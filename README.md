@@ -6,7 +6,7 @@ the result without a server account.
 
 ## What it does
 
-- Opens directly into an empty Org Editor with Units, Employees, Analytics, Calendar, and Download.
+- Opens directly into an empty Editor with Units, Employees, Analytics, Calendar, and Download.
 - Keeps a canonical Main View and independent custom Views.
 - Supports Static and Live Units, Unit-scoped positions, tags, drag and drop, and undo/redo.
 - Exports Teams, Employees, their combined Main View, or the complete workspace in one strict

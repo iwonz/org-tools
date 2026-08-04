@@ -69,9 +69,7 @@ test("detects Russian from browser preferences on first use", async ({ page }) =
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
-  await expect(
-    page.getByRole("tab", { name: ruMessages.Ui["Org Editor"], exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     ruMessages.Metadata.description,
@@ -87,9 +85,7 @@ test("falls back to English for an unsupported browser locale", async ({ page })
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(
-    page.getByRole("tab", { name: enMessages.Ui["Org Editor"], exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("tab", { name: enMessages.Ui.Editor, exact: true })).toBeVisible();
   expect(await page.evaluate((key) => window.localStorage.getItem(key), localeStorageKey)).toBe(
     "en",
   );
@@ -111,6 +107,12 @@ test("switches the interface in place and persists the choice", async ({ page },
   expect(languageBox?.x).toBeLessThan(themeBox?.x ?? 0);
 
   await languageToggle.click();
+  await expect(
+    page.getByRole("option", { name: ruMessages.Ui.Russian, exact: true }),
+  ).toContainText("🇷🇺");
+  await expect(
+    page.getByRole("option", { name: enMessages.Ui.English, exact: true }),
+  ).toContainText("🇬🇧");
   await page.getByRole("option", { name: ruMessages.Ui.Russian, exact: true }).click();
 
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
@@ -119,12 +121,14 @@ test("switches the interface in place and persists the choice", async ({ page },
     `${ruMessages.Ui.Language}: ${ruMessages.Ui.Russian}`,
   );
   await expect(languageToggle).toContainText("🇷🇺");
+  await expect(languageToggle).toHaveText("🇷🇺");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     ruMessages.Metadata.description,
   );
   const header = page.locator("header");
-  await expect(header.getByRole("img", { name: "Org Tools", exact: true })).toBeVisible();
+  await expect(header.getByRole("img", { name: "Org Tools", exact: true })).toHaveCount(0);
+  await expect(header.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
   await expect(
     header.getByRole("button", { name: ruMessages.Ui.Import, exact: true }),
   ).toBeVisible();
@@ -165,7 +169,7 @@ test("switches the interface in place and persists the choice", async ({ page },
     path: testInfo.outputPath("russian-employee-avatar.png"),
   });
   await employeeDialog.getByRole("button", { name: ruMessages.Ui.Cancel, exact: true }).click();
-  await page.getByRole("tab", { name: ruMessages.Ui["Org Editor"], exact: true }).click();
+  await page.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true }).click();
 
   await page.getByRole("button", { name: ruMessages.Ui["Add to empty canvas"] }).click();
   await page.getByRole("button", { name: ruMessages.Ui["Add Unit"], exact: true }).click();
@@ -232,9 +236,7 @@ test("switches the interface in place and persists the choice", async ({ page },
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
-  await expect(
-    page.getByRole("tab", { name: ruMessages.Ui["Org Editor"], exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
   expect(consoleErrors.filter((message) => message.includes("INVALID_KEY"))).toEqual([]);
 });
 

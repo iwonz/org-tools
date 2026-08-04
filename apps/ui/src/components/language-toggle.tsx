@@ -26,7 +26,8 @@ export function LanguageToggle() {
       <SelectPrimitive.Trigger asChild data-demo-id="language-toggle">
         <Button
           aria-label={`${t("Language")}: ${activeLabel}`}
-          className="h-9 gap-2 rounded-sm px-2.5 text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
+          className="size-9 rounded-sm text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
+          size="icon"
           title={`${t("Language")}: ${activeLabel}`}
           type="button"
           variant="ghost"
@@ -34,7 +35,6 @@ export function LanguageToggle() {
           <span aria-hidden="true" className="text-base leading-none">
             {activeOption?.flag ?? "🇬🇧"}
           </span>
-          <span className="text-sm">{activeLabel}</span>
         </Button>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>

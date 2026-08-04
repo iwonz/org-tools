@@ -18,7 +18,7 @@ export const syntheticEmployeesJsonPath = fileURLToPath(
 export const productTabs = [
   "Units",
   "Employees",
-  "Org Editor",
+  "Editor",
   "Analytics",
   "Calendar",
   "Download",
@@ -56,7 +56,7 @@ export async function openBlankWorkspace(page: Page): Promise<void> {
     locale: "en",
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("tab", { name: "Org Editor", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "Editor", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
   );

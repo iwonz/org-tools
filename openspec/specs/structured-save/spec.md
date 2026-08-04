@@ -4,12 +4,13 @@
 Define complete and structured partial downloads from the in-memory workspace.
 ## Requirements
 ### Requirement: Save offers complete and structured partial documents
-The application SHALL open a localized Export workspace dialog ordered Teams, Employees, Teams +
-Employees, and Full workspace, default to Full workspace, and download the chosen strictly
-validated `OrgToolsState` only after explicit confirmation.
+The application SHALL expose a localized header Export action with a document-download icon, open an
+Export workspace dialog ordered Teams, Employees, Teams + Employees, and Full workspace, default to
+Full workspace, and download the chosen strictly validated `OrgToolsState` only after explicit
+confirmation.
 
 #### Scenario: Open Save dialog
-- **WHEN** a user activates the header Export action
+- **WHEN** a user activates the header Export action by its visible label or accessible icon-only control
 - **THEN** no file is downloaded until the Export workspace dialog displays the four choices and the user confirms one
 
 #### Scenario: Empty data option

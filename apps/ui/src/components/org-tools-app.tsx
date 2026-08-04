@@ -4,11 +4,11 @@ import { observer } from "mobx-react-lite";
 import { useTheme } from "next-themes";
 import { useRef, useState } from "react";
 import {
-  HiOutlineArrowUpTray,
   HiOutlineBuildingOffice2,
   HiOutlineCalendarDays,
   HiOutlineChartBar,
   HiOutlineDocumentArrowDown,
+  HiOutlineDocumentArrowUp,
   HiOutlineFolder,
   HiOutlineShare,
   HiOutlineUsers,
@@ -59,76 +59,6 @@ const LoadedApp = observer(() => {
   return (
     <>
       <main className="flex h-dvh w-dvw flex-col overflow-hidden bg-background text-foreground">
-        <header
-          className="flex h-14 shrink-0 items-center justify-between gap-3 px-4"
-          data-demo-id="app-header"
-        >
-          <div
-            aria-label="Org Tools"
-            className="shrink-0 text-lg font-extrabold tracking-tight text-foreground"
-            data-demo-id="brand-wordmark"
-            role="img"
-          >
-            Org Tools
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <LanguageToggle />
-            <ThemeToggle />
-            <input
-              accept=".json,application/json"
-              aria-hidden="true"
-              className="sr-only"
-              data-demo-id="import-file-input"
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = "";
-                if (file) setImportFile(file);
-              }}
-              ref={importFileInputRef}
-              tabIndex={-1}
-              type="file"
-            />
-            <Button
-              onClick={() => {
-                if (!importFileInputRef.current) return;
-                importFileInputRef.current.value = "";
-                importFileInputRef.current.click();
-              }}
-              type="button"
-              variant="outline"
-            >
-              <HiOutlineArrowUpTray />
-              {t("Import")}
-            </Button>
-            <Button data-demo-id="save-workspace" onClick={openSaveDialog} type="button">
-              <HiOutlineDocumentArrowDown />
-              {t("Workspace Export")}
-            </Button>
-          </div>
-        </header>
-        {error && (
-          <div
-            className="shrink-0 bg-destructive/10 px-4 py-2 text-sm text-destructive"
-            data-demo-id="app-error"
-            role="alert"
-          >
-            {messageText(error)}
-          </div>
-        )}
-        {notice && (
-          <div
-            className="shrink-0 bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
-            data-demo-id="app-notice"
-            role="status"
-          >
-            {"kind" in notice && notice.kind === "import"
-              ? countText("importSummary", {
-                  duplicateCount: notice.duplicateCount,
-                  newCount: notice.newCount,
-                })
-              : messageText(notice as UiMessageDescriptor)}
-          </div>
-        )}
         <Tabs
           className="min-h-0 flex-1"
           onValueChange={(value) => {
@@ -145,37 +75,120 @@ const LoadedApp = observer(() => {
           }}
           value={store.activeTab}
         >
-          <div
-            className="flex h-14 shrink-0 items-center bg-background px-4"
-            data-demo-id="product-navigation"
+          <header
+            className="flex h-14 shrink-0 items-center gap-2 bg-background px-2 sm:gap-3 sm:px-4"
+            data-demo-id="app-header"
           >
-            <TabsList>
-              <TabsTrigger data-demo-id="tab-units" value="units">
-                <HiOutlineFolder />
-                {t("Units")}
-              </TabsTrigger>
-              <TabsTrigger data-demo-id="tab-employees" value="employees">
-                <HiOutlineUsers />
-                {t("Employees")}
-              </TabsTrigger>
-              <TabsTrigger data-demo-id="tab-org-editor" value="orgEditor">
-                <HiOutlineBuildingOffice2 />
-                {t("Org Editor")}
-              </TabsTrigger>
-              <TabsTrigger data-demo-id="tab-analytics" value="analytics">
-                <HiOutlineChartBar />
-                {t("Analytics")}
-              </TabsTrigger>
-              <TabsTrigger data-demo-id="tab-calendar" value="calendar">
-                <HiOutlineCalendarDays />
-                {t("Calendar")}
-              </TabsTrigger>
-              <TabsTrigger data-demo-id="tab-export" value="export">
-                <HiOutlineShare />
-                {t("Data Download")}
-              </TabsTrigger>
-            </TabsList>
-          </div>
+            <nav
+              aria-label={t("Product navigation")}
+              className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              data-demo-id="product-navigation"
+            >
+              <TabsList className="w-max">
+                <TabsTrigger data-demo-id="tab-units" value="units">
+                  <HiOutlineFolder />
+                  {t("Units")}
+                </TabsTrigger>
+                <TabsTrigger data-demo-id="tab-employees" value="employees">
+                  <HiOutlineUsers />
+                  {t("Employees")}
+                </TabsTrigger>
+                <TabsTrigger data-demo-id="tab-org-editor" value="orgEditor">
+                  <HiOutlineBuildingOffice2 />
+                  {t("Editor")}
+                </TabsTrigger>
+                <TabsTrigger data-demo-id="tab-analytics" value="analytics">
+                  <HiOutlineChartBar />
+                  {t("Analytics")}
+                </TabsTrigger>
+                <TabsTrigger data-demo-id="tab-calendar" value="calendar">
+                  <HiOutlineCalendarDays />
+                  {t("Calendar")}
+                </TabsTrigger>
+                <TabsTrigger data-demo-id="tab-export" value="export">
+                  <HiOutlineShare />
+                  {t("Data Download")}
+                </TabsTrigger>
+              </TabsList>
+            </nav>
+            <div
+              className="flex shrink-0 items-center gap-1 sm:gap-2"
+              data-demo-id="header-actions"
+            >
+              <LanguageToggle />
+              <ThemeToggle />
+              <input
+                accept=".json,application/json"
+                aria-hidden="true"
+                className="sr-only"
+                data-demo-id="import-file-input"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = "";
+                  if (file) setImportFile(file);
+                }}
+                ref={importFileInputRef}
+                tabIndex={-1}
+                type="file"
+              />
+              <Button
+                aria-label={t("Import")}
+                className="size-9 px-0 lg:w-auto lg:px-4"
+                data-demo-id="import-action"
+                onClick={() => {
+                  if (!importFileInputRef.current) return;
+                  importFileInputRef.current.value = "";
+                  importFileInputRef.current.click();
+                }}
+                title={t("Import")}
+                type="button"
+                variant="outline"
+              >
+                <HiOutlineDocumentArrowUp
+                  data-demo-id="import-action-icon"
+                  data-icon="document-arrow-up"
+                />
+                <span className="hidden lg:inline">{t("Import")}</span>
+              </Button>
+              <Button
+                aria-label={t("Workspace Export")}
+                className="size-9 px-0 lg:w-auto lg:px-4"
+                data-demo-id="save-workspace"
+                onClick={openSaveDialog}
+                title={t("Workspace Export")}
+                type="button"
+              >
+                <HiOutlineDocumentArrowDown
+                  data-demo-id="export-action-icon"
+                  data-icon="document-arrow-down"
+                />
+                <span className="hidden lg:inline">{t("Workspace Export")}</span>
+              </Button>
+            </div>
+          </header>
+          {error && (
+            <div
+              className="shrink-0 bg-destructive/10 px-4 py-2 text-sm text-destructive"
+              data-demo-id="app-error"
+              role="alert"
+            >
+              {messageText(error)}
+            </div>
+          )}
+          {notice && (
+            <div
+              className="shrink-0 bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
+              data-demo-id="app-notice"
+              role="status"
+            >
+              {"kind" in notice && notice.kind === "import"
+                ? countText("importSummary", {
+                    duplicateCount: notice.duplicateCount,
+                    newCount: notice.newCount,
+                  })
+                : messageText(notice as UiMessageDescriptor)}
+            </div>
+          )}
           <TabsContent
             className="flex min-h-0 flex-1"
             data-demo-id="units-tab-content"

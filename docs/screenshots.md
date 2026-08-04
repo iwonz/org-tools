@@ -7,9 +7,9 @@ machine preferences cannot change gallery copy.
 
 ## Gallery
 
-### Empty Org Editor
+### Empty Editor
 
-![Empty Org Editor](screenshots/empty-org-editor.png)
+![Empty Editor](screenshots/empty-org-editor.png)
 
 ### Synthetic organization canvas
 
@@ -55,9 +55,9 @@ machine preferences cannot change gallery copy.
 
 ![Employee avatar form](screenshots/employee-avatar-form.png)
 
-### Dark shell and wordmark
+### Dark shell and unified header
 
-![Dark shell and wordmark](screenshots/dark-shell.png)
+![Dark shell and unified header](screenshots/dark-shell.png)
 
 ### Employee import mapping
 
@@ -68,8 +68,9 @@ machine preferences cannot change gallery copy.
 ![Scoped state import](screenshots/state-import.png)
 
 The Calendar fixture includes exact dated-tag events and its compact cloud. Scoped state operation
-cards, nested Team and Employee previews, generic mapping, and localized empty states are also covered by browser assertions. Every gallery
-capture uses the deterministic English locale; targeted Russian desktop checks verify wider labels.
+cards, nested Team and Employee previews, generic mapping, the unified header, and localized empty
+states are also covered by browser assertions. Every gallery capture uses the deterministic English
+locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
 shows the total catalog count. The gallery verifies borderless shell, surface and dialog chrome,
 borderless content-sized Analytics groups, whitespace between sections, and preserved outlines for
@@ -88,8 +89,9 @@ Inspect every changed PNG. Do not accept a screenshot that contains real organiz
 filesystem path, a browser notification, a nondeterministic timestamp, or an external image.
 
 `pnpm test:browser` runs the non-visual smoke scenarios against the same production server. The
-smoke suite verifies blank startup, ordered keyboard-accessible product tabs, the shadow-free
-monochrome wordmark, absence of locale-provider console errors, the simplified empty states, all
+smoke suite verifies blank startup, the wordmark-free unified header, ordered keyboard-accessible
+product tabs, the flag-only locale trigger, responsive transfer actions at 390, 1024, and 1280 px,
+absence of locale-provider console errors, the simplified empty states, all
 four scoped workspace Export downloads, state projection append/replace, local avatar workflows,
 hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.

@@ -1,9 +1,11 @@
 # Usage
 
-org-tools opens directly in a blank Main View with Org Editor selected. The compact header shows the
-accessible monochrome text-only Org Tools wordmark without an intervening icon and provides explicit
-**Import** and **Export** actions; the application does not autosave. Empty product tabs show
-one focused next action and omit controls that cannot yet do useful work.
+org-tools opens directly in a blank Main View with Editor selected. One 56 px header places the six
+product tabs on the left and the language, theme, **Import**, and **Export** actions on the right,
+without a visible wordmark. Below 1024 px the transfer actions keep their localized accessible names
+and document-arrow icons while hiding their visible labels, and the tab region scrolls horizontally
+without overflowing the page. The application does not autosave. Empty product tabs show one focused
+next action and omit controls that cannot yet do useful work.
 
 The shell, populated surface headers, dialogs, local sections, and repeated list rows use spacing,
 background grouping, and interaction feedback instead of decorative horizontal rules. Borders
@@ -14,9 +16,10 @@ guides, focus states, and destructive states where they communicate an actual bo
 
 The interface supports English and Russian. On first use, org-tools selects the first supported
 language from the browser preferences and falls back to English. Use the flag language menu
-immediately to the left of the theme menu to switch in place; the choice is remembered locally under
-`org-tools-locale`. Opening or importing a workspace does not change the language, and user-entered
-organization content is never translated.
+immediately to the left of the theme menu to switch in place. Its closed trigger shows only the
+active flag; the menu shows each flag with its language name and selected indicator. The choice is
+remembered locally under `org-tools-locale`. Opening or importing a workspace does not change the
+language, and user-entered organization content is never translated.
 
 The Russian interface uses localized Team terminology for Unit and Live Unit. English machine keys,
 persisted types, and export fields remain unchanged.
@@ -26,7 +29,7 @@ persisted types, and export fields remain unchanged.
 - **Units** manages the shared Unit hierarchy and effective membership.
 - **Employees** manages the global Employee catalog, tags, and contact fields. Its populated header
   shows the total catalog size and adds the visible match count while search or filters are active.
-- **Org Editor** arranges the Main View or an independent custom View on a canvas.
+- **Editor** arranges the Main View or an independent custom View on a canvas.
 - **Analytics** summarizes the current organization without sending data elsewhere.
 - **Calendar** combines recurring birthdays with one-time dated Employee tag events.
 - **Download** selects local sources and produces CSV, JSON, or separator-based templates.

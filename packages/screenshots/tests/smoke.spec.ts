@@ -32,26 +32,30 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   await expectNoHorizontalRule(page.locator('[data-demo-id="app-header"]'));
   await expectNoHorizontalRule(page.locator('[data-demo-id="product-navigation"]'));
 
-  const wordmark = page.getByRole("img", { name: "Org Tools", exact: true });
-  await expect(wordmark).toBeVisible();
-  await expect(wordmark.locator('[data-demo-id="brand-emoji"]')).toHaveCount(0);
-  await expect(wordmark.locator("[data-brand-word]")).toHaveCount(0);
-  await expect(wordmark).toHaveCSS("background-image", "none");
-  const wordmarkColors = await wordmark.evaluate((element) => ({
-    bodyColor: window.getComputedStyle(document.body).color,
-    color: window.getComputedStyle(element).color,
-  }));
-  expect(wordmarkColors.color).toBe(wordmarkColors.bodyColor);
-  await expect(wordmark).toHaveCSS("filter", "none");
+  const header = page.locator('[data-demo-id="app-header"]');
+  const navigation = page.locator('[data-demo-id="product-navigation"]');
+  const actions = page.locator('[data-demo-id="header-actions"]');
+  await expect(header.locator('[data-demo-id="product-navigation"]')).toHaveCount(1);
+  await expect(header.locator('[data-demo-id="header-actions"]')).toHaveCount(1);
+  await expect(header.getByRole("img", { name: "Org Tools", exact: true })).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="brand-wordmark"]')).toHaveCount(0);
+  expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(56);
+  const navigationBox = await navigation.boundingBox();
+  const actionsBox = await actions.boundingBox();
+  expect(navigationBox).not.toBeNull();
+  expect(actionsBox).not.toBeNull();
+  expect(navigationBox?.x ?? 0).toBeLessThan(actionsBox?.x ?? 0);
+  await expect(page.locator('[data-demo-id="import-action-icon"]')).toHaveAttribute(
+    "data-icon",
+    "document-arrow-up",
+  );
+  await expect(page.locator('[data-demo-id="export-action-icon"]')).toHaveAttribute(
+    "data-icon",
+    "document-arrow-down",
+  );
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  const darkWordmarkColors = await wordmark.evaluate((element) => ({
-    bodyColor: window.getComputedStyle(document.body).color,
-    color: window.getComputedStyle(element).color,
-  }));
-  expect(darkWordmarkColors.color).toBe(darkWordmarkColors.bodyColor);
-  await expect(wordmark).toHaveCSS("background-image", "none");
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Light", exact: true }).click();
   expect(
@@ -80,7 +84,7 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
     "aria-selected",
     "true",
   );
-  await page.getByRole("tab", { name: "Org Editor", exact: true }).click();
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
   await expect(page.locator('[data-demo-id="org-editor-actions"]')).toHaveCount(0);
   await expect(page.locator('[data-demo-id="org-editor-focus-primary-unit-button"]')).toHaveCount(
@@ -89,6 +93,42 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   expect(consoleErrors.filter((message) => message.includes("INVALID_KEY"))).toEqual([]);
 
   await assertLocalRequests();
+});
+
+test("contains the unified header at narrow and desktop widths", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openBlankWorkspace(page);
+
+  const header = page.locator('[data-demo-id="app-header"]');
+  const navigation = page.locator('[data-demo-id="product-navigation"]');
+  const importLabel = page.locator('[data-demo-id="import-action"] span');
+  const exportLabel = page.locator('[data-demo-id="save-workspace"] span');
+
+  await expect(importLabel).toBeHidden();
+  await expect(exportLabel).toBeHidden();
+  await expect(page.locator('[data-demo-id="import-action"]')).toHaveAccessibleName("Import");
+  await expect(page.locator('[data-demo-id="save-workspace"]')).toHaveAccessibleName("Export");
+  expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(56);
+  expect(await navigation.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+    true,
+  );
+  await navigation.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  expect(await navigation.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+
+  for (const width of [1024, 1280]) {
+    await page.setViewportSize({ width, height: 720 });
+    await expect(importLabel).toBeVisible();
+    await expect(exportLabel).toBeVisible();
+    expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(56);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
 });
 
 test("opens the chooser before the dialog and maps ordinary JSON without format examples", async ({

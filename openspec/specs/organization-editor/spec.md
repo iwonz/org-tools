@@ -4,10 +4,9 @@
 Define the retained editor surfaces, View isolation, and birthday-driven product behavior.
 ## Requirements
 ### Requirement: The generic editor retains six product surfaces
-The application SHALL provide localized Units, Employees, Org Editor, Analytics, Calendar, and
-Download surfaces in that visual and keyboard order, with Org Editor active for a blank workspace,
-a compact accessible monochrome text-only Org Tools brand without an intervening icon or emoji and
-without text shadows, and consistent actionable top-level empty states. A populated Employees
+The application SHALL provide localized Units, Employees, Editor, Analytics, Calendar, and Download
+surfaces in that visual and keyboard order, with Editor active for a blank workspace, no visible
+wordmark or brand icon, and consistent actionable top-level empty states. A populated Employees
 surface SHALL show the total catalog count and SHALL additionally show the visible match count only
 while search or filters are active.
 
@@ -32,11 +31,15 @@ while search or filters are active.
 - **THEN** the localized label remains fully visible on one line inside the View selector without overlapping adjacent controls
 - **AND** longer user-authored View names remain contained with a single-line ellipsis
 
-#### Scenario: Compact application header
+#### Scenario: Unified application header
 - **WHEN** the product shell renders in light or dark theme
-- **THEN** it shows the accessible monochrome text-only `Org Tools` brand in the active foreground color with no gradient or drop shadow
-- **AND** no icon or emoji appears between `Org` and `Tools`
-- **AND** the header actions are Import followed by Export while the active View and organization count subtitle remain omitted
+- **THEN** one 56 px header contains the six product tabs on the left and locale, theme, Import, and Export actions on the right without a visible wordmark
+- **AND** Import and Export use matched document-arrow icons while the active View and organization count subtitle remain omitted
+
+#### Scenario: Narrow application header
+- **WHEN** the viewport is narrower than 1024 px
+- **THEN** Import and Export hide their visible labels but retain localized accessible names and tooltips
+- **AND** the tab region scrolls horizontally without page-level overflow or changing tab order
 
 #### Scenario: Populated Employee catalog count
 - **WHEN** the Employees surface contains Employees and no search or filter is active
