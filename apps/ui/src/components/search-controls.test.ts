@@ -1,0 +1,224 @@
+import type { OrgEditorState, WorkspaceEmployee } from "@org-tools/types";
+import { describe, expect, test } from "vitest";
+
+import { buildWorkspaceOrgStructure } from "@/lib/build-workspace-org-structure";
+import {
+  createEmptyEmployeeSearchFilters,
+  filterEmployeesBySearch,
+  getEmployeesForSearch,
+  pruneEmployeeSearchFilters,
+} from "@/lib/employee-search";
+import { buildEmployeeUnitMembershipIndex } from "@/lib/employee-unit-contexts";
+import { createDefaultOrgEditorState, createOrgEditorUnitFromScratch } from "@/lib/org-editor";
+
+const uuid = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
+const ROOT_ID = uuid(100);
+const FIRST_TEAM_ID = uuid(101);
+const SECOND_TEAM_ID = uuid(102);
+const ALEX_ID = uuid(1);
+const BLAIR_ID = uuid(2);
+const CASEY_ID = uuid(3);
+const DANA_ID = uuid(4);
+const timestamp = "2026-07-31T00:00:00.000Z";
+
+const employee = (id: string, fields: Partial<WorkspaceEmployee>): WorkspaceEmployee => ({
+  avatarBase64Url: null,
+  birthday: null,
+  createdAt: timestamp,
+  email: null,
+  firstName: "Employee",
+  id,
+  lastName: "Example",
+  phone: null,
+  profileUrl: null,
+  tags: [],
+  updatedAt: timestamp,
+  username: null,
+  ...fields,
+});
+
+const employees: WorkspaceEmployee[] = [
+  employee(ALEX_ID, {
+    birthday: "03-12",
+    email: "alex@example.test",
+    firstName: "Alex",
+    tags: [{ date: null, label: "Critical" }],
+    username: "alex",
+  }),
+  employee(BLAIR_ID, {
+    birthday: "04-18",
+    email: "blair@example.test",
+    firstName: "Blair",
+    username: "blair",
+  }),
+  employee(CASEY_ID, { firstName: "Casey", username: "casey" }),
+  employee(DANA_ID, {
+    email: "dana@example.test",
+    firstName: "Dana",
+    username: "dana",
+  }),
+];
+
+const editorState: OrgEditorState = {
+  ...createDefaultOrgEditorState(),
+  units: [
+    createOrgEditorUnitFromScratch({
+      bossEmployeeId: CASEY_ID,
+      employeeIds: [CASEY_ID],
+      employeePositions: [{ employeeId: CASEY_ID, position: "Boss" }],
+      id: ROOT_ID,
+      name: "Root",
+      x: 0,
+      y: 0,
+    }),
+    createOrgEditorUnitFromScratch({
+      employeeIds: [ALEX_ID],
+      employeePositions: [{ employeeId: ALEX_ID, position: "QA" }],
+      id: FIRST_TEAM_ID,
+      name: "Team",
+      parentId: ROOT_ID,
+      x: 0,
+      y: 200,
+    }),
+    createOrgEditorUnitFromScratch({
+      employeeIds: [BLAIR_ID],
+      employeePositions: [{ employeeId: BLAIR_ID, position: "QA" }],
+      id: SECOND_TEAM_ID,
+      name: "Team",
+      parentId: ROOT_ID,
+      x: 360,
+      y: 200,
+    }),
+  ],
+};
+
+const structure = buildWorkspaceOrgStructure(employees, editorState);
+const membershipIndex = buildEmployeeUnitMembershipIndex(
+  structure.allEmployees,
+  structure.indexes.unitsById,
+);
+
+const filter = (
+  filters: ReturnType<typeof createEmptyEmployeeSearchFilters>,
+  queryTokens: string[] = [],
+) =>
+  filterEmployeesBySearch({
+    employeeSearchDocumentByEmployeeId: structure.indexes.employeeSearchDocumentByEmployeeId,
+    employeeUnitMembershipsByEmployeeId: membershipIndex,
+    employees: structure.indexes.employeesByName,
+    filters,
+    queryTokens,
+  }).map((currentEmployee) => currentEmployee.id);
+
+describe("Employee Unit filters", () => {
+  test("returns the central sorted array without a full pass for an empty search", () => {
+    const sortedEmployees = structure.indexes.employeesByName;
+    const visibleEmployees = getEmployeesForSearch({
+      employeeSearchDocumentByEmployeeId: structure.indexes.employeeSearchDocumentByEmployeeId,
+      employeeUnitMembershipsByEmployeeId: membershipIndex,
+      employees: sortedEmployees,
+      filters: createEmptyEmployeeSearchFilters(),
+      queryTokens: [],
+    });
+
+    expect(visibleEmployees).toBe(sortedEmployees);
+  });
+
+  test("uses exact Unit membership without descendants and ORs values inside the Unit group", () => {
+    expect(filter({ ...createEmptyEmployeeSearchFilters(), selectedUnitIds: [ROOT_ID] })).toEqual([
+      CASEY_ID,
+    ]);
+    expect(
+      filter({
+        ...createEmptyEmployeeSearchFilters(),
+        selectedUnitIds: [FIRST_TEAM_ID, SECOND_TEAM_ID],
+      }),
+    ).toEqual([ALEX_ID, BLAIR_ID]);
+  });
+
+  test("ORs missing tags with selected tags", () => {
+    expect(filter({ ...createEmptyEmployeeSearchFilters(), includeWithoutTags: true })).toEqual([
+      BLAIR_ID,
+      CASEY_ID,
+      DANA_ID,
+    ]);
+    expect(
+      filter({
+        ...createEmptyEmployeeSearchFilters(),
+        includeWithoutTags: true,
+        selectedTags: ["Critical"],
+      }),
+    ).toEqual([ALEX_ID, BLAIR_ID, CASEY_ID, DANA_ID]);
+  });
+
+  test("ORs missing Units with selected exact Unit assignments", () => {
+    expect(filter({ ...createEmptyEmployeeSearchFilters(), includeWithoutUnits: true })).toEqual([
+      DANA_ID,
+    ]);
+    expect(
+      filter({
+        ...createEmptyEmployeeSearchFilters(),
+        includeWithoutUnits: true,
+        selectedUnitIds: [FIRST_TEAM_ID],
+      }),
+    ).toEqual([ALEX_ID, DANA_ID]);
+  });
+
+  test("counts a Live assignment as a Unit in ordinary search", () => {
+    const membershipsWithLiveUnit = new Map(membershipIndex);
+    membershipsWithLiveUnit.set(DANA_ID, {
+      manualUnitIdSet: new Set(),
+      unitIdSet: new Set([uuid(200)]),
+    });
+
+    const visibleIds = filterEmployeesBySearch({
+      employeeSearchDocumentByEmployeeId: structure.indexes.employeeSearchDocumentByEmployeeId,
+      employeeUnitMembershipsByEmployeeId: membershipsWithLiveUnit,
+      employees: structure.indexes.employeesByName,
+      filters: { ...createEmptyEmployeeSearchFilters(), includeWithoutUnits: true },
+      queryTokens: [],
+    }).map((currentEmployee) => currentEmployee.id);
+    expect(visibleIds).toEqual([]);
+  });
+
+  test("combines filter groups and text through AND", () => {
+    expect(
+      filter(
+        {
+          birthday: { day: 12, month: 3 },
+          includeWithoutTags: false,
+          includeWithoutUnits: false,
+          selectedPositions: ["QA"],
+          selectedTags: ["Critical"],
+          selectedUnitIds: [FIRST_TEAM_ID],
+        },
+        ["alex"],
+      ),
+    ).toEqual([ALEX_ID]);
+    expect(
+      filter({
+        ...createEmptyEmployeeSearchFilters(),
+        includeWithoutTags: true,
+        includeWithoutUnits: true,
+      }),
+    ).toEqual([DANA_ID]);
+  });
+
+  test("prunes unavailable Unit IDs without changing other filters", () => {
+    const filters = pruneEmployeeSearchFilters(
+      {
+        ...createEmptyEmployeeSearchFilters(),
+        includeWithoutUnits: true,
+        selectedTags: ["Critical"],
+        selectedUnitIds: [FIRST_TEAM_ID, uuid(999)],
+      },
+      new Set([ROOT_ID, FIRST_TEAM_ID, SECOND_TEAM_ID]),
+    );
+
+    expect(filters).toMatchObject({
+      includeWithoutUnits: true,
+      selectedTags: ["Critical"],
+      selectedUnitIds: [FIRST_TEAM_ID],
+    });
+  });
+});

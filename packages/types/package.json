@@ -1,0 +1,12 @@
+{
+  "name": "@org-tools/types",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    }
+  }
+}

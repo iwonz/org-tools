@@ -1,0 +1,598 @@
+import { readFile } from "node:fs/promises";
+
+import { expect, test } from "@playwright/test";
+
+import {
+  expectLocalRequestsOnly,
+  openBlankWorkspace,
+  openImportDialog,
+  productTabs,
+  replaceWithSyntheticWorkspace,
+  syntheticEmployeesJsonPath,
+  syntheticWorkspacePath,
+} from "./helpers.js";
+
+test("opens a blank workspace with all product surfaces", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+
+  const wordmark = page.getByRole("img", { name: "Org Tools", exact: true });
+  await expect(wordmark).toBeVisible();
+  await expect(wordmark.locator('[data-demo-id="brand-emoji"]')).toHaveCount(0);
+  await expect(wordmark.locator("[data-brand-word]")).toHaveCount(0);
+  await expect(wordmark).toHaveCSS("background-image", "none");
+  const wordmarkColors = await wordmark.evaluate((element) => ({
+    bodyColor: window.getComputedStyle(document.body).color,
+    color: window.getComputedStyle(element).color,
+  }));
+  expect(wordmarkColors.color).toBe(wordmarkColors.bodyColor);
+  await expect(wordmark).toHaveCSS("filter", "none");
+  await page.locator('[data-demo-id="theme-toggle"]').click();
+  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  const darkWordmarkColors = await wordmark.evaluate((element) => ({
+    bodyColor: window.getComputedStyle(document.body).color,
+    color: window.getComputedStyle(element).color,
+  }));
+  expect(darkWordmarkColors.color).toBe(darkWordmarkColors.bodyColor);
+  await expect(wordmark).toHaveCSS("background-image", "none");
+  await page.locator('[data-demo-id="theme-toggle"]').click();
+  await page.getByRole("option", { name: "Light", exact: true }).click();
+  expect(
+    await page
+      .locator('[data-demo-id^="tab-"]')
+      .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-demo-id"))),
+  ).toEqual([
+    "tab-units",
+    "tab-employees",
+    "tab-org-editor",
+    "tab-analytics",
+    "tab-calendar",
+    "tab-export",
+  ]);
+  for (const tabName of productTabs) {
+    const tab = page.getByRole("tab", { name: tabName, exact: true });
+    await expect(tab).toBeVisible();
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+  }
+  const unitsTab = page.getByRole("tab", { name: "Units", exact: true });
+  await unitsTab.focus();
+  await unitsTab.press("End");
+  await expect(page.getByRole("tab", { name: "Download", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.getByRole("tab", { name: "Org Editor", exact: true }).click();
+  await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-editor-focus-primary-unit-button"]')).toHaveCount(
+    0,
+  );
+  expect(consoleErrors.filter((message) => message.includes("INVALID_KEY"))).toEqual([]);
+
+  await assertLocalRequests();
+});
+
+test("opens the chooser before the dialog and maps ordinary JSON without format examples", async ({
+  page,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+
+  await expect(page.locator('[data-demo-id="import-file-input"]')).toHaveAttribute(
+    "accept",
+    ".json,application/json",
+  );
+  const canceledChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  const canceledChooser = await canceledChooserPromise;
+  await canceledChooser.setFiles([]);
+  await expect(page.getByRole("dialog", { name: "Import" })).toHaveCount(0);
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  const fileChooser = await fileChooserPromise;
+  await expect(page.getByRole("dialog", { name: "Import" })).toHaveCount(0);
+  await fileChooser.setFiles(syntheticEmployeesJsonPath);
+  const dialog = page.getByRole("dialog", { name: "Import" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Field mapping", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("tab")).toHaveCount(0);
+  await expect(dialog.getByRole("radiogroup", { name: "Import as" })).toContainText("Teams");
+  await expect(dialog.getByRole("radiogroup", { name: "Import as" })).toContainText("Employees");
+  await expect(dialog.getByText("employees.json", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  const repeatedFileDialog = await openImportDialog(page, syntheticEmployeesJsonPath);
+  await expect(repeatedFileDialog.getByText("Field mapping", { exact: true })).toBeVisible();
+  await repeatedFileDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  const malformedStateDialog = await openImportDialog(page, {
+    buffer: Buffer.from(
+      JSON.stringify({ employees: [], kind: "org-tools-state", unexpected: [], views: [] }),
+    ),
+    mimeType: "application/json",
+    name: "malformed-state.json",
+  });
+  await expect(
+    malformedStateDialog.getByText("Could not read or parse the selected file.", { exact: true }),
+  ).toBeVisible();
+  await expect(malformedStateDialog.getByText("Field mapping", { exact: true })).toHaveCount(0);
+  await malformedStateDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await assertLocalRequests();
+});
+
+test("selects and appends Employees from a recognized workspace state", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  const dialog = await openImportDialog(page, syntheticWorkspacePath);
+  await dialog.getByRole("radio", { name: "Employees", exact: true }).check();
+  await expect(dialog.getByText("Structured import preview", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("4 new Employees", { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByRole("radiogroup", { name: "Import operation" }).getByRole("radio").first(),
+  ).toBeChecked();
+  await dialog.getByRole("button", { name: "Append", exact: true }).click();
+
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("selects and replaces current data with Teams from a recognized workspace state", async ({
+  page,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  const dialog = await openImportDialog(page, syntheticWorkspacePath);
+  await dialog.getByRole("radio", { name: "Teams", exact: true }).check();
+  await expect(dialog.getByText("2 manual Teams", { exact: true })).toBeVisible();
+  await dialog
+    .getByRole("radiogroup", { name: "Import operation" })
+    .getByRole("radio")
+    .last()
+    .check();
+  await expect(
+    dialog.getByText("Remove current Employees, Teams, and custom Views before importing."),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Replace all current", exact: true }).click();
+
+  await page.getByRole("tab", { name: "Units", exact: true }).click();
+  await page.getByText("Product", { exact: true }).first().click();
+  await expect(page.getByText("Platform", { exact: true }).first()).toBeVisible();
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("maps nested generic JSON as Teams with Employee assignments", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  const dialog = await openImportDialog(page, {
+    buffer: Buffer.from(
+      JSON.stringify([
+        {
+          children: [
+            {
+              employees: [
+                {
+                  email: "jordan.reed@example.test",
+                  employeeKey: "jordan",
+                  firstName: "Jordan",
+                  isBoss: true,
+                  lastName: "Reed",
+                  position: "Engineer",
+                  tags: ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"],
+                  username: "jordan.reed",
+                },
+              ],
+              key: "platform",
+              name: "Platform",
+            },
+          ],
+          key: "engineering",
+          name: "Engineering",
+        },
+      ]),
+    ),
+    mimeType: "application/json",
+    name: "teams-employees.json",
+  });
+  await dialog.getByRole("radio", { name: "Teams + Employees", exact: true }).check();
+  await expect(dialog.getByText("1 assignments", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Append", exact: true }).click();
+
+  const editorEmployee = page
+    .locator("[data-org-editor-employee-row]")
+    .filter({ hasText: "Jordan Reed" });
+  await expect(editorEmployee).toContainText("Theta");
+  await expect(editorEmployee.locator('[data-employee-tags-hidden-count="0"]')).toBeVisible();
+  const platformCanvasUnit = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
+  await platformCanvasUnit.click({ button: "right" });
+  await page.locator('[data-demo-id="org-editor-export-action"]').click();
+  const imageExportDialog = page.getByRole("dialog", { name: "Export" });
+  const imagePreview = imageExportDialog.locator('[data-demo-id="org-editor-export-image"]');
+  await expect(imagePreview).toBeVisible();
+  expect(
+    await imagePreview.evaluate((image) => (image as HTMLImageElement).naturalHeight),
+  ).toBeGreaterThan(120);
+  const pngDownloadPromise = page.waitForEvent("download");
+  await imageExportDialog.getByRole("button", { name: "Save", exact: true }).click();
+  const pngDownload = await pngDownloadPromise;
+  expect(pngDownload.suggestedFilename()).toMatch(/\.png$/u);
+  const pngPath = await pngDownload.path();
+  expect(pngPath).not.toBeNull();
+  expect((await readFile(pngPath ?? "")).subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+  await page.keyboard.press("Escape");
+  await page.getByRole("tab", { name: "Units", exact: true }).click();
+  await page.getByText("Platform", { exact: true }).first().click();
+  const unitEmployee = page.locator('[data-demo-id="unit-employee-card"]');
+  await expect(unitEmployee).toContainText("Jordan Reed");
+  await expect(unitEmployee).toContainText("Theta");
+  await expect(unitEmployee.locator('[data-employee-tags-hidden-count="0"]')).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("exports a blank workspace as the public state format", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export workspace" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("radio", { name: /Full workspace/ })).toBeChecked();
+  await expect(dialog.locator('input[value="teams"]')).toBeDisabled();
+  await expect(dialog.locator('input[value="employees"]')).toBeDisabled();
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("org-tools-state.json");
+
+  await assertLocalRequests();
+});
+
+test("downloads all workspace Export formats in order and re-imports the combined document", async ({
+  page,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+
+  const downloads: Array<{
+    fileName: string;
+    content: "employees" | "teams" | "teamsEmployees" | "workspace";
+  }> = [
+    { content: "teams", fileName: "org-tools-teams.json" },
+    { content: "employees", fileName: "org-tools-employees.json" },
+    { content: "teamsEmployees", fileName: "org-tools-teams-employees.json" },
+    { content: "workspace", fileName: "org-tools-state.json" },
+  ];
+  let combinedPath = "";
+
+  for (const expected of downloads) {
+    await page.getByRole("button", { name: "Export", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Export workspace" });
+    expect(
+      await dialog
+        .locator('input[name="save-format"]')
+        .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value)),
+    ).toEqual(["teams", "employees", "teamsEmployees", "workspace"]);
+    await expect(dialog.locator('input[value="workspace"]')).toBeChecked();
+    await dialog.locator(`input[value="${expected.content}"]`).check();
+    const downloadPromise = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: "Download", exact: true }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe(expected.fileName);
+    const filePath = await download.path();
+    expect(filePath).not.toBeNull();
+    const document = JSON.parse(await readFile(filePath ?? "", "utf8")) as {
+      content: string;
+      kind: string;
+    };
+    expect(document.kind).toBe("org-tools-state");
+    expect(document.content).toBe(expected.content);
+    expect(document).not.toHaveProperty("formatVersion");
+    expect(document).not.toHaveProperty("schemaVersion");
+    if (expected.content === "teamsEmployees") combinedPath = filePath ?? "";
+  }
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const importDialog = await openImportDialog(page, combinedPath);
+  await expect(importDialog.getByText("Structured import preview", { exact: true })).toBeVisible();
+  await importDialog.getByRole("button", { name: "Append", exact: true }).click();
+  await page.getByRole("tab", { name: "Units", exact: true }).click();
+  await expect(page.getByText("Platform", { exact: true }).first()).toBeVisible();
+
+  await assertLocalRequests();
+});
+
+test("keeps CSV as a Download output while Import accepts JSON only", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+
+  await expect(page.locator('[data-demo-id="import-file-input"]')).toHaveAttribute(
+    "accept",
+    ".json,application/json",
+  );
+  await page.getByRole("tab", { name: "Download", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add Unit Employees to download", exact: true })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  const settings = page.getByRole("dialog").filter({ hasText: "Download settings" });
+  await expect(settings.getByRole("tab", { name: "CSV", exact: true })).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await settings.getByRole("button", { name: "Download", exact: true }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-export.csv");
+
+  await assertLocalRequests();
+});
+
+test("creates, crops, re-crops, pastes, and removes a local Employee avatar", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await page.getByRole("button", { name: "Create Employee", exact: true }).click();
+  const employeeDialog = page.getByRole("dialog", { name: "Create Employee" });
+  const pngBase64 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=";
+  const pngBuffer = Buffer.from(pngBase64, "base64");
+
+  await employeeDialog.getByLabel("Choose file", { exact: true }).setInputFiles({
+    buffer: Buffer.from("<svg></svg>"),
+    mimeType: "image/svg+xml",
+    name: "avatar.svg",
+  });
+  await expect(employeeDialog.getByText("Choose a PNG, JPEG, or WebP image.")).toBeVisible();
+
+  await employeeDialog.getByLabel("Choose file", { exact: true }).setInputFiles({
+    buffer: pngBuffer,
+    mimeType: "image/png",
+    name: "avatar.png",
+  });
+  let cropDialog = page.getByRole("dialog", { name: "Crop avatar" });
+  await expect(cropDialog).toBeVisible();
+  await cropDialog.getByRole("slider", { name: "Zoom" }).fill("2");
+  await cropDialog.getByRole("button", { name: "Use avatar", exact: true }).click();
+  const preview = employeeDialog.locator('[data-demo-id="employee-avatar-preview"]');
+  await expect(preview).toHaveAttribute("src", /^data:image\/webp;base64,/);
+  expect(
+    await preview.evaluate(async (element) => {
+      const image = element as HTMLImageElement;
+      await image.decode();
+      return [image.naturalWidth, image.naturalHeight];
+    }),
+  ).toEqual([512, 512]);
+
+  const croppedSource = await preview.getAttribute("src");
+  await employeeDialog.getByRole("button", { name: "Adjust crop", exact: true }).click();
+  cropDialog = page.getByRole("dialog", { name: "Crop avatar" });
+  await cropDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(preview).toHaveAttribute("src", croppedSource ?? "");
+
+  await employeeDialog.locator("form").evaluate((form, encodedImage) => {
+    const bytes = Uint8Array.from(atob(encodedImage), (character) => character.charCodeAt(0));
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "pasted.png", { type: "image/png" }));
+    form.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData: transfer }));
+  }, pngBase64);
+  cropDialog = page.getByRole("dialog", { name: "Crop avatar" });
+  await expect(cropDialog).toBeVisible();
+  await cropDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await page.evaluate((encodedImage) => {
+    const bytes = Uint8Array.from(atob(encodedImage), (character) => character.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "image/png" });
+    Object.defineProperty(navigator.clipboard, "read", {
+      configurable: true,
+      value: async () => [{ getType: async () => blob, types: ["image/png"] }],
+    });
+  }, pngBase64);
+  await employeeDialog.getByRole("button", { name: "Paste image", exact: true }).click();
+  cropDialog = page.getByRole("dialog", { name: "Crop avatar" });
+  await cropDialog.getByRole("button", { name: "Use avatar", exact: true }).click();
+  await employeeDialog.getByLabel("First name", { exact: true }).fill("Riley");
+  await employeeDialog.getByRole("button", { name: "Create", exact: true }).click();
+
+  await page.locator('[data-demo-id="employee-edit-button"]').click();
+  const editDialog = page.getByRole("dialog", { name: "Edit Employee" });
+  await expect(editDialog.locator('[data-demo-id="employee-avatar-preview"]')).toHaveAttribute(
+    "src",
+    /^data:image\/webp;base64,/,
+  );
+  await editDialog.getByRole("button", { name: "Remove avatar", exact: true }).click();
+  await expect(editDialog.locator('[data-demo-id="employee-avatar-preview"]')).toHaveCount(0);
+  await editDialog.getByRole("button", { name: "Save", exact: true }).click();
+
+  await assertLocalRequests();
+});
+
+test("atomically opens a complete synthetic workspace", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+
+  await expect(page.getByText("Platform", { exact: true }).first()).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("renders safe profile links, birthdays, and dated tag events", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  const profileLink = page.getByRole("link", { name: "Avery Stone", exact: true }).first();
+  await expect(profileLink).toHaveAttribute("href", "https://example.test/profiles/avery-stone");
+  await expect(profileLink).toHaveAttribute("target", "_blank");
+  await expect(profileLink).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(profileLink).toHaveAttribute("referrerpolicy", "no-referrer");
+
+  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
+  await expect(page.getByText("Employee Calendar", { exact: true })).toBeVisible();
+  const julyBirthday = page.locator('[data-calendar-date="2026-07-22"]');
+  await expect(julyBirthday).toHaveRole("button");
+  await julyBirthday.click();
+  await expect(page.getByRole("dialog", { name: /July 22, 2026/ })).toContainText("Jordan Reed");
+  await page
+    .getByRole("dialog", { name: /July 22, 2026/ })
+    .getByRole("button", { name: "Close" })
+    .click();
+  await page
+    .locator('[data-demo-id="dated-tag-cloud"]')
+    .getByRole("button", { name: /Operations/ })
+    .click();
+  const tagDialog = page.getByRole("dialog", { name: "Operations" });
+  await expect(tagDialog).toContainText("Morgan Park");
+  await expect(tagDialog).toContainText("Past");
+
+  await assertLocalRequests();
+});
+
+test("keeps Calendar navigation in the header and fits July at 1280 by 720", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
+
+  const navigation = page.locator('[data-demo-id="calendar-header-navigation"]');
+  await expect(navigation).toContainText("July 2026");
+  await expect(navigation.getByRole("button")).toHaveText(["Previous", "Next"]);
+  const layout = await page.locator('[data-demo-id="calendar-scroll-area"]').evaluate((element) => {
+    const grid = element.querySelector('[data-demo-id="calendar-month-grid"]');
+    if (!(grid instanceof HTMLElement)) throw new Error("Calendar grid is unavailable.");
+    const area = element as HTMLElement;
+    return {
+      gridBottom: grid.getBoundingClientRect().bottom,
+      gridRight: grid.getBoundingClientRect().right,
+      scrollBottom: area.getBoundingClientRect().bottom,
+      scrollHeight: area.scrollHeight,
+      scrollRight: area.getBoundingClientRect().right,
+      scrollWidth: area.scrollWidth,
+      visibleHeight: area.clientHeight,
+      visibleWidth: area.clientWidth,
+    };
+  });
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.visibleWidth);
+  expect(layout.scrollHeight).toBeLessThanOrEqual(layout.visibleHeight);
+  expect(layout.gridRight).toBeLessThanOrEqual(layout.scrollRight);
+  expect(layout.gridBottom).toBeLessThanOrEqual(layout.scrollBottom);
+
+  for (let index = 0; index < 6; index += 1) {
+    await navigation.getByRole("button", { name: "Next", exact: true }).click();
+  }
+  await expect(navigation).toContainText("January 2027");
+
+  await assertLocalRequests();
+});
+
+test("edits and clears a dated tag from quick and full Employee editors", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+
+  await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
+  const tagPopover = page.locator('[data-demo-id="employees-tag-picker-popover"]');
+  await expect(tagPopover.locator('input[type="date"]')).toHaveCount(0);
+  await tagPopover.getByRole("button", { name: "Date for tag Remote" }).click();
+  const quickDateInput = page.locator('input[type="date"][aria-label="Date for tag Remote"]');
+  await expect(quickDateInput).toHaveValue("2026-08-12");
+  await quickDateInput.fill("2026-08-15");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+
+  await page.locator('[data-demo-id="employee-edit-button"]').first().click();
+  let employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
+  await expect(employeeDialog.locator('input[type="date"]')).toHaveCount(0);
+  await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
+  const employeeTagDate = page.locator('input[type="date"][aria-label="Date for tag Remote"]');
+  await expect(employeeTagDate).toHaveValue("2026-08-15");
+  await page.getByRole("button", { name: "Clear date", exact: true }).click();
+  await employeeDialog.getByRole("button", { name: "Save", exact: true }).click();
+
+  await page.locator('[data-demo-id="employee-edit-button"]').first().click();
+  employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
+  await expect(employeeDialog.locator('input[type="date"]')).toHaveCount(0);
+  await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
+  await expect(page.locator('input[type="date"][aria-label="Date for tag Remote"]')).toHaveValue(
+    "",
+  );
+  await page.keyboard.press("Escape");
+  await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await assertLocalRequests();
+});
+
+test("adds a tag and applies one date through the bulk Org Editor menu", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+
+  const productUnit = page.locator(
+    '[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]',
+  );
+  const rows = productUnit.locator("[data-org-editor-employee-row]");
+  await expect(rows).toHaveCount(2);
+  await rows.nth(0).click();
+  await rows.nth(1).click({ modifiers: ["Control"] });
+  await rows.nth(1).click({ button: "right" });
+  const contextMenu = page.locator("[data-org-editor-context-menu]");
+  await contextMenu.locator('[data-demo-id="org-editor-employee-tags-action"]').hover();
+  const tagPanel = page.locator('[data-demo-id="org-editor-employee-tags-panel"]');
+  await expect(tagPanel).toBeVisible();
+  await tagPanel.getByRole("checkbox", { name: "Remote", exact: true }).click();
+  await tagPanel.getByRole("button", { name: "Date for tag Remote" }).click();
+  await page.locator('input[type="date"][aria-label="Date for tag Remote"]').fill("2026-08-18");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await page.locator('[data-demo-id="employee-edit-button"]').nth(3).click();
+  const employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
+  await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
+  await expect(page.locator('input[type="date"][aria-label="Date for tag Remote"]')).toHaveValue(
+    "2026-08-18",
+  );
+  await page.keyboard.press("Escape");
+  await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await assertLocalRequests();
+});
+
+test("maps and imports synthetic JSON Employees without Unit assignments", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+
+  const dialog = await openImportDialog(page, syntheticEmployeesJsonPath);
+  await expect(dialog.getByText("Field mapping", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("2 new", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Import 2 Employees", exact: true }).click();
+  await expect(dialog).toBeHidden();
+
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("discovers the nested Employee collection in synthetic JSON", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+
+  const dialog = await openImportDialog(page, syntheticEmployeesJsonPath);
+  await expect(dialog.getByText("$.records (2 rows)", { exact: true }).first()).toBeVisible();
+  await expect(dialog.getByText("Field mapping", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("2 new", { exact: true })).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await assertLocalRequests();
+});

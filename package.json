@@ -1,0 +1,52 @@
+{
+  "name": "org-tools",
+  "version": "0.1.0",
+  "description": "A private-by-design organization editor that runs entirely in the browser.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iwonz/org-tools.git"
+  },
+  "homepage": "https://github.com/iwonz/org-tools#readme",
+  "bugs": {
+    "url": "https://github.com/iwonz/org-tools/issues"
+  },
+  "scripts": {
+    "build": "pnpm --filter @org-tools/ui build",
+    "build:ui": "pnpm --filter @org-tools/ui build",
+    "dev": "pnpm --filter @org-tools/ui dev",
+    "dev:ui": "pnpm --filter @org-tools/ui dev",
+    "format": "biome format --write .",
+    "fixture:performance": "node scripts/generate-performance-fixture.mjs",
+    "lint": "biome check .",
+    "public:check": "node scripts/check-public-safety.mjs",
+    "screenshots:generate": "pnpm build && pnpm --filter @org-tools/screenshots generate",
+    "spec": "node scripts/run-openspec.mjs",
+    "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
+    "start": "pnpm --filter @org-tools/ui start",
+    "test": "pnpm test:unit",
+    "test:browser": "pnpm build && pnpm --filter @org-tools/screenshots smoke",
+    "test:unit": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/screenshots typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@fission-ai/openspec": "1.5.0",
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "pnpm": {
+    "overrides": {
+      "@radix-ui/react-dismissable-layer": "1.1.19",
+      "@radix-ui/react-focus-guards": "1.1.6",
+      "@radix-ui/react-focus-scope": "1.1.15"
+    }
+  }
+}

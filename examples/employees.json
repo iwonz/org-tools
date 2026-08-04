@@ -1,0 +1,37 @@
+{
+  "generatedFor": "org-tools import example",
+  "records": [
+    {
+      "name": {
+        "given": "Avery",
+        "family": "Stone"
+      },
+      "contact": {
+        "email": "avery.stone@example.test",
+        "phone": "+1-202-555-0101"
+      },
+      "account": {
+        "username": "avery.stone",
+        "profile": "https://example.test/profiles/avery-stone"
+      },
+      "birthday": "03-14",
+      "tags": ["Design", "Remote"]
+    },
+    {
+      "name": {
+        "given": "Jordan",
+        "family": "Reed"
+      },
+      "contact": {
+        "email": "jordan.reed@example.test",
+        "phone": "+1-202-555-0102"
+      },
+      "account": {
+        "username": "jordan.reed",
+        "profile": "https://example.test/profiles/jordan-reed"
+      },
+      "birthday": "07-22",
+      "tags": ["Engineering", "Mentor"]
+    }
+  ]
+}

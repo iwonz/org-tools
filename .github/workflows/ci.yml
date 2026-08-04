@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm --filter @org-tools/screenshots exec playwright install --with-deps chromium
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Validate OpenSpec
+        run: pnpm spec:validate
+
+      - name: Build static application
+        run: pnpm build
+
+      - name: Browser smoke tests
+        run: pnpm --filter @org-tools/screenshots smoke
+
+      - name: Generate screenshot gallery
+        run: pnpm --filter @org-tools/screenshots generate
+
+      - name: Check publication safety
+        run: pnpm public:check
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: org-tools-screenshots
+          path: docs/screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
