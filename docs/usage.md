@@ -5,6 +5,11 @@ accessible monochrome text-only Org Tools wordmark without an intervening icon a
 **Import** and **Export** actions; the application does not autosave. Empty product tabs show
 one focused next action and omit controls that cannot yet do useful work.
 
+The shell, populated surface headers, dialogs, local sections, and repeated list rows use spacing,
+background grouping, and interaction feedback instead of decorative horizontal rules. Borders
+remain on controls, selectable cards, dialogs, calendar cells, independent split panes, hierarchy
+guides, focus states, and destructive states where they communicate an actual boundary.
+
 ## Interface language
 
 The interface supports English and Russian. On first use, org-tools selects the first supported
@@ -113,9 +118,9 @@ repeat annually, with February 29 shown on February 28 in non-leap years; dated 
 their exact date. Day dialogs separate birthdays and dated tags. The bounded tag cloud opens a
 virtualized dialog with current and future events ascending and past events descending. Analytics
 keeps six sortable, virtualized sections and drill-down dialogs on one visually continuous page.
-Only the surface header has a structural divider; section titles and rows are borderless and use
-whitespace plus hover or focus feedback. Short sections follow their content height, while long
-sections expose eight rows before scrolling internally.
+The surface header, section titles, and rows are borderless and use whitespace plus hover or focus
+feedback. Short sections follow their content height, while long sections expose eight rows before
+scrolling internally.
 
 The generic Download surface keeps `tags` as labels. Selecting `tagDates` adds `{tag, date}` objects in
 JSON and `tag=YYYY-MM-DD` values in CSV or templates.

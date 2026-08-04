@@ -378,7 +378,7 @@ export const AnalyticsTab = observer(() => {
         data-demo-id="analytics-tab"
       >
         <div
-          className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-background px-4 py-3"
           data-demo-id="analytics-header"
         >
           <div className="min-w-0">

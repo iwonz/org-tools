@@ -197,7 +197,7 @@ function TagEventSection({ events }: { events: DatedTagEvent[] }) {
           if (!event) return null;
           return (
             <div
-              className="absolute left-0 top-0 flex w-full items-center gap-3 border-b px-1 py-2"
+              className="absolute left-0 top-0 flex w-full items-center gap-3 px-1 py-2"
               key={row.key}
               style={{ height: row.size, transform: `translateY(${row.start}px)` }}
             >
@@ -291,7 +291,10 @@ export const CalendarTab = observer(() => {
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20"
         data-demo-id="calendar-tab"
       >
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3">
+        <div
+          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-background px-4 py-3"
+          data-demo-id="calendar-header"
+        >
           <div className="min-w-0">
             <div className="text-sm font-medium">{t("Employee Calendar")}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
@@ -320,7 +323,7 @@ export const CalendarTab = observer(() => {
         {datedTagGroups.length > 0 && (
           <div
             className={cn(
-              "flex shrink-0 flex-wrap gap-1.5 overflow-auto border-b bg-background px-3 py-2",
+              "flex shrink-0 flex-wrap gap-1.5 overflow-auto bg-background px-3 py-2",
               cloudExpanded ? "max-h-16" : "max-h-[4.25rem]",
             )}
             data-demo-id="dated-tag-cloud"

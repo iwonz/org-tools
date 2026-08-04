@@ -51,7 +51,6 @@ type SelectedEmployeesPanelProps = {
   visibleRemoveDataDemoId?: string;
   visibleRemoveLabel?: string;
   visibleRemoveSuffix?: (count: number) => ReactNode;
-  withHeaderBorder?: boolean;
 };
 
 export function SelectedEmployeesPanel({
@@ -92,7 +91,6 @@ export function SelectedEmployeesPanel({
   visibleRemoveDataDemoId,
   visibleRemoveLabel,
   visibleRemoveSuffix,
-  withHeaderBorder = true,
 }: SelectedEmployeesPanelProps) {
   const t = useUiText();
   const countText = useCountText();
@@ -110,9 +108,7 @@ export function SelectedEmployeesPanel({
   return (
     <div className={className} data-demo-id={panelDataDemoId}>
       {showHeader && (
-        <div
-          className={cn("grid shrink-0 gap-3 p-3", withHeaderBorder && "border-b", headerClassName)}
-        >
+        <div className={cn("grid shrink-0 gap-3 p-3", headerClassName)}>
           {hasSearchContent && (
             <EmployeeSearchInput
               ariaLabel={t("Search Employees")}

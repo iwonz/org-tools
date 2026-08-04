@@ -1098,10 +1098,7 @@ function OrgEditorNode({
       >
         <HiOutlinePlus className="size-4" />
       </Button>
-      <div
-        className={cn("grid shrink-0 gap-1.5 p-2", shouldRenderEmployeeList && "border-b")}
-        style={{ height: ORG_EDITOR_UNIT_HEADER_HEIGHT }}
-      >
+      <div className="grid shrink-0 gap-1.5 p-2" style={{ height: ORG_EDITOR_UNIT_HEADER_HEIGHT }}>
         <div className="flex items-center gap-2">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground">
             <HiOutlineBuildingOffice2 className="size-4" />

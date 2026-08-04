@@ -180,7 +180,8 @@ function ImportPreview({ plan }: { plan: EmployeeImportPlan }) {
 
           return (
             <div
-              className="absolute left-0 top-0 w-full border-b px-3 py-2 last:border-b-0"
+              className="absolute left-0 top-0 w-full px-3 py-2"
+              data-demo-id="ordinary-import-preview-row"
               data-index={virtualRow.index}
               key={virtualRow.key}
               ref={virtualizer.measureElement}
@@ -238,7 +239,10 @@ const MappingSelect = observer(
     const examples = selectedField ? session.getSourceExamples(selectedField) : [];
 
     return (
-      <div className="grid grid-cols-[minmax(8rem,0.65fr)_minmax(12rem,1fr)_minmax(10rem,1.2fr)] items-center gap-3 border-b py-2 last:border-b-0">
+      <div
+        className="grid grid-cols-[minmax(8rem,0.65fr)_minmax(12rem,1fr)_minmax(10rem,1.2fr)] items-center gap-3 py-2"
+        data-demo-id="employee-mapping-row"
+      >
         <Label className="text-sm">
           {t(EMPLOYEE_IMPORT_TARGET_DEFINITIONS[target].label as UiTextKey)}
         </Label>
@@ -282,7 +286,10 @@ const TeamMappingSelect = observer(
     const value = selectedIndex < 0 ? UNMAPPED_SELECT_VALUE : `field-${selectedIndex}`;
     const examples = selectedField ? session.getSourceExamples(selectedField) : [];
     return (
-      <div className="grid grid-cols-[minmax(8rem,0.65fr)_minmax(12rem,1fr)_minmax(10rem,1.2fr)] items-center gap-3 border-b py-2 last:border-b-0">
+      <div
+        className="grid grid-cols-[minmax(8rem,0.65fr)_minmax(12rem,1fr)_minmax(10rem,1.2fr)] items-center gap-3 py-2"
+        data-demo-id="team-mapping-row"
+      >
         <Label className="text-sm">
           {t(TEAM_IMPORT_TARGET_DEFINITIONS[target].label as UiTextKey)}
         </Label>
@@ -544,10 +551,7 @@ export const ImportDialog = observer(
                     </div>
                   </div>
                   {session.stateContent !== "workspace" && (
-                    <section
-                      className="mt-2 grid gap-3 border-t pt-4"
-                      data-demo-id="state-import-mode"
-                    >
+                    <section className="mt-5 grid gap-3" data-demo-id="state-import-mode">
                       <div>
                         <h3 className="text-sm font-semibold">{t("Import mode")}</h3>
                         <p className="mt-1 text-xs text-muted-foreground">

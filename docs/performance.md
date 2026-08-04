@@ -20,8 +20,8 @@ Employee lists, Unit-aware pickers, long filter options, and import previews mus
 Use stable item keys and remeasure rows when section composition or filters change. Components must
 receive resolved data and contexts through props rather than observing the whole organization store.
 
-Analytics keeps six bounded virtualized lists, but lays them out with spacing and thin section
-dividers instead of a nested border lattice. Calendar uses seven fluid columns, four or five
+Analytics keeps six bounded virtualized lists, but lays them out with spacing instead of a nested
+border lattice or section rules. Calendar uses seven fluid columns, four or five
 adaptive rows, at most two inline tag events per day, and a bounded two-line tag cloud so a 31-day
 month fits the maintained 1280-by-720 desktop viewport. Smaller viewports retain local overflow as a
 safe fallback. Per-tag event dialogs virtualize upcoming and past rows.

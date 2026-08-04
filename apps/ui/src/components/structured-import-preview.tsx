@@ -344,7 +344,7 @@ export function StructuredImportPreview({
                     </div>
                   )}
                   {row.kind === "employeeSection" && (
-                    <div className="flex items-center justify-between gap-3 border-t px-1 pb-1 pt-3 text-xs font-semibold text-muted-foreground">
+                    <div className="flex items-center justify-between gap-3 px-1 pb-1 pt-3 text-xs font-semibold text-muted-foreground">
                       <span>
                         {row.title === "all"
                           ? t("Employees in this import")

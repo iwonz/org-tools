@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 
 import {
   expectLocalRequestsOnly,
@@ -12,6 +12,15 @@ import {
   syntheticWorkspacePath,
 } from "./helpers.js";
 
+async function expectNoHorizontalRule(locator: Locator) {
+  expect(
+    await locator.evaluate((element) => ({
+      bottom: window.getComputedStyle(element).borderBottomWidth,
+      top: window.getComputedStyle(element).borderTopWidth,
+    })),
+  ).toEqual({ bottom: "0px", top: "0px" });
+}
+
 test("opens a blank workspace with all product surfaces", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -19,6 +28,9 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   });
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankWorkspace(page);
+
+  await expectNoHorizontalRule(page.locator('[data-demo-id="app-header"]'));
+  await expectNoHorizontalRule(page.locator('[data-demo-id="product-navigation"]'));
 
   const wordmark = page.getByRole("img", { name: "Org Tools", exact: true });
   await expect(wordmark).toBeVisible();
@@ -102,7 +114,10 @@ test("opens the chooser before the dialog and maps ordinary JSON without format 
   await fileChooser.setFiles(syntheticEmployeesJsonPath);
   const dialog = page.getByRole("dialog", { name: "Import" });
   await expect(dialog).toBeVisible();
+  await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-header"]'));
+  await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-footer"]'));
   await expect(dialog.getByText("Field mapping", { exact: true })).toBeVisible();
+  await expectNoHorizontalRule(dialog.locator('[data-demo-id="employee-mapping-row"]').first());
   await expect(dialog.getByRole("tab")).toHaveCount(0);
   await expect(dialog.getByRole("radiogroup", { name: "Import as" })).toContainText("Teams");
   await expect(dialog.getByRole("radiogroup", { name: "Import as" })).toContainText("Employees");
@@ -138,8 +153,13 @@ test("selects and appends Employees from a recognized workspace state", async ({
   await expect(dialog.locator('[data-demo-id="structured-preview-employee-card"]')).toHaveCount(4);
   const importMode = dialog.locator('[data-demo-id="state-import-mode"]');
   await expect(importMode.getByText("Import mode", { exact: true })).toBeVisible();
+  await expectNoHorizontalRule(importMode);
   await expect(importMode.locator('[data-demo-id="state-operation-append"]')).toHaveClass(
     /ring-primary/u,
+  );
+  await expect(importMode.locator('[data-demo-id="state-operation-append"]')).toHaveCSS(
+    "border-top-width",
+    "1px",
   );
   await expect(importMode.locator('[data-demo-id="state-operation-replace"]')).toHaveClass(
     /border-destructive/u,
@@ -148,7 +168,9 @@ test("selects and appends Employees from a recognized workspace state", async ({
     dialog.getByRole("radiogroup", { name: "Import operation" }).getByRole("radio").first(),
   ).toBeChecked();
   await dialog.getByRole("button", { name: "Append", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("Import merged into Main.");
+  const importNotice = page.getByRole("status");
+  await expect(importNotice).toHaveText("Import merged into Main.");
+  await expectNoHorizontalRule(importNotice);
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
@@ -195,6 +217,35 @@ test("previews nested recognized Teams with Employee cards and cancels without m
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("keeps borderless Import chrome contained at 390 pixels", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  const dialog = await openImportDialog(page, syntheticWorkspacePath);
+  await dialog.getByRole("radio", { name: "Teams + Employees", exact: true }).check();
+
+  const append = dialog.locator('[data-demo-id="state-operation-append"]');
+  const replace = dialog.locator('[data-demo-id="state-operation-replace"]');
+  const appendBox = await append.boundingBox();
+  const replaceBox = await replace.boundingBox();
+  expect(appendBox).not.toBeNull();
+  expect(replaceBox).not.toBeNull();
+  expect(replaceBox?.y ?? 0).toBeGreaterThan((appendBox?.y ?? 0) + (appendBox?.height ?? 0) - 1);
+  await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-header"]'));
+  await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-footer"]'));
+  await expect(dialog.locator('[data-slot="dialog-footer"]')).toBeVisible();
+  expect(await dialog.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+    await dialog.evaluate((element) => element.clientWidth),
+  );
+  expect(
+    await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => element.scrollHeight),
+  ).toBeGreaterThan(
+    await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => element.clientHeight),
+  );
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await assertLocalRequests();
 });
 
@@ -522,6 +573,13 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
   await replaceWithSyntheticWorkspace(page);
 
   await expect(page.getByText("Platform", { exact: true }).first()).toBeVisible();
+  await page.getByRole("tab", { name: "Units", exact: true }).click();
+  await expect(page.locator('[data-demo-id="units-tree-panel"]')).toHaveCSS(
+    "border-right-width",
+    "1px",
+  );
+  await expectNoHorizontalRule(page.locator('[data-demo-id="units-tree-header"]'));
+  await expectNoHorizontalRule(page.locator('[data-demo-id="units-employee-header"]'));
   await assertLocalRequests();
 });
 
@@ -530,6 +588,8 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await openBlankWorkspace(page);
   await replaceWithSyntheticWorkspace(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
+
+  await expectNoHorizontalRule(page.locator('[data-demo-id="employees-header"]'));
 
   const summary = page.locator('[data-demo-id="employees-summary"]');
   await expect(summary).toContainText("Employees");
@@ -545,6 +605,8 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
 
   await page.locator('[data-demo-id="employee-create-button"]').click();
   const createDialog = page.getByRole("dialog", { name: "Create Employee" });
+  await expectNoHorizontalRule(createDialog.locator('[data-slot="dialog-header"]'));
+  await expectNoHorizontalRule(createDialog.locator('[data-slot="dialog-footer"]'));
   await createDialog.getByLabel("First name", { exact: true }).fill("Taylor");
   await createDialog.getByLabel("Last name", { exact: true }).fill("Tester");
   await createDialog.getByRole("button", { name: "Create", exact: true }).click();
@@ -552,6 +614,9 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
 
   const createdEmployee = page.locator("article").filter({ hasText: "Taylor Tester" });
   await createdEmployee.getByRole("button", { name: "Delete", exact: true }).click();
+  const deleteDialog = page.getByRole("alertdialog");
+  await expectNoHorizontalRule(deleteDialog.locator('[data-slot="alert-dialog-header"]'));
+  await expectNoHorizontalRule(deleteDialog.locator('[data-slot="alert-dialog-footer"]'));
   await page.locator('[data-demo-id="confirm-delete-employee"]').click();
   await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("4 Employees");
   await assertLocalRequests();
@@ -564,7 +629,7 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
 
   const analyticsHeader = page.locator('[data-demo-id="analytics-header"]');
-  await expect(analyticsHeader).toHaveCSS("border-bottom-width", "1px");
+  await expectNoHorizontalRule(analyticsHeader);
   const positions = page.locator('[data-demo-id="analytics-positions"]');
   await expect(positions).toHaveAttribute("data-analytics-entry-count", "4");
   await expect(positions).toHaveAttribute("data-analytics-visible-rows", "4");
@@ -694,6 +759,12 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   await page.getByRole("tab", { name: "Calendar", exact: true }).click();
 
   const navigation = page.locator('[data-demo-id="calendar-header-navigation"]');
+  await expectNoHorizontalRule(page.locator('[data-demo-id="calendar-header"]'));
+  await expectNoHorizontalRule(page.locator('[data-demo-id="dated-tag-cloud"]'));
+  await expect(page.locator('[data-calendar-date="2026-07-01"]')).toHaveCSS(
+    "border-top-width",
+    "1px",
+  );
   await expect(navigation).toContainText("July 2026");
   await expect(navigation.getByRole("button")).toHaveText(["Previous", "Next"]);
   const layout = await page.locator('[data-demo-id="calendar-scroll-area"]').evaluate((element) => {

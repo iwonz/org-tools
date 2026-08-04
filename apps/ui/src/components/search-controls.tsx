@@ -242,7 +242,7 @@ function EmployeeFilterOptionList<TId extends UnitId>({
 
           return (
             <div
-              className="absolute left-0 top-0 flex w-full items-start gap-2 border-b px-2 py-1.5 text-sm transition-colors last:border-b-0 hover:bg-accent/40"
+              className="absolute left-0 top-0 flex w-full items-start gap-2 px-2 py-1.5 text-sm transition-colors hover:bg-accent/40"
               data-filter-option
               data-filter-option-index={virtualRow.index}
               key={String(option.id)}
@@ -605,7 +605,7 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
           }}
           sideOffset={6}
         >
-          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-popover px-3 py-2">
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-popover px-3 py-2">
             <div className="text-sm font-medium">{t("Employee filters")}</div>
             {activeFilterCount > 0 && (
               <Button

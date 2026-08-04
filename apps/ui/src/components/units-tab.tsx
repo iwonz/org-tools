@@ -356,7 +356,10 @@ export const UnitsTab = observer(() => {
         className="flex min-h-0 min-w-0 flex-col border-r bg-background"
         data-demo-id="units-tree-panel"
       >
-        <div className="flex min-h-16 shrink-0 items-center gap-2 border-b px-3 py-2">
+        <div
+          className="flex min-h-16 shrink-0 items-center gap-2 px-3 py-2"
+          data-demo-id="units-tree-header"
+        >
           {showUnitSearch && (
             <UnitSearchInput
               ariaLabel={t("Search Units by name")}
@@ -494,7 +497,7 @@ export const UnitsTab = observer(() => {
         className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background"
         data-demo-id="units-employee-panel"
       >
-        <div className="grid shrink-0 gap-3 border-b p-3">
+        <div className="grid shrink-0 gap-3 p-3" data-demo-id="units-employee-header">
           <div className="min-w-0">
             <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
             <nav

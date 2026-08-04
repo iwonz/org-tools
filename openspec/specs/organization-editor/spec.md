@@ -58,10 +58,9 @@ The application SHALL use nullable `MM-DD` birthdays for Calendar and birthday a
 navigate a selected month and year across year boundaries, SHALL project February 29 birthdays to
 February 28 in non-leap years, SHALL include exact-date global Main Employee tag events, SHALL fit a
 31-day grid and bounded tag cloud without page scroll at the maintained 1280 by 720 desktop
-viewport, and SHALL render Analytics as one continuous surface with a single header divider,
-borderless content-sized groups, and no outer card matrix or repeated row rules. Each Analytics
-group SHALL show at most eight estimated 42 px rows before using its existing virtualized internal
-scroll container.
+viewport, and SHALL render Analytics as one continuous borderless surface with content-sized groups,
+no outer card matrix, and no header or repeated row rules. Each Analytics group SHALL show at most
+eight estimated 42 px rows before using its existing virtualized internal scroll container.
 
 #### Scenario: Birthday display
 - **WHEN** an Employee has a valid birthday and the calendar displays the corresponding year and month
@@ -74,7 +73,7 @@ scroll container.
 #### Scenario: Continuous Analytics surface
 - **WHEN** Analytics is ready
 - **THEN** all six sortable virtualized groups and drill-down actions remain available in two desktop columns and one narrow-screen column
-- **AND** whitespace plus hover or focus feedback separates borderless group rows while only the surface header retains a horizontal divider
+- **AND** whitespace plus hover or focus feedback separates the surface header, groups, and borderless rows without horizontal divider lines
 
 #### Scenario: Short Analytics group
 - **WHEN** an Analytics group contains fewer than eight entries

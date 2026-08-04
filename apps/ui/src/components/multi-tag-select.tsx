@@ -167,7 +167,7 @@ export function MultiTagSelect<Id extends number | string>({
             ) : (
               visibleOptions.map((option) => (
                 <div
-                  className="flex items-start gap-2 border-b px-3 py-2 transition-colors last:border-b-0 hover:bg-accent/40"
+                  className="flex items-start gap-2 px-3 py-2 transition-colors hover:bg-accent/40"
                   key={String(option.id)}
                 >
                   <Checkbox

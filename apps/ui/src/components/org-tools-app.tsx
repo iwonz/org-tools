@@ -59,7 +59,10 @@ const LoadedApp = observer(() => {
   return (
     <>
       <main className="flex h-dvh w-dvw flex-col overflow-hidden bg-background text-foreground">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4">
+        <header
+          className="flex h-14 shrink-0 items-center justify-between gap-3 px-4"
+          data-demo-id="app-header"
+        >
           <div
             aria-label="Org Tools"
             className="shrink-0 text-lg font-extrabold tracking-tight text-foreground"
@@ -105,7 +108,8 @@ const LoadedApp = observer(() => {
         </header>
         {error && (
           <div
-            className="shrink-0 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive"
+            className="shrink-0 bg-destructive/10 px-4 py-2 text-sm text-destructive"
+            data-demo-id="app-error"
             role="alert"
           >
             {messageText(error)}
@@ -113,7 +117,8 @@ const LoadedApp = observer(() => {
         )}
         {notice && (
           <div
-            className="shrink-0 border-b bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
+            className="shrink-0 bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
+            data-demo-id="app-notice"
             role="status"
           >
             {"kind" in notice && notice.kind === "import"
@@ -140,7 +145,10 @@ const LoadedApp = observer(() => {
           }}
           value={store.activeTab}
         >
-          <div className="flex h-14 shrink-0 items-center border-b bg-background px-4">
+          <div
+            className="flex h-14 shrink-0 items-center bg-background px-4"
+            data-demo-id="product-navigation"
+          >
             <TabsList>
               <TabsTrigger data-demo-id="tab-units" value="units">
                 <HiOutlineFolder />

@@ -71,7 +71,10 @@ export const EmployeesTab = observer(() => {
       data-demo-id="employees-tab"
     >
       {sortedEmployees.length > 0 && (
-        <div className="flex min-h-16 shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3">
+        <div
+          className="flex min-h-16 shrink-0 flex-wrap items-center gap-3 px-4 py-3"
+          data-demo-id="employees-header"
+        >
           <div className="min-w-fit shrink-0" data-demo-id="employees-summary">
             <div className="text-sm font-medium">{t("Employees")}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">

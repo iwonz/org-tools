@@ -71,8 +71,9 @@ The Calendar fixture includes exact dated-tag events and its compact cloud. Scop
 cards, nested Team and Employee previews, generic mapping, and localized empty states are also covered by browser assertions. Every gallery
 capture uses the deterministic English locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
-shows the total catalog count, and the Analytics capture verifies borderless content-sized groups
-with whitespace between sections.
+shows the total catalog count. The gallery verifies borderless shell, surface and dialog chrome,
+borderless content-sized Analytics groups, whitespace between sections, and preserved outlines for
+controls, selection cards, calendars, split panes, hierarchy guides, focus, and destructive states.
 
 ## Regenerate
 
@@ -93,4 +94,6 @@ four scoped workspace Export downloads, state projection append/replace, local a
 hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
 It also verifies silent replacement completion, localized Employee total and match counts, reactive
-count changes, and Analytics dynamic height, row cap, sorting, drill-down, and border behavior.
+count changes, borderless normal and destructive dialog chrome, a contained 390 px Import layout,
+preserved meaningful outlines, and Analytics dynamic height, row cap, sorting, drill-down, and
+border behavior.

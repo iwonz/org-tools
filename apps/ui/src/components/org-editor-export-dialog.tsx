@@ -596,7 +596,7 @@ export function OrgEditorExportDialog({
                     </div>
                   </div>
 
-                  <div className="grid gap-3 border-t pt-4">
+                  <div className="grid gap-3 pt-2">
                     <div className="grid gap-2">
                       <Label>{t("Employee format")}</Label>
                       <div className="flex min-w-0 flex-wrap gap-2">

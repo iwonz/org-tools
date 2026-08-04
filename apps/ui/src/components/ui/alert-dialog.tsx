@@ -53,7 +53,7 @@ function AlertDialogContent({
 function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("grid gap-1.5 border-b px-5 py-4 text-left", className)}
+      className={cn("grid gap-1.5 bg-background px-5 py-4 text-left", className)}
       data-slot="alert-dialog-header"
       {...props}
     />
@@ -64,7 +64,7 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 border-t px-5 py-4 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2 bg-background px-5 py-4 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="alert-dialog-footer"

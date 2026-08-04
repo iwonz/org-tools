@@ -487,7 +487,7 @@ export const ExportTab = observer(() => {
         >
           <aside className="flex min-h-0 min-w-0 flex-col border-r bg-background">
             {store.orgViewList.length > 1 && (
-              <div className="border-b p-2.5">
+              <div className="p-2.5">
                 <Select
                   onValueChange={(viewId) => {
                     store.selectExportOrgView(viewId);
@@ -721,7 +721,7 @@ export const ExportTab = observer(() => {
             visibleRemoveSuffix={(count) => countText("employees", { count })}
           />
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[70px] items-center justify-center border-t bg-gradient-to-t from-background via-background/90 to-background/0 px-6 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[70px] items-center justify-center bg-gradient-to-t from-background via-background/90 to-background/0 px-6 backdrop-blur-sm">
           <Button
             className="pointer-events-auto h-12 min-w-72 text-base"
             data-demo-id="export-continue-button"

@@ -146,7 +146,7 @@ export function EmployeeTagPickerPanel({
 
               return (
                 <div
-                  className="absolute left-0 top-0 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b px-2 text-xs transition-colors hover:bg-accent"
+                  className="absolute left-0 top-0 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 text-xs transition-colors hover:bg-accent"
                   data-employee-tag-option
                   data-state={
                     checked === "indeterminate"
