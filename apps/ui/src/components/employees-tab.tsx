@@ -34,12 +34,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useUiText } from "@/i18n/use-ui-text";
+import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import { useOrgStore } from "@/stores/org-store-context";
 
 export const EmployeesTab = observer(() => {
   const store = useOrgStore();
   const t = useUiText();
+  const countText = useCountText();
   const units = store.units;
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState(createEmptyEmployeeSearchFilters);
@@ -70,23 +71,37 @@ export const EmployeesTab = observer(() => {
       data-demo-id="employees-tab"
     >
       {sortedEmployees.length > 0 && (
-        <div className="flex min-h-16 shrink-0 items-center justify-end gap-3 border-b px-4 py-3">
-          {sortedEmployees.length > 0 && (
-            <EmployeeSearchInput
-              ariaLabel={t("Search Employees")}
-              className="min-w-0 flex-1"
-              dataDemoId="employees-search"
-              filters={filters}
-              onFiltersChange={setFilters}
-              onValueChange={setQuery}
-              placeholder={t("Search Employees")}
-              positionButtonDemoId="employees-position-filter"
-              positionOptions={units.indexes.positionOptions}
-              positionPopoverDemoId="employees-position-popover"
-              tagOptions={units.indexes.tagOptions}
-              value={query}
-            />
-          )}
+        <div className="flex min-h-16 shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3">
+          <div className="min-w-fit shrink-0" data-demo-id="employees-summary">
+            <div className="text-sm font-medium">{t("Employees")}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              <span data-demo-id="employees-total-count">
+                {countText("employees", { count: sortedEmployees.length })}
+              </span>
+              {hasSearch && (
+                <>
+                  {" "}
+                  <span data-demo-id="employees-match-count">
+                    · {countText("matches", { count: visibleEmployees.length })}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+          <EmployeeSearchInput
+            ariaLabel={t("Search Employees")}
+            className="min-w-56 flex-1"
+            dataDemoId="employees-search"
+            filters={filters}
+            onFiltersChange={setFilters}
+            onValueChange={setQuery}
+            placeholder={t("Search Employees")}
+            positionButtonDemoId="employees-position-filter"
+            positionOptions={units.indexes.positionOptions}
+            positionPopoverDemoId="employees-position-popover"
+            tagOptions={units.indexes.tagOptions}
+            value={query}
+          />
           <Button
             data-demo-id="employee-create-button"
             onClick={() => setIsCreateOpen(true)}

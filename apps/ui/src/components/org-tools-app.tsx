@@ -242,11 +242,7 @@ const LoadedApp = observer(() => {
           );
           if (operation === "replace") setTheme(store.theme);
           setError(null);
-          setNotice(
-            operation === "append"
-              ? uiMessage("Import merged into Main.")
-              : uiMessage("Opened {fileName}.", { fileName: candidate.fileName }),
-          );
+          setNotice(operation === "append" ? uiMessage("Import merged into Main.") : null);
         }}
         initialFile={importFile}
         onOpenChange={(open) => {

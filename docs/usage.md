@@ -19,7 +19,8 @@ persisted types, and export fields remain unchanged.
 ## Product tabs
 
 - **Units** manages the shared Unit hierarchy and effective membership.
-- **Employees** manages the global Employee catalog, tags, and contact fields.
+- **Employees** manages the global Employee catalog, tags, and contact fields. Its populated header
+  shows the total catalog size and adds the visible match count while search or filters are active.
 - **Org Editor** arranges the Main View or an independent custom View on a canvas.
 - **Analytics** summarizes the current organization without sending data elsewhere.
 - **Calendar** combines recurring birthdays with one-time dated Employee tag events.
@@ -50,6 +51,10 @@ current**. Append remaps UUID references, reuses unambiguous Employees without o
 roots to Main, moves the imported layout into free canvas space, and preserves custom Views and UI.
 Partial replace clears the current organization and installs only the selected projection. Full
 workspace always replaces and shows a separate destructive warning.
+
+A successful replacement closes without leaving a global filename banner. Append keeps its
+localized merge summary, and failed operations continue to show their owned error without changing
+the workspace.
 
 Every operation builds and strictly validates a detached complete candidate. Canceling or any
 unknown field, scope mismatch, unsafe value, invalid date, identity conflict, dangling reference, or
@@ -101,8 +106,10 @@ Calendar keeps a selected month and year plus Previous and Next controls in its 
 repeat annually, with February 29 shown on February 28 in non-leap years; dated tags appear only on
 their exact date. Day dialogs separate birthdays and dated tags. The bounded tag cloud opens a
 virtualized dialog with current and future events ascending and past events descending. Analytics
-keeps six sortable, virtualized sections and drill-down dialogs on one visually continuous page
-without card backgrounds or a border matrix.
+keeps six sortable, virtualized sections and drill-down dialogs on one visually continuous page.
+Only the surface header has a structural divider; section titles and rows are borderless and use
+whitespace plus hover or focus feedback. Short sections follow their content height, while long
+sections expose eight rows before scrolling internally.
 
 The generic Download surface keeps `tags` as labels. Selecting `tagDates` adds `{tag, date}` objects in
 JSON and `tag=YYYY-MM-DD` values in CSV or templates.

@@ -139,6 +139,7 @@ test("selects and appends Employees from a recognized workspace state", async ({
     dialog.getByRole("radiogroup", { name: "Import operation" }).getByRole("radio").first(),
   ).toBeChecked();
   await dialog.getByRole("button", { name: "Append", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("Import merged into Main.");
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
@@ -421,6 +422,134 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
   await replaceWithSyntheticWorkspace(page);
 
   await expect(page.getByText("Platform", { exact: true }).first()).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("shows reactive total and filtered Employee counts", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+
+  const summary = page.locator('[data-demo-id="employees-summary"]');
+  await expect(summary).toContainText("Employees");
+  await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("4 Employees");
+  await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
+
+  const search = page.locator('[data-demo-id="employees-search"]');
+  await search.getByRole("searchbox").fill("Avery");
+  await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("4 Employees");
+  await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveText("· 1 match");
+  await search.getByRole("searchbox").fill("");
+  await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
+
+  await page.locator('[data-demo-id="employee-create-button"]').click();
+  const createDialog = page.getByRole("dialog", { name: "Create Employee" });
+  await createDialog.getByLabel("First name", { exact: true }).fill("Taylor");
+  await createDialog.getByLabel("Last name", { exact: true }).fill("Tester");
+  await createDialog.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("5 Employees");
+
+  const createdEmployee = page.locator("article").filter({ hasText: "Taylor Tester" });
+  await createdEmployee.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.locator('[data-demo-id="confirm-delete-employee"]').click();
+  await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("4 Employees");
+  await assertLocalRequests();
+});
+
+test("renders clean content-sized Analytics groups with working drill-down", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+  await page.getByRole("tab", { name: "Analytics", exact: true }).click();
+
+  const analyticsHeader = page.locator('[data-demo-id="analytics-header"]');
+  await expect(analyticsHeader).toHaveCSS("border-bottom-width", "1px");
+  const positions = page.locator('[data-demo-id="analytics-positions"]');
+  await expect(positions).toHaveAttribute("data-analytics-entry-count", "4");
+  await expect(positions).toHaveAttribute("data-analytics-visible-rows", "4");
+  await expect(positions).toHaveCSS("height", "228px");
+  await expect(positions.locator("header")).toHaveCSS("border-bottom-width", "0px");
+  expect(
+    await positions.locator("[data-analytics-row]").evaluateAll((rows) =>
+      rows.map((row) => ({
+        bottom: window.getComputedStyle(row).borderBottomWidth,
+        top: window.getComputedStyle(row).borderTopWidth,
+      })),
+    ),
+  ).toEqual(
+    Array.from({ length: 4 }, () => ({
+      bottom: "0px",
+      top: "0px",
+    })),
+  );
+
+  const firstRow = positions.locator("[data-analytics-row]").first();
+  const restingBackground = await firstRow.evaluate(
+    (row) => window.getComputedStyle(row).backgroundColor,
+  );
+  await firstRow.hover();
+  expect(await firstRow.evaluate((row) => window.getComputedStyle(row).backgroundColor)).not.toBe(
+    restingBackground,
+  );
+
+  const valueHeader = positions.getByRole("columnheader", { name: /Value/u });
+  await valueHeader.getByRole("button", { name: "Value", exact: true }).click();
+  await expect(valueHeader).toHaveAttribute("aria-sort", "ascending");
+  await positions.locator('[data-demo-id="analytics-positions-view-button"]').first().click();
+  const drillDown = page.locator('[data-demo-id="analytics-employees-dialog"]');
+  await expect(drillDown).toBeVisible();
+  await drillDown.getByRole("button", { name: "Close", exact: true }).click();
+
+  const duplicates = page.locator('[data-demo-id="analytics-full-name-duplicates"]');
+  await expect(duplicates).toHaveAttribute("data-analytics-visible-rows", "0");
+  await expect(duplicates).toHaveCSS("height", "124px");
+  await assertLocalRequests();
+});
+
+test("caps long Analytics groups at eight virtualized rows", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  const state = JSON.parse(await readFile(syntheticWorkspacePath, "utf8")) as {
+    employees: Array<Record<string, unknown>>;
+  };
+  const template = state.employees[0];
+  if (!template) throw new Error("Synthetic Employee template is unavailable.");
+  for (let index = 1; index <= 12; index += 1) {
+    state.employees.push({
+      ...template,
+      avatarBase64Url: null,
+      birthday: null,
+      email: `sample-${index}@example.test`,
+      firstName: `Sample${String(index).padStart(2, "0")}`,
+      id: `50000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      lastName: "Employee",
+      profileUrl: null,
+      tags: [],
+      username: `sample-${index}`,
+    });
+  }
+  const dialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "large-analytics-state.json",
+  });
+  await dialog.getByRole("button", { name: "Replace all current", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Analytics", exact: true }).click();
+
+  const firstNames = page.locator('[data-demo-id="analytics-first-names"]');
+  await expect(firstNames).toHaveAttribute("data-analytics-entry-count", "16");
+  await expect(firstNames).toHaveAttribute("data-analytics-visible-rows", "8");
+  await expect(firstNames).toHaveCSS("height", "396px");
+  const scrollArea = page.locator('[data-demo-id="analytics-first-names-scroll-area"]');
+  expect(
+    await scrollArea.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    })),
+  ).toMatchObject({ clientHeight: 368 });
+  expect(await scrollArea.evaluate((element) => element.scrollHeight)).toBeGreaterThan(368);
   await assertLocalRequests();
 });
 

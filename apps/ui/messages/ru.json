@@ -366,7 +366,6 @@
     "Switch to top-to-bottom layout": "Переключить на вертикальную раскладку",
     "{name} will be removed from every Unit in the Org Editor.": "{name} будет удалён из всех команд в редакторе оргструктуры.",
     "An unexpected error occurred.": "Произошла непредвиденная ошибка.",
-    "Opened {fileName}.": "Открыт файл {fileName}.",
     "Workspace state downloaded.": "Состояние рабочей области скачано.",
     "Could not import Employees.": "Не удалось импортировать сотрудников.",
     "Could not read or parse the selected file.": "Не удалось прочитать или разобрать выбранный файл.",

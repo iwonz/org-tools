@@ -70,6 +70,9 @@ machine preferences cannot change gallery copy.
 The Calendar fixture includes exact dated-tag events and its compact cloud. Scoped state choices,
 generic mapping, and localized empty states are also covered by browser assertions. Every gallery
 capture uses the deterministic English locale; targeted Russian desktop checks verify wider labels.
+Populated captures intentionally omit a replacement-import filename banner. The Employees capture
+shows the total catalog count, and the Analytics capture verifies borderless content-sized groups
+with whitespace between sections.
 
 ## Regenerate
 
@@ -89,3 +92,5 @@ monochrome wordmark, absence of locale-provider console errors, the simplified e
 four scoped workspace Export downloads, state projection append/replace, local avatar workflows,
 hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
+It also verifies silent replacement completion, localized Employee total and match counts, reactive
+count changes, and Analytics dynamic height, row cap, sorting, drill-down, and border behavior.

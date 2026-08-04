@@ -366,7 +366,6 @@
     "Switch to top-to-bottom layout": "Switch to top-to-bottom layout",
     "{name} will be removed from every Unit in the Org Editor.": "{name} will be removed from every Unit in the Org Editor.",
     "An unexpected error occurred.": "An unexpected error occurred.",
-    "Opened {fileName}.": "Opened {fileName}.",
     "Workspace state downloaded.": "Workspace state downloaded.",
     "Could not import Employees.": "Could not import Employees.",
     "Could not read or parse the selected file.": "Could not read or parse the selected file.",

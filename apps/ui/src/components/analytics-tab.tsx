@@ -41,6 +41,12 @@ type AnalyticsSortState = {
   key: AnalyticsSortKey;
 };
 
+const ANALYTICS_TITLE_HEIGHT = 28;
+const ANALYTICS_TABLE_HEADER_HEIGHT = 32;
+const ANALYTICS_ROW_HEIGHT = 42;
+const ANALYTICS_MAX_VISIBLE_ROWS = 8;
+const ANALYTICS_EMPTY_BODY_HEIGHT = 96;
+
 const getDefaultSortDirection = (key: AnalyticsSortKey): AnalyticsSortDirection =>
   key === "count" ? "desc" : "asc";
 
@@ -180,6 +186,12 @@ function AnalyticsList({
     virtualRows.length > 0
       ? rowVirtualizer.getTotalSize() - (virtualRows[virtualRows.length - 1]?.end ?? 0)
       : 0;
+  const visibleRowCount = Math.min(sortedEntries.length, ANALYTICS_MAX_VISIBLE_ROWS);
+  const sectionHeight =
+    ANALYTICS_TITLE_HEIGHT +
+    (visibleRowCount === 0
+      ? ANALYTICS_EMPTY_BODY_HEIGHT
+      : ANALYTICS_TABLE_HEADER_HEIGHT + visibleRowCount * ANALYTICS_ROW_HEIGHT);
   const handleSort = (key: AnalyticsSortKey) => {
     setSortState((currentSortState) =>
       currentSortState.key === key
@@ -196,19 +208,26 @@ function AnalyticsList({
 
   return (
     <section
-      className={["flex h-96 min-w-0 flex-col", className].filter(Boolean).join(" ")}
+      className={["flex min-w-0 flex-col", className].filter(Boolean).join(" ")}
+      data-analytics-entry-count={sortedEntries.length}
+      data-analytics-visible-rows={visibleRowCount}
       data-demo-id={demoId}
+      style={{ height: sectionHeight }}
     >
-      <header className="shrink-0 border-b pb-2">
+      <header className="flex h-7 shrink-0 items-start">
         <h2 className="min-w-0 text-sm font-medium">{title}</h2>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col pt-2">
+      <div className="flex min-h-0 flex-1 flex-col">
         {sortedEntries.length === 0 ? (
           <div className="grid min-h-0 flex-1 place-items-center p-4 text-sm text-muted-foreground">
             {emptyState}
           </div>
         ) : (
-          <div className="min-h-0 flex-1 overflow-auto" ref={scrollRef}>
+          <div
+            className="min-h-0 flex-1 overflow-auto"
+            data-demo-id={`${demoId}-scroll-area`}
+            ref={scrollRef}
+          >
             <table className="w-full border-collapse text-sm">
               <thead className="sticky top-0 z-10 bg-background/95 text-left text-xs text-muted-foreground backdrop-blur">
                 <tr>
@@ -245,7 +264,8 @@ function AnalyticsList({
 
                   return (
                     <tr
-                      className="border-t"
+                      className="transition-colors hover:bg-muted/40 focus-within:bg-muted/40"
+                      data-analytics-row
                       data-index={virtualRow.index}
                       key={`${entry.label}:${virtualRow.index}`}
                       ref={rowVirtualizer.measureElement}
@@ -385,7 +405,7 @@ export const AnalyticsTab = observer(() => {
             </div>
           ) : (
             <div
-              className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2"
+              className="grid grid-cols-1 items-start gap-x-10 gap-y-8 lg:grid-cols-2"
               data-demo-id="analytics-grid"
             >
               <AnalyticsList

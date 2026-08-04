@@ -67,6 +67,7 @@ export async function replaceWithSyntheticWorkspace(page: Page): Promise<void> {
   await expect(dialog.getByText("Workspace state detected", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Replace all current", exact: true }).click();
   await expect(dialog).toBeHidden();
+  await expect(page.getByRole("status")).toHaveCount(0);
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
 }
 

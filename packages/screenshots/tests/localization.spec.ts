@@ -233,7 +233,7 @@ for (const [locale, messages] of [
 ] as const satisfies ReadonlyArray<readonly ["en" | "ru", Messages]>) {
   test(`keeps export, import, and localized error workflows local in ${locale}`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     const assertLocalRequests = await expectLocalRequestsOnly(page);
     await seedLocale(page, locale);
     await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -294,6 +294,29 @@ for (const [locale, messages] of [
     await dialog
       .getByRole("button", { name: messages.Ui["Replace all current"], exact: true })
       .click();
+    await expect(page.getByRole("status")).toHaveCount(0);
+    await page.getByRole("tab", { name: messages.Ui.Employees, exact: true }).click();
+    await expect(page.locator('[data-demo-id="employees-summary"]')).toContainText(
+      messages.Ui.Employees,
+    );
+    await expect(page.locator('[data-demo-id="employees-total-count"]')).toContainText("4");
+    await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
+    await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("Avery");
+    await expect(page.locator('[data-demo-id="employees-match-count"]')).toContainText("1");
+    if (locale === "ru") {
+      await page.screenshot({
+        animations: "disabled",
+        fullPage: true,
+        path: testInfo.outputPath("russian-employee-counts.png"),
+      });
+      await page.getByRole("tab", { name: messages.Ui.Analytics, exact: true }).click();
+      await expect(page.locator('[data-demo-id="analytics-grid"]')).toBeVisible();
+      await page.screenshot({
+        animations: "disabled",
+        fullPage: true,
+        path: testInfo.outputPath("russian-analytics-clean.png"),
+      });
+    }
     await page.getByRole("tab", { name: messages.Ui.Calendar, exact: true }).click();
     await expect(page.getByText(messages.Ui["Employee Calendar"], { exact: true })).toBeVisible();
     await page
