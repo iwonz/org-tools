@@ -72,7 +72,8 @@ const sourceState = (): OrgToolsState => {
         selectedUnitIds: [rootId],
       },
       name: "Remote leads",
-      order: 1,
+      order: 0,
+      parentId: rootId,
       x: 480,
     }),
   ];
@@ -106,6 +107,47 @@ describe("scoped state import", () => {
       newEmployeeCount: 1,
       unitCount: 2,
     });
+    expect(plan.units).toEqual([
+      expect.objectContaining({
+        assignments: [{ employeeKey: uuid(10), isBoss: true, position: "Lead" }],
+        children: [
+          expect.objectContaining({
+            assignments: [],
+            key: uuid(21),
+            liveRoles: [{ employeeKey: uuid(10), isBoss: true, position: "Remote Lead" }],
+            mode: "live",
+            name: "Remote leads",
+          }),
+        ],
+        key: uuid(20),
+        liveRoles: [],
+        mode: "manual",
+        name: "Product",
+      }),
+    ]);
+  });
+
+  test("keeps unassigned Employees normalized and preserves append identity status", () => {
+    const source = sourceState();
+    source.employees.push(employee(uuid(11), "jordan"));
+    const projected = createStructuredSave(parseOrgToolsState(source), "teamsEmployees");
+    const plan = planStateImport(projected, "teamsEmployees", [employee(uuid(30), "avery")]);
+    expect(plan.employees).toEqual([
+      expect.objectContaining({ key: uuid(10), status: "existing" }),
+      expect.objectContaining({ key: uuid(11), status: "new" }),
+    ]);
+    const directlyReferenced = new Set(
+      plan.units.flatMap((root) => [
+        ...root.assignments.map(({ employeeKey }) => employeeKey),
+        ...root.children.flatMap((child) =>
+          child.assignments.map(({ employeeKey }) => employeeKey),
+        ),
+      ]),
+    );
+    expect([...directlyReferenced]).toEqual([uuid(10)]);
+    expect(
+      plan.employees.filter(({ key }) => !directlyReferenced.has(key)).map(({ key }) => key),
+    ).toEqual([uuid(11)]);
   });
 
   test("appends with UUID remapping, identity reuse, and translated relative layout", () => {

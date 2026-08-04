@@ -8,8 +8,10 @@ import {
   HiOutlineArrowUpTray,
   HiOutlineCheckCircle,
   HiOutlineExclamationTriangle,
+  HiOutlinePlusCircle,
 } from "react-icons/hi2";
 
+import { StructuredImportPreview } from "@/components/structured-import-preview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,12 +55,7 @@ import {
   TEAM_IMPORT_TARGETS,
   type TeamImportTarget,
 } from "@/lib/generic-import";
-import type {
-  MappedImportDocument,
-  StateImportOperation,
-  StructuredImportPlan,
-  StructuredImportUnitPlan,
-} from "@/lib/structured-import";
+import type { MappedImportDocument, StateImportOperation } from "@/lib/structured-import";
 import { cn } from "@/lib/utils";
 import {
   type EmployeeImportCommitSummary,
@@ -228,81 +225,6 @@ function ImportPreview({ plan }: { plan: EmployeeImportPlan }) {
     </div>
   );
 }
-
-const StructuredTeamTree = ({ units }: { units: readonly StructuredImportUnitPlan[] }) => {
-  const t = useUiText();
-  if (units.length === 0) return null;
-  return (
-    <ul className="grid gap-1 text-sm">
-      {units.map((unit) => (
-        <li key={unit.key}>
-          <div className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
-            <span className="min-w-0 flex-1 truncate font-medium">{unit.name}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {unit.mode === "live" ? t("Live Team") : t("Manual Team")}
-            </span>
-          </div>
-          {unit.children.length > 0 && (
-            <div className="ml-5 mt-1 border-l pl-3">
-              <StructuredTeamTree units={unit.children} />
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-};
-
-const StructuredImportPreview = ({
-  append = true,
-  plan,
-}: {
-  append?: boolean;
-  plan: StructuredImportPlan;
-}) => {
-  const format = useAppFormatter();
-  const t = useUiText();
-  return (
-    <section className="grid gap-3 rounded-md border p-4">
-      <div>
-        <h3 className="text-sm font-semibold">{t("Structured import preview")}</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {append
-            ? t(
-                "This import adds data to Main. Existing Employees are reused without being overwritten.",
-              )
-            : t("This import replaces current data with the selected state content.")}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
-        <span>
-          {format.number(plan.newEmployeeCount)} {t("new Employees")}
-        </span>
-        <span>
-          {format.number(plan.existingEmployeeCount)} {t("existing Employees")}
-        </span>
-        <span>
-          {format.number(plan.manualUnitCount)} {t("manual Teams")}
-        </span>
-        <span>
-          {format.number(plan.liveUnitCount)} {t("Live Teams")}
-        </span>
-        <span>
-          {format.number(plan.assignmentCount)} {t("assignments")}
-        </span>
-      </div>
-      {plan.units.length > 0 ? (
-        <div className="max-h-64 overflow-y-auto">
-          <StructuredTeamTree units={plan.units} />
-        </div>
-      ) : (
-        <div className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-          {t("No Teams in this import.")}
-        </div>
-      )}
-    </section>
-  );
-};
 
 const MappingSelect = observer(
   ({ session, target }: { session: ImportSessionStore; target: EmployeeImportTarget }) => {
@@ -555,7 +477,7 @@ export const ImportDialog = observer(
                 <Label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring">
                   <HiOutlineArrowUpTray className="size-4" />
                   {hasSource ? t("Choose another file") : t("Choose file")}
-                  <Input
+                  <input
                     accept=".json,application/json"
                     className="sr-only"
                     disabled={isReadingFile}
@@ -594,61 +516,103 @@ export const ImportDialog = observer(
                       </p>
                     </div>
                   </div>
-                  <div className="grid gap-2" role="radiogroup" aria-label={t("State content")}>
-                    {session.availableStateContents.map((content) => (
-                      <label
-                        className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm"
-                        key={content}
-                      >
-                        <input
-                          checked={session.stateContent === content}
-                          name="state-content"
-                          onChange={() => selectStateContent(content)}
-                          type="radio"
-                        />
-                        {t(STATE_CONTENT_LABELS[content])}
-                      </label>
-                    ))}
+                  <div className="grid gap-2">
+                    <Label>{t("State content")}</Label>
+                    <div
+                      className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
+                      role="radiogroup"
+                      aria-label={t("State content")}
+                    >
+                      {session.availableStateContents.map((content) => (
+                        <label
+                          className={cn(
+                            "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent/50",
+                            session.stateContent === content &&
+                              "border-primary/60 bg-primary/5 ring-2 ring-primary/15",
+                          )}
+                          key={content}
+                        >
+                          <input
+                            checked={session.stateContent === content}
+                            name="state-content"
+                            onChange={() => selectStateContent(content)}
+                            type="radio"
+                          />
+                          {t(STATE_CONTENT_LABELS[content])}
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   {session.stateContent !== "workspace" && (
-                    <div
-                      className="grid gap-2"
-                      role="radiogroup"
-                      aria-label={t("Import operation")}
+                    <section
+                      className="mt-2 grid gap-3 border-t pt-4"
+                      data-demo-id="state-import-mode"
                     >
-                      <label className="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm">
-                        <input
-                          checked={session.stateOperation === "append"}
-                          name="state-operation"
-                          onChange={() => selectStateOperation("append")}
-                          type="radio"
-                        />
-                        <span>
-                          <span className="block font-medium">{t("Append")}</span>
-                          <span className="block text-xs text-muted-foreground">
-                            {t("Keep current data and add the selected content to Main.")}
+                      <div>
+                        <h3 className="text-sm font-semibold">{t("Import mode")}</h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t(
+                            "Choose how the selected content should affect the current workspace.",
+                          )}
+                        </p>
+                      </div>
+                      <div
+                        className="grid gap-3 sm:grid-cols-2"
+                        role="radiogroup"
+                        aria-label={t("Import operation")}
+                      >
+                        <label
+                          className={cn(
+                            "flex min-h-24 cursor-pointer items-start gap-3 rounded-lg border bg-background p-3 text-sm transition-colors hover:bg-accent/50",
+                            session.stateOperation === "append" &&
+                              "border-primary/60 bg-primary/5 ring-2 ring-primary/20",
+                          )}
+                          data-demo-id="state-operation-append"
+                        >
+                          <input
+                            checked={session.stateOperation === "append"}
+                            className="mt-1"
+                            name="state-operation"
+                            onChange={() => selectStateOperation("append")}
+                            type="radio"
+                          />
+                          <HiOutlinePlusCircle className="mt-0.5 size-5 shrink-0 text-primary" />
+                          <span>
+                            <span className="block font-semibold">{t("Append")}</span>
+                            <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                              {t("Keep current data and add the selected content to Main.")}
+                            </span>
                           </span>
-                        </span>
-                      </label>
-                      <label className="flex cursor-pointer items-start gap-2 rounded-md border border-destructive/30 px-3 py-2 text-sm">
-                        <input
-                          checked={session.stateOperation === "replace"}
-                          name="state-operation"
-                          onChange={() => selectStateOperation("replace")}
-                          type="radio"
-                        />
-                        <span>
-                          <span className="block font-medium text-destructive">
-                            {t("Replace all current")}
+                        </label>
+                        <label
+                          className={cn(
+                            "flex min-h-24 cursor-pointer items-start gap-3 rounded-lg border border-destructive/30 bg-background p-3 text-sm transition-colors hover:bg-destructive/5",
+                            session.stateOperation === "replace" &&
+                              "border-destructive bg-destructive/10 ring-2 ring-destructive/20",
+                          )}
+                          data-demo-id="state-operation-replace"
+                        >
+                          <input
+                            checked={session.stateOperation === "replace"}
+                            className="mt-1 accent-destructive"
+                            name="state-operation"
+                            onChange={() => selectStateOperation("replace")}
+                            type="radio"
+                          />
+                          <HiOutlineExclamationTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
+                          <span>
+                            <span className="block font-semibold text-destructive">
+                              {t("Replace all current")}
+                            </span>
+                            <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                              {t(
+                                "Remove current Employees, Teams, and custom Views before importing.",
+                              )}
+                            </span>
                           </span>
-                          <span className="block text-xs text-muted-foreground">
-                            {t(
-                              "Remove current Employees, Teams, and custom Views before importing.",
-                            )}
-                          </span>
-                        </span>
-                      </label>
-                    </div>
+                        </label>
+                      </div>
+                    </section>
                   )}
                   {session.stateContent === "workspace" && (
                     <div className="text-sm font-medium text-destructive">
@@ -661,6 +625,7 @@ export const ImportDialog = observer(
               {session.stateCandidate && structuredPlan && (
                 <StructuredImportPreview
                   append={session.stateOperation === "append"}
+                  key={`state:${session.fileName}:${session.stateContent}`}
                   plan={structuredPlan}
                 />
               )}
@@ -799,7 +764,12 @@ export const ImportDialog = observer(
                       {messageText(genericPlanIssue)}
                     </div>
                   )}
-                  {genericPlan && <StructuredImportPreview plan={genericPlan.preview} />}
+                  {genericPlan && (
+                    <StructuredImportPreview
+                      key={`generic:${session.fileName}:${session.selectedCollectionId}:${session.genericTarget}:${JSON.stringify(session.mapping)}:${JSON.stringify(session.teamMapping)}:${session.tagDelimiter}`}
+                      plan={genericPlan.preview}
+                    />
+                  )}
                 </>
               )}
             </div>

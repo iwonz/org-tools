@@ -62,9 +62,17 @@ export type StructuredImportEmployeePlan = {
   status: "existing" | "new";
 };
 
+export type StructuredImportAssignmentPlan = {
+  employeeKey: string;
+  isBoss: boolean;
+  position: string | null;
+};
+
 export type StructuredImportUnitPlan = {
+  assignments: StructuredImportAssignmentPlan[];
   children: StructuredImportUnitPlan[];
   key: string;
+  liveRoles: StructuredImportAssignmentPlan[];
   mode: "live" | "manual";
   name: string;
 };
@@ -260,9 +268,33 @@ export const planMappedImport = (
       throw new LocalizedError(uiMessage("Structured import is invalid."));
     }
     unitKeyList.push(key);
+    const livePositionByEmployeeKey = new Map(
+      (unit.positionOverrides ?? []).map(({ employeeKey, position }) => [
+        employeeKey,
+        normalizeOptionalEmployeeText(position),
+      ]),
+    );
+    const liveRoleKeys = [
+      ...(unit.liveBossEmployeeKey ? [unit.liveBossEmployeeKey] : []),
+      ...(unit.positionOverrides ?? []).map(({ employeeKey }) => employeeKey),
+    ];
     return {
+      assignments: unit.liveFilter
+        ? []
+        : unit.employees.map(({ employeeKey, isBoss, position }) => ({
+            employeeKey,
+            isBoss: Boolean(isBoss),
+            position: normalizeOptionalEmployeeText(position),
+          })),
       children: unit.children.map(toUnitPlan),
       key,
+      liveRoles: unit.liveFilter
+        ? [...new Set(liveRoleKeys)].map((employeeKey) => ({
+            employeeKey,
+            isBoss: unit.liveBossEmployeeKey === employeeKey,
+            position: livePositionByEmployeeKey.get(employeeKey) ?? null,
+          }))
+        : [],
       mode: unit.liveFilter ? "live" : "manual",
       name: unit.name.trim(),
     };

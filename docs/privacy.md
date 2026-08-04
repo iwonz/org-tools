@@ -9,7 +9,7 @@ the current browser page. The application does not provide telemetry, remote log
 upload APIs, background synchronization, or a server database. Browser smoke tests fail when a core
 workflow makes a request outside the local application origin.
 
-State is held in memory. It enters only when the user explicitly selects a file and leaves only when
+State and import preview rows are held in memory. They enter only when the user explicitly selects a file and leave only when
 the user explicitly downloads, copies, or exports content. Closing or reloading the page discards
 unsaved organization changes. Organizational data is not stored in cookies, IndexedDB, session
 storage, or local storage.

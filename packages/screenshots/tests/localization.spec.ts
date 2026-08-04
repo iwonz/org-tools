@@ -199,6 +199,17 @@ test("switches the interface in place and persists the choice", async ({ page },
   await expect(
     dialog.getByRole("radiogroup", { name: ruMessages.Ui["State content"] }),
   ).toContainText(ruMessages.Ui["Full workspace"]);
+  await dialog
+    .getByRole("radio", { name: ruMessages.Ui["Teams + Employees"], exact: true })
+    .check();
+  await expect(dialog.getByText(ruMessages.Ui["Import mode"], { exact: true })).toBeVisible();
+  await expect(dialog.locator('[data-demo-id="state-operation-append"]')).toContainText(
+    ruMessages.Ui.Append,
+  );
+  await expect(dialog.locator('[data-demo-id="state-operation-replace"]')).toContainText(
+    ruMessages.Ui["Replace all current"],
+  );
+  await expect(dialog.locator('[data-demo-id="structured-preview-employee-card"]')).toHaveCount(4);
   await page.screenshot({
     animations: "disabled",
     fullPage: true,

@@ -44,9 +44,12 @@ Full workspace can contain every View and UI field. Obsolete and scope-mismatche
 rejected without migration.
 
 `ImportSessionStore` keeps the selected state projection and operation or the ordinary file
-collection, mappings, preview, and errors transiently. Recognized state append resolves Employee
-identity, remaps UUIDs and references, translates imported layout into a free Main area, and retains
-custom Views and UI. Partial replace installs a clean projection; Full workspace always replaces.
+collection, mappings, preview, and errors transiently. Preview plans retain normalized Employees,
+ordered Team hierarchy, manual assignment references, and separate Live role references. The dialog
+flattens that graph into dynamically measured virtual rows without duplicating Employee records.
+Recognized state append resolves Employee identity, remaps UUIDs and references, translates imported
+layout into a free Main area, and retains custom Views and UI. Partial replace installs a clean
+projection; Full workspace always replaces.
 
 Ordinary JSON maps recursive children and inline Employee arrays. These sources create manual Teams
 only and always append. Conflicting keys, ambiguous identities, and multiple bosses block the

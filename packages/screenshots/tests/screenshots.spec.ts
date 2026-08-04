@@ -252,6 +252,11 @@ test("captures recognized state import choices", async ({ page }) => {
   await expect(dialog.getByRole("radiogroup", { name: "State content" })).toContainText(
     "Full workspace",
   );
+  await dialog.getByRole("radio", { name: "Teams + Employees", exact: true }).check();
+  await expect(dialog.getByText("Import mode", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Product", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Platform", { exact: true })).toBeVisible();
+  await expect(dialog.locator('[data-demo-id="structured-preview-employee-card"]')).toHaveCount(4);
   await stabilizeForScreenshot(page);
 
   await page.screenshot({

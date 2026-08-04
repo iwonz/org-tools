@@ -63,12 +63,12 @@ machine preferences cannot change gallery copy.
 
 ![Employee import mapping](screenshots/employee-import-mapping.png)
 
-### Scoped state import
+### Scoped state import choices and preview
 
 ![Scoped state import](screenshots/state-import.png)
 
-The Calendar fixture includes exact dated-tag events and its compact cloud. Scoped state choices,
-generic mapping, and localized empty states are also covered by browser assertions. Every gallery
+The Calendar fixture includes exact dated-tag events and its compact cloud. Scoped state operation
+cards, nested Team and Employee previews, generic mapping, and localized empty states are also covered by browser assertions. Every gallery
 capture uses the deterministic English locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
 shows the total catalog count, and the Analytics capture verifies borderless content-sized groups

@@ -37,7 +37,10 @@ the same row-height model expands Unit bounds and local PNG output without hidde
 ## Import and export
 
 Parsing and preview keep bounded samples for display while retaining enough normalized row and graph
-state for an atomic commit. JSON hierarchy and inline Employee relations normalize once before preview.
+state for an atomic commit. JSON hierarchy and inline Employee relations normalize once before
+preview. Structured preview plans keep Employees in one keyed collection, flatten Team, assignment,
+and Live-role rows once per projection or collapse change, and dynamically measure only virtualized
+rows inside a bounded viewport.
 Large synthetic fixtures are generated in a temporary directory and are never committed. Complete
 state parsing validates references in indexed passes instead of repeated full collection scans.
 

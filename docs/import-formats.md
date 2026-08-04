@@ -38,8 +38,9 @@ When importing, a state exposes only projections carried by its `content`. Parti
 Append, the safe default, or Replace all current. Append reuses one unambiguous Employee identity by
 username then email without overwrite, generates new UUIDs, remaps references, appends roots, and
 translates the source layout into a free Main area while preserving current custom Views and UI.
-Partial replace deletes all current organization data and installs a clean selected projection. Full
-workspace always replaces and displays a dedicated destructive warning.
+Partial replace deletes all current organization data and installs a clean selected projection. The
+Import mode section presents Append and Replace as separate choice cards, with replacement styled as
+destructive. Full workspace always replaces and displays a dedicated destructive warning.
 
 ## Ordinary JSON
 
@@ -52,7 +53,10 @@ state. Employee tags from ordinary mapping are undated.
 
 ## Validation and current-schema policy
 
-Preview reports the Team tree plus new and reused Employees, manual Teams, assignments, and errors.
+Preview renders the ordered Team tree, nested manual assignment cards, separate Live role cards,
+Employees without direct manual assignments, new/reused identity state, counts, and errors through a
+bounded virtualized viewport. Employee-only state renders its complete catalog without an empty-Team
+placeholder.
 Ordinary mapping always appends. Cancellation or any parsing, mapping, identity, graph, reference, or
 candidate error leaves the current workspace unchanged.
 

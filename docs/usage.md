@@ -49,7 +49,8 @@ offers only data available in the file. Teams + Employees offers the first three
 workspace offers all four. Partial choices default to **Append** and also allow **Replace all
 current**. Append remaps UUID references, reuses unambiguous Employees without overwrite, appends
 roots to Main, moves the imported layout into free canvas space, and preserves custom Views and UI.
-Partial replace clears the current organization and installs only the selected projection. Full
+Partial replace clears the current organization and installs only the selected projection. The two
+operations appear in a separate Import mode section, with replacement styled as destructive. Full
 workspace always replaces and shows a separate destructive warning.
 
 A successful replacement closes without leaving a global filename banner. Append keeps its
@@ -72,8 +73,13 @@ manual Teams.
    `isBoss` fields.
 3. If tags arrive in text, choose the delimiter. JSON tag arrays remain arrays and produce undated
    tag assignments.
-4. Review the Team tree, new and reused Employees, assignments, invalid rows, conflicts, and source
-   examples before confirming.
+4. Review the virtualized Team tree, nested Teams, Employee cards, positions, bosses, new/reused
+   identity state, assignments, invalid rows, conflicts, and source examples before confirming.
+
+Recognized Employees-only state displays the complete imported catalog as read-only cards. Teams +
+Employees places manual assignment cards inside each Team and lists Employees without a direct
+manual assignment separately. Live boss and position overrides appear as Live roles; calculated Live
+membership is evaluated only after import.
 
 Repeated keys are rejected. Ambiguous Employees and multiple bosses block the complete append. Live
 filters are available only through a recognized scoped state. See

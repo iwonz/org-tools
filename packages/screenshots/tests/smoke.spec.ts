@@ -135,6 +135,15 @@ test("selects and appends Employees from a recognized workspace state", async ({
   await dialog.getByRole("radio", { name: "Employees", exact: true }).check();
   await expect(dialog.getByText("Structured import preview", { exact: true })).toBeVisible();
   await expect(dialog.getByText("4 new Employees", { exact: true })).toBeVisible();
+  await expect(dialog.locator('[data-demo-id="structured-preview-employee-card"]')).toHaveCount(4);
+  const importMode = dialog.locator('[data-demo-id="state-import-mode"]');
+  await expect(importMode.getByText("Import mode", { exact: true })).toBeVisible();
+  await expect(importMode.locator('[data-demo-id="state-operation-append"]')).toHaveClass(
+    /ring-primary/u,
+  );
+  await expect(importMode.locator('[data-demo-id="state-operation-replace"]')).toHaveClass(
+    /border-destructive/u,
+  );
   await expect(
     dialog.getByRole("radiogroup", { name: "Import operation" }).getByRole("radio").first(),
   ).toBeChecked();
@@ -143,6 +152,89 @@ test("selects and appends Employees from a recognized workspace state", async ({
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("previews nested recognized Teams with Employee cards and cancels without mutation", async ({
+  page,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  const dialog = await openImportDialog(page, syntheticWorkspacePath);
+  await dialog.getByRole("radio", { name: "Teams + Employees", exact: true }).check();
+
+  const product = dialog
+    .locator('[data-demo-id="structured-preview-team"]')
+    .filter({ hasText: "Product" });
+  const platform = dialog
+    .locator('[data-demo-id="structured-preview-team"]')
+    .filter({ hasText: "Platform" });
+  await expect(product).toBeVisible();
+  await expect(platform).toBeVisible();
+  expect(
+    await platform.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).marginInlineStart),
+    ),
+  ).toBeGreaterThan(
+    await product.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).marginInlineStart),
+    ),
+  );
+
+  const cards = dialog.locator('[data-demo-id="structured-preview-employee-card"]');
+  await expect(cards).toHaveCount(4);
+  await expect(cards.filter({ hasText: "Avery Stone" })).toContainText("Product Lead");
+  await expect(cards.filter({ hasText: "Avery Stone" })).toContainText("Boss");
+  await expect(cards.filter({ hasText: "Riley Chen" })).toContainText("Research");
+
+  await product.getByRole("button", { name: "Collapse" }).click();
+  await expect(platform).toHaveCount(0);
+  await product.getByRole("button", { name: "Expand" }).click();
+  await expect(platform).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("virtualizes a large mapped Team and Employee preview", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  const teams = Array.from({ length: 120 }, (_, index) => ({
+    employees: [
+      {
+        email: `employee-${index}@example.test`,
+        employeeKey: `employee-${index}`,
+        firstName: "Employee",
+        lastName: String(index),
+        position: "Contributor",
+        username: `employee-${index}`,
+      },
+    ],
+    key: `team-${index}`,
+    name: `Team ${index}`,
+  }));
+  const dialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(teams)),
+    mimeType: "application/json",
+    name: "large-teams.json",
+  });
+  await dialog.getByRole("radio", { name: "Teams + Employees", exact: true }).check();
+  const viewport = dialog.locator('[data-demo-id="structured-preview-viewport"]');
+  await expect(viewport).toBeVisible();
+  expect(await viewport.evaluate((element) => element.clientHeight)).toBeGreaterThanOrEqual(400);
+  expect(await viewport.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
+    true,
+  );
+  expect(await dialog.locator('[data-demo-id="structured-preview-team"]').count()).toBeLessThan(
+    teams.length,
+  );
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(dialog.getByText("Team 119", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await assertLocalRequests();
 });
 
@@ -207,6 +299,14 @@ test("maps nested generic JSON as Teams with Employee assignments", async ({ pag
   });
   await dialog.getByRole("radio", { name: "Teams + Employees", exact: true }).check();
   await expect(dialog.getByText("1 assignments", { exact: true })).toBeVisible();
+  await expect(
+    dialog.locator('[data-demo-id="structured-preview-team"]').filter({ hasText: "Platform" }),
+  ).toBeVisible();
+  await expect(
+    dialog
+      .locator('[data-demo-id="structured-preview-employee-card"]')
+      .filter({ hasText: "Jordan Reed" }),
+  ).toContainText("Engineer");
   await dialog.getByRole("button", { name: "Append", exact: true }).click();
 
   const editorEmployee = page
