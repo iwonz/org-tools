@@ -7,6 +7,7 @@ import { useAppLocale } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import type { AppLocale } from "@/i18n/locale";
 import { useUiText } from "@/i18n/use-ui-text";
+import { cn } from "@/lib/utils";
 import enMessages from "../../messages/en.json";
 import ruMessages from "../../messages/ru.json";
 
@@ -15,7 +16,7 @@ const LANGUAGE_OPTIONS: Array<{ flag: string; label: string; value: AppLocale }>
   { flag: "🇬🇧", label: enMessages.Ui.English, value: "en" },
 ];
 
-export function LanguageToggle() {
+export function LanguageToggle({ triggerClassName }: { triggerClassName?: string }) {
   const { locale, setLocale } = useAppLocale();
   const t = useUiText();
   const activeOption = LANGUAGE_OPTIONS.find((option) => option.value === locale);
@@ -26,7 +27,10 @@ export function LanguageToggle() {
       <SelectPrimitive.Trigger asChild data-demo-id="language-toggle">
         <Button
           aria-label={`${t("Language")}: ${activeLabel}`}
-          className="size-9 rounded-sm text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
+          className={cn(
+            "size-9 rounded-sm text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+            triggerClassName,
+          )}
           size="icon"
           title={`${t("Language")}: ${activeLabel}`}
           type="button"

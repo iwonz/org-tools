@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { type UiTextKey, useUiText } from "@/i18n/use-ui-text";
 import { normalizeUiTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
 const THEME_OPTIONS: Array<{
@@ -28,7 +29,7 @@ const THEME_OPTIONS: Array<{
   { value: "system", labelKey: "System", icon: HiOutlineComputerDesktop },
 ];
 
-export const ThemeToggle = observer(() => {
+export const ThemeToggle = observer(({ triggerClassName }: { triggerClassName?: string }) => {
   const store = useOrgStore();
   const t = useUiText();
   const { setTheme, theme } = useTheme();
@@ -59,7 +60,10 @@ export const ThemeToggle = observer(() => {
       <SelectPrimitive.Trigger asChild data-demo-id="theme-toggle">
         <Button
           aria-label={activeLabel}
-          className="size-9 rounded-sm text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
+          className={cn(
+            "size-9 rounded-sm text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+            triggerClassName,
+          )}
           size="icon"
           title={`${t("Theme")}: ${activeLabel}`}
           type="button"

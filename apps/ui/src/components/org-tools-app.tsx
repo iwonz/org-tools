@@ -31,7 +31,10 @@ import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { OrgStoreProvider, useOrgStore } from "@/stores/org-store-context";
 
 const PRODUCT_TAB_CLASS_NAME =
-  "relative h-full rounded-none border-0 bg-transparent px-3 text-muted-foreground hover:bg-accent/40 hover:text-foreground focus-visible:ring-inset data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:inset-x-3 data-[state=active]:after:bottom-px data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-primary";
+  "h-full rounded-none border-0 bg-transparent px-3 text-muted-foreground hover:bg-accent/40 hover:text-foreground focus-visible:ring-inset data-[state=active]:bg-accent data-[state=active]:text-accent-foreground";
+
+const HEADER_ACTION_CLASS_NAME =
+  "h-full w-9 rounded-none border-0 bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:border-transparent focus-visible:ring-inset data-[state=open]:bg-accent data-[state=open]:text-accent-foreground";
 
 const LoadedApp = observer(() => {
   const store = useOrgStore();
@@ -145,11 +148,11 @@ const LoadedApp = observer(() => {
               </TabsList>
             </nav>
             <div
-              className="flex shrink-0 items-center gap-1 sm:gap-2"
+              className="flex h-9 shrink-0 items-center gap-0 overflow-hidden rounded-md border border-input bg-background/70"
               data-demo-id="header-actions"
             >
-              <LanguageToggle />
-              <ThemeToggle />
+              <LanguageToggle triggerClassName={HEADER_ACTION_CLASS_NAME} />
+              <ThemeToggle triggerClassName={HEADER_ACTION_CLASS_NAME} />
               <input
                 accept=".json,application/json"
                 aria-hidden="true"
@@ -166,7 +169,7 @@ const LoadedApp = observer(() => {
               />
               <Button
                 aria-label={t("Import")}
-                className="size-9 px-0 lg:w-auto lg:px-4"
+                className={`${HEADER_ACTION_CLASS_NAME} px-0 lg:w-auto lg:px-4`}
                 data-demo-id="import-action"
                 onClick={() => {
                   if (!importFileInputRef.current) return;
@@ -175,7 +178,7 @@ const LoadedApp = observer(() => {
                 }}
                 title={t("Import")}
                 type="button"
-                variant="outline"
+                variant="ghost"
               >
                 <HiOutlineDocumentArrowUp
                   data-demo-id="import-action-icon"
@@ -185,11 +188,12 @@ const LoadedApp = observer(() => {
               </Button>
               <Button
                 aria-label={t("Workspace Export")}
-                className="size-9 px-0 lg:w-auto lg:px-4"
+                className={`${HEADER_ACTION_CLASS_NAME} px-0 lg:w-auto lg:px-4`}
                 data-demo-id="save-workspace"
                 onClick={openSaveDialog}
                 title={t("Workspace Export")}
                 type="button"
+                variant="ghost"
               >
                 <HiOutlineDocumentArrowDown
                   data-demo-id="export-action-icon"
