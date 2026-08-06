@@ -288,11 +288,11 @@ export const CalendarTab = observer(() => {
   return (
     <>
       <section
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
         data-demo-id="calendar-tab"
       >
         <div
-          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-background px-4 py-3"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-transparent px-4 py-3"
           data-demo-id="calendar-header"
         >
           <div className="min-w-0">
@@ -323,7 +323,7 @@ export const CalendarTab = observer(() => {
         {datedTagGroups.length > 0 && (
           <div
             className={cn(
-              "flex shrink-0 flex-wrap gap-1.5 overflow-auto bg-background px-3 py-2",
+              "flex shrink-0 flex-wrap gap-1.5 overflow-auto bg-transparent px-3 py-2",
               cloudExpanded ? "max-h-16" : "max-h-[4.25rem]",
             )}
             data-demo-id="dated-tag-cloud"

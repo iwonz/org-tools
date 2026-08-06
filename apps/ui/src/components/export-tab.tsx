@@ -471,7 +471,7 @@ export const ExportTab = observer(() => {
 
   return (
     <section
-      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       data-demo-id="export-tab"
     >
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -485,7 +485,7 @@ export const ExportTab = observer(() => {
                 : "fit-content(70%) minmax(30%, 1fr)",
           }}
         >
-          <aside className="flex min-h-0 min-w-0 flex-col border-r bg-background">
+          <aside className="flex min-h-0 min-w-0 flex-col border-r bg-transparent">
             {store.orgViewList.length > 1 && (
               <div className="p-2.5">
                 <Select
@@ -675,6 +675,7 @@ export const ExportTab = observer(() => {
           </aside>
           <SelectedEmployeesPanel
             canClear={selections.length > 0 || excludedEmployeeIds.length > 0}
+            className="flex min-h-0 min-w-0 flex-col bg-transparent"
             clearDataDemoId="export-clear-selected"
             dataDemoId="export-selected-employees"
             employeeActions={(employee) => (

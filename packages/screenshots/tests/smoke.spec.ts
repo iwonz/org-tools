@@ -21,6 +21,14 @@ async function expectNoHorizontalRule(locator: Locator) {
   ).toEqual({ bottom: "0px", top: "0px" });
 }
 
+async function getBackgroundColor(locator: Locator) {
+  return locator.evaluate((element) => window.getComputedStyle(element).backgroundColor);
+}
+
+async function expectTransparentBackground(locator: Locator) {
+  expect(await getBackgroundColor(locator)).toBe("rgba(0, 0, 0, 0)");
+}
+
 test("opens a blank workspace with all product surfaces", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -104,6 +112,7 @@ test("contains the unified header at narrow and desktop widths", async ({ page }
   const importLabel = page.locator('[data-demo-id="import-action"] span');
   const exportLabel = page.locator('[data-demo-id="save-workspace"] span');
 
+  await expectTransparentBackground(header);
   await expect(importLabel).toBeHidden();
   await expect(exportLabel).toBeHidden();
   await expect(page.locator('[data-demo-id="import-action"]')).toHaveAccessibleName("Import");
@@ -122,6 +131,7 @@ test("contains the unified header at narrow and desktop widths", async ({ page }
 
   for (const width of [1024, 1280]) {
     await page.setViewportSize({ width, height: 720 });
+    await expectTransparentBackground(header);
     await expect(importLabel).toBeVisible();
     await expect(exportLabel).toBeVisible();
     expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(56);
@@ -129,6 +139,48 @@ test("contains the unified header at narrow and desktop widths", async ({ page }
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
   }
+});
+
+test("uses one continuous shell background with distinct bounded surfaces", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openBlankWorkspace(page);
+
+  const shell = page.locator('[data-demo-id="app-shell"]');
+  const header = page.locator('[data-demo-id="app-header"]');
+  const lightShellBackground = await getBackgroundColor(shell);
+
+  expect(lightShellBackground).not.toBe("rgb(255, 255, 255)");
+  expect(lightShellBackground).not.toBe("rgba(0, 0, 0, 0)");
+  await expectTransparentBackground(header);
+  await expectTransparentBackground(page.locator('[data-demo-id="top-level-empty-state"]'));
+
+  await replaceWithSyntheticWorkspace(page);
+  const surfaces = [
+    ["tab-units", '[data-demo-id="units-tree-panel"]'],
+    ["tab-employees", '[data-demo-id="employees-tab"]'],
+    ["tab-org-editor", '[data-demo-id="org-editor-canvas"]'],
+    ["tab-analytics", '[data-demo-id="analytics-tab"]'],
+    ["tab-calendar", '[data-demo-id="calendar-tab"]'],
+    ["tab-export", '[data-demo-id="export-tab"]'],
+  ] as const;
+
+  for (const [tabDemoId, selector] of surfaces) {
+    await page.locator(`[data-demo-id="${tabDemoId}"]`).click();
+    await expectTransparentBackground(page.locator(selector));
+  }
+
+  await page.locator('[data-demo-id="tab-employees"]').click();
+  const employeeCard = page.locator('[data-demo-id="employees-list"] article').first();
+  await expect(employeeCard).toBeVisible();
+  expect(await getBackgroundColor(employeeCard)).not.toBe(lightShellBackground);
+
+  await page.locator('[data-demo-id="theme-toggle"]').click();
+  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  const darkShellBackground = await getBackgroundColor(shell);
+  expect(darkShellBackground).not.toBe(lightShellBackground);
+  expect(await getBackgroundColor(employeeCard)).not.toBe(darkShellBackground);
+  await expectTransparentBackground(header);
+  await expectTransparentBackground(page.locator('[data-demo-id="employees-tab"]'));
 });
 
 test("opens the chooser before the dialog and maps ordinary JSON without format examples", async ({

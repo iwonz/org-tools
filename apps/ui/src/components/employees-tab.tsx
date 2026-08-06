@@ -67,7 +67,7 @@ export const EmployeesTab = observer(() => {
 
   return (
     <section
-      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       data-demo-id="employees-tab"
     >
       {sortedEmployees.length > 0 && (

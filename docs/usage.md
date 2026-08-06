@@ -7,10 +7,13 @@ and document-arrow icons while hiding their visible labels, and the tab region s
 without overflowing the page. The application does not autosave. Empty product tabs show one focused
 next action and omit controls that cannot yet do useful work.
 
-The shell, populated surface headers, dialogs, local sections, and repeated list rows use spacing,
-background grouping, and interaction feedback instead of decorative horizontal rules. Borders
-remain on controls, selectable cards, dialogs, calendar cells, independent split panes, hierarchy
-guides, focus states, and destructive states where they communicate an actual boundary.
+The root shell, transparent header, and all six top-level product surfaces share one continuous,
+theme-aware neutral background. Dialogs, cards, fields, popovers, calendar cells, and interactive
+controls keep their own opaque surfaces where contrast communicates an actual boundary. The shell,
+populated surface headers, dialogs, local sections, and repeated list rows use spacing, background
+grouping, and interaction feedback instead of decorative horizontal rules. Borders remain on
+controls, selectable cards, dialogs, calendar cells, independent split panes, hierarchy guides,
+focus states, and destructive states where they communicate an actual boundary.
 
 ## Interface language
 

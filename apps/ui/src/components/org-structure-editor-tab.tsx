@@ -3073,13 +3073,13 @@ export const OrgStructureEditorTab = observer(() => {
   return (
     <>
       <section
-        className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-background"
+        className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent"
         data-demo-id="org-structure-editor-tab"
       >
         <div
           aria-label={t("Org Editor canvas")}
           className={cn(
-            "absolute inset-0 select-none overflow-hidden bg-muted/20",
+            "absolute inset-0 select-none overflow-hidden bg-transparent",
             editor.units.length > 0 && "cursor-grab active:cursor-grabbing",
           )}
           data-demo-id="org-editor-canvas"

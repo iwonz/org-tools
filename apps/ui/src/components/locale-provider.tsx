@@ -78,7 +78,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   if (!locale) {
-    return <div aria-busy="true" className="h-dvh w-dvw bg-background" />;
+    return <div aria-busy="true" className="h-dvh w-dvw bg-shell" />;
   }
 
   return (

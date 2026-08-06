@@ -58,7 +58,10 @@ const LoadedApp = observer(() => {
 
   return (
     <>
-      <main className="flex h-dvh w-dvw flex-col overflow-hidden bg-background text-foreground">
+      <main
+        className="flex h-dvh w-dvw flex-col overflow-hidden bg-shell text-foreground"
+        data-demo-id="app-shell"
+      >
         <Tabs
           className="min-h-0 flex-1"
           onValueChange={(value) => {
@@ -76,7 +79,7 @@ const LoadedApp = observer(() => {
           value={store.activeTab}
         >
           <header
-            className="flex h-14 shrink-0 items-center gap-2 bg-background px-2 sm:gap-3 sm:px-4"
+            className="flex h-14 shrink-0 items-center gap-2 bg-transparent px-2 sm:gap-3 sm:px-4"
             data-demo-id="app-header"
           >
             <nav

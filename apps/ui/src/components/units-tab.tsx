@@ -349,11 +349,11 @@ export const UnitsTab = observer(() => {
 
   return (
     <section
-      className="grid min-h-0 min-w-0 flex-1 overflow-hidden bg-muted/20"
+      className="grid min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent"
       style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
     >
       <div
-        className="flex min-h-0 min-w-0 flex-col border-r bg-background"
+        className="flex min-h-0 min-w-0 flex-col border-r bg-transparent"
         data-demo-id="units-tree-panel"
       >
         <div
@@ -494,7 +494,7 @@ export const UnitsTab = observer(() => {
         </ScrollArea>
       </div>
       <aside
-        className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background"
+        className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent"
         data-demo-id="units-employee-panel"
       >
         <div className="grid shrink-0 gap-3 p-3" data-demo-id="units-employee-header">

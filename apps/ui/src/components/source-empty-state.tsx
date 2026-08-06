@@ -27,7 +27,7 @@ function EmptyStateContent({ action, description, icon, title }: EmptyStateConte
 export function TopLevelEmptyState(props: EmptyStateContentProps) {
   return (
     <section
-      className="grid min-h-0 flex-1 place-items-center bg-muted/20 p-8"
+      className="grid min-h-0 flex-1 place-items-center bg-transparent p-8"
       data-demo-id="top-level-empty-state"
     >
       <EmptyStateContent {...props} />
