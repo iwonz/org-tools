@@ -31,7 +31,7 @@ import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { OrgStoreProvider, useOrgStore } from "@/stores/org-store-context";
 
 const PRODUCT_TAB_CLASS_NAME =
-  "h-9 border border-input bg-background/70 px-3 text-foreground hover:bg-accent hover:text-accent-foreground data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground";
+  "relative h-full rounded-none border-0 bg-transparent px-3 text-muted-foreground hover:bg-accent/40 hover:text-foreground focus-visible:ring-inset data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:inset-x-3 data-[state=active]:after:bottom-px data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-primary";
 
 const LoadedApp = observer(() => {
   const store = useOrgStore();
@@ -91,7 +91,7 @@ const LoadedApp = observer(() => {
               data-demo-id="product-navigation"
             >
               <TabsList
-                className="h-9 w-max gap-1 rounded-none bg-transparent p-0 sm:gap-2"
+                className="h-9 w-max gap-0 overflow-hidden rounded-md border border-input bg-background/70 p-0"
                 data-demo-id="product-tabs-list"
               >
                 <TabsTrigger

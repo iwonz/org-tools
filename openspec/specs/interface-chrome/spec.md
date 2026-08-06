@@ -10,20 +10,21 @@ The application SHALL use one borderless 56 px header, a continuous theme-aware 
 background, spacing, background grouping, and control layout instead of decorative horizontal rules
 in the main shell, status bands, product surface headers, and local section headers. The header
 SHALL contain a horizontally containable product-tab region on the left and a fixed global-action
-region on the right. Each product tab SHALL be a separate, equally styled bordered control, and the
-responsive gap between product tabs SHALL match the gap between global actions. The root shell,
-transparent header, and all six top-level product surfaces SHALL share the shell background, while
-meaningful cards, fields, dialogs, popovers, calendar cells, and interactive controls retain their
-own bounded surface treatment.
+region on the right. The product-tab region SHALL form one contiguous bordered island with no gap or
+individual control border between tabs. The active tab SHALL use a tab-specific inset indicator and
+stronger text without a filled action-button background. The root shell, transparent header, and all
+six top-level product surfaces SHALL share the shell background, while meaningful cards, fields,
+dialogs, popovers, calendar cells, and interactive controls retain their own bounded surface
+treatment.
 
 #### Scenario: Populated product surface
 - **WHEN** a populated product surface renders below the unified app header
 - **THEN** the header and surface share one continuous shell background without a separate tab row, white header strip, shadow, or horizontal divider line
 
-#### Scenario: Consistent product navigation controls
+#### Scenario: Contiguous product tab island
 - **WHEN** the unified header renders in light or dark theme
-- **THEN** all six product tabs have equal height, radius, border treatment, internal spacing, and a clear active state
-- **AND** adjacent product tabs use the same responsive horizontal gap as adjacent global actions
+- **THEN** one outer boundary groups all six equal-height product tabs with no gap or individual tab border
+- **AND** the active tab has stronger text and a visible inset bottom indicator while retaining a transparent background
 
 #### Scenario: Status band
 - **WHEN** an error or informational status appears

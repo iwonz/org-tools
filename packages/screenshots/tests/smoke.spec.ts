@@ -29,32 +29,50 @@ async function expectTransparentBackground(locator: Locator) {
   expect(await getBackgroundColor(locator)).toBe("rgba(0, 0, 0, 0)");
 }
 
-async function expectConsistentProductTabControls(page: Page) {
+async function expectProductTabIsland(page: Page) {
   const tabsList = page.locator('[data-demo-id="product-tabs-list"]');
   const tabs = tabsList.locator('[data-demo-id^="tab-"]');
-  const actions = page.locator('[data-demo-id="header-actions"]');
+  const listStyle = await tabsList.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      borderWidth: style.borderWidth,
+      columnGap: style.columnGap,
+      height: element.getBoundingClientRect().height,
+    };
+  });
   const tabStyles = await tabs.evaluateAll((elements) =>
     elements.map((element) => {
       const style = window.getComputedStyle(element);
       return {
-        borderRadius: style.borderRadius,
+        backgroundColor: style.backgroundColor,
         borderWidth: style.borderWidth,
         height: element.getBoundingClientRect().height,
       };
     }),
   );
 
+  expect(listStyle).toEqual({ borderWidth: "1px", columnGap: "0px", height: 36 });
   expect(tabStyles).toHaveLength(6);
-  expect(new Set(tabStyles.map(({ borderRadius }) => borderRadius)).size).toBe(1);
-  expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["1px"]));
-  expect(new Set(tabStyles.map(({ height }) => height))).toEqual(new Set([36]));
-  expect(await tabsList.evaluate((element) => window.getComputedStyle(element).columnGap)).toBe(
-    await actions.evaluate((element) => window.getComputedStyle(element).columnGap),
-  );
+  expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
+  expect(new Set(tabStyles.map(({ height }) => height)).size).toBe(1);
 
   const active = tabsList.locator('[data-demo-id^="tab-"][aria-selected="true"]');
   const inactive = tabsList.locator('[data-demo-id^="tab-"][aria-selected="false"]').first();
-  expect(await getBackgroundColor(active)).not.toBe(await getBackgroundColor(inactive));
+  expect(await getBackgroundColor(active)).toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
+  expect(await active.evaluate((element) => window.getComputedStyle(element).color)).not.toBe(
+    await inactive.evaluate((element) => window.getComputedStyle(element).color),
+  );
+  const activeMarker = await active.evaluate((element) => {
+    const marker = window.getComputedStyle(element, "::after");
+    return {
+      backgroundColor: marker.backgroundColor,
+      content: marker.content,
+      height: marker.height,
+    };
+  });
+  expect(activeMarker).toMatchObject({ content: '""', height: "2px" });
+  expect(activeMarker.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
 }
 
 test("opens a blank workspace with all product surfaces", async ({ page }) => {
@@ -92,7 +110,7 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await expectConsistentProductTabControls(page);
+  await expectProductTabIsland(page);
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Light", exact: true }).click();
   expect(
@@ -141,7 +159,7 @@ test("contains the unified header at narrow and desktop widths", async ({ page }
   const importLabel = page.locator('[data-demo-id="import-action"] span');
   const exportLabel = page.locator('[data-demo-id="save-workspace"] span');
 
-  await expectConsistentProductTabControls(page);
+  await expectProductTabIsland(page);
   await expectTransparentBackground(header);
   await expect(importLabel).toBeHidden();
   await expect(exportLabel).toBeHidden();
@@ -161,7 +179,7 @@ test("contains the unified header at narrow and desktop widths", async ({ page }
 
   for (const width of [1024, 1280]) {
     await page.setViewportSize({ width, height: 720 });
-    await expectConsistentProductTabControls(page);
+    await expectProductTabIsland(page);
     await expectTransparentBackground(header);
     await expect(importLabel).toBeVisible();
     await expect(exportLabel).toBeVisible();

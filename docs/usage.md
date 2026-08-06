@@ -4,10 +4,10 @@ org-tools opens directly in a blank Main View with Editor selected. One 56 px he
 product tabs on the left and the language, theme, **Import**, and **Export** actions on the right,
 without a visible wordmark. Below 1024 px the transfer actions keep their localized accessible names
 and document-arrow icons while hiding their visible labels, and the tab region scrolls horizontally
-without overflowing the page. Each product tab is an individual bordered control with consistent
-height and styling; the responsive spacing between tabs matches the spacing between the global
-actions. The application does not autosave. Empty product tabs show one focused next action and omit
-controls that cannot yet do useful work.
+without overflowing the page. The six product tabs form one contiguous bordered island without gaps
+or individual tab borders. Stronger text and a thin inset bottom marker identify the active tab
+without giving it an action-button background. The application does not autosave. Empty product tabs
+show one focused next action and omit controls that cannot yet do useful work.
 
 The root shell, transparent header, and all six top-level product surfaces share one continuous,
 theme-aware neutral background. Dialogs, cards, fields, popovers, calendar cells, and interactive
