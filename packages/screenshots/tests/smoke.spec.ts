@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, type Locator, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import {
   expectLocalRequestsOnly,
@@ -27,6 +27,34 @@ async function getBackgroundColor(locator: Locator) {
 
 async function expectTransparentBackground(locator: Locator) {
   expect(await getBackgroundColor(locator)).toBe("rgba(0, 0, 0, 0)");
+}
+
+async function expectConsistentProductTabControls(page: Page) {
+  const tabsList = page.locator('[data-demo-id="product-tabs-list"]');
+  const tabs = tabsList.locator('[data-demo-id^="tab-"]');
+  const actions = page.locator('[data-demo-id="header-actions"]');
+  const tabStyles = await tabs.evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        borderRadius: style.borderRadius,
+        borderWidth: style.borderWidth,
+        height: element.getBoundingClientRect().height,
+      };
+    }),
+  );
+
+  expect(tabStyles).toHaveLength(6);
+  expect(new Set(tabStyles.map(({ borderRadius }) => borderRadius)).size).toBe(1);
+  expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["1px"]));
+  expect(new Set(tabStyles.map(({ height }) => height))).toEqual(new Set([36]));
+  expect(await tabsList.evaluate((element) => window.getComputedStyle(element).columnGap)).toBe(
+    await actions.evaluate((element) => window.getComputedStyle(element).columnGap),
+  );
+
+  const active = tabsList.locator('[data-demo-id^="tab-"][aria-selected="true"]');
+  const inactive = tabsList.locator('[data-demo-id^="tab-"][aria-selected="false"]').first();
+  expect(await getBackgroundColor(active)).not.toBe(await getBackgroundColor(inactive));
 }
 
 test("opens a blank workspace with all product surfaces", async ({ page }) => {
@@ -64,6 +92,7 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
+  await expectConsistentProductTabControls(page);
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Light", exact: true }).click();
   expect(
@@ -112,6 +141,7 @@ test("contains the unified header at narrow and desktop widths", async ({ page }
   const importLabel = page.locator('[data-demo-id="import-action"] span');
   const exportLabel = page.locator('[data-demo-id="save-workspace"] span');
 
+  await expectConsistentProductTabControls(page);
   await expectTransparentBackground(header);
   await expect(importLabel).toBeHidden();
   await expect(exportLabel).toBeHidden();
@@ -131,6 +161,7 @@ test("contains the unified header at narrow and desktop widths", async ({ page }
 
   for (const width of [1024, 1280]) {
     await page.setViewportSize({ width, height: 720 });
+    await expectConsistentProductTabControls(page);
     await expectTransparentBackground(header);
     await expect(importLabel).toBeVisible();
     await expect(exportLabel).toBeVisible();

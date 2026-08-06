@@ -73,10 +73,10 @@ states are also covered by browser assertions. Every gallery capture uses the de
 locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
 shows the total catalog count. The gallery verifies one continuous theme-aware background across the
-root shell, transparent header, and top-level product surfaces; distinct bounded controls; borderless
-surface and dialog chrome; borderless content-sized Analytics groups; whitespace between sections;
-and preserved outlines for controls, selection cards, calendars, split panes, hierarchy guides,
-focus, and destructive states.
+root shell, transparent header, and top-level product surfaces; individually bordered and equally
+spaced product tabs; distinct bounded controls; borderless surface and dialog chrome; borderless
+content-sized Analytics groups; whitespace between sections; and preserved outlines for controls,
+selection cards, calendars, split panes, hierarchy guides, focus, and destructive states.
 
 ## Regenerate
 
@@ -92,8 +92,8 @@ filesystem path, a browser notification, a nondeterministic timestamp, or an ext
 
 `pnpm test:browser` runs the non-visual smoke scenarios against the same production server. The
 smoke suite verifies blank startup, the wordmark-free unified header, its continuous light and dark
-shell background, distinct bounded surfaces, ordered keyboard-accessible product tabs, the flag-only
-locale trigger, responsive transfer actions at 390, 1024, and 1280 px,
+shell background, distinct bounded surfaces, consistently styled and spaced keyboard-accessible
+product tabs, the flag-only locale trigger, responsive transfer actions at 390, 1024, and 1280 px,
 absence of locale-provider console errors, the simplified empty states, all
 four scoped workspace Export downloads, state projection append/replace, local avatar workflows,
 hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
