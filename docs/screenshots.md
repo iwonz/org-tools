@@ -72,13 +72,13 @@ cards, nested Team and Employee previews, generic mapping, the unified header, a
 states are also covered by browser assertions. Every gallery capture uses the deterministic English
 locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
-shows one containing surface around search, its total catalog count, actions, and contiguous rows.
-The gallery verifies one continuous theme-aware shell background, transparent top-level containers,
-one populated surface each for Teams, Employees, Analytics, and Download, consistent segmented tab
-switchers, one contiguous global-action island, compact split panes without vertical rules, the
-Org Editor top-right and bottom-left action islands, right-revealing Editor search, quiet borderless
-Analytics groups with 12 px gaps, and preserved outlines for controls, selection cards, calendars,
-hierarchy guides, focus, and destructive states.
+shows one containing layout around search, its total catalog count, actions, and contiguous rows.
+The gallery verifies one uninterrupted theme-aware background across the header, top-level
+containers, and transparent populated workflow islands; consistent segmented tab switchers; one
+contiguous global-action island; compact split panes without vertical rules; the Org Editor top-left
+and bottom-left action islands; right-revealing Editor search; quiet borderless Analytics groups with
+12 px gaps; and preserved owned surfaces for controls, Employee and Team cards, selection cards,
+calendars, hierarchy guides, focus, and destructive states.
 
 ## Regenerate
 
@@ -103,6 +103,7 @@ hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping,
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
 It also verifies silent replacement completion, localized Employee total and match counts, reactive
 count changes, borderless normal and destructive dialog chrome, a contained 390 px Import layout,
-contiguous Employee rows, shared populated product surfaces, absent source-pane rules, compact Teams
-and Analytics spacing, grouped Editor controls, preserved meaningful outlines, and Analytics
-backgrounds, dynamic height, row cap, sorting, drill-down, and border behavior.
+contiguous Employee rows, shell-continuous populated workflow layouts, absent source-pane rules,
+compact Teams and Analytics spacing, left-aligned grouped Editor controls, preserved meaningful
+outlines, and Analytics backgrounds, dynamic height, row cap, sorting, drill-down, and border
+behavior.

@@ -162,12 +162,11 @@ async function expectProductSurfaceIsland(surface: Locator) {
       };
     }),
   ).toEqual({
-    backgroundColor: await getBackgroundColor(surface),
+    backgroundColor: "rgba(0, 0, 0, 0)",
     borderRadius: "8px",
     overflowX: "hidden",
     overflowY: "hidden",
   });
-  expect(await getBackgroundColor(surface)).not.toBe("rgba(0, 0, 0, 0)");
 }
 
 async function expectContainedBy(parent: Locator, child: Locator) {
@@ -1034,14 +1033,7 @@ test("groups Org Editor controls and reveals search to the right", async ({ page
   const topActionsBox = await topActions.boundingBox();
   expect(canvasBox).not.toBeNull();
   expect(topActionsBox).not.toBeNull();
-  expect(
-    Math.abs(
-      (canvasBox?.x ?? 0) +
-        (canvasBox?.width ?? 0) -
-        ((topActionsBox?.x ?? 0) + (topActionsBox?.width ?? 0)) -
-        12,
-    ),
-  ).toBeLessThanOrEqual(1);
+  expect(Math.abs((topActionsBox?.x ?? 0) - (canvasBox?.x ?? 0) - 12)).toBeLessThanOrEqual(1);
 
   const searchButton = page.locator('[data-demo-id="org-editor-search-button"]');
   await searchButton.click();

@@ -12,16 +12,16 @@ not autosave. Nested tab groups use the same contiguous segmented-switcher treat
 application. Empty product tabs show one focused next action and omit controls that cannot yet do
 useful work.
 
-The root shell, transparent header, and top-level product containers share one continuous,
-theme-aware neutral background. Populated Teams, Employees, Analytics, and Download workflows each
-use one inset rounded surface that contains their header, controls, and content. Dialogs, fields,
-popovers, calendar cells, and interactive controls keep their own opaque surfaces where contrast
-communicates an actual boundary. The shell, populated surface headers, dialogs, local sections, and
-repeated list rows use spacing, background grouping, and interaction feedback instead of decorative
-horizontal rules. Borders remain on controls, selectable cards, dialogs, calendar cells, hierarchy
-guides, focus states, and destructive states where they communicate an actual boundary. Adjacent
-panes in Teams and Download share their containing surface and rely on compact spacing rather than a
-vertical rule.
+The root shell, transparent header, top-level product containers, and populated workflow layout
+islands share one continuous theme-aware neutral background. The workflow islands retain their
+inset, rounded clipping, and content grouping without adding a contrasting page fill below the
+header. Dialogs, fields, Employee and Team cards, nested Analytics groups, popovers, calendar cells,
+and interactive controls keep their own opaque surfaces where contrast communicates an actual
+boundary. The shell, populated surface headers, dialogs, local sections, and repeated list rows use
+spacing, background grouping, and interaction feedback instead of decorative horizontal rules.
+Borders remain on controls, selectable cards, dialogs, calendar cells, hierarchy guides, focus
+states, and destructive states where they communicate an actual boundary. Adjacent panes in Teams
+and Download share their containing layout and rely on compact spacing rather than a vertical rule.
 
 ## Interface language
 
@@ -44,7 +44,7 @@ persisted types, and export fields remain unchanged.
   filters are active. Search, the count, actions, and the continuous zero-gap virtualized list share
   one surface.
 - **Editor** arranges the Main View or an independent custom View on a canvas. View selection,
-  history, layout, hierarchy, and search actions form one top-right control island. Search is the last
+  history, layout, hierarchy, and search actions form one top-left control island. Search is the last
   action and reveals its field to the right of its trigger. Zoom, scale reset, and primary-Team focus
   form a second island at the bottom left.
 - **Analytics** summarizes the current organization without sending data elsewhere. Its header and

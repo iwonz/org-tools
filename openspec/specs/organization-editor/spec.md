@@ -9,7 +9,7 @@ surfaces in that visual and keyboard order, with Editor active for a blank works
 wordmark or brand icon, and consistent actionable top-level empty states. A populated Employees
 surface SHALL show the total catalog count below search and SHALL additionally show the visible match
 count only while search or filters are active. The populated Org Editor SHALL group View management,
-layout, hierarchy, and search controls in one top-right island and group viewport controls in one
+layout, hierarchy, and search controls in one top-left island and group viewport controls in one
 bottom-left island.
 
 #### Scenario: Product navigation order
@@ -53,11 +53,11 @@ bottom-left island.
 
 #### Scenario: Editor control islands
 - **WHEN** the active View contains Units
-- **THEN** View selection and actions, layout, arrange, hierarchy, and Search appear as borderless children of one top-right island
+- **THEN** View selection and actions, layout, arrange, hierarchy, and Search appear as borderless children of one top-left island
 - **AND** zoom out, zoom in, scale reset, and primary-Team focus appear as borderless children of one bottom-left island
 
 #### Scenario: Editor search placement
-- **WHEN** Search is the final control in the top-right island and the user opens it
+- **WHEN** Search is the final control in the top-left island and the user opens it
 - **THEN** the field appears to the right of its trigger while the complete island and results remain within the viewport
 
 ### Requirement: Main and custom Views remain independent

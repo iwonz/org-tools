@@ -21,21 +21,22 @@ Use stable item keys and remeasure rows when section composition or filters chan
 receive resolved data and contexts through props rather than observing the whole organization store.
 Employee list rows use a zero-gap virtualizer layout; their measured heights remain content-driven.
 
-Analytics keeps six bounded virtualized lists inside one outer surface. The nested groups use quiet
-backgrounds and 12 px grid gaps without a border lattice or section rules. Outer padding is included
-in each computed section height so the eight-row viewport cap remains unchanged. The shared product
-surface wrapper adds no observer or derived-data boundary. Calendar uses seven fluid columns, four or five
-adaptive rows, at most two inline tag events per day, and a bounded two-line tag cloud so a 31-day
-month fits the maintained 1280-by-720 desktop viewport. Smaller viewports retain local overflow as a
-safe fallback. Per-tag event dialogs virtualize upcoming and past rows.
+Analytics keeps six bounded virtualized lists inside one transparent outer layout island. The nested
+groups use quiet backgrounds and 12 px grid gaps without a border lattice or section rules. Outer
+padding is included in each computed section height so the eight-row viewport cap remains unchanged.
+The shared product-surface wrapper adds neither a paint layer nor an observer or derived-data
+boundary. Calendar uses seven fluid columns, four or five adaptive rows, at most two inline tag
+events per day, and a bounded two-line tag cloud so a 31-day month fits the maintained 1280-by-720
+desktop viewport. Smaller viewports retain local overflow as a safe fallback. Per-tag event dialogs
+virtualize upcoming and past rows.
 
 Canvas pointer movement should update imperative preview state without triggering a complete React
 render for every event. Portaled drag previews and full-size valid drop targets should avoid
 measuring the entire tree repeatedly.
 
-Org Editor control islands group existing controls only. Search remains closed and unmounted at its
-zero-width state until requested, then expands to the right of its trigger without changing canvas
-data or forcing a layout pass over canvas nodes.
+Org Editor control islands group existing controls only. The top island is left-anchored; Search
+remains closed and unmounted at its zero-width state until requested, then expands to the right of
+its trigger without changing canvas data or forcing a layout pass over canvas nodes.
 
 Org Editor Employee rows use deterministic tag-chip packing and cached per-Unit prefix offsets.
 Locale or tag changes invalidate those measurements. Visibility lookup uses the prefix offsets, and

@@ -3472,7 +3472,7 @@ export const OrgStructureEditorTab = observer(() => {
 
         {(editor.units.length > 0 || store.orgViewList.length > 1) && (
           <div
-            className="absolute right-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-end gap-0 rounded-md border border-input bg-background/95 backdrop-blur"
+            className="absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-start gap-0 rounded-md border border-input bg-background/95 backdrop-blur"
             data-demo-id="org-editor-actions"
           >
             <OrgViewToolbar
