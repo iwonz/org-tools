@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ProductSurfaceIsland } from "@/components/ui/product-surface-island";
 import { type UiTextKey, useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
 import type { AnalyticsCountEntry } from "@/lib/analytics";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -210,7 +211,7 @@ function AnalyticsList({
 
   return (
     <section
-      className={["flex min-w-0 flex-col rounded-lg bg-card p-3", className]
+      className={["flex min-w-0 flex-col rounded-md bg-muted/45 p-3", className]
         .filter(Boolean)
         .join(" ")}
       data-analytics-entry-count={sortedEntries.length}
@@ -233,7 +234,7 @@ function AnalyticsList({
             ref={scrollRef}
           >
             <table className="w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-card/95 text-left text-xs text-muted-foreground backdrop-blur">
+              <thead className="sticky top-0 z-10 bg-muted/95 text-left text-xs text-muted-foreground backdrop-blur">
                 <tr>
                   <AnalyticsSortableHeader
                     className="px-3 py-1"
@@ -381,83 +382,91 @@ export const AnalyticsTab = observer(() => {
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
         data-demo-id="analytics-tab"
       >
-        <div
-          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-transparent px-4 py-3"
-          data-demo-id="analytics-header"
+        <ProductSurfaceIsland
+          className="m-2 flex min-h-0 flex-1 flex-col"
+          data-demo-id="analytics-surface"
         >
-          <div className="min-w-0">
-            <div className="text-sm font-medium">{t("Analytics")}</div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
-              {countText("employeesInMain", { count: units.allEmployees.length })}
-            </div>
-          </div>
-        </div>
-        <div className="min-h-0 flex-1 overflow-auto p-4" data-demo-id="analytics-scroll-area">
-          {!analytics ? (
-            <div className="grid h-full min-h-[320px] place-items-center">
-              <div className="grid justify-items-center gap-3 text-sm text-muted-foreground">
-                <div
-                  aria-hidden="true"
-                  className="size-8 rounded-full border-2 border-primary/20 border-t-primary motion-safe:animate-spin"
-                />
-                <div>
-                  {analyticsBuildStatus === "scheduled"
-                    ? t("Preparing analytics")
-                    : t("Building analytics")}
-                </div>
+          <div
+            className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-transparent px-3 py-3"
+            data-demo-id="analytics-header"
+          >
+            <div className="min-w-0">
+              <div className="text-sm font-medium">{t("Analytics")}</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {countText("employeesInMain", { count: units.allEmployees.length })}
               </div>
             </div>
-          ) : (
-            <div
-              className="grid grid-cols-1 items-start gap-x-10 gap-y-8 lg:grid-cols-2"
-              data-demo-id="analytics-grid"
-            >
-              <AnalyticsList
-                demoId="analytics-positions"
-                emptyState={t("No positions found")}
-                entries={analytics.positionCounts}
-                onView={(entry) => openView("Positions", entry)}
-                title={t("Positions")}
-              />
-              <AnalyticsList
-                demoId="analytics-birthday-months"
-                emptyState={t("No birth months found")}
-                entries={analytics.birthdayMonthCounts}
-                onView={(entry) => openView("Birth months", entry)}
-                title={t("Birth months")}
-              />
-              <AnalyticsList
-                demoId="analytics-birthday-dates"
-                emptyState={t("No birthdays found")}
-                entries={analytics.birthdayDateCounts}
-                onView={(entry) => openView("Birthdays", entry)}
-                title={t("Birthdays")}
-              />
-              <AnalyticsList
-                demoId="analytics-first-names"
-                emptyState={t("No first names found")}
-                entries={analytics.firstNameCounts}
-                onView={(entry) => openView("First names", entry)}
-                title={t("First names")}
-              />
-              <AnalyticsList
-                demoId="analytics-last-names"
-                emptyState={t("No last names found")}
-                entries={analytics.lastNameCounts}
-                onView={(entry) => openView("Last names", entry)}
-                title={t("Last names")}
-              />
-              <AnalyticsList
-                className="lg:col-span-2"
-                demoId="analytics-full-name-duplicates"
-                emptyState={t("No duplicate full names")}
-                entries={analytics.fullNameDuplicates}
-                onView={(entry) => openView("Full names", entry)}
-                title={t("Full names")}
-              />
-            </div>
-          )}
-        </div>
+          </div>
+          <div
+            className="min-h-0 flex-1 overflow-auto p-3 pt-0"
+            data-demo-id="analytics-scroll-area"
+          >
+            {!analytics ? (
+              <div className="grid h-full min-h-[320px] place-items-center">
+                <div className="grid justify-items-center gap-3 text-sm text-muted-foreground">
+                  <div
+                    aria-hidden="true"
+                    className="size-8 rounded-full border-2 border-primary/20 border-t-primary motion-safe:animate-spin"
+                  />
+                  <div>
+                    {analyticsBuildStatus === "scheduled"
+                      ? t("Preparing analytics")
+                      : t("Building analytics")}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2"
+                data-demo-id="analytics-grid"
+              >
+                <AnalyticsList
+                  demoId="analytics-positions"
+                  emptyState={t("No positions found")}
+                  entries={analytics.positionCounts}
+                  onView={(entry) => openView("Positions", entry)}
+                  title={t("Positions")}
+                />
+                <AnalyticsList
+                  demoId="analytics-birthday-months"
+                  emptyState={t("No birth months found")}
+                  entries={analytics.birthdayMonthCounts}
+                  onView={(entry) => openView("Birth months", entry)}
+                  title={t("Birth months")}
+                />
+                <AnalyticsList
+                  demoId="analytics-birthday-dates"
+                  emptyState={t("No birthdays found")}
+                  entries={analytics.birthdayDateCounts}
+                  onView={(entry) => openView("Birthdays", entry)}
+                  title={t("Birthdays")}
+                />
+                <AnalyticsList
+                  demoId="analytics-first-names"
+                  emptyState={t("No first names found")}
+                  entries={analytics.firstNameCounts}
+                  onView={(entry) => openView("First names", entry)}
+                  title={t("First names")}
+                />
+                <AnalyticsList
+                  demoId="analytics-last-names"
+                  emptyState={t("No last names found")}
+                  entries={analytics.lastNameCounts}
+                  onView={(entry) => openView("Last names", entry)}
+                  title={t("Last names")}
+                />
+                <AnalyticsList
+                  className="lg:col-span-2"
+                  demoId="analytics-full-name-duplicates"
+                  emptyState={t("No duplicate full names")}
+                  entries={analytics.fullNameDuplicates}
+                  onView={(entry) => openView("Full names", entry)}
+                  title={t("Full names")}
+                />
+              </div>
+            )}
+          </div>
+        </ProductSurfaceIsland>
       </section>
       <Dialog
         onOpenChange={(open) => {

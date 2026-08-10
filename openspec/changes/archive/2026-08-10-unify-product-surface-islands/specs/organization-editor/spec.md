@@ -1,8 +1,5 @@
-# organization-editor Specification
+## MODIFIED Requirements
 
-## Purpose
-Define the retained editor surfaces, View isolation, and birthday-driven product behavior.
-## Requirements
 ### Requirement: The generic editor retains six product surfaces
 The application SHALL provide localized Units, Employees, Editor, Analytics, Calendar, and Download
 surfaces in that visual and keyboard order, with Editor active for a blank workspace, no visible
@@ -60,20 +57,13 @@ bottom-left island.
 - **WHEN** Search is the final control in the top-right island and the user opens it
 - **THEN** the field appears to the right of its trigger while the complete island and results remain within the viewport
 
-### Requirement: Main and custom Views remain independent
-The editor SHALL preserve the canonical Main View, custom Views, Live Units, undo/redo, drag-and-drop, layout, and viewport isolation.
-
-#### Scenario: Custom View edit
-- **WHEN** a global Employee or Unit is edited only in a custom View
-- **THEN** the Main View remains unchanged
-
 ### Requirement: Calendar and analytics use normalized birthdays
 The application SHALL use nullable `MM-DD` birthdays for Calendar and birthday analytics, SHALL
 navigate a selected month and year across year boundaries, SHALL project February 29 birthdays to
 February 28 in non-leap years, SHALL include exact-date global Main Employee tag events, SHALL fit a
 31-day grid and bounded tag cloud without page scroll at the maintained 1280 by 720 desktop
-viewport, and SHALL render Analytics as one outer surface island containing six content-sized
-groups with quiet nested backgrounds, compact 12 px gaps, and no header or repeated row rules. Each
+viewport, and SHALL render Analytics as one outer surface island containing six content-sized groups
+with quiet nested backgrounds, compact 12 px gaps, and no header or repeated row rules. Each
 Analytics group SHALL show at most eight estimated 42 px rows before using its existing virtualized
 internal scroll container.
 
@@ -97,33 +87,3 @@ internal scroll container.
 #### Scenario: Long Analytics group
 - **WHEN** an Analytics group contains more than eight entries
 - **THEN** eight rows remain visible and additional virtualized rows are reachable through internal scrolling
-
-### Requirement: Calendar exposes dated tag events and details
-The Calendar SHALL show exact-date tag events separately from birthday avatars, limit a day cell to two inline tag events plus an overflow count, and open a localized day dialog with Birthday and Dated tags sections.
-
-#### Scenario: Open a populated day
-- **WHEN** a user activates a day containing birthdays and dated tags
-- **THEN** the dialog lists both event sections with their Employees and labels
-
-### Requirement: Calendar provides a bounded dated-tag cloud
-The Calendar SHALL show all dated tag labels from global Main Employees as localized chips with event counts in at most two rows, disclose overflow without expanding the page, and open a virtualized dialog for the selected label.
-
-#### Scenario: Open a tag from the cloud
-- **WHEN** a user activates a dated-tag cloud chip
-- **THEN** current and future events appear in ascending date order and past events appear separately in descending date order with localized dates and Employees
-
-#### Scenario: Calendar empty state
-- **WHEN** no global Main Employee has either a birthday or a dated tag
-- **THEN** the shared Calendar empty state is shown instead of the cloud and grid
-
-### Requirement: Org Editor Employee geometry follows wrapped tags
-The Org Editor SHALL compute Employee row heights from all rendered localized tag chips and SHALL
-use shared prefix offsets for virtualization, hitboxes, selection, connectors, layout, and bounds.
-
-#### Scenario: Tag rows change
-- **WHEN** Employee tags or the active locale changes the packed chip rows
-- **THEN** measurements are invalidated and every downstream canvas geometry consumer uses the updated offsets without overlap
-
-#### Scenario: Large View virtualization
-- **WHEN** a large View contains variable-height Employee rows
-- **THEN** only visible rows render while hit testing and connector anchors remain aligned with their Employees

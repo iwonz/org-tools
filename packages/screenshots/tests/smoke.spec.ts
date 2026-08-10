@@ -149,6 +149,41 @@ async function expectSegmentedSwitcher(tabsList: Locator) {
   expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
 }
 
+async function expectProductSurfaceIsland(surface: Locator) {
+  await expect(surface).toBeVisible();
+  expect(
+    await surface.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        borderRadius: style.borderRadius,
+        overflowX: style.overflowX,
+        overflowY: style.overflowY,
+      };
+    }),
+  ).toEqual({
+    backgroundColor: await getBackgroundColor(surface),
+    borderRadius: "8px",
+    overflowX: "hidden",
+    overflowY: "hidden",
+  });
+  expect(await getBackgroundColor(surface)).not.toBe("rgba(0, 0, 0, 0)");
+}
+
+async function expectContainedBy(parent: Locator, child: Locator) {
+  const [parentBox, childBox] = await Promise.all([parent.boundingBox(), child.boundingBox()]);
+  expect(parentBox).not.toBeNull();
+  expect(childBox).not.toBeNull();
+  expect(childBox?.x ?? 0).toBeGreaterThanOrEqual((parentBox?.x ?? 0) - 1);
+  expect(childBox?.y ?? 0).toBeGreaterThanOrEqual((parentBox?.y ?? 0) - 1);
+  expect((childBox?.x ?? 0) + (childBox?.width ?? 0)).toBeLessThanOrEqual(
+    (parentBox?.x ?? 0) + (parentBox?.width ?? 0) + 1,
+  );
+  expect((childBox?.y ?? 0) + (childBox?.height ?? 0)).toBeLessThanOrEqual(
+    (parentBox?.y ?? 0) + (parentBox?.height ?? 0) + 1,
+  );
+}
+
 test("opens a blank workspace with all product surfaces", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -798,6 +833,10 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
   );
   await expectNoHorizontalRule(page.locator('[data-demo-id="units-tree-header"]'));
   await expectNoHorizontalRule(page.locator('[data-demo-id="units-employee-header"]'));
+  const unitsSurface = page.locator('[data-demo-id="units-surface"]');
+  await expectProductSurfaceIsland(unitsSurface);
+  await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-tree-panel"]'));
+  await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-employee-panel"]'));
 
   await page.getByRole("tab", { name: "Download", exact: true }).click();
   await expect(page.locator('[data-demo-id="export-source-panel"]')).toHaveCSS(
@@ -805,6 +844,9 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
     "0px",
   );
   await expectSegmentedSwitcher(page.locator('[data-demo-id="export-source-tabs"]'));
+  const exportSurface = page.locator('[data-demo-id="export-surface"]');
+  await expectProductSurfaceIsland(exportSurface);
+  await expectContainedBy(exportSurface, page.locator('[data-demo-id="export-selection-grid"]'));
   await assertLocalRequests();
 });
 
@@ -815,6 +857,11 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
 
   await expectNoHorizontalRule(page.locator('[data-demo-id="employees-header"]'));
+
+  const employeesSurface = page.locator('[data-demo-id="employees-surface"]');
+  await expectProductSurfaceIsland(employeesSurface);
+  await expectContainedBy(employeesSurface, page.locator('[data-demo-id="employees-header"]'));
+  await expectContainedBy(employeesSurface, page.locator('[data-demo-id="employees-list"]'));
 
   const summary = page.locator('[data-demo-id="employees-summary"]');
   const search = page.locator('[data-demo-id="employees-search"]');
@@ -885,6 +932,15 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
 
   const analyticsHeader = page.locator('[data-demo-id="analytics-header"]');
   await expectNoHorizontalRule(analyticsHeader);
+  const analyticsSurface = page.locator('[data-demo-id="analytics-surface"]');
+  await expectProductSurfaceIsland(analyticsSurface);
+  await expectContainedBy(analyticsSurface, analyticsHeader);
+  expect(
+    await page.locator('[data-demo-id="analytics-grid"]').evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return { columnGap: style.columnGap, rowGap: style.rowGap };
+    }),
+  ).toEqual({ columnGap: "12px", rowGap: "12px" });
   const positions = page.locator('[data-demo-id="analytics-positions"]');
   await expect(positions).toHaveAttribute("data-analytics-entry-count", "4");
   await expect(positions).toHaveAttribute("data-analytics-visible-rows", "4");
@@ -927,6 +983,83 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
   const duplicates = page.locator('[data-demo-id="analytics-full-name-duplicates"]');
   await expect(duplicates).toHaveAttribute("data-analytics-visible-rows", "0");
   await expect(duplicates).toHaveCSS("height", "148px");
+  await assertLocalRequests();
+});
+
+test("groups Org Editor controls and reveals search to the right", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+
+  const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
+  const topActions = page.locator('[data-demo-id="org-editor-actions"]');
+  const viewportActions = page.locator('[data-demo-id="org-editor-viewport-actions"]');
+  const topStyle = await topActions.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return { borderWidth: style.borderWidth, columnGap: style.columnGap };
+  });
+  const viewportStyle = await viewportActions.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return { borderWidth: style.borderWidth, columnGap: style.columnGap };
+  });
+  expect(topStyle).toEqual({ borderWidth: "1px", columnGap: "0px" });
+  expect(viewportStyle).toEqual({ borderWidth: "1px", columnGap: "0px" });
+  await expect(topActions.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(1);
+  expect(
+    await topActions.evaluate(
+      (element) => element.lastElementChild?.getAttribute("data-demo-id") ?? null,
+    ),
+  ).toBe("org-editor-search");
+  expect(
+    new Set(
+      await topActions
+        .locator("button")
+        .evaluateAll((buttons) =>
+          buttons.map((button) => window.getComputedStyle(button).borderWidth),
+        ),
+    ),
+  ).toEqual(new Set(["0px"]));
+  expect(
+    new Set(
+      await viewportActions
+        .locator("button")
+        .evaluateAll((buttons) =>
+          buttons.map((button) => window.getComputedStyle(button).borderWidth),
+        ),
+    ),
+  ).toEqual(new Set(["0px"]));
+
+  const canvasBox = await canvas.boundingBox();
+  const topActionsBox = await topActions.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  expect(topActionsBox).not.toBeNull();
+  expect(
+    Math.abs(
+      (canvasBox?.x ?? 0) +
+        (canvasBox?.width ?? 0) -
+        ((topActionsBox?.x ?? 0) + (topActionsBox?.width ?? 0)) -
+        12,
+    ),
+  ).toBeLessThanOrEqual(1);
+
+  const searchButton = page.locator('[data-demo-id="org-editor-search-button"]');
+  await searchButton.click();
+  const searchInput = page.locator('[data-demo-id="org-editor-search-input"]');
+  await expect(searchInput).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-search-field"]')).toHaveCSS(
+    "width",
+    "288px",
+  );
+  const [buttonBox, inputBox] = await Promise.all([
+    searchButton.boundingBox(),
+    searchInput.boundingBox(),
+  ]);
+  expect(buttonBox).not.toBeNull();
+  expect(inputBox).not.toBeNull();
+  expect(inputBox?.x ?? 0).toBeGreaterThanOrEqual(
+    (buttonBox?.x ?? 0) + (buttonBox?.width ?? 0) - 1,
+  );
   await assertLocalRequests();
 });
 

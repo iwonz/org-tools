@@ -55,6 +55,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ProductSurfaceIsland } from "@/components/ui/product-surface-island";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UnitDialog } from "@/components/unit-dialog";
 import { UnitTree } from "@/components/unit-tree";
@@ -348,256 +349,262 @@ export const UnitsTab = observer(() => {
   }
 
   return (
-    <section
-      className="grid min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent"
-      style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
-    >
-      <div className="flex min-h-0 min-w-0 flex-col bg-transparent" data-demo-id="units-tree-panel">
-        <div
-          className="flex min-h-16 shrink-0 items-center gap-2 px-3 py-2"
-          data-demo-id="units-tree-header"
-        >
-          {showUnitSearch && (
-            <UnitSearchInput
-              ariaLabel={t("Search Units by name")}
-              className="min-w-40 flex-1"
-              dataDemoId="units-search"
-              onValueChange={setUnitSearchQuery}
-              placeholder={t("Search Units by name")}
-              value={unitSearchQuery}
-            />
-          )}
-          <Button
-            className={showUnitSearch ? "shrink-0" : "w-full"}
-            data-demo-id="unit-create-root-button"
-            onClick={() => setUnitDialog({ parentId: null, unitId: null })}
-            size="sm"
-            type="button"
-          >
-            <HiOutlinePlus />
-            {t("Add Unit")}
-          </Button>
-        </div>
-        <ScrollArea className="min-h-0 flex-1" scrollbars="none">
-          {hasVisibleUnits ? (
-            <ul className="grid min-w-max gap-2 p-3">
-              <UnitTree
-                cardClassName="w-max min-w-full"
-                dataDemoId="unit-tree-item"
-                dropTarget={(unit) => {
-                  if (
-                    !employeeDrag ||
-                    unit.id === employeeDrag.sourceUnitId ||
-                    unit.membershipMode === "live"
-                  )
-                    return null;
-
-                  return {
-                    active: dropTargetUnitId === unit.id,
-                    dataDemoId: "unit-employee-drop-zone",
-                    label: t("Move Employee to Unit “{name}”", { name: unit.name }),
-                    onDragEnter: (event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                      setDropTargetUnitId(unit.id);
-                    },
-                    onDragLeave: (event) => {
-                      const relatedTarget = event.relatedTarget;
-                      if (
-                        relatedTarget instanceof Node &&
-                        event.currentTarget.contains(relatedTarget)
-                      ) {
-                        return;
-                      }
-                      setDropTargetUnitId((currentUnitId) =>
-                        currentUnitId === unit.id ? null : currentUnitId,
-                      );
-                    },
-                    onDragOver: (event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                      setDropTargetUnitId(unit.id);
-                    },
-                    onDrop: (event) => {
-                      event.preventDefault();
-                      store.moveEmployeeBetweenUnits(
-                        employeeDrag.employeeId,
-                        employeeDrag.sourceUnitId,
-                        unit.id,
-                      );
-                      finishEmployeeDrag();
-                    },
-                  };
-                }}
-                employeesById={units.indexes.employeesById}
-                expandedUnitIds={store.expandedUnitIds}
-                actions={(unit) => (
-                  <>
-                    <ActionIconButton
-                      dataDemoId="unit-create-child-button"
-                      disabled={false}
-                      icon={<HiOutlinePlus />}
-                      label={t("Add child Unit")}
-                      onClick={() => setUnitDialog({ parentId: unit.id, unitId: null })}
-                      tooltip={t("Add child Unit")}
-                    />
-                    <ActionIconButton
-                      dataDemoId="unit-edit-button"
-                      disabled={false}
-                      icon={<HiOutlinePencilSquare />}
-                      label={t("Edit Unit")}
-                      onClick={() => setUnitDialog({ parentId: unit.parentId, unitId: unit.id })}
-                      tooltip={t("Edit Unit")}
-                    />
-                    <ActionIconButton
-                      disabled={false}
-                      icon={<HiOutlineTrash />}
-                      label={t("Delete Unit")}
-                      onClick={() => setDeletingUnit(unit)}
-                      tooltip={t("Delete Unit and descendant branch")}
-                    />
-                  </>
-                )}
-                onClick={(unit, state) => {
-                  store.selectUnit(unit.id);
-
-                  if (state.hasChildren && !state.isExpanded) {
-                    store.toggleExpandedUnitId(unit.id);
-                  }
-                }}
-                onDoubleClick={(unit, state) => {
-                  if (state.hasChildren && state.isExpanded) {
-                    store.toggleExpandedUnitId(unit.id);
-                  }
-                }}
-                onToggle={store.toggleExpandedUnitId}
-                queryTokens={unitSearchTokens}
-                roots={units.roots}
-                scrollIntoViewUnitId={store.selectedUnitId}
-                scrollIntoViewWhen={store.activeTab === "units"}
-                selected={(unit) => store.selectedUnitId === unit.id}
-                subtitle={getUnitEmployeeSummary}
-                visibleUnitIds={visibleUnitIds}
-              />
-            </ul>
-          ) : (
-            <div className="grid min-h-[220px] place-items-center p-8 text-center text-sm text-muted-foreground">
-              <div className="grid justify-items-center gap-3">
-                <HiOutlineFolder className="size-8 text-muted-foreground/70" />
-                <span>{t("No Units found")}</span>
-              </div>
-            </div>
-          )}
-        </ScrollArea>
-      </div>
-      <aside
-        className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent"
-        data-demo-id="units-employee-panel"
+    <section className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
+      <ProductSurfaceIsland
+        className="m-2 grid min-h-0 flex-1"
+        data-demo-id="units-surface"
+        style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
       >
-        <div className="grid shrink-0 gap-3 p-3" data-demo-id="units-employee-header">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
-            <nav
-              aria-label={t("Selected Unit path")}
-              className="scrollbar-hidden mt-1 min-w-0 overflow-x-auto overflow-y-hidden"
-              data-demo-id="units-selected-path"
+        <div
+          className="flex min-h-0 min-w-0 flex-col bg-transparent"
+          data-demo-id="units-tree-panel"
+        >
+          <div
+            className="flex min-h-16 shrink-0 items-center gap-2 px-2 py-2"
+            data-demo-id="units-tree-header"
+          >
+            {showUnitSearch && (
+              <UnitSearchInput
+                ariaLabel={t("Search Units by name")}
+                className="min-w-40 flex-1"
+                dataDemoId="units-search"
+                onValueChange={setUnitSearchQuery}
+                placeholder={t("Search Units by name")}
+                value={unitSearchQuery}
+              />
+            )}
+            <Button
+              className={showUnitSearch ? "shrink-0" : "w-full"}
+              data-demo-id="unit-create-root-button"
+              onClick={() => setUnitDialog({ parentId: null, unitId: null })}
+              size="sm"
+              type="button"
             >
-              <ol className="flex w-max min-w-full items-center text-xs text-muted-foreground">
-                {selectedUnit.path.names.map((pathName, index) => (
-                  <li
-                    className="flex min-w-0 shrink-0 items-center"
-                    key={selectedUnit.path.ids[index] ?? pathName}
-                  >
-                    {index > 0 && <MiddleDot />}
-                    <span className="whitespace-nowrap">{pathName}</span>
-                  </li>
-                ))}
-              </ol>
-            </nav>
+              <HiOutlinePlus />
+              {t("Add Unit")}
+            </Button>
           </div>
-          {hasUnitEmployees && (
-            <EmployeeSearchInput
-              ariaLabel={t("Search Employees in the selected Unit")}
-              dataDemoId="units-employee-search"
-              filters={employeeSearchFilters}
-              onFiltersChange={setEmployeeSearchFilters}
-              onValueChange={setEmployeeSearchQuery}
-              placeholder={t("Search Employees")}
-              positionButtonDemoId="units-employee-position-filter"
-              positionOptions={units.indexes.positionOptions}
-              positionPopoverDemoId="units-employee-position-popover"
-              tagOptions={units.indexes.tagOptions}
-              value={employeeSearchQuery}
-            />
-          )}
+          <ScrollArea className="min-h-0 flex-1" scrollbars="none">
+            {hasVisibleUnits ? (
+              <ul className="grid min-w-max gap-2 p-2">
+                <UnitTree
+                  cardClassName="w-max min-w-full"
+                  dataDemoId="unit-tree-item"
+                  dropTarget={(unit) => {
+                    if (
+                      !employeeDrag ||
+                      unit.id === employeeDrag.sourceUnitId ||
+                      unit.membershipMode === "live"
+                    )
+                      return null;
+
+                    return {
+                      active: dropTargetUnitId === unit.id,
+                      dataDemoId: "unit-employee-drop-zone",
+                      label: t("Move Employee to Unit “{name}”", { name: unit.name }),
+                      onDragEnter: (event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        setDropTargetUnitId(unit.id);
+                      },
+                      onDragLeave: (event) => {
+                        const relatedTarget = event.relatedTarget;
+                        if (
+                          relatedTarget instanceof Node &&
+                          event.currentTarget.contains(relatedTarget)
+                        ) {
+                          return;
+                        }
+                        setDropTargetUnitId((currentUnitId) =>
+                          currentUnitId === unit.id ? null : currentUnitId,
+                        );
+                      },
+                      onDragOver: (event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        setDropTargetUnitId(unit.id);
+                      },
+                      onDrop: (event) => {
+                        event.preventDefault();
+                        store.moveEmployeeBetweenUnits(
+                          employeeDrag.employeeId,
+                          employeeDrag.sourceUnitId,
+                          unit.id,
+                        );
+                        finishEmployeeDrag();
+                      },
+                    };
+                  }}
+                  employeesById={units.indexes.employeesById}
+                  expandedUnitIds={store.expandedUnitIds}
+                  actions={(unit) => (
+                    <>
+                      <ActionIconButton
+                        dataDemoId="unit-create-child-button"
+                        disabled={false}
+                        icon={<HiOutlinePlus />}
+                        label={t("Add child Unit")}
+                        onClick={() => setUnitDialog({ parentId: unit.id, unitId: null })}
+                        tooltip={t("Add child Unit")}
+                      />
+                      <ActionIconButton
+                        dataDemoId="unit-edit-button"
+                        disabled={false}
+                        icon={<HiOutlinePencilSquare />}
+                        label={t("Edit Unit")}
+                        onClick={() => setUnitDialog({ parentId: unit.parentId, unitId: unit.id })}
+                        tooltip={t("Edit Unit")}
+                      />
+                      <ActionIconButton
+                        disabled={false}
+                        icon={<HiOutlineTrash />}
+                        label={t("Delete Unit")}
+                        onClick={() => setDeletingUnit(unit)}
+                        tooltip={t("Delete Unit and descendant branch")}
+                      />
+                    </>
+                  )}
+                  onClick={(unit, state) => {
+                    store.selectUnit(unit.id);
+
+                    if (state.hasChildren && !state.isExpanded) {
+                      store.toggleExpandedUnitId(unit.id);
+                    }
+                  }}
+                  onDoubleClick={(unit, state) => {
+                    if (state.hasChildren && state.isExpanded) {
+                      store.toggleExpandedUnitId(unit.id);
+                    }
+                  }}
+                  onToggle={store.toggleExpandedUnitId}
+                  queryTokens={unitSearchTokens}
+                  roots={units.roots}
+                  scrollIntoViewUnitId={store.selectedUnitId}
+                  scrollIntoViewWhen={store.activeTab === "units"}
+                  selected={(unit) => store.selectedUnitId === unit.id}
+                  subtitle={getUnitEmployeeSummary}
+                  visibleUnitIds={visibleUnitIds}
+                />
+              </ul>
+            ) : (
+              <div className="grid min-h-[220px] place-items-center p-8 text-center text-sm text-muted-foreground">
+                <div className="grid justify-items-center gap-3">
+                  <HiOutlineFolder className="size-8 text-muted-foreground/70" />
+                  <span>{t("No Units found")}</span>
+                </div>
+              </div>
+            )}
+          </ScrollArea>
         </div>
-        <EmployeeCardList
-          actions={(employee) => (
-            <>
-              <EmployeeTagPopover
-                dataDemoId="units-employee-tag-picker"
-                employee={employee}
-                onApply={store.updateEmployeeTags}
+        <aside
+          className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent"
+          data-demo-id="units-employee-panel"
+        >
+          <div className="grid shrink-0 gap-2 p-2" data-demo-id="units-employee-header">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
+              <nav
+                aria-label={t("Selected Unit path")}
+                className="scrollbar-hidden mt-1 min-w-0 overflow-x-auto overflow-y-hidden"
+                data-demo-id="units-selected-path"
+              >
+                <ol className="flex w-max min-w-full items-center text-xs text-muted-foreground">
+                  {selectedUnit.path.names.map((pathName, index) => (
+                    <li
+                      className="flex min-w-0 shrink-0 items-center"
+                      key={selectedUnit.path.ids[index] ?? pathName}
+                    >
+                      {index > 0 && <MiddleDot />}
+                      <span className="whitespace-nowrap">{pathName}</span>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            </div>
+            {hasUnitEmployees && (
+              <EmployeeSearchInput
+                ariaLabel={t("Search Employees in the selected Unit")}
+                dataDemoId="units-employee-search"
+                filters={employeeSearchFilters}
+                onFiltersChange={setEmployeeSearchFilters}
+                onValueChange={setEmployeeSearchQuery}
+                placeholder={t("Search Employees")}
+                positionButtonDemoId="units-employee-position-filter"
+                positionOptions={units.indexes.positionOptions}
+                positionPopoverDemoId="units-employee-position-popover"
                 tagOptions={units.indexes.tagOptions}
+                value={employeeSearchQuery}
               />
-              <ActionIconButton
-                disabled={false}
-                icon={<HiOutlinePencilSquare />}
-                label={t("Edit Employee")}
-                onClick={() => setEditingEmployee(employee)}
-                tooltip={t("Edit Employee")}
-              />
-              <ActionIconButton
-                disabled={false}
-                icon={<HiOutlineTrash />}
-                label={t("Delete Employee")}
-                onClick={() => setDeletingEmployee(employee)}
-                tooltip={t("Delete Employee")}
-              />
-            </>
-          )}
-          bossUnitId={selectedUnit.id}
-          cardDataDemoId="unit-employee-card"
-          className="flex-1"
-          dataDemoId="units-employee-cards"
-          draggable={(employee) =>
-            selectedUnit.membershipMode === "manual" && directEmployeeIdSet.has(employee.id)
-          }
-          emptyState={
-            hasUnitEmployees && hasEmployeeSearch
-              ? t("No Employees found")
-              : t("The selected Unit has no Employees")
-          }
-          name={(employee) => (
-            <HighlightedText queryTokens={employeeSearchTokens} text={employee.fullName} />
-          )}
-          onDragEnd={() => {
-            finishEmployeeDrag();
-          }}
-          onDragStart={(event: DragEvent<HTMLElement>, employee) => {
-            const sourceUnitId = selectedUnit.id;
-            const dragState = { employeeId: employee.id, sourceUnitId };
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData(
-              "application/x-org-tools-employee",
-              JSON.stringify(dragState),
-            );
-            setTransparentDragImage(event);
-            setEmployeeDrag(dragState);
-            setEmployeeDragPoint({ x: event.clientX, y: event.clientY });
-          }}
-          onUnitContextClick={(unitContext) => {
-            store.selectUnitFromEmployeeCard(unitContext.unitId);
-          }}
-          resetKey={`units:${selectedUnit.id}:${deferredEmployeeSearchQuery}:${employeeSearchFiltersKey}`}
-          queryTokens={employeeSearchTokens}
-          sections={employeeSections}
-          subtitle={(employee) => (
-            <EmployeeIdentity employee={employee} queryTokens={employeeSearchTokens} />
-          )}
-          unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
-        />
-      </aside>
+            )}
+          </div>
+          <EmployeeCardList
+            actions={(employee) => (
+              <>
+                <EmployeeTagPopover
+                  dataDemoId="units-employee-tag-picker"
+                  employee={employee}
+                  onApply={store.updateEmployeeTags}
+                  tagOptions={units.indexes.tagOptions}
+                />
+                <ActionIconButton
+                  disabled={false}
+                  icon={<HiOutlinePencilSquare />}
+                  label={t("Edit Employee")}
+                  onClick={() => setEditingEmployee(employee)}
+                  tooltip={t("Edit Employee")}
+                />
+                <ActionIconButton
+                  disabled={false}
+                  icon={<HiOutlineTrash />}
+                  label={t("Delete Employee")}
+                  onClick={() => setDeletingEmployee(employee)}
+                  tooltip={t("Delete Employee")}
+                />
+              </>
+            )}
+            bossUnitId={selectedUnit.id}
+            cardDataDemoId="unit-employee-card"
+            className="flex-1 p-0"
+            dataDemoId="units-employee-cards"
+            draggable={(employee) =>
+              selectedUnit.membershipMode === "manual" && directEmployeeIdSet.has(employee.id)
+            }
+            emptyState={
+              hasUnitEmployees && hasEmployeeSearch
+                ? t("No Employees found")
+                : t("The selected Unit has no Employees")
+            }
+            name={(employee) => (
+              <HighlightedText queryTokens={employeeSearchTokens} text={employee.fullName} />
+            )}
+            onDragEnd={() => {
+              finishEmployeeDrag();
+            }}
+            onDragStart={(event: DragEvent<HTMLElement>, employee) => {
+              const sourceUnitId = selectedUnit.id;
+              const dragState = { employeeId: employee.id, sourceUnitId };
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData(
+                "application/x-org-tools-employee",
+                JSON.stringify(dragState),
+              );
+              setTransparentDragImage(event);
+              setEmployeeDrag(dragState);
+              setEmployeeDragPoint({ x: event.clientX, y: event.clientY });
+            }}
+            onUnitContextClick={(unitContext) => {
+              store.selectUnitFromEmployeeCard(unitContext.unitId);
+            }}
+            resetKey={`units:${selectedUnit.id}:${deferredEmployeeSearchQuery}:${employeeSearchFiltersKey}`}
+            queryTokens={employeeSearchTokens}
+            sections={employeeSections}
+            subtitle={(employee) => (
+              <EmployeeIdentity employee={employee} queryTokens={employeeSearchTokens} />
+            )}
+            unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
+          />
+        </aside>
+      </ProductSurfaceIsland>
       {draggedEmployee && employeeDragPoint && (
         <UnitEmployeeDragPreview
           employee={draggedEmployee}

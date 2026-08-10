@@ -662,14 +662,17 @@ function OrgEditorToolbarButton({
   return (
     <Button
       aria-label={ariaLabel}
-      className={cn("h-9 bg-background/95 shadow-sm backdrop-blur", className)}
+      className={cn(
+        "h-9 rounded-none border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset",
+        className,
+      )}
       data-demo-id={dataDemoId}
       disabled={disabled}
       onClick={onClick}
       size="sm"
       title={title}
       type="button"
-      variant="outline"
+      variant="ghost"
     >
       {children}
     </Button>
@@ -688,7 +691,7 @@ function OrgEditorLayoutSwitch({
     <Button
       aria-checked={layoutMode === "leftRight"}
       aria-label={t("Change layout direction")}
-      className="h-9 gap-1 bg-background/95 px-1 shadow-sm backdrop-blur"
+      className="h-9 gap-1 rounded-none border-0 bg-transparent px-1 shadow-none hover:bg-accent/60 focus-visible:ring-inset"
       data-demo-id="org-editor-layout-switch"
       onClick={onToggle}
       role="switch"
@@ -699,7 +702,7 @@ function OrgEditorLayoutSwitch({
           : t("Switch to top-to-bottom layout")
       }
       type="button"
-      variant="outline"
+      variant="ghost"
     >
       <span
         className={cn(
@@ -779,21 +782,30 @@ function OrgEditorSearchControl({
 
   return (
     <div
-      className="relative flex items-center justify-end gap-2"
+      className="relative flex items-center justify-end gap-0"
       data-demo-id="org-editor-search"
       onPointerDown={(event) => event.stopPropagation()}
       ref={rootRef}
     >
+      <OrgEditorToolbarButton
+        ariaLabel={open ? t("Hide search") : t("Search canvas")}
+        dataDemoId="org-editor-search-button"
+        onClick={() => onOpenChange(!open)}
+        title={t("Search canvas")}
+      >
+        <HiOutlineMagnifyingGlass />
+      </OrgEditorToolbarButton>
       <div
         className={cn(
           "grid overflow-hidden transition-all duration-200 ease-out",
           open ? "w-72 opacity-100" : "w-0 opacity-0",
         )}
+        data-demo-id="org-editor-search-field"
       >
         <div className="relative min-w-0">
           <Input
             aria-label={t("Search the Org Editor canvas")}
-            className="h-9 bg-background/95 pr-9 shadow-sm backdrop-blur"
+            className="h-9 rounded-none border-0 bg-transparent pr-9 shadow-none focus-visible:ring-inset"
             data-demo-id="org-editor-search-input"
             onChange={(event) => onQueryChange(event.currentTarget.value)}
             placeholder={t("Unit or Employee")}
@@ -814,14 +826,6 @@ function OrgEditorSearchControl({
           )}
         </div>
       </div>
-      <OrgEditorToolbarButton
-        ariaLabel={open ? t("Hide search") : t("Search canvas")}
-        dataDemoId="org-editor-search-button"
-        onClick={() => onOpenChange(!open)}
-        title={t("Search canvas")}
-      >
-        <HiOutlineMagnifyingGlass />
-      </OrgEditorToolbarButton>
       {open && (
         <div
           className="absolute right-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
@@ -3466,62 +3470,68 @@ export const OrgStructureEditorTab = observer(() => {
           )}
         </div>
 
-        <div className="absolute left-3 top-3 z-40">
-          <OrgViewToolbar
-            canRedo={editor.canRedo}
-            canUndo={editor.canUndo}
-            emptyCanvas={editor.units.length === 0}
-            onRedo={editor.redo}
-            onUndo={editor.undo}
-          />
-        </div>
-
-        {editor.units.length > 0 && (
+        {(editor.units.length > 0 || store.orgViewList.length > 1) && (
           <div
-            className="absolute right-3 top-3 z-30 flex flex-wrap justify-end gap-2"
+            className="absolute right-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-end gap-0 rounded-md border border-input bg-background/95 backdrop-blur"
             data-demo-id="org-editor-actions"
           >
+            <OrgViewToolbar
+              canRedo={editor.canRedo}
+              canUndo={editor.canUndo}
+              emptyCanvas={editor.units.length === 0}
+              onRedo={editor.redo}
+              onUndo={editor.undo}
+            />
             {editor.units.length > 0 && (
-              <OrgEditorSearchControl
-                onOpenChange={setSearchOpen}
-                onQueryChange={setSearchQuery}
-                onSelectResult={selectOrgEditorSearchResult}
-                open={searchOpen}
-                query={searchQuery}
-                queryTokens={orgEditorSearchTokens}
-                results={orgEditorSearchResults}
-              />
+              <>
+                <OrgEditorLayoutSwitch layoutMode={editor.layoutMode} onToggle={toggleLayoutMode} />
+                <OrgEditorToolbarButton
+                  dataDemoId="org-editor-align-button"
+                  disabled={editor.units.length === 0}
+                  onClick={() => editor.applyLayout()}
+                  title={t("Arrange the current hierarchy")}
+                >
+                  <HiOutlineSquares2X2 />
+                  {t("Arrange")}
+                </OrgEditorToolbarButton>
+                <OrgEditorToolbarButton
+                  ariaLabel={toggleAllUnitsLabel}
+                  dataDemoId="org-editor-toggle-all-units-button"
+                  disabled={editor.units.length === 0}
+                  onClick={() =>
+                    editor.setUnitsCollapsed(
+                      editor.units.map((unit) => unit.id),
+                      !hasCollapsedUnits,
+                    )
+                  }
+                  title={toggleAllUnitsLabel}
+                >
+                  {hasCollapsedUnits ? (
+                    <HiOutlineArrowsPointingOut />
+                  ) : (
+                    <HiOutlineArrowsPointingIn />
+                  )}
+                  {toggleAllUnitsLabel}
+                </OrgEditorToolbarButton>
+                <OrgEditorSearchControl
+                  onOpenChange={setSearchOpen}
+                  onQueryChange={setSearchQuery}
+                  onSelectResult={selectOrgEditorSearchResult}
+                  open={searchOpen}
+                  query={searchQuery}
+                  queryTokens={orgEditorSearchTokens}
+                  results={orgEditorSearchResults}
+                />
+              </>
             )}
-            <OrgEditorLayoutSwitch layoutMode={editor.layoutMode} onToggle={toggleLayoutMode} />
-            <OrgEditorToolbarButton
-              dataDemoId="org-editor-align-button"
-              disabled={editor.units.length === 0}
-              onClick={() => editor.applyLayout()}
-              title={t("Arrange the current hierarchy")}
-            >
-              <HiOutlineSquares2X2 />
-              {t("Arrange")}
-            </OrgEditorToolbarButton>
-            <OrgEditorToolbarButton
-              ariaLabel={toggleAllUnitsLabel}
-              dataDemoId="org-editor-toggle-all-units-button"
-              disabled={editor.units.length === 0}
-              onClick={() =>
-                editor.setUnitsCollapsed(
-                  editor.units.map((unit) => unit.id),
-                  !hasCollapsedUnits,
-                )
-              }
-              title={toggleAllUnitsLabel}
-            >
-              {hasCollapsedUnits ? <HiOutlineArrowsPointingOut /> : <HiOutlineArrowsPointingIn />}
-              {toggleAllUnitsLabel}
-            </OrgEditorToolbarButton>
           </div>
         )}
 
         {editor.units.length > 0 && (
-          <div className="absolute bottom-3 left-3 z-30 flex flex-wrap gap-2">
+          <div
+            className="absolute bottom-3 left-3 z-30 flex items-stretch gap-0 rounded-md border border-input bg-background/95 backdrop-blur"
+            data-demo-id="org-editor-viewport-actions"
+          >
             <OrgEditorToolbarButton
               onClick={() =>
                 zoomAt(

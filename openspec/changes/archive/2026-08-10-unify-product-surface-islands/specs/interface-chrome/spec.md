@@ -1,10 +1,5 @@
-# interface-chrome Specification
+## MODIFIED Requirements
 
-## Purpose
-Define how the application separates shell, surface, dialog, and repeated-row content without
-unnecessary decorative rules.
-
-## Requirements
 ### Requirement: Application chrome is separated without decorative rules
 The application SHALL use one borderless 56 px header, a continuous theme-aware neutral shell
 background, spacing, background grouping, and control layout instead of decorative horizontal rules
@@ -64,48 +59,3 @@ interactive controls retain their own bounded surface treatment.
 #### Scenario: Meaningful surface contrast
 - **WHEN** the continuous shell renders in light or dark theme
 - **THEN** product islands, fields, dialogs, popovers, calendar cells, nested Analytics groups, and interactive controls remain visually distinct from the shell without adding a header separator
-
-### Requirement: Dialog chrome is borderless inside its outer boundary
-Dialog and alert-dialog headers and footers SHALL use padding and background without internal top or
-bottom rules while preserving accessible titles, descriptions, close actions, scrolling, and
-confirmation actions.
-
-#### Scenario: Long dialog
-- **WHEN** Import, Export, or Employee content scrolls inside a constrained dialog
-- **THEN** the header and actions remain readable and reachable without header or footer divider lines
-
-#### Scenario: Destructive alert
-- **WHEN** a destructive confirmation dialog opens
-- **THEN** its destructive copy and action remain explicit without internal dialog rules
-
-### Requirement: Repeated rows are separated without line rules
-Repeated interface rows SHALL use content layout and interaction feedback instead of decorative line
-rules. Virtualized Employee card lists SHALL render contiguous rows without shell-background gaps or
-individual list-row corner rounding. This applies alongside virtualized and non-virtualized filters,
-tag pickers, mappings, event lists, and import previews.
-
-#### Scenario: Interactive option list
-- **WHEN** a user navigates a filter or tag list with pointer or keyboard
-- **THEN** each option remains identifiable from layout and active feedback without a row divider
-
-#### Scenario: Contiguous Employee list
-- **WHEN** multiple Employees render in a list surface
-- **THEN** adjacent cards form continuous rows without an inter-card gap, individual corner rounding, or row divider
-
-#### Scenario: Mapping and preview rows
-- **WHEN** a generic mapping or structured preview contains multiple rows
-- **THEN** aligned fields, hierarchy, cards, and spacing remain readable without repeated row rules
-
-### Requirement: Meaningful component boundaries remain
-The application SHALL retain outlines that communicate interactive controls, selectable cards,
-dialogs, calendar cells, hierarchy guides, focus, errors, or destructive states. Adjacent Teams and
-Download panes SHALL not use an outline solely as a layout separator. Analytics groups SHALL use an
-owned background rather than an outline to communicate their boundary.
-
-#### Scenario: Interactive boundary audit
-- **WHEN** the borderless chrome is rendered in light or dark theme
-- **THEN** fields, choice cards, calendar cells, hierarchy guides, focus rings, and destructive selections remain visually bounded
-
-#### Scenario: Narrow layout
-- **WHEN** the Import dialog renders at a 390 px viewport
-- **THEN** operation cards stack, content remains inside the dialog, and no page-level horizontal overflow appears

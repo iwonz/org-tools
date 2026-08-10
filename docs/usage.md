@@ -12,14 +12,16 @@ not autosave. Nested tab groups use the same contiguous segmented-switcher treat
 application. Empty product tabs show one focused next action and omit controls that cannot yet do
 useful work.
 
-The root shell, transparent header, and all six top-level product surfaces share one continuous,
-theme-aware neutral background. Dialogs, cards, fields, popovers, calendar cells, and interactive
-controls keep their own opaque surfaces where contrast communicates an actual boundary. The shell,
-populated surface headers, dialogs, local sections, and repeated list rows use spacing, background
-grouping, and interaction feedback instead of decorative horizontal rules. Borders remain on
-controls, selectable cards, dialogs, calendar cells, hierarchy guides, focus states, and destructive
-states where they communicate an actual boundary. Adjacent panes in Teams and Download rely on
-layout and content grouping rather than a vertical rule.
+The root shell, transparent header, and top-level product containers share one continuous,
+theme-aware neutral background. Populated Teams, Employees, Analytics, and Download workflows each
+use one inset rounded surface that contains their header, controls, and content. Dialogs, fields,
+popovers, calendar cells, and interactive controls keep their own opaque surfaces where contrast
+communicates an actual boundary. The shell, populated surface headers, dialogs, local sections, and
+repeated list rows use spacing, background grouping, and interaction feedback instead of decorative
+horizontal rules. Borders remain on controls, selectable cards, dialogs, calendar cells, hierarchy
+guides, focus states, and destructive states where they communicate an actual boundary. Adjacent
+panes in Teams and Download share their containing surface and rely on compact spacing rather than a
+vertical rule.
 
 ## Interface language
 
@@ -35,14 +37,21 @@ persisted types, and export fields remain unchanged.
 
 ## Product tabs
 
-- **Units** manages the shared Unit hierarchy and effective membership.
+- **Units** manages the shared Unit hierarchy and effective membership. Its hierarchy and selected
+  Employee pane share one surface with a compact inner seam.
 - **Employees** manages the global Employee catalog, tags, and contact fields. Its populated header
   shows the total catalog size directly below search and adds the visible match count while search or
-  filters are active. Employee cards form one continuous virtualized list without gaps or row rules.
-- **Editor** arranges the Main View or an independent custom View on a canvas.
-- **Analytics** summarizes the current organization without sending data elsewhere.
+  filters are active. Search, the count, actions, and the continuous zero-gap virtualized list share
+  one surface.
+- **Editor** arranges the Main View or an independent custom View on a canvas. View selection,
+  history, layout, hierarchy, and search actions form one top-right control island. Search is the last
+  action and reveals its field to the right of its trigger. Zoom, scale reset, and primary-Team focus
+  form a second island at the bottom left.
+- **Analytics** summarizes the current organization without sending data elsewhere. Its header and
+  all six groups share one outer surface; quiet nested group backgrounds use 12 px gaps.
 - **Calendar** combines recurring birthdays with one-time dated Employee tag events.
-- **Download** selects local sources and produces CSV, JSON, or separator-based templates.
+- **Download** selects local sources and produces CSV, JSON, or separator-based templates inside one
+  workflow surface.
 
 The Main View is canonical. A custom View can begin as a copy of Main or empty, then keep its own
 document, local Employees, global Employee overrides, canvas layout, viewport, and command history.
@@ -130,9 +139,10 @@ Calendar keeps a selected month and year plus Previous and Next controls in its 
 repeat annually, with February 29 shown on February 28 in non-leap years; dated tags appear only on
 their exact date. Day dialogs separate birthdays and dated tags. The bounded tag cloud opens a
 virtualized dialog with current and future events ascending and past events descending. Analytics
-keeps six sortable, virtualized sections and drill-down dialogs on one page. Each section uses a
-quiet padded background without a border, shadow, title rule, or row rule. Short sections follow
-their content height, while long sections expose eight rows before scrolling internally.
+keeps six sortable, virtualized sections and drill-down dialogs on one page. The six sections sit in
+one containing surface with 12 px gaps. Each section uses a quiet padded background without a
+border, shadow, title rule, or row rule. Short sections follow their content height, while long
+sections expose eight rows before scrolling internally.
 
 The generic Download surface keeps `tags` as labels. Selecting `tagDates` adds `{tag, date}` objects in
 JSON and `tag=YYYY-MM-DD` values in CSV or templates.

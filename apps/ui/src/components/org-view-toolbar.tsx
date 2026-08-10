@@ -46,6 +46,9 @@ import { useOrgStore } from "@/stores/org-store-context";
 
 type ViewDialogState = { mode: "create"; source: "blank" | "main" } | { mode: "rename" } | null;
 
+const ORG_VIEW_ACTION_CLASS_NAME =
+  "size-9 rounded-none border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset";
+
 const getNextViewName = (names: readonly string[], formatName: (number: number) => string) => {
   const nameSet = new Set(names.map((name) => name.toLocaleLowerCase("en-US")));
   let index = 1;
@@ -122,15 +125,12 @@ export const OrgViewToolbar = observer(
     return (
       <>
         {(!emptyCanvas || views.length > 1) && (
-          <div
-            className="flex items-center gap-1 rounded-lg border bg-background/95 p-1.5 shadow-sm backdrop-blur"
-            data-demo-id="org-view-toolbar"
-          >
+          <div className="flex items-center gap-0" data-demo-id="org-view-toolbar">
             {(!emptyCanvas || views.length > 1) && (
               <Select onValueChange={store.selectOrgView} value={store.activeOrgViewId}>
                 <SelectTrigger
                   aria-label={t("Active View")}
-                  className="h-8 w-72 max-w-[calc(100vw-6rem)] overflow-hidden"
+                  className="h-9 w-48 max-w-[calc(100vw-6rem)] overflow-hidden rounded-none border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset xl:w-64"
                   title={activeViewDisplayName}
                 >
                   <span
@@ -151,10 +151,10 @@ export const OrgViewToolbar = observer(
             )}
             {!emptyCanvas && (
               <>
-                <span className="mx-1 h-5 w-px bg-border" />
                 {canUndo && (
                   <Button
                     aria-label={t("Undo")}
+                    className={ORG_VIEW_ACTION_CLASS_NAME}
                     data-demo-id="org-editor-undo-button"
                     onClick={onUndo}
                     size="icon"
@@ -167,6 +167,7 @@ export const OrgViewToolbar = observer(
                 {canRedo && (
                   <Button
                     aria-label={t("Redo")}
+                    className={ORG_VIEW_ACTION_CLASS_NAME}
                     data-demo-id="org-editor-redo-button"
                     onClick={onRedo}
                     size="icon"
@@ -177,6 +178,7 @@ export const OrgViewToolbar = observer(
                   </Button>
                 )}
                 <Button
+                  className={ORG_VIEW_ACTION_CLASS_NAME}
                   data-demo-id="org-view-create-button"
                   onClick={openCreate}
                   size="icon"
@@ -188,6 +190,7 @@ export const OrgViewToolbar = observer(
                 {!isMain && (
                   <>
                     <Button
+                      className={ORG_VIEW_ACTION_CLASS_NAME}
                       onClick={openRename}
                       size="icon"
                       title={t("Rename View")}
@@ -196,6 +199,7 @@ export const OrgViewToolbar = observer(
                       <HiOutlinePencilSquare />
                     </Button>
                     <Button
+                      className={ORG_VIEW_ACTION_CLASS_NAME}
                       onClick={() => setDeleteOpen(true)}
                       size="icon"
                       title={t("Delete View")}

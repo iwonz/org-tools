@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ProductSurfaceIsland } from "@/components/ui/product-surface-island";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -70,51 +71,6 @@ export const EmployeesTab = observer(() => {
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       data-demo-id="employees-tab"
     >
-      {sortedEmployees.length > 0 && (
-        <div
-          className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 px-4 py-3"
-          data-demo-id="employees-header"
-        >
-          <div className="grid min-w-56 flex-1 gap-1" data-demo-id="employees-search-column">
-            <EmployeeSearchInput
-              ariaLabel={t("Search Employees")}
-              className="w-full"
-              dataDemoId="employees-search"
-              filters={filters}
-              onFiltersChange={setFilters}
-              onValueChange={setQuery}
-              placeholder={t("Search Employees")}
-              positionButtonDemoId="employees-position-filter"
-              positionOptions={units.indexes.positionOptions}
-              positionPopoverDemoId="employees-position-popover"
-              tagOptions={units.indexes.tagOptions}
-              value={query}
-            />
-            <div className="px-1 text-xs text-muted-foreground" data-demo-id="employees-summary">
-              <span data-demo-id="employees-total-count">
-                {countText("employees", { count: sortedEmployees.length })}
-              </span>
-              {hasSearch && (
-                <>
-                  {" "}
-                  <span data-demo-id="employees-match-count">
-                    · {countText("matches", { count: visibleEmployees.length })}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-          <Button
-            className="shrink-0"
-            data-demo-id="employee-create-button"
-            onClick={() => setIsCreateOpen(true)}
-            type="button"
-          >
-            <HiOutlinePlus />
-            {t("Create")}
-          </Button>
-        </div>
-      )}
       {sortedEmployees.length === 0 ? (
         <TopLevelEmptyState
           action={
@@ -132,55 +88,103 @@ export const EmployeesTab = observer(() => {
           title={t("No Employees yet")}
         />
       ) : (
-        <EmployeeCardList
-          actions={(employee) => {
-            return (
-              <>
-                <EmployeeTagPopover
-                  dataDemoId="employees-tag-picker"
-                  employee={employee}
-                  onApply={store.updateEmployeeTags}
-                  tagOptions={units.indexes.tagOptions}
-                />
-                <Button
-                  data-demo-id="employee-edit-button"
-                  onClick={() => setEditingEmployee(employee)}
-                  size="icon"
-                  title={t("Edit")}
-                  type="button"
-                  variant="ghost"
-                >
-                  <HiOutlinePencilSquare />
-                </Button>
-                <Button
-                  onClick={() => setDeletingEmployee(employee)}
-                  size="icon"
-                  title={t("Delete")}
-                  type="button"
-                  variant="ghost"
-                >
-                  <HiOutlineTrash />
-                </Button>
-              </>
-            );
-          }}
-          className="flex-1"
-          dataDemoId="employees-list"
-          employees={visibleEmployees}
-          emptyState={hasSearch ? t("No Employees found") : t("No Employees yet")}
-          name={(employee) => (
-            <HighlightedText queryTokens={queryTokens} text={employee.fullName} />
-          )}
-          onUnitContextClick={(unitContext) => {
-            store.selectUnitFromEmployeeCard(unitContext.unitId);
-          }}
-          resetKey={`employees:${deferredQuery}:${getEmployeeSearchFiltersKey(filters)}`}
-          queryTokens={queryTokens}
-          subtitle={(employee) => (
-            <EmployeeIdentity employee={employee} queryTokens={queryTokens} />
-          )}
-          unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
-        />
+        <ProductSurfaceIsland
+          className="m-2 flex min-h-0 flex-1 flex-col"
+          data-demo-id="employees-surface"
+        >
+          <div
+            className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 px-3 py-3"
+            data-demo-id="employees-header"
+          >
+            <div className="grid min-w-56 flex-1 gap-1" data-demo-id="employees-search-column">
+              <EmployeeSearchInput
+                ariaLabel={t("Search Employees")}
+                className="w-full"
+                dataDemoId="employees-search"
+                filters={filters}
+                onFiltersChange={setFilters}
+                onValueChange={setQuery}
+                placeholder={t("Search Employees")}
+                positionButtonDemoId="employees-position-filter"
+                positionOptions={units.indexes.positionOptions}
+                positionPopoverDemoId="employees-position-popover"
+                tagOptions={units.indexes.tagOptions}
+                value={query}
+              />
+              <div className="px-1 text-xs text-muted-foreground" data-demo-id="employees-summary">
+                <span data-demo-id="employees-total-count">
+                  {countText("employees", { count: sortedEmployees.length })}
+                </span>
+                {hasSearch && (
+                  <>
+                    {" "}
+                    <span data-demo-id="employees-match-count">
+                      · {countText("matches", { count: visibleEmployees.length })}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            <Button
+              className="shrink-0"
+              data-demo-id="employee-create-button"
+              onClick={() => setIsCreateOpen(true)}
+              type="button"
+            >
+              <HiOutlinePlus />
+              {t("Create")}
+            </Button>
+          </div>
+          <EmployeeCardList
+            actions={(employee) => {
+              return (
+                <>
+                  <EmployeeTagPopover
+                    dataDemoId="employees-tag-picker"
+                    employee={employee}
+                    onApply={store.updateEmployeeTags}
+                    tagOptions={units.indexes.tagOptions}
+                  />
+                  <Button
+                    data-demo-id="employee-edit-button"
+                    onClick={() => setEditingEmployee(employee)}
+                    size="icon"
+                    title={t("Edit")}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <HiOutlinePencilSquare />
+                  </Button>
+                  <Button
+                    onClick={() => setDeletingEmployee(employee)}
+                    size="icon"
+                    title={t("Delete")}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <HiOutlineTrash />
+                  </Button>
+                </>
+              );
+            }}
+            className="flex-1 p-0"
+            dataDemoId="employees-list"
+            employees={visibleEmployees}
+            emptyState={hasSearch ? t("No Employees found") : t("No Employees yet")}
+            name={(employee) => (
+              <HighlightedText queryTokens={queryTokens} text={employee.fullName} />
+            )}
+            onUnitContextClick={(unitContext) => {
+              store.selectUnitFromEmployeeCard(unitContext.unitId);
+            }}
+            resetKey={`employees:${deferredQuery}:${getEmployeeSearchFiltersKey(filters)}`}
+            queryTokens={queryTokens}
+            subtitle={(employee) => (
+              <EmployeeIdentity employee={employee} queryTokens={queryTokens} />
+            )}
+            unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
+          />
+        </ProductSurfaceIsland>
       )}
       {isCreateOpen && (
         <EmployeeDialog
