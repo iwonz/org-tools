@@ -19,9 +19,11 @@ canvas arrangement can render all nodes simultaneously.
 Employee lists, Unit-aware pickers, long filter options, and import previews must remain virtualized.
 Use stable item keys and remeasure rows when section composition or filters change. Components must
 receive resolved data and contexts through props rather than observing the whole organization store.
+Employee list rows use a zero-gap virtualizer layout; their measured heights remain content-driven.
 
-Analytics keeps six bounded virtualized lists, but lays them out with spacing instead of a nested
-border lattice or section rules. Calendar uses seven fluid columns, four or five
+Analytics keeps six bounded virtualized lists on quiet background surfaces with no border lattice or
+section rules. Outer padding is included in each computed section height so the eight-row viewport
+cap remains unchanged. Calendar uses seven fluid columns, four or five
 adaptive rows, at most two inline tag events per day, and a bounded two-line tag cloud so a 31-day
 month fits the maintained 1280-by-720 desktop viewport. Smaller viewports retain local overflow as a
 safe fallback. Per-tag event dialogs virtualize upcoming and past rows.

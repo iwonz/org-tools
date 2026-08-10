@@ -309,9 +309,6 @@ for (const [locale, messages] of [
       .click();
     await expect(page.getByRole("status")).toHaveCount(0);
     await page.getByRole("tab", { name: messages.Ui.Employees, exact: true }).click();
-    await expect(page.locator('[data-demo-id="employees-summary"]')).toContainText(
-      messages.Ui.Employees,
-    );
     await expect(page.locator('[data-demo-id="employees-total-count"]')).toContainText("4");
     await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
     await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("Avery");

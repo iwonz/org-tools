@@ -485,7 +485,10 @@ export const ExportTab = observer(() => {
                 : "fit-content(70%) minmax(30%, 1fr)",
           }}
         >
-          <aside className="flex min-h-0 min-w-0 flex-col border-r bg-transparent">
+          <aside
+            className="flex min-h-0 min-w-0 flex-col bg-transparent"
+            data-demo-id="export-source-panel"
+          >
             {store.orgViewList.length > 1 && (
               <div className="p-2.5">
                 <Select

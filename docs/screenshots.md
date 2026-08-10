@@ -72,12 +72,12 @@ cards, nested Team and Employee previews, generic mapping, the unified header, a
 states are also covered by browser assertions. Every gallery capture uses the deterministic English
 locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
-shows the total catalog count. The gallery verifies one continuous theme-aware background across the
-root shell, transparent header, and top-level product surfaces; one contiguous product-tab island
-with a flat selected segment and no underline; one contiguous global-action island; distinct bounded
-controls; borderless surface and dialog chrome; borderless content-sized Analytics groups;
-whitespace between sections; and preserved outlines for controls, selection cards, calendars, split
-panes, hierarchy guides, focus, and destructive states.
+shows the total catalog count below search and contiguous Employee rows. The gallery verifies one
+continuous theme-aware background across the root shell, transparent header, and top-level product
+surfaces; consistent segmented tab switchers; one contiguous global-action island; split panes
+without vertical rules; distinct bounded controls; quiet borderless content-sized Analytics group
+backgrounds; whitespace between sections; and preserved outlines for controls, selection cards,
+calendars, hierarchy guides, focus, and destructive states.
 
 ## Regenerate
 
@@ -94,13 +94,13 @@ filesystem path, a browser notification, a nondeterministic timestamp, or an ext
 `pnpm test:browser` runs the non-visual smoke scenarios against the same production server. The
 smoke suite verifies blank startup, the wordmark-free unified header, its continuous light and dark
 shell background, distinct bounded surfaces, the contiguous keyboard-accessible product-tab island,
-the contiguous global-action island, the flag-only locale trigger, responsive transfer actions at
-390, 1024, and 1280 px,
+consistent nested switchers, the contiguous global-action island, the flag-only locale trigger,
+responsive transfer actions at 390, 1024, and 1280 px,
 absence of locale-provider console errors, the simplified empty states, all
 four scoped workspace Export downloads, state projection append/replace, local avatar workflows,
 hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
 It also verifies silent replacement completion, localized Employee total and match counts, reactive
 count changes, borderless normal and destructive dialog chrome, a contained 390 px Import layout,
-preserved meaningful outlines, and Analytics dynamic height, row cap, sorting, drill-down, and
-border behavior.
+contiguous Employee rows, absent source-pane rules, preserved meaningful outlines, and Analytics
+backgrounds, dynamic height, row cap, sorting, drill-down, and border behavior.

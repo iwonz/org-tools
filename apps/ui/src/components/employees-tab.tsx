@@ -72,12 +72,25 @@ export const EmployeesTab = observer(() => {
     >
       {sortedEmployees.length > 0 && (
         <div
-          className="flex min-h-16 shrink-0 flex-wrap items-center gap-3 px-4 py-3"
+          className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 px-4 py-3"
           data-demo-id="employees-header"
         >
-          <div className="min-w-fit shrink-0" data-demo-id="employees-summary">
-            <div className="text-sm font-medium">{t("Employees")}</div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
+          <div className="grid min-w-56 flex-1 gap-1" data-demo-id="employees-search-column">
+            <EmployeeSearchInput
+              ariaLabel={t("Search Employees")}
+              className="w-full"
+              dataDemoId="employees-search"
+              filters={filters}
+              onFiltersChange={setFilters}
+              onValueChange={setQuery}
+              placeholder={t("Search Employees")}
+              positionButtonDemoId="employees-position-filter"
+              positionOptions={units.indexes.positionOptions}
+              positionPopoverDemoId="employees-position-popover"
+              tagOptions={units.indexes.tagOptions}
+              value={query}
+            />
+            <div className="px-1 text-xs text-muted-foreground" data-demo-id="employees-summary">
               <span data-demo-id="employees-total-count">
                 {countText("employees", { count: sortedEmployees.length })}
               </span>
@@ -91,21 +104,8 @@ export const EmployeesTab = observer(() => {
               )}
             </div>
           </div>
-          <EmployeeSearchInput
-            ariaLabel={t("Search Employees")}
-            className="min-w-56 flex-1"
-            dataDemoId="employees-search"
-            filters={filters}
-            onFiltersChange={setFilters}
-            onValueChange={setQuery}
-            placeholder={t("Search Employees")}
-            positionButtonDemoId="employees-position-filter"
-            positionOptions={units.indexes.positionOptions}
-            positionPopoverDemoId="employees-position-popover"
-            tagOptions={units.indexes.tagOptions}
-            value={query}
-          />
           <Button
+            className="shrink-0"
             data-demo-id="employee-create-button"
             onClick={() => setIsCreateOpen(true)}
             type="button"

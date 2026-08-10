@@ -112,6 +112,43 @@ async function expectHeaderActionIsland(page: Page) {
   expect(new Set(buttonStyles.map(({ height }) => height)).size).toBe(1);
 }
 
+async function expectSegmentedSwitcher(tabsList: Locator) {
+  const triggers = tabsList.getByRole("tab");
+  const listStyle = await tabsList.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      borderWidth: style.borderWidth,
+      columnGap: style.columnGap,
+      overflow: style.overflow,
+      padding: style.padding,
+    };
+  });
+  const triggerStyles = await triggers.evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        borderRadius: style.borderRadius,
+        borderWidth: style.borderWidth,
+      };
+    }),
+  );
+
+  expect(listStyle).toEqual({
+    borderWidth: "1px",
+    columnGap: "0px",
+    overflow: "hidden",
+    padding: "0px",
+  });
+  expect(triggerStyles.length).toBeGreaterThan(1);
+  expect(new Set(triggerStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
+  expect(new Set(triggerStyles.map(({ borderRadius }) => borderRadius))).toEqual(new Set(["0px"]));
+
+  const active = tabsList.getByRole("tab", { selected: true });
+  const inactive = tabsList.getByRole("tab", { selected: false }).first();
+  expect(await getBackgroundColor(active)).not.toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
+}
+
 test("opens a blank workspace with all product surfaces", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -757,10 +794,17 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
   await page.getByRole("tab", { name: "Units", exact: true }).click();
   await expect(page.locator('[data-demo-id="units-tree-panel"]')).toHaveCSS(
     "border-right-width",
-    "1px",
+    "0px",
   );
   await expectNoHorizontalRule(page.locator('[data-demo-id="units-tree-header"]'));
   await expectNoHorizontalRule(page.locator('[data-demo-id="units-employee-header"]'));
+
+  await page.getByRole("tab", { name: "Download", exact: true }).click();
+  await expect(page.locator('[data-demo-id="export-source-panel"]')).toHaveCSS(
+    "border-right-width",
+    "0px",
+  );
+  await expectSegmentedSwitcher(page.locator('[data-demo-id="export-source-tabs"]'));
   await assertLocalRequests();
 });
 
@@ -773,11 +817,41 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await expectNoHorizontalRule(page.locator('[data-demo-id="employees-header"]'));
 
   const summary = page.locator('[data-demo-id="employees-summary"]');
-  await expect(summary).toContainText("Employees");
+  const search = page.locator('[data-demo-id="employees-search"]');
+  await expect(
+    page.locator('[data-demo-id="employees-header"]').getByText("Employees", { exact: true }),
+  ).toHaveCount(0);
   await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("4 Employees");
   await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
+  const searchBox = await search.boundingBox();
+  const summaryBox = await summary.boundingBox();
+  expect(searchBox).not.toBeNull();
+  expect(summaryBox).not.toBeNull();
+  expect(summaryBox?.y ?? 0).toBeGreaterThanOrEqual((searchBox?.y ?? 0) + (searchBox?.height ?? 0));
+  expect(Math.abs((summaryBox?.x ?? 0) - (searchBox?.x ?? 0))).toBeLessThanOrEqual(4);
 
-  const search = page.locator('[data-demo-id="employees-search"]');
+  const employeeCards = page.locator('[data-demo-id="employees-list"] article');
+  await expect(employeeCards).toHaveCount(4);
+  const firstCardStyle = await employeeCards.first().evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return { borderRadius: style.borderRadius };
+  });
+  expect(firstCardStyle.borderRadius).toBe("0px");
+  const firstTwoCardRects = await employeeCards.evaluateAll((cards) =>
+    cards.slice(0, 2).map((card) => {
+      const rect = card.getBoundingClientRect();
+      return { bottom: rect.bottom, top: rect.top };
+    }),
+  );
+  const cardGap = (firstTwoCardRects[1]?.top ?? 0) - (firstTwoCardRects[0]?.bottom ?? 0);
+  expect(cardGap).toBeGreaterThanOrEqual(0);
+  expect(cardGap).toBeLessThanOrEqual(1);
+  expect(
+    await getBackgroundColor(
+      page.locator('[data-demo-id="employees-list"] [data-employee-list-track]'),
+    ),
+  ).toBe(await getBackgroundColor(employeeCards.first()));
+
   await search.getByRole("searchbox").fill("Avery");
   await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("4 Employees");
   await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveText("· 1 match");
@@ -814,7 +888,10 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
   const positions = page.locator('[data-demo-id="analytics-positions"]');
   await expect(positions).toHaveAttribute("data-analytics-entry-count", "4");
   await expect(positions).toHaveAttribute("data-analytics-visible-rows", "4");
-  await expect(positions).toHaveCSS("height", "228px");
+  await expect(positions).toHaveCSS("height", "252px");
+  expect(await getBackgroundColor(positions)).not.toBe("rgba(0, 0, 0, 0)");
+  await expect(positions).toHaveCSS("border-width", "0px");
+  await expect(positions).toHaveCSS("box-shadow", "none");
   await expect(positions.locator("header")).toHaveCSS("border-bottom-width", "0px");
   expect(
     await positions.locator("[data-analytics-row]").evaluateAll((rows) =>
@@ -849,7 +926,7 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
 
   const duplicates = page.locator('[data-demo-id="analytics-full-name-duplicates"]');
   await expect(duplicates).toHaveAttribute("data-analytics-visible-rows", "0");
-  await expect(duplicates).toHaveCSS("height", "124px");
+  await expect(duplicates).toHaveCSS("height", "148px");
   await assertLocalRequests();
 });
 
@@ -887,7 +964,7 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
   const firstNames = page.locator('[data-demo-id="analytics-first-names"]');
   await expect(firstNames).toHaveAttribute("data-analytics-entry-count", "16");
   await expect(firstNames).toHaveAttribute("data-analytics-visible-rows", "8");
-  await expect(firstNames).toHaveCSS("height", "396px");
+  await expect(firstNames).toHaveCSS("height", "420px");
   const scrollArea = page.locator('[data-demo-id="analytics-first-names-scroll-area"]');
   expect(
     await scrollArea.evaluate((element) => ({

@@ -46,6 +46,7 @@ const ANALYTICS_TABLE_HEADER_HEIGHT = 32;
 const ANALYTICS_ROW_HEIGHT = 42;
 const ANALYTICS_MAX_VISIBLE_ROWS = 8;
 const ANALYTICS_EMPTY_BODY_HEIGHT = 96;
+const ANALYTICS_SECTION_VERTICAL_PADDING = 24;
 
 const getDefaultSortDirection = (key: AnalyticsSortKey): AnalyticsSortDirection =>
   key === "count" ? "desc" : "asc";
@@ -188,6 +189,7 @@ function AnalyticsList({
       : 0;
   const visibleRowCount = Math.min(sortedEntries.length, ANALYTICS_MAX_VISIBLE_ROWS);
   const sectionHeight =
+    ANALYTICS_SECTION_VERTICAL_PADDING +
     ANALYTICS_TITLE_HEIGHT +
     (visibleRowCount === 0
       ? ANALYTICS_EMPTY_BODY_HEIGHT
@@ -208,7 +210,9 @@ function AnalyticsList({
 
   return (
     <section
-      className={["flex min-w-0 flex-col", className].filter(Boolean).join(" ")}
+      className={["flex min-w-0 flex-col rounded-lg bg-card p-3", className]
+        .filter(Boolean)
+        .join(" ")}
       data-analytics-entry-count={sortedEntries.length}
       data-analytics-visible-rows={visibleRowCount}
       data-demo-id={demoId}
@@ -229,7 +233,7 @@ function AnalyticsList({
             ref={scrollRef}
           >
             <table className="w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-shell/95 text-left text-xs text-muted-foreground backdrop-blur">
+              <thead className="sticky top-0 z-10 bg-card/95 text-left text-xs text-muted-foreground backdrop-blur">
                 <tr>
                   <AnalyticsSortableHeader
                     className="px-3 py-1"

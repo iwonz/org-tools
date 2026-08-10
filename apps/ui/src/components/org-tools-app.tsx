@@ -30,9 +30,6 @@ import { describeError, type UiMessageDescriptor, uiMessage } from "@/i18n/messa
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { OrgStoreProvider, useOrgStore } from "@/stores/org-store-context";
 
-const PRODUCT_TAB_CLASS_NAME =
-  "h-full rounded-none border-0 bg-transparent px-3 text-muted-foreground hover:bg-accent/40 hover:text-foreground focus-visible:ring-inset data-[state=active]:bg-accent data-[state=active]:text-accent-foreground";
-
 const HEADER_ACTION_CLASS_NAME =
   "h-full w-9 rounded-none border-0 bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:border-transparent focus-visible:ring-inset data-[state=open]:bg-accent data-[state=open]:text-accent-foreground";
 
@@ -93,55 +90,28 @@ const LoadedApp = observer(() => {
               className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               data-demo-id="product-navigation"
             >
-              <TabsList
-                className="h-9 w-max gap-0 overflow-hidden rounded-md border border-input bg-background/70 p-0"
-                data-demo-id="product-tabs-list"
-              >
-                <TabsTrigger
-                  className={PRODUCT_TAB_CLASS_NAME}
-                  data-demo-id="tab-units"
-                  value="units"
-                >
+              <TabsList className="w-max" data-demo-id="product-tabs-list">
+                <TabsTrigger data-demo-id="tab-units" value="units">
                   <HiOutlineFolder />
                   {t("Units")}
                 </TabsTrigger>
-                <TabsTrigger
-                  className={PRODUCT_TAB_CLASS_NAME}
-                  data-demo-id="tab-employees"
-                  value="employees"
-                >
+                <TabsTrigger data-demo-id="tab-employees" value="employees">
                   <HiOutlineUsers />
                   {t("Employees")}
                 </TabsTrigger>
-                <TabsTrigger
-                  className={PRODUCT_TAB_CLASS_NAME}
-                  data-demo-id="tab-org-editor"
-                  value="orgEditor"
-                >
+                <TabsTrigger data-demo-id="tab-org-editor" value="orgEditor">
                   <HiOutlineBuildingOffice2 />
                   {t("Editor")}
                 </TabsTrigger>
-                <TabsTrigger
-                  className={PRODUCT_TAB_CLASS_NAME}
-                  data-demo-id="tab-analytics"
-                  value="analytics"
-                >
+                <TabsTrigger data-demo-id="tab-analytics" value="analytics">
                   <HiOutlineChartBar />
                   {t("Analytics")}
                 </TabsTrigger>
-                <TabsTrigger
-                  className={PRODUCT_TAB_CLASS_NAME}
-                  data-demo-id="tab-calendar"
-                  value="calendar"
-                >
+                <TabsTrigger data-demo-id="tab-calendar" value="calendar">
                   <HiOutlineCalendarDays />
                   {t("Calendar")}
                 </TabsTrigger>
-                <TabsTrigger
-                  className={PRODUCT_TAB_CLASS_NAME}
-                  data-demo-id="tab-export"
-                  value="export"
-                >
+                <TabsTrigger data-demo-id="tab-export" value="export">
                   <HiOutlineShare />
                   {t("Data Download")}
                 </TabsTrigger>

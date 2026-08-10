@@ -17,7 +17,6 @@ import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { cn } from "@/lib/utils";
 
 const CARD_HEIGHT_ESTIMATE = 132;
-const CARD_GAP_PX = 4;
 const SECTION_HEADER_HEIGHT_ESTIMATE = 36;
 const EMPTY_EMPLOYEES: Employee[] = [];
 
@@ -55,6 +54,11 @@ type EmployeeCardVariant = "list" | "compact";
 const CARD_HEIGHT_ESTIMATE_BY_VARIANT: Record<EmployeeCardVariant, number> = {
   compact: 84,
   list: CARD_HEIGHT_ESTIMATE,
+};
+
+const CARD_GAP_BY_VARIANT: Record<EmployeeCardVariant, number> = {
+  compact: 4,
+  list: 0,
 };
 
 type EmployeeCardProps = {
@@ -340,7 +344,7 @@ export const EmployeeCard = observer(function EmployeeCard({
   return (
     <article
       className={cn(
-        "relative flex min-w-0 items-start gap-3 rounded-md bg-card p-4",
+        "relative flex min-w-0 items-start gap-3 rounded-none bg-card p-4",
         isInteractive && "cursor-pointer",
         draggable && "cursor-grab active:cursor-grabbing",
         selected && "bg-accent text-accent-foreground",
@@ -445,7 +449,7 @@ export function EmployeeCardList({
       sectionRows?.[index]?.type === "section"
         ? SECTION_HEADER_HEIGHT_ESTIMATE
         : CARD_HEIGHT_ESTIMATE_BY_VARIANT[variant],
-    gap: CARD_GAP_PX,
+    gap: CARD_GAP_BY_VARIANT[variant],
     getItemKey: (index) =>
       sectionRows?.[index]?.id ?? String(employees[index]?.id ?? `employee-row:${index}`),
     getScrollElement: () => parentRef.current,
@@ -493,7 +497,11 @@ export function EmployeeCardList({
           {resolvedEmptyState}
         </div>
       ) : (
-        <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
+        <div
+          className="relative bg-card"
+          data-employee-list-track
+          style={{ height: virtualizer.getTotalSize() }}
+        >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const row = sectionRows?.[virtualRow.index];
             const employee = row?.type === "employee" ? row.employee : employees[virtualRow.index];

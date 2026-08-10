@@ -352,10 +352,7 @@ export const UnitsTab = observer(() => {
       className="grid min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent"
       style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
     >
-      <div
-        className="flex min-h-0 min-w-0 flex-col border-r bg-transparent"
-        data-demo-id="units-tree-panel"
-      >
+      <div className="flex min-h-0 min-w-0 flex-col bg-transparent" data-demo-id="units-tree-panel">
         <div
           className="flex min-h-16 shrink-0 items-center gap-2 px-3 py-2"
           data-demo-id="units-tree-header"
