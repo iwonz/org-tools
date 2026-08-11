@@ -93,7 +93,7 @@ export const EmployeesTab = observer(() => {
           data-demo-id="employees-surface"
         >
           <div
-            className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 px-3 py-3"
+            className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 px-3 pb-3 pt-0"
             data-demo-id="employees-header"
           >
             <div className="grid min-w-56 flex-1 gap-1" data-demo-id="employees-search-column">

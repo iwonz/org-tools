@@ -292,7 +292,7 @@ export const CalendarTab = observer(() => {
         data-demo-id="calendar-tab"
       >
         <div
-          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-transparent px-4 py-3"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-transparent px-4 pb-3 pt-0"
           data-demo-id="calendar-header"
         >
           <div className="min-w-0">

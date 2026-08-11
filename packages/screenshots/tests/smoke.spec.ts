@@ -336,20 +336,39 @@ test("uses one continuous root surface with a distinct Editor canvas", async ({ 
   expect(editorCanvasBox).not.toBeNull();
 
   const surfaces = [
-    ["tab-units", '[data-demo-id="units-surface"]'],
-    ["tab-employees", '[data-demo-id="employees-surface"]'],
-    ["tab-analytics", '[data-demo-id="analytics-surface"]'],
-    ["tab-calendar", '[data-demo-id="calendar-tab"]'],
-    ["tab-export", '[data-demo-id="export-surface"]'],
+    [
+      "tab-units",
+      '[data-demo-id="units-surface"]',
+      ['[data-demo-id="unit-create-root-button"]', '[data-demo-id="units-employee-header"]'],
+    ],
+    ["tab-employees", '[data-demo-id="employees-surface"]', ['[data-demo-id="employees-search"]']],
+    ["tab-analytics", '[data-demo-id="analytics-surface"]', ['[data-demo-id="analytics-header"]']],
+    ["tab-calendar", '[data-demo-id="calendar-tab"]', ['[data-demo-id="calendar-header"]']],
+    [
+      "tab-export",
+      '[data-demo-id="export-surface"]',
+      [
+        '[data-demo-id="export-source-tabs"]',
+        '[data-demo-id="export-selected-panel"] > div:first-child',
+      ],
+    ],
   ] as const;
 
-  for (const [tabDemoId, selector] of surfaces) {
+  for (const [tabDemoId, selector, leadingSelectors] of surfaces) {
     await page.locator(`[data-demo-id="${tabDemoId}"]`).click();
     const surface = page.locator(selector);
     await expectTransparentBackground(surface);
     const surfaceBox = await surface.boundingBox();
     expect(surfaceBox).not.toBeNull();
     expect(Math.abs((surfaceBox?.y ?? 0) - (editorCanvasBox?.y ?? 0))).toBeLessThanOrEqual(1);
+    for (const leadingSelector of leadingSelectors) {
+      const leadingBox = await page.locator(leadingSelector).boundingBox();
+      expect(leadingBox).not.toBeNull();
+      expect(
+        Math.abs((leadingBox?.y ?? 0) - (editorCanvasBox?.y ?? 0)),
+        `${leadingSelector} starts at the shared workflow origin`,
+      ).toBeLessThanOrEqual(1);
+    }
   }
 
   await page.locator('[data-demo-id="tab-org-editor"]').click();

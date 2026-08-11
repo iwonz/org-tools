@@ -80,11 +80,11 @@ shows search, its total catalog count, actions, and contiguous rows directly on 
 Successful workspace and Download-tab saves also remain visually silent; browser tests assert the
 downloaded files while copy confirmation and errors retain their interface feedback.
 The gallery verifies an uninterrupted white light surface and dark neutral surface across the header
-and ordinary workflows; a shared flush workflow origin immediately below the header; flat spaced
-product tabs, nested tabs, and global actions; compact split
-panes without vertical rules; flat Org Editor top-left and bottom-left control groups over a neutral
-canvas; card-consistent neutral tags in local image export; right-revealing Editor search; unfilled
-borderless Analytics groups with 12 px gaps; and
+and ordinary workflows; a shared flush workflow origin and first visible content group immediately
+below the header without top inset; flat spaced product tabs, nested tabs, and global actions;
+compact split panes without vertical rules; flat Org Editor top-left and bottom-left control groups
+over a neutral canvas; card-consistent neutral tags in local image export; right-revealing Editor
+search; unfilled borderless Analytics groups with 12 px gaps; and
 preserved semantic boundaries for fields, dialogs, popovers, selection cards, calendar cells,
 hierarchy guides, Editor nodes, focus, and destructive states.
 

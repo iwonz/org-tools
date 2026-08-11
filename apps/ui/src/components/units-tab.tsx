@@ -360,7 +360,7 @@ export const UnitsTab = observer(() => {
           data-demo-id="units-tree-panel"
         >
           <div
-            className="flex min-h-16 shrink-0 items-center gap-2 px-2 py-2"
+            className="flex shrink-0 items-start gap-2 px-2 pb-2 pt-0"
             data-demo-id="units-tree-header"
           >
             {showUnitSearch && (
@@ -500,7 +500,7 @@ export const UnitsTab = observer(() => {
           className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent"
           data-demo-id="units-employee-panel"
         >
-          <div className="grid shrink-0 gap-2 p-2" data-demo-id="units-employee-header">
+          <div className="grid shrink-0 gap-2 px-2 pb-2 pt-0" data-demo-id="units-employee-header">
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
               <nav

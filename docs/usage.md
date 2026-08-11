@@ -51,6 +51,9 @@ persisted types, and export fields remain unchanged.
 - **Download** selects local sources and produces CSV, JSON, or separator-based templates on the
   shared root surface.
 
+Populated product tabs begin directly below the unified header. Their first root-level controls add
+no top inset, while horizontal, bottom, and subsequent section spacing keep each workflow readable.
+
 The Main View is canonical. A custom View can begin as a copy of Main or empty, then keep its own
 document, local Employees, global Employee overrides, canvas layout, viewport, and command history.
 

@@ -491,7 +491,7 @@ export const ExportTab = observer(() => {
             data-demo-id="export-source-panel"
           >
             {store.orgViewList.length > 1 && (
-              <div className="p-2.5">
+              <div className="px-2.5 pb-2.5 pt-0">
                 <Select
                   onValueChange={(viewId) => {
                     store.selectExportOrgView(viewId);
@@ -520,7 +520,7 @@ export const ExportTab = observer(() => {
               value={sourceSection}
             >
               <TabsList
-                className="mx-2.5 mt-2.5 h-auto w-fit shrink-0"
+                className="mx-2.5 mt-0 h-auto w-fit shrink-0"
                 data-demo-id="export-source-tabs"
               >
                 <TabsTrigger
@@ -698,6 +698,7 @@ export const ExportTab = observer(() => {
             emptyState={<ExportSelectedEmployeesEmptyState />}
             filters={selectedFilters}
             hasSearch={hasSelectedEmployeeSearch}
+            headerClassName="px-3 pb-3 pt-0"
             onClear={() => {
               store.clearExportSelection();
               setStatus(null);
