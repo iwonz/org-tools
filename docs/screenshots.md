@@ -15,6 +15,10 @@ machine preferences cannot change gallery copy.
 
 ![Synthetic organization canvas](screenshots/synthetic-org-editor.png)
 
+### Org Editor image export
+
+![Org Editor image export](screenshots/org-editor-image-export.png)
+
 ### Synthetic Employees catalog
 
 ![Synthetic Employees catalog](screenshots/synthetic-employees.png)
@@ -74,9 +78,11 @@ locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
 shows search, its total catalog count, actions, and contiguous rows directly on the root surface.
 The gallery verifies an uninterrupted white light surface and dark neutral surface across the header
-and ordinary workflows; flat spaced product tabs, nested tabs, and global actions; compact split
+and ordinary workflows; a shared flush workflow origin immediately below the header; flat spaced
+product tabs, nested tabs, and global actions; compact split
 panes without vertical rules; flat Org Editor top-left and bottom-left control groups over a neutral
-canvas; right-revealing Editor search; unfilled borderless Analytics groups with 12 px gaps; and
+canvas; card-consistent neutral tags in local image export; right-revealing Editor search; unfilled
+borderless Analytics groups with 12 px gaps; and
 preserved semantic boundaries for fields, dialogs, popovers, selection cards, calendar cells,
 hierarchy guides, Editor nodes, focus, and destructive states.
 
@@ -104,6 +110,6 @@ claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
 It also verifies silent replacement completion, localized Employee total and match counts, reactive
 count changes, borderless normal and destructive dialog chrome, a contained 390 px Import layout,
 contiguous transparent Employee rows, root-continuous populated workflow layouts, absent source-pane
-rules, compact Teams and Analytics spacing, left-aligned flat Editor controls, the distinct neutral
-canvas, preserved meaningful outlines, and Analytics transparency, dynamic height, row cap, sorting,
-drill-down, and border behavior.
+rules, aligned top boundaries without per-tab outer top margins, compact Teams and Analytics spacing,
+left-aligned flat Editor controls, the distinct neutral canvas, preserved meaningful outlines, and
+Analytics transparency, dynamic height, row cap, sorting, drill-down, and border behavior.

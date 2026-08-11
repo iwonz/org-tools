@@ -41,7 +41,8 @@ dedicated canvas background token adds no observer or layout work.
 
 Org Editor Employee rows use deterministic tag-chip packing and cached per-Unit prefix offsets.
 Locale or tag changes invalidate those measurements. Visibility lookup uses the prefix offsets, and
-the same row-height model expands Unit bounds and local PNG output without hidden-tag counters.
+the PNG pipeline separately reuses one compact chip geometry for both painting and exported
+row-height growth without hidden-tag counters or unused tag rows.
 
 ## Import and export
 

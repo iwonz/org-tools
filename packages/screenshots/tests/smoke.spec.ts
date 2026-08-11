@@ -330,17 +330,26 @@ test("uses one continuous root surface with a distinct Editor canvas", async ({ 
   await expectTransparentBackground(page.locator('[data-demo-id="top-level-empty-state"]'));
 
   await replaceWithSyntheticWorkspace(page);
+  await page.locator('[data-demo-id="tab-org-editor"]').click();
+  const editorCanvas = page.locator('[data-demo-id="org-editor-canvas"]');
+  const editorCanvasBox = await editorCanvas.boundingBox();
+  expect(editorCanvasBox).not.toBeNull();
+
   const surfaces = [
-    ["tab-units", '[data-demo-id="units-tree-panel"]'],
-    ["tab-employees", '[data-demo-id="employees-tab"]'],
-    ["tab-analytics", '[data-demo-id="analytics-tab"]'],
+    ["tab-units", '[data-demo-id="units-surface"]'],
+    ["tab-employees", '[data-demo-id="employees-surface"]'],
+    ["tab-analytics", '[data-demo-id="analytics-surface"]'],
     ["tab-calendar", '[data-demo-id="calendar-tab"]'],
-    ["tab-export", '[data-demo-id="export-tab"]'],
+    ["tab-export", '[data-demo-id="export-surface"]'],
   ] as const;
 
   for (const [tabDemoId, selector] of surfaces) {
     await page.locator(`[data-demo-id="${tabDemoId}"]`).click();
-    await expectTransparentBackground(page.locator(selector));
+    const surface = page.locator(selector);
+    await expectTransparentBackground(surface);
+    const surfaceBox = await surface.boundingBox();
+    expect(surfaceBox).not.toBeNull();
+    expect(Math.abs((surfaceBox?.y ?? 0) - (editorCanvasBox?.y ?? 0))).toBeLessThanOrEqual(1);
   }
 
   await page.locator('[data-demo-id="tab-org-editor"]').click();

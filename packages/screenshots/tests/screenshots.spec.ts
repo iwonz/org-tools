@@ -41,6 +41,25 @@ test("captures the synthetic organization canvas", async ({ page }) => {
   });
 });
 
+test("captures card-consistent tags in the Org Editor image export", async ({ page }) => {
+  await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
+  await page.locator('fieldset[aria-label="Canvas Unit Platform"]').click({
+    button: "right",
+    position: { x: 20, y: 20 },
+  });
+  await page.locator('[data-demo-id="org-editor-export-action"]').click();
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog.locator('[data-demo-id="org-editor-export-image"]')).toBeVisible();
+  await stabilizeForScreenshot(page);
+
+  await page.screenshot({
+    animations: "disabled",
+    fullPage: true,
+    path: `${screenshotsDirectory}/org-editor-image-export.png`,
+  });
+});
+
 test("captures the synthetic Employees catalog", async ({ page }) => {
   await openBlankWorkspace(page);
   await replaceWithSyntheticWorkspace(page);

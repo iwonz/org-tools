@@ -381,7 +381,7 @@ export const AnalyticsTab = observer(() => {
         data-demo-id="analytics-tab"
       >
         <ProductSurface
-          className="m-2 flex min-h-0 flex-1 flex-col"
+          className="mx-2 mb-2 flex min-h-0 flex-1 flex-col"
           data-demo-id="analytics-surface"
         >
           <div

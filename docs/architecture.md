@@ -65,9 +65,10 @@ dated-tag events by ISO day and normalized label alongside birthday indexes, so 
 virtualized dialogs do not rescan the Employee catalog during render.
 
 Tag dates stay behind focused calendar popovers. Cards and the Org Editor render every chip with
-wrapping. A shared deterministic packing model produces variable Employee row heights and prefix
-offsets used by canvas virtualization, hit testing, connections, layout, bounds, and localized PNG
-rendering.
+wrapping. The interactive canvas uses deterministic packing to produce variable Employee row heights
+and prefix offsets for virtualization, hit testing, connections, layout, and bounds. Localized PNG
+rendering uses a card-consistent neutral chip profile whose shared paint and row-allocation geometry
+keeps exported bounds compact and aligned.
 
 Employee avatar editing is also a local draft pipeline. A bounded file or clipboard Blob is decoded,
 optionally downscaled to a temporary 4096-pixel preview, positioned through `react-easy-crop`, and

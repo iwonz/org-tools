@@ -351,7 +351,7 @@ export const UnitsTab = observer(() => {
   return (
     <section className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
       <ProductSurface
-        className="m-2 grid min-h-0 flex-1"
+        className="mx-2 mb-2 grid min-h-0 flex-1"
         data-demo-id="units-surface"
         style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
       >

@@ -475,7 +475,7 @@ export const ExportTab = observer(() => {
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       data-demo-id="export-tab"
     >
-      <ProductSurface className="relative m-2 min-h-0 flex-1" data-demo-id="export-surface">
+      <ProductSurface className="relative mx-2 mb-2 min-h-0 flex-1" data-demo-id="export-surface">
         <div
           className="grid h-full min-h-0 overflow-hidden pb-[86px]"
           data-demo-id="export-selection-grid"

@@ -123,8 +123,9 @@ Employee-to-Unit assignment, so the same Employee can have different roles in di
 The Employee form and quick tag menu hide date controls behind a calendar action. A dated chip reads
 `label · localized date`; bulk editing displays mixed dates and can apply or clear one date for all
 selected Employees that have the label. Every Employee surface and PNG image shows all tags on
-wrapped rows without `+N` counters. Ordinary JSON mapping creates undated tags; scoped state
-files carry dated tags.
+wrapped rows without `+N` counters. PNG tags use the same neutral rounded treatment and localized
+`label · date` content as Employee cards, with compact row spacing. Ordinary JSON mapping creates
+undated tags; scoped state files carry dated tags.
 
 Profile and email links open only when activated. Choose an avatar from a PNG, JPEG, or WebP file,
 use the explicit clipboard action, or paste an image while the Employee form is focused. The crop

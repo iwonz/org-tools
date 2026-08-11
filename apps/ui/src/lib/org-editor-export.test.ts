@@ -5,8 +5,12 @@ import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorExportFileBaseName,
   getEmployeeCanvasAvatarUrl,
+  getOrgEditorExportEmployeeGeometry,
   getOrgEditorExportEmployeeRowHeight,
+  getOrgEditorExportEmployeeTagChipWidth,
   getOrgEditorExportEmployeeTagLabels,
+  getOrgEditorExportEmployeeTagRowCount,
+  ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_EXPORT_GRADIENTS,
 } from "@/lib/org-editor-export";
 
@@ -66,7 +70,7 @@ describe("Org Editor image export", () => {
     expect(createOrgEditorExportFileBaseName(unit)).toBe("Research-Development-Lab");
   });
 
-  test("localizes every dated tag and expands PNG rows with the shared packing model", () => {
+  test("localizes every dated tag and expands PNG rows with compact export geometry", () => {
     const taggedEmployee = {
       ...employee,
       tags: [
@@ -81,6 +85,25 @@ describe("Org Editor image export", () => {
     expect(english).toHaveLength(4);
     expect(english).toContain("Last day · Sep 1, 2026");
     expect(russian).not.toEqual(english);
-    expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBeGreaterThan(48);
+    expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBe(47.5);
+    expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90, () => 36)).toBe(52);
+    expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(4);
+    expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBe(120);
+  });
+
+  test("uses the neutral Employee-card chip palette and spacing", () => {
+    expect(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE).toEqual({
+      fillStyle: "rgba(29, 29, 29, 0.1)",
+      fontSize: 11,
+      gap: 4,
+      height: 20,
+      horizontalPadding: 8,
+      radius: 6,
+      textStyle: "#1d1d1d",
+      widthPerCharacter: 6.3,
+    });
+    expect(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fillStyle).not.toContain("39, 135, 245");
+    expect(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.textStyle).not.toBe("#2787f5");
+    expect(getOrgEditorExportEmployeeGeometry(unit, 0).textMaxWidth).toBe(314);
   });
 });
