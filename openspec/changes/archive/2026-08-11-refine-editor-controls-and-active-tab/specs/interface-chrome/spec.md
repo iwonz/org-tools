@@ -1,9 +1,5 @@
-# interface-chrome Specification
+## MODIFIED Requirements
 
-## Purpose
-Define how the application separates shell, surface, dialog, and repeated-row content without
-unnecessary decorative rules.
-## Requirements
 ### Requirement: Application chrome is separated without decorative rules
 The application SHALL use one borderless 56 px header and one continuous root surface: white in the
 light theme and a shared dark neutral in the dark theme. Every product workflow SHALL begin flush
@@ -75,51 +71,3 @@ toolbar groups SHALL retain their required bounded treatment.
 #### Scenario: Stable product workflow origin
 - **WHEN** a user switches between Editor and any populated product workflow
 - **THEN** the Editor canvas, ordinary workflow surface, and its first visible root-level content group all begin immediately below the unified header without outer top margin, top padding, or a vertical content jump
-
-### Requirement: Dialog chrome is borderless inside its outer boundary
-Dialog and alert-dialog outer boundaries SHALL remain visually distinct from the page, while their
-headers and footers SHALL use padding and background without internal top or bottom rules. Accessible
-titles, descriptions, close actions, scrolling, and confirmation actions SHALL remain unchanged.
-
-#### Scenario: Long dialog
-- **WHEN** Import, Export, or Employee content scrolls inside a constrained dialog
-- **THEN** the outer dialog remains identifiable and the header and actions remain readable and reachable without header or footer divider lines
-
-#### Scenario: Destructive alert
-- **WHEN** a destructive confirmation dialog opens
-- **THEN** its outer boundary, destructive copy, and action remain explicit without internal dialog rules
-
-### Requirement: Repeated rows are separated without line rules
-Repeated interface rows SHALL use compact content layout and interaction feedback instead of
-decorative line rules, card fill, or inter-row gutters. Virtualized Employee lists SHALL render
-contiguous rows directly on the workflow background without individual list-row corner rounding.
-This applies alongside virtualized and non-virtualized filters, tag pickers, mappings, event lists,
-and import previews, except where a real selectable or data-card boundary is semantically required.
-
-#### Scenario: Interactive option list
-- **WHEN** a user navigates a filter or tag list with pointer or keyboard
-- **THEN** each option remains identifiable from layout and active feedback without a row divider or persistent row fill
-
-#### Scenario: Contiguous Employee list
-- **WHEN** multiple Employees render in a list surface
-- **THEN** adjacent rows share the root surface without an inter-row gap, individual background tile, corner rounding, or row divider
-
-#### Scenario: Mapping and preview rows
-- **WHEN** a generic mapping or structured preview contains multiple rows
-- **THEN** aligned fields, hierarchy, semantic cards, and spacing remain readable without decorative repeated row rules or section islands
-
-### Requirement: Meaningful component boundaries remain
-The application SHALL retain outlines or owned surfaces only when they communicate interactive
-controls, selectable cards, dialogs, popovers, calendar cells, hierarchy guides, canvas data nodes,
-focus, errors, or destructive states. Adjacent Teams and Download panes, workflow wrappers,
-navigation groups, toolbar groups, ordinary repeated rows, and Analytics groups SHALL not use an
-outline or fill solely as layout decoration.
-
-#### Scenario: Semantic boundary audit
-- **WHEN** the flat chrome is rendered in light or dark theme
-- **THEN** fields, choice cards, dialogs, popovers, calendar cells, hierarchy guides, Editor data nodes, focus rings, and destructive selections remain visually bounded
-- **AND** navigation, actions, workflow wrappers, Analytics sections, and ordinary rows remain unenclosed
-
-#### Scenario: Narrow layout
-- **WHEN** the Import dialog renders at a 390 px viewport
-- **THEN** operation cards retain their selectable boundaries, content remains inside the dialog, and no page-level horizontal overflow appears

@@ -67,9 +67,7 @@ async function expectFlatProductTabs(page: Page) {
   );
   expect(
     Number(await active.evaluate((element) => window.getComputedStyle(element).fontWeight)),
-  ).toBeGreaterThan(
-    Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)),
-  );
+  ).toBe(Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)));
   const activeMarker = await active.evaluate((element) => {
     const marker = window.getComputedStyle(element, "::after");
     return {
@@ -150,11 +148,12 @@ async function expectFlatTabGroup(tabsList: Locator) {
   const inactive = tabsList.getByRole("tab", { selected: false }).first();
   expect(await getBackgroundColor(active)).toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
+  expect(await active.evaluate((element) => window.getComputedStyle(element).color)).not.toBe(
+    await inactive.evaluate((element) => window.getComputedStyle(element).color),
+  );
   expect(
     Number(await active.evaluate((element) => window.getComputedStyle(element).fontWeight)),
-  ).toBeGreaterThan(
-    Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)),
-  );
+  ).toBe(Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)));
 }
 
 async function expectFlatProductSurface(surface: Locator) {
@@ -1037,7 +1036,7 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
   await assertLocalRequests();
 });
 
-test("renders flat Org Editor controls and reveals search to the right", async ({ page }) => {
+test("renders surfaced Org Editor controls and reveals search to the right", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankWorkspace(page);
   await replaceWithSyntheticWorkspace(page);
@@ -1050,28 +1049,42 @@ test("renders flat Org Editor controls and reveals search to the right", async (
     const style = window.getComputedStyle(element);
     return {
       backgroundColor: style.backgroundColor,
+      borderRadius: style.borderRadius,
       borderWidth: style.borderWidth,
+      boxShadow: style.boxShadow,
       columnGap: style.columnGap,
+      padding: style.padding,
     };
   });
   const viewportStyle = await viewportActions.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return {
       backgroundColor: style.backgroundColor,
+      borderRadius: style.borderRadius,
       borderWidth: style.borderWidth,
+      boxShadow: style.boxShadow,
       columnGap: style.columnGap,
+      padding: style.padding,
     };
   });
-  expect(topStyle).toEqual({
-    backgroundColor: "rgba(0, 0, 0, 0)",
-    borderWidth: "0px",
+  expect(topStyle).toMatchObject({
+    borderRadius: "8px",
+    borderWidth: "1px",
     columnGap: "4px",
+    padding: "4px",
   });
-  expect(viewportStyle).toEqual({
-    backgroundColor: "rgba(0, 0, 0, 0)",
-    borderWidth: "0px",
+  expect(viewportStyle).toMatchObject({
+    borderRadius: "8px",
+    borderWidth: "1px",
     columnGap: "4px",
+    padding: "4px",
   });
+  for (const { boxShadow } of [topStyle, viewportStyle]) {
+    const shadowColors = boxShadow.match(/rgba?\([^)]+\)/gu) ?? [];
+    expect(shadowColors.every((color) => color === "rgba(0, 0, 0, 0)")).toBe(true);
+  }
+  expect(topStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(viewportStyle.backgroundColor).toBe(topStyle.backgroundColor);
   expect(await getBackgroundColor(canvas)).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(canvas)).not.toBe(
     await getBackgroundColor(page.locator('[data-demo-id="app-shell"]')),
@@ -1124,6 +1137,14 @@ test("renders flat Org Editor controls and reveals search to the right", async (
   expect(inputBox?.x ?? 0).toBeGreaterThanOrEqual(
     (buttonBox?.x ?? 0) + (buttonBox?.width ?? 0) - 1,
   );
+
+  await page.locator('[data-demo-id="theme-toggle"]').click();
+  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expectFlatProductTabs(page);
+  const darkTopBackground = await getBackgroundColor(topActions);
+  expect(darkTopBackground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(viewportActions)).toBe(darkTopBackground);
   await assertLocalRequests();
 });
 

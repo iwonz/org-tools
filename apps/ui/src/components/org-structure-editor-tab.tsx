@@ -679,6 +679,9 @@ function OrgEditorToolbarButton({
   );
 }
 
+const ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME =
+  "rounded-lg border border-border/70 bg-background/95 p-1 shadow-none backdrop-blur-sm";
+
 function OrgEditorLayoutSwitch({
   layoutMode,
   onToggle,
@@ -3472,7 +3475,10 @@ export const OrgStructureEditorTab = observer(() => {
 
         {(editor.units.length > 0 || store.orgViewList.length > 1) && (
           <div
-            className="absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-start gap-1 bg-transparent"
+            className={cn(
+              "absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-start gap-1",
+              ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+            )}
             data-demo-id="org-editor-actions"
           >
             <OrgViewToolbar
@@ -3529,7 +3535,10 @@ export const OrgStructureEditorTab = observer(() => {
 
         {editor.units.length > 0 && (
           <div
-            className="absolute bottom-3 left-3 z-30 flex items-stretch gap-1 bg-transparent"
+            className={cn(
+              "absolute bottom-3 left-3 z-30 flex items-stretch gap-1",
+              ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+            )}
             data-demo-id="org-editor-viewport-actions"
           >
             <OrgEditorToolbarButton

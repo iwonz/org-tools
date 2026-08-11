@@ -34,10 +34,11 @@ Canvas pointer movement should update imperative preview state without triggerin
 render for every event. Portaled drag previews and full-size valid drop targets should avoid
 measuring the entire tree repeatedly.
 
-Org Editor controls render in flat top-left and bottom-left groups without enclosing paint layers.
-Search remains closed and unmounted at its zero-width state until requested, then expands to the
-right of its trigger without changing canvas data or forcing a layout pass over canvas nodes. The
-dedicated canvas background token adds no observer or layout work.
+Org Editor controls render in compact top-left and bottom-left toolbar surfaces. These static paint
+layers add no observers or canvas-data work. Search remains closed and unmounted at its zero-width
+state until requested, then expands to the right of its trigger without changing canvas data or
+forcing a layout pass over canvas nodes. The dedicated canvas background token adds no observer or
+layout work.
 
 Org Editor Employee rows use deterministic tag-chip packing and cached per-Unit prefix offsets.
 Locale or tag changes invalidate those measurements. Visibility lookup uses the prefix offsets, and

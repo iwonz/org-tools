@@ -42,9 +42,10 @@ persisted types, and export fields remain unchanged.
   filters are active. Search, the count, actions, and the continuous zero-gap virtualized list share
   the root surface.
 - **Editor** arranges the Main View or an independent custom View on a canvas. View selection,
-  history, layout, hierarchy, and search actions form one flat top-left group. Search is the last
-  action and reveals its field to the right of its trigger. Zoom, scale reset, and primary-Team focus
-  form a second flat group at the bottom left. The canvas retains its neutral-gray background.
+  history, layout, hierarchy, and search actions form one compact surfaced top-left toolbar. Search
+  is the last action and reveals its field to the right of its trigger. Zoom, scale reset, and
+  primary-Team focus form a matching surfaced toolbar at the bottom left. The canvas retains its
+  neutral-gray background.
 - **Analytics** summarizes the current organization without sending data elsewhere. Its header and
   all six groups sit directly on the root surface with compact 12 px gaps.
 - **Calendar** combines recurring birthdays with one-time dated Employee tag events.
@@ -53,6 +54,7 @@ persisted types, and export fields remain unchanged.
 
 Populated product tabs begin directly below the unified header. Their first root-level controls add
 no top inset, while horizontal, bottom, and subsequent section spacing keep each workflow readable.
+Product and nested tabs identify the active item by foreground color without changing font weight.
 
 The Main View is canonical. A custom View can begin as a copy of Main or empty, then keep its own
 document, local Employees, global Employee overrides, canvas layout, viewport, and command history.

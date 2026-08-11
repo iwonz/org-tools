@@ -9,10 +9,9 @@ surfaces in that visual and keyboard order, with Editor active for a blank works
 wordmark or brand icon, and consistent actionable top-level empty states. A populated Employees
 surface SHALL show the total catalog count below search and SHALL additionally show the visible match
 count only while search or filters are active. The populated Org Editor SHALL place View management,
-layout, hierarchy, and search controls in one flat top-left group and viewport controls in one flat
-bottom-left group without enclosing toolbar islands. The Editor canvas SHALL retain a distinct
-neutral-gray background while application chrome and ordinary workflow content use the continuous
-root surface.
+layout, hierarchy, and search controls in one compact top-left toolbar surface and viewport controls
+in one compact bottom-left toolbar surface. The Editor canvas SHALL retain a distinct neutral-gray
+background while application chrome and ordinary workflow content use the continuous root surface.
 
 #### Scenario: Product navigation order
 - **WHEN** the product shell renders in either locale
@@ -53,10 +52,11 @@ root surface.
 - **WHEN** Employee search or filters are active
 - **THEN** the count line keeps the localized total Employee count and adds the localized visible match count
 
-#### Scenario: Flat Editor control groups
+#### Scenario: Editor control surfaces
 - **WHEN** the active View contains Units
-- **THEN** View selection and actions, layout, arrange, hierarchy, and Search appear in one spaced top-left group without an enclosing border, fill, radius, shadow, or backdrop
-- **AND** zoom out, zoom in, scale reset, and primary-Team focus appear in one spaced bottom-left group with the same flat treatment
+- **THEN** View selection and actions, layout, arrange, hierarchy, and Search appear in one compact top-left surface with an adaptive background, subtle boundary, radius, and padding
+- **AND** zoom out, zoom in, scale reset, and primary-Team focus appear in one compact bottom-left surface with the same treatment
+- **AND** individual resting controls remain borderless and the groups add no shadow
 
 #### Scenario: Editor search placement
 - **WHEN** Search is the final control in the top-left group and the user opens it

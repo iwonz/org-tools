@@ -239,6 +239,7 @@ test("captures local Employee avatar cropping", async ({ page }) => {
 
 test("captures the dark unified header", async ({ page }) => {
   await openBlankWorkspace(page);
+  await replaceWithSyntheticWorkspace(page);
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
