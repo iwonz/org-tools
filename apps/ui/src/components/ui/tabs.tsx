@@ -5,11 +5,11 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const SEGMENTED_TABS_LIST_CLASS_NAME =
-  "inline-flex h-9 items-center justify-center gap-0 overflow-hidden rounded-md border border-input bg-background/70 p-0";
+const FLAT_TABS_LIST_CLASS_NAME =
+  "inline-flex h-9 items-center justify-center gap-1 bg-transparent p-0";
 
-const SEGMENTED_TABS_TRIGGER_CLASS_NAME =
-  "inline-flex h-full min-h-8 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-none border-0 bg-transparent px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground";
+const FLAT_TABS_TRIGGER_CLASS_NAME =
+  "inline-flex h-full min-h-8 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border-0 bg-transparent px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:font-semibold data-[state=active]:text-foreground";
 
 function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
@@ -20,7 +20,7 @@ function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive
 function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      className={cn(SEGMENTED_TABS_LIST_CLASS_NAME, className)}
+      className={cn(FLAT_TABS_LIST_CLASS_NAME, className)}
       data-slot="tabs-list"
       {...props}
     />
@@ -30,7 +30,7 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
 function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
     <TabsPrimitive.Trigger
-      className={cn(SEGMENTED_TABS_TRIGGER_CLASS_NAME, className)}
+      className={cn(FLAT_TABS_TRIGGER_CLASS_NAME, className)}
       data-slot="tabs-trigger"
       {...props}
     />

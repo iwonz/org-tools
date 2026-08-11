@@ -56,7 +56,7 @@ type SelectedEmployeesPanelProps = {
 export function SelectedEmployeesPanel({
   canClear,
   clearDataDemoId,
-  className = "flex min-h-0 min-w-0 flex-col bg-background",
+  className = "flex min-h-0 min-w-0 flex-col bg-transparent",
   dataDemoId,
   employeeActions,
   employeePositionOptions,

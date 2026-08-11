@@ -72,13 +72,13 @@ cards, nested Team and Employee previews, generic mapping, the unified header, a
 states are also covered by browser assertions. Every gallery capture uses the deterministic English
 locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
-shows one containing layout around search, its total catalog count, actions, and contiguous rows.
-The gallery verifies one uninterrupted theme-aware background across the header, top-level
-containers, and transparent populated workflow islands; consistent segmented tab switchers; one
-contiguous global-action island; compact split panes without vertical rules; the Org Editor top-left
-and bottom-left action islands; right-revealing Editor search; quiet borderless Analytics groups with
-12 px gaps; and preserved owned surfaces for controls, Employee and Team cards, selection cards,
-calendars, hierarchy guides, focus, and destructive states.
+shows search, its total catalog count, actions, and contiguous rows directly on the root surface.
+The gallery verifies an uninterrupted white light surface and dark neutral surface across the header
+and ordinary workflows; flat spaced product tabs, nested tabs, and global actions; compact split
+panes without vertical rules; flat Org Editor top-left and bottom-left control groups over a neutral
+canvas; right-revealing Editor search; unfilled borderless Analytics groups with 12 px gaps; and
+preserved semantic boundaries for fields, dialogs, popovers, selection cards, calendar cells,
+hierarchy guides, Editor nodes, focus, and destructive states.
 
 ## Regenerate
 
@@ -93,9 +93,9 @@ Inspect every changed PNG. Do not accept a screenshot that contains real organiz
 filesystem path, a browser notification, a nondeterministic timestamp, or an external image.
 
 `pnpm test:browser` runs the non-visual smoke scenarios against the same production server. The
-smoke suite verifies blank startup, the wordmark-free unified header, its continuous light and dark
-shell background, distinct bounded surfaces, the contiguous keyboard-accessible product-tab island,
-consistent nested switchers, the contiguous global-action island, the flag-only locale trigger,
+smoke suite verifies blank startup, the wordmark-free unified header, its continuous white and dark
+root surfaces, flat keyboard-accessible product tabs, consistent flat nested tabs, flat global
+actions, the flag-only locale trigger,
 responsive transfer actions at 390, 1024, and 1280 px,
 absence of locale-provider console errors, the simplified empty states, all
 four scoped workspace Export downloads, state projection append/replace, local avatar workflows,
@@ -103,7 +103,7 @@ hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping,
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
 It also verifies silent replacement completion, localized Employee total and match counts, reactive
 count changes, borderless normal and destructive dialog chrome, a contained 390 px Import layout,
-contiguous Employee rows, shell-continuous populated workflow layouts, absent source-pane rules,
-compact Teams and Analytics spacing, left-aligned grouped Editor controls, preserved meaningful
-outlines, and Analytics backgrounds, dynamic height, row cap, sorting, drill-down, and border
-behavior.
+contiguous transparent Employee rows, root-continuous populated workflow layouts, absent source-pane
+rules, compact Teams and Analytics spacing, left-aligned flat Editor controls, the distinct neutral
+canvas, preserved meaningful outlines, and Analytics transparency, dynamic height, row cap, sorting,
+drill-down, and border behavior.

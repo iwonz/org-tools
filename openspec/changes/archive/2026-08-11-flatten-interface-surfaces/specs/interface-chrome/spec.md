@@ -1,9 +1,5 @@
-# interface-chrome Specification
+## MODIFIED Requirements
 
-## Purpose
-Define how the application separates shell, surface, dialog, and repeated-row content without
-unnecessary decorative rules.
-## Requirements
 ### Requirement: Application chrome is separated without decorative rules
 The application SHALL use one borderless 56 px header and one continuous root surface: white in the
 light theme and a shared dark neutral in the dark theme. It SHALL use whitespace, typography,

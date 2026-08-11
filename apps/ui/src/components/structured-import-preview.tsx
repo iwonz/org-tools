@@ -280,10 +280,7 @@ export function StructuredImportPreview({
   };
 
   return (
-    <section
-      className="grid min-w-0 gap-3 rounded-md border p-4"
-      data-demo-id="structured-import-preview"
-    >
+    <section className="grid min-w-0 gap-3 py-2" data-demo-id="structured-import-preview">
       <div>
         <h3 className="text-sm font-semibold">{t("Structured import preview")}</h3>
         <p className="mt-1 text-xs text-muted-foreground">

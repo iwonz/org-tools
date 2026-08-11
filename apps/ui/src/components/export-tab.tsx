@@ -30,7 +30,7 @@ import {
 } from "@/components/source-empty-state";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ProductSurfaceIsland } from "@/components/ui/product-surface-island";
+import { ProductSurface } from "@/components/ui/product-surface";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -475,7 +475,7 @@ export const ExportTab = observer(() => {
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       data-demo-id="export-tab"
     >
-      <ProductSurfaceIsland className="relative m-2 min-h-0 flex-1" data-demo-id="export-surface">
+      <ProductSurface className="relative m-2 min-h-0 flex-1" data-demo-id="export-surface">
         <div
           className="grid h-full min-h-0 overflow-hidden pb-[86px]"
           data-demo-id="export-selection-grid"
@@ -554,7 +554,7 @@ export const ExportTab = observer(() => {
                       placeholder={t("Search Units by name")}
                       value={unitQuery}
                     />
-                    <ScrollArea className="mt-3 min-h-0 flex-1 bg-muted/20" scrollbars="none">
+                    <ScrollArea className="mt-3 min-h-0 flex-1 bg-transparent" scrollbars="none">
                       {hasVisibleUnits ? (
                         <ul
                           className="grid min-w-max gap-2 px-2.5 pb-3"
@@ -650,7 +650,7 @@ export const ExportTab = observer(() => {
                   employees={foundEmployees}
                   excludeFoundDataDemoId="export-exclude-found-employees"
                   hasSourceEmployees={hasEmployeeSourceContent}
-                  listClassName="flex-1 bg-muted/20 p-2"
+                  listClassName="flex-1 bg-transparent p-2"
                   listDataDemoId="export-employee-results"
                   onAddFound={addFoundEmployeesToExport}
                   onExcludeFound={excludeFoundEmployeesFromExport}
@@ -726,7 +726,7 @@ export const ExportTab = observer(() => {
             visibleRemoveSuffix={(count) => countText("employees", { count })}
           />
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[70px] items-center justify-center bg-gradient-to-t from-card via-card/90 to-card/0 px-6 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[70px] items-center justify-center bg-gradient-to-t from-background via-background/90 to-background/0 px-6 backdrop-blur-sm">
           <Button
             className="pointer-events-auto h-12 min-w-72 text-base"
             data-demo-id="export-continue-button"
@@ -738,7 +738,7 @@ export const ExportTab = observer(() => {
             <HiOutlineArrowRight />
           </Button>
         </div>
-      </ProductSurfaceIsland>
+      </ProductSurface>
       <Dialog
         onOpenChange={(open) => {
           setIsExportSettingsDialogOpen(open);

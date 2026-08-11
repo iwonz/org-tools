@@ -85,8 +85,8 @@ export const UnitCard = forwardRef<HTMLDivElement, UnitCardProps>(function UnitC
   return (
     <div
       className={cn(
-        "relative flex min-w-0 items-center gap-3 rounded-md border bg-card p-3 pr-4 transition-colors hover:bg-accent",
-        selected && "border-primary bg-accent text-accent-foreground",
+        "relative flex min-w-0 items-center gap-3 rounded-none bg-transparent p-3 pr-4 transition-colors hover:bg-accent/50",
+        selected && "bg-accent text-accent-foreground",
         dropTarget?.active && "border-primary bg-primary/10",
         className,
       )}

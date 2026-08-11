@@ -62,7 +62,7 @@ export function EmployeeSourcePicker({
   filters,
   hasSourceEmployees,
   includePositions = false,
-  listClassName = "flex-1 bg-muted/20 p-0",
+  listClassName = "flex-1 bg-transparent p-0",
   listDataDemoId,
   onAddFound,
   onExcludeFound,

@@ -55,7 +55,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ProductSurfaceIsland } from "@/components/ui/product-surface-island";
+import { ProductSurface } from "@/components/ui/product-surface";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UnitDialog } from "@/components/unit-dialog";
 import { UnitTree } from "@/components/unit-tree";
@@ -350,7 +350,7 @@ export const UnitsTab = observer(() => {
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
-      <ProductSurfaceIsland
+      <ProductSurface
         className="m-2 grid min-h-0 flex-1"
         data-demo-id="units-surface"
         style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
@@ -604,7 +604,7 @@ export const UnitsTab = observer(() => {
             unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
           />
         </aside>
-      </ProductSurfaceIsland>
+      </ProductSurface>
       {draggedEmployee && employeeDragPoint && (
         <UnitEmployeeDragPreview
           employee={draggedEmployee}

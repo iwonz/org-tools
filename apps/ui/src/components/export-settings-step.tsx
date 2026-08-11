@@ -269,7 +269,7 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
     selectedFieldKeys: FieldKey[];
     title: string;
   }) => (
-    <section className="flex min-w-0 flex-col rounded-md border bg-background p-3">
+    <section className="flex min-w-0 flex-col py-3">
       <div className="space-y-0.5">
         <h3 className="text-sm font-medium">{title}</h3>
         {description && (

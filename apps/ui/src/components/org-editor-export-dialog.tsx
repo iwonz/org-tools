@@ -441,7 +441,7 @@ export function OrgEditorExportDialog({
                   </div>
                 </section>
 
-                <section className="grid gap-4 rounded-md border bg-muted/20 p-4">
+                <section className="grid gap-4 py-2">
                   <div className="grid gap-2">
                     <Label>{t("Background")}</Label>
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

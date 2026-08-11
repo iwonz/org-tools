@@ -560,7 +560,7 @@ export function UnitDialog({
                 employees={visibleManualEmployees}
                 filters={manualFilters}
                 hasSourceEmployees={structure.indexes.employeesByName.length > 0}
-                listClassName="flex-1 rounded-md border bg-muted/10 px-1 py-0"
+                listClassName="flex-1 bg-transparent px-1 py-0"
                 listDataDemoId="unit-manual-results"
                 onAddFound={() =>
                   updateManualAssignments((assignments) => [
@@ -685,8 +685,8 @@ export function UnitDialog({
                     </>
                   )}
                   bossUnitId={initialUnit?.id ?? null}
-                  cardClassName="bg-muted/20"
-                  className="flex-1 rounded-md border bg-muted/10"
+                  cardClassName="bg-transparent"
+                  className="flex-1"
                   dataDemoId="live-unit-preview"
                   employees={visibleLiveEmployees}
                   emptyState={t("No Employees currently match this filter")}

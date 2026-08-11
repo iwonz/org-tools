@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ProductSurfaceIsland } from "@/components/ui/product-surface-island";
+import { ProductSurface } from "@/components/ui/product-surface";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -88,7 +88,7 @@ export const EmployeesTab = observer(() => {
           title={t("No Employees yet")}
         />
       ) : (
-        <ProductSurfaceIsland
+        <ProductSurface
           className="m-2 flex min-h-0 flex-1 flex-col"
           data-demo-id="employees-surface"
         >
@@ -184,7 +184,7 @@ export const EmployeesTab = observer(() => {
             )}
             unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
           />
-        </ProductSurfaceIsland>
+        </ProductSurface>
       )}
       {isCreateOpen && (
         <EmployeeDialog

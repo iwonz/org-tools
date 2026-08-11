@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ProductSurfaceIsland } from "@/components/ui/product-surface-island";
+import { ProductSurface } from "@/components/ui/product-surface";
 import { type UiTextKey, useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
 import type { AnalyticsCountEntry } from "@/lib/analytics";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -211,9 +211,7 @@ function AnalyticsList({
 
   return (
     <section
-      className={["flex min-w-0 flex-col rounded-md bg-muted/45 p-3", className]
-        .filter(Boolean)
-        .join(" ")}
+      className={["flex min-w-0 flex-col bg-transparent p-3", className].filter(Boolean).join(" ")}
       data-analytics-entry-count={sortedEntries.length}
       data-analytics-visible-rows={visibleRowCount}
       data-demo-id={demoId}
@@ -234,7 +232,7 @@ function AnalyticsList({
             ref={scrollRef}
           >
             <table className="w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-muted/95 text-left text-xs text-muted-foreground backdrop-blur">
+              <thead className="sticky top-0 z-10 bg-background/95 text-left text-xs text-muted-foreground backdrop-blur">
                 <tr>
                   <AnalyticsSortableHeader
                     className="px-3 py-1"
@@ -269,7 +267,7 @@ function AnalyticsList({
 
                   return (
                     <tr
-                      className="transition-colors hover:bg-muted/40 focus-within:bg-muted/40"
+                      className="transition-colors hover:bg-accent/45 focus-within:bg-accent/45"
                       data-analytics-row
                       data-index={virtualRow.index}
                       key={`${entry.label}:${virtualRow.index}`}
@@ -382,7 +380,7 @@ export const AnalyticsTab = observer(() => {
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
         data-demo-id="analytics-tab"
       >
-        <ProductSurfaceIsland
+        <ProductSurface
           className="m-2 flex min-h-0 flex-1 flex-col"
           data-demo-id="analytics-surface"
         >
@@ -466,7 +464,7 @@ export const AnalyticsTab = observer(() => {
               </div>
             )}
           </div>
-        </ProductSurfaceIsland>
+        </ProductSurface>
       </section>
       <Dialog
         onOpenChange={(open) => {
@@ -518,7 +516,7 @@ export const AnalyticsTab = observer(() => {
               />
             )}
             <EmployeeCardList
-              className="min-h-0 flex-1 rounded-md border"
+              className="min-h-0 flex-1"
               dataDemoId="analytics-employees-dialog-list"
               employees={visibleViewEmployees}
               emptyState={

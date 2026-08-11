@@ -152,7 +152,7 @@ function CalendarDayCell({
     </>
   );
   const classes = cn(
-    "min-h-0 overflow-hidden rounded-md border border-transparent bg-card p-2 text-left",
+    "min-h-0 overflow-hidden rounded-sm border border-border/80 bg-transparent p-2 text-left",
     isToday && "border-primary/50 bg-primary/5",
   );
   return hasContent ? (

@@ -31,7 +31,7 @@ import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { OrgStoreProvider, useOrgStore } from "@/stores/org-store-context";
 
 const HEADER_ACTION_CLASS_NAME =
-  "h-full w-9 rounded-none border-0 bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:border-transparent focus-visible:ring-inset data-[state=open]:bg-accent data-[state=open]:text-accent-foreground";
+  "h-full w-9 rounded-md border-0 bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:border-transparent focus-visible:ring-inset data-[state=open]:bg-accent data-[state=open]:text-accent-foreground";
 
 const LoadedApp = observer(() => {
   const store = useOrgStore();
@@ -118,7 +118,7 @@ const LoadedApp = observer(() => {
               </TabsList>
             </nav>
             <div
-              className="flex h-9 shrink-0 items-center gap-0 overflow-hidden rounded-md border border-input bg-background/70"
+              className="flex h-9 shrink-0 items-center gap-1 bg-transparent"
               data-demo-id="header-actions"
             >
               <LanguageToggle triggerClassName={HEADER_ACTION_CLASS_NAME} />

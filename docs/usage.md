@@ -4,24 +4,22 @@ org-tools opens directly in a blank Main View with Editor selected. One 56 px he
 product tabs on the left and the language, theme, **Import**, and **Export** actions on the right,
 without a visible wordmark. Below 1024 px the transfer actions keep their localized accessible names
 and document-arrow icons while hiding their visible labels, and the tab region scrolls horizontally
-without overflowing the page. The six product tabs form one contiguous bordered island without gaps
-or individual tab borders. A flat, subtle fill and stronger text identify the active tab without an
-underline, individual border, or rounded button shape. Language, theme, **Import**, and **Export**
-form a second contiguous bordered island with consistent borderless controls. The application does
-not autosave. Nested tab groups use the same contiguous segmented-switcher treatment throughout the
-application. Empty product tabs show one focused next action and omit controls that cannot yet do
-useful work.
+without overflowing the page. The six product tabs form one flat row with small gaps and no shared
+boundary. Stronger foreground text and weight identify the active tab without an underline, fill,
+individual border, or button-like selected pill. Language, theme, **Import**, and **Export** form a
+second flat, spaced group without an enclosing surface. The application does not autosave. Nested
+tab groups use the same flat treatment throughout the application. Empty product tabs show one
+focused next action and omit controls that cannot yet do useful work.
 
-The root shell, transparent header, top-level product containers, and populated workflow layout
-islands share one continuous theme-aware neutral background. The workflow islands retain their
-inset, rounded clipping, and content grouping without adding a contrasting page fill below the
-header. Dialogs, fields, Employee and Team cards, nested Analytics groups, popovers, calendar cells,
-and interactive controls keep their own opaque surfaces where contrast communicates an actual
-boundary. The shell, populated surface headers, dialogs, local sections, and repeated list rows use
-spacing, background grouping, and interaction feedback instead of decorative horizontal rules.
-Borders remain on controls, selectable cards, dialogs, calendar cells, hierarchy guides, focus
-states, and destructive states where they communicate an actual boundary. Adjacent panes in Teams
-and Download share their containing layout and rely on compact spacing rather than a vertical rule.
+The transparent header and every ordinary top-level workflow share one continuous root surface:
+white in the light theme and a dark neutral in the dark theme. Headers, controls, panes, Analytics
+groups, and repeated rows sit directly on that surface without rounded workflow containers,
+decorative section fills, or horizontal rules. Typography, whitespace, alignment, and hover or
+focus feedback provide hierarchy. Dialogs, fields, popovers, selectable or destructive choices,
+calendar cells, hierarchy guides, focus and error states, and Editor data nodes retain boundaries
+where those boundaries communicate meaning. Adjacent panes in Teams and Download rely on compact
+layout rather than a vertical rule. The Editor canvas is the deliberate exception to the root
+surface and keeps a neutral-gray workspace background.
 
 ## Interface language
 
@@ -38,20 +36,20 @@ persisted types, and export fields remain unchanged.
 ## Product tabs
 
 - **Units** manages the shared Unit hierarchy and effective membership. Its hierarchy and selected
-  Employee pane share one surface with a compact inner seam.
+  Employee pane sit directly on the root surface with a compact inner seam.
 - **Employees** manages the global Employee catalog, tags, and contact fields. Its populated header
   shows the total catalog size directly below search and adds the visible match count while search or
   filters are active. Search, the count, actions, and the continuous zero-gap virtualized list share
-  one surface.
+  the root surface.
 - **Editor** arranges the Main View or an independent custom View on a canvas. View selection,
-  history, layout, hierarchy, and search actions form one top-left control island. Search is the last
+  history, layout, hierarchy, and search actions form one flat top-left group. Search is the last
   action and reveals its field to the right of its trigger. Zoom, scale reset, and primary-Team focus
-  form a second island at the bottom left.
+  form a second flat group at the bottom left. The canvas retains its neutral-gray background.
 - **Analytics** summarizes the current organization without sending data elsewhere. Its header and
-  all six groups share one outer surface; quiet nested group backgrounds use 12 px gaps.
+  all six groups sit directly on the root surface with compact 12 px gaps.
 - **Calendar** combines recurring birthdays with one-time dated Employee tag events.
-- **Download** selects local sources and produces CSV, JSON, or separator-based templates inside one
-  workflow surface.
+- **Download** selects local sources and produces CSV, JSON, or separator-based templates on the
+  shared root surface.
 
 The Main View is canonical. A custom View can begin as a copy of Main or empty, then keep its own
 document, local Employees, global Employee overrides, canvas layout, viewport, and command history.
@@ -139,10 +137,10 @@ Calendar keeps a selected month and year plus Previous and Next controls in its 
 repeat annually, with February 29 shown on February 28 in non-leap years; dated tags appear only on
 their exact date. Day dialogs separate birthdays and dated tags. The bounded tag cloud opens a
 virtualized dialog with current and future events ascending and past events descending. Analytics
-keeps six sortable, virtualized sections and drill-down dialogs on one page. The six sections sit in
-one containing surface with 12 px gaps. Each section uses a quiet padded background without a
-border, shadow, title rule, or row rule. Short sections follow their content height, while long
-sections expose eight rows before scrolling internally.
+keeps six sortable, virtualized sections and drill-down dialogs on one page. The six sections sit
+directly on the root surface with 12 px gaps and use headings, columns, whitespace, and hover or
+focus feedback without a nested background, border, shadow, title rule, or row rule. Short sections
+follow their content height, while long sections expose eight rows before scrolling internally.
 
 The generic Download surface keeps `tags` as labels. Selecting `tagDates` adds `{tag, date}` objects in
 JSON and `tag=YYYY-MM-DD` values in CSV or templates.

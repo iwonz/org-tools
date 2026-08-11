@@ -306,7 +306,7 @@ export const EmployeeCard = observer(function EmployeeCard({
     return (
       <article
         className={cn(
-          "flex h-full min-w-0 items-center gap-3 rounded-md bg-card px-3 py-2",
+          "flex h-full min-w-0 items-center gap-3 rounded-none bg-transparent px-3 py-2 transition-colors hover:bg-accent/35",
           isInteractive && "cursor-pointer",
           draggable && "cursor-grab active:cursor-grabbing",
           selected && "bg-accent text-accent-foreground",
@@ -344,7 +344,7 @@ export const EmployeeCard = observer(function EmployeeCard({
   return (
     <article
       className={cn(
-        "relative flex min-w-0 items-start gap-3 rounded-none bg-card p-4",
+        "relative flex min-w-0 items-start gap-3 rounded-none bg-transparent p-4 transition-colors hover:bg-accent/35",
         isInteractive && "cursor-pointer",
         draggable && "cursor-grab active:cursor-grabbing",
         selected && "bg-accent text-accent-foreground",
@@ -498,7 +498,7 @@ export function EmployeeCardList({
         </div>
       ) : (
         <div
-          className="relative bg-card"
+          className="relative bg-transparent"
           data-employee-list-track
           style={{ height: virtualizer.getTotalSize() }}
         >

@@ -663,7 +663,7 @@ function OrgEditorToolbarButton({
     <Button
       aria-label={ariaLabel}
       className={cn(
-        "h-9 rounded-none border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset",
+        "h-9 rounded-md border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset",
         className,
       )}
       data-demo-id={dataDemoId}
@@ -691,7 +691,7 @@ function OrgEditorLayoutSwitch({
     <Button
       aria-checked={layoutMode === "leftRight"}
       aria-label={t("Change layout direction")}
-      className="h-9 gap-1 rounded-none border-0 bg-transparent px-1 shadow-none hover:bg-accent/60 focus-visible:ring-inset"
+      className="h-9 gap-1 rounded-md border-0 bg-transparent px-1 shadow-none hover:bg-accent/60 focus-visible:ring-inset"
       data-demo-id="org-editor-layout-switch"
       onClick={onToggle}
       role="switch"
@@ -782,7 +782,7 @@ function OrgEditorSearchControl({
 
   return (
     <div
-      className="relative flex items-center justify-end gap-0"
+      className="relative flex items-center justify-end gap-1"
       data-demo-id="org-editor-search"
       onPointerDown={(event) => event.stopPropagation()}
       ref={rootRef}
@@ -805,7 +805,7 @@ function OrgEditorSearchControl({
         <div className="relative min-w-0">
           <Input
             aria-label={t("Search the Org Editor canvas")}
-            className="h-9 rounded-none border-0 bg-transparent pr-9 shadow-none focus-visible:ring-inset"
+            className="h-9 rounded-md border-input bg-background pr-9 shadow-none focus-visible:ring-inset"
             data-demo-id="org-editor-search-input"
             onChange={(event) => onQueryChange(event.currentTarget.value)}
             placeholder={t("Unit or Employee")}
@@ -1303,7 +1303,7 @@ function ImportUnitDialog({
         <DialogHeader>
           <DialogTitle>{t("Add from Main")}</DialogTitle>
         </DialogHeader>
-        <DialogBody className="flex flex-1 flex-col gap-3 overflow-hidden bg-muted/20">
+        <DialogBody className="flex flex-1 flex-col gap-3 overflow-hidden">
           <UnitSearchInput
             ariaLabel={t("Search Units by name")}
             onValueChange={setQuery}
@@ -3083,7 +3083,7 @@ export const OrgStructureEditorTab = observer(() => {
         <div
           aria-label={t("Org Editor canvas")}
           className={cn(
-            "absolute inset-0 select-none overflow-hidden bg-transparent",
+            "absolute inset-0 select-none overflow-hidden bg-canvas",
             editor.units.length > 0 && "cursor-grab active:cursor-grabbing",
           )}
           data-demo-id="org-editor-canvas"
@@ -3472,7 +3472,7 @@ export const OrgStructureEditorTab = observer(() => {
 
         {(editor.units.length > 0 || store.orgViewList.length > 1) && (
           <div
-            className="absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-start gap-0 rounded-md border border-input bg-background/95 backdrop-blur"
+            className="absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-start gap-1 bg-transparent"
             data-demo-id="org-editor-actions"
           >
             <OrgViewToolbar
@@ -3529,7 +3529,7 @@ export const OrgStructureEditorTab = observer(() => {
 
         {editor.units.length > 0 && (
           <div
-            className="absolute bottom-3 left-3 z-30 flex items-stretch gap-0 rounded-md border border-input bg-background/95 backdrop-blur"
+            className="absolute bottom-3 left-3 z-30 flex items-stretch gap-1 bg-transparent"
             data-demo-id="org-editor-viewport-actions"
           >
             <OrgEditorToolbarButton
