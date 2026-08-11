@@ -77,6 +77,8 @@ states are also covered by browser assertions. Every gallery capture uses the de
 locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
 shows search, its total catalog count, actions, and contiguous rows directly on the root surface.
+Successful workspace and Download-tab saves also remain visually silent; browser tests assert the
+downloaded files while copy confirmation and errors retain their interface feedback.
 The gallery verifies an uninterrupted white light surface and dark neutral surface across the header
 and ordinary workflows; a shared flush workflow origin immediately below the header; flat spaced
 product tabs, nested tabs, and global actions; compact split

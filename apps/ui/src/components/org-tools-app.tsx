@@ -287,7 +287,6 @@ const LoadedApp = observer(() => {
       <SaveDialog
         onDownloaded={() => {
           setError(null);
-          setNotice(uiMessage("File downloaded"));
         }}
         onOpenChange={(open) => {
           if (!open) setSaveState(null);

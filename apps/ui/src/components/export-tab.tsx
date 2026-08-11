@@ -453,7 +453,7 @@ export const ExportTab = observer(() => {
           : "text/plain;charset=utf-8";
 
     downloadText(createExportText(), `org-tools-export.${extension}`, type);
-    setStatus("File downloaded");
+    setStatus(null);
   };
 
   const copy = async () => {

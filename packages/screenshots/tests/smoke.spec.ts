@@ -685,6 +685,7 @@ test("exports a blank workspace as the public state format", async ({ page }) =>
   await dialog.getByRole("button", { name: "Download", exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("org-tools-state.json");
+  await expect(page.getByRole("status")).toHaveCount(0);
 
   await assertLocalRequests();
 });
@@ -764,6 +765,7 @@ test("keeps CSV as a Download output while Import accepts JSON only", async ({ p
   const downloadPromise = page.waitForEvent("download");
   await settings.getByRole("button", { name: "Download", exact: true }).click();
   expect((await downloadPromise).suggestedFilename()).toBe("org-tools-export.csv");
+  await expect(settings.locator('[data-demo-id="export-actions"] > div')).toHaveCount(0);
 
   await assertLocalRequests();
 });

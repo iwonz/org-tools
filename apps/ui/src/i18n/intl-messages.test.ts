@@ -5,6 +5,11 @@ import ruMessages from "../../messages/ru.json";
 import { encodeUiMessageKey, prepareMessagesForNextIntl } from "./intl-messages";
 
 describe("next-intl message preparation", () => {
+  it("does not retain a downloaded-file success label", () => {
+    expect(enMessages.Ui).not.toHaveProperty("File downloaded");
+    expect(ruMessages.Ui).not.toHaveProperty("File downloaded");
+  });
+
   it("encodes sentence periods without changing translated values", () => {
     const english = prepareMessagesForNextIntl(enMessages);
     const russian = prepareMessagesForNextIntl(ruMessages);

@@ -68,6 +68,9 @@ every opening. Empty partial choices are disabled.
 - Full workspace downloads `org-tools-state.json`, the complete current workspace with Views,
   layout, viewport, and UI state.
 
+Successful file downloads rely on the browser's download UI and do not add an in-app success label.
+Clipboard copies keep their explicit confirmation, and download or validation errors remain visible.
+
 Choose **Import** to open the native JSON file chooser. After a file is selected, the dialog
 recognizes `content` and
 offers only data available in the file. Teams + Employees offers the first three choices; Full

@@ -266,6 +266,7 @@ for (const [locale, messages] of [
     const downloadPromise = page.waitForEvent("download");
     await saveDialog.getByRole("button", { name: messages.Ui.Download, exact: true }).click();
     expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
+    await expect(page.getByRole("status")).toHaveCount(0);
 
     let dialog = await chooseImportFile(page, messages, syntheticEmployeesJsonPath);
     await expect(dialog.getByText(messages.Ui["Field mapping"], { exact: true })).toBeVisible();
@@ -283,6 +284,24 @@ for (const [locale, messages] of [
       employeeDialog.getByRole("button", { name: messages.Ui["Paste image"], exact: true }),
     ).toBeVisible();
     await employeeDialog.getByRole("button", { name: messages.Ui.Cancel, exact: true }).click();
+
+    await page.getByRole("tab", { name: messages.Ui["Data Download"], exact: true }).click();
+    await page.locator('[data-demo-id="export-source-tab-employees"]').click();
+    await page.locator('[data-demo-id="export-toggle-employee"]').first().click();
+    await page.getByRole("button", { name: messages.Ui.Continue, exact: true }).click();
+    const downloadSettings = page.getByRole("dialog").filter({
+      hasText: messages.Ui["Download settings"],
+    });
+    await downloadSettings.getByRole("button", { name: messages.Ui.Copy, exact: true }).click();
+    await expect(
+      downloadSettings.getByText(messages.Ui["Copied to the clipboard"], { exact: true }),
+    ).toBeVisible();
+    const localDownloadPromise = page.waitForEvent("download");
+    await downloadSettings.getByRole("button", { name: messages.Ui.Download, exact: true }).click();
+    await localDownloadPromise;
+    await expect(downloadSettings.locator('[data-demo-id="export-actions"] > div')).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(downloadSettings).toBeHidden();
 
     dialog = await chooseImportFile(page, messages, {
       buffer: Buffer.from("{"),

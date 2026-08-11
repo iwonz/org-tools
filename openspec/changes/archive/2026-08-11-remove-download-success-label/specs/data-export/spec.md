@@ -1,8 +1,5 @@
-# data-export Specification
+## MODIFIED Requirements
 
-## Purpose
-Define the local, generic text and image export boundary for Employees and Units.
-## Requirements
 ### Requirement: Data export remains local and generic
 The application SHALL export selected Employees and Units as CSV, JSON, separator templates, or a
 canvas PNG using only the generic data model. Employee JSON SHALL keep `tags` as an array of labels
