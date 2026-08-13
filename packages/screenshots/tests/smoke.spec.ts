@@ -30,6 +30,7 @@ async function expectTransparentBackground(locator: Locator) {
 }
 
 async function expectFlatProductTabs(page: Page) {
+  await page.mouse.move(1, 200);
   const tabsList = page.locator('[data-demo-id="product-tabs-list"]');
   const tabs = tabsList.locator('[data-demo-id^="tab-"]');
   const listStyle = await tabsList.evaluate((element) => {
@@ -60,14 +61,21 @@ async function expectFlatProductTabs(page: Page) {
 
   const active = tabsList.locator('[data-demo-id^="tab-"][aria-selected="true"]');
   const inactive = tabsList.locator('[data-demo-id^="tab-"][aria-selected="false"]').first();
+  const restingInactiveColor = await inactive.evaluate(
+    (element) => window.getComputedStyle(element).color,
+  );
+  const activeColor = await active.evaluate((element) => window.getComputedStyle(element).color);
   expect(await getBackgroundColor(active)).toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
-  expect(await active.evaluate((element) => window.getComputedStyle(element).color)).not.toBe(
-    await inactive.evaluate((element) => window.getComputedStyle(element).color),
-  );
+  expect(restingInactiveColor).not.toBe(activeColor);
   expect(
     Number(await active.evaluate((element) => window.getComputedStyle(element).fontWeight)),
   ).toBe(Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)));
+  await inactive.hover();
+  expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
+  await expect
+    .poll(() => inactive.evaluate((element) => window.getComputedStyle(element).color))
+    .not.toBe(restingInactiveColor);
   const activeMarker = await active.evaluate((element) => {
     const marker = window.getComputedStyle(element, "::after");
     return {
@@ -114,6 +122,7 @@ async function expectFlatHeaderActions(page: Page) {
 }
 
 async function expectFlatTabGroup(tabsList: Locator) {
+  await tabsList.page().mouse.move(1, 200);
   const triggers = tabsList.getByRole("tab");
   const listStyle = await tabsList.evaluate((element) => {
     const style = window.getComputedStyle(element);
@@ -146,14 +155,21 @@ async function expectFlatTabGroup(tabsList: Locator) {
 
   const active = tabsList.getByRole("tab", { selected: true });
   const inactive = tabsList.getByRole("tab", { selected: false }).first();
+  const restingInactiveColor = await inactive.evaluate(
+    (element) => window.getComputedStyle(element).color,
+  );
+  const activeColor = await active.evaluate((element) => window.getComputedStyle(element).color);
   expect(await getBackgroundColor(active)).toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
-  expect(await active.evaluate((element) => window.getComputedStyle(element).color)).not.toBe(
-    await inactive.evaluate((element) => window.getComputedStyle(element).color),
-  );
+  expect(restingInactiveColor).not.toBe(activeColor);
   expect(
     Number(await active.evaluate((element) => window.getComputedStyle(element).fontWeight)),
   ).toBe(Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)));
+  await inactive.hover();
+  expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
+  await expect
+    .poll(() => inactive.evaluate((element) => window.getComputedStyle(element).color))
+    .not.toBe(restingInactiveColor);
 }
 
 async function expectFlatProductSurface(surface: Locator) {

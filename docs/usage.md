@@ -55,6 +55,7 @@ persisted types, and export fields remain unchanged.
 Populated product tabs begin directly below the unified header. Their first root-level controls add
 no top inset, while horizontal, bottom, and subsequent section spacing keep each workflow readable.
 Product and nested tabs identify the active item by foreground color without changing font weight.
+Pointer hover uses the same color-only feedback and does not add a background fill.
 
 The Main View is canonical. A custom View can begin as a copy of Main or empty, then keep its own
 document, local Employees, global Employee overrides, canvas layout, viewport, and command history.

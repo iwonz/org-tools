@@ -83,8 +83,9 @@ The gallery verifies an uninterrupted white light surface and dark neutral surfa
 and ordinary workflows; a shared flush workflow origin and first visible content group immediately
 below the header without top inset; flat spaced product tabs, nested tabs, and global actions;
 compact split panes without vertical rules; surfaced Org Editor top-left and bottom-left toolbar
-groups over a neutral canvas; color-only active tab state; card-consistent neutral tags in local
-image export; right-revealing Editor search; unfilled borderless Analytics groups with 12 px gaps; and
+groups over a neutral canvas; color-only active and hover tab states without background fill;
+card-consistent neutral tags in local image export; right-revealing Editor search; unfilled
+borderless Analytics groups with 12 px gaps; and
 preserved semantic boundaries for fields, dialogs, popovers, selection cards, calendar cells,
 hierarchy guides, Editor nodes, focus, and destructive states.
 
