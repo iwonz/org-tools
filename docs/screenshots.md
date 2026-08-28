@@ -59,9 +59,9 @@ machine preferences cannot change gallery copy.
 
 ![Employee avatar form](screenshots/employee-avatar-form.png)
 
-### Dark shell and unified header
+### Dark shell and expanded sidebar
 
-![Dark shell and unified header](screenshots/dark-shell.png)
+![Dark shell and expanded sidebar](screenshots/dark-shell.png)
 
 ### Employee import mapping
 
@@ -72,22 +72,27 @@ machine preferences cannot change gallery copy.
 ![Scoped state import](screenshots/state-import.png)
 
 The Calendar fixture includes exact dated-tag events and its compact cloud. Scoped state operation
-cards, nested Team and Employee previews, generic mapping, the unified header, and localized empty
+cards, nested Team and Employee previews, generic mapping, the collapsible sidebar, and localized empty
 states are also covered by browser assertions. Every gallery capture uses the deterministic English
 locale; targeted Russian desktop checks verify wider labels.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
 shows search, its total catalog count, actions, and contiguous rows directly on the root surface.
 Successful workspace and Download-tab saves also remain visually silent; browser tests assert the
 downloaded files while copy confirmation and errors retain their interface feedback.
-The gallery verifies an uninterrupted white light surface and dark neutral surface across the header
-and ordinary workflows; a shared flush workflow origin and first visible content group immediately
-below the header without top inset; flat spaced product tabs, nested tabs, and global actions;
-compact split panes without vertical rules; surfaced Org Editor top-left and bottom-left toolbar
-groups over a neutral canvas; color-only active and hover tab states without background fill;
-card-consistent neutral tags in local image export; right-revealing Editor search; unfilled
-borderless Analytics groups with 12 px gaps; and
-preserved semantic boundaries for fields, dialogs, popovers, selection cards, calendar cells,
-hierarchy guides, Editor nodes, focus, and destructive states.
+The gallery verifies full-bleed light and dark workflows without decorative outer frames or empty
+perimeter gutters; a dark expanded sidebar with tonal active navigation; one Inter UI typeface;
+restrained steel-blue signal details with nearly neutral blue-gray interaction surfaces;
+compact tonal split panes without vertical rules; pointer states without decorative borders,
+outlines, inset hairlines, or added hover elevation; no decorative brand glyph; centered compact
+sidebar icons that keep their horizontal coordinate through a continuous right-edge transition; no
+visible Org Tools title; a collapse row with the same padding, icon size, and fixed icon axis as the
+navigation items; geometry-stable pressed states; no decorative shadow on ordinary controls, cards,
+shell chrome, or Editor toolbars; restrained separation depth only on true overlays;
+stable theme and language menu rows; surfaced
+Org Editor top-left and bottom-left toolbar groups over a neutral canvas and adaptive snap grid;
+card-consistent neutral tags in local image export; right-revealing Editor search; borderless tonal
+Analytics groups with one uniform inner tone and compact gaps; and preserved semantic boundaries for fields, calendar cells,
+data previews, hierarchy guides, Editor nodes, focus, drag targets, and destructive states.
 
 ## Regenerate
 
@@ -102,17 +107,22 @@ Inspect every changed PNG. Do not accept a screenshot that contains real organiz
 filesystem path, a browser notification, a nondeterministic timestamp, or an external image.
 
 `pnpm test:browser` runs the non-visual smoke scenarios against the same production server. The
-smoke suite verifies blank startup, the wordmark-free unified header, its continuous white and dark
-root surfaces, flat keyboard-accessible product tabs, consistent flat nested tabs, flat global
-actions, the flag-only locale trigger,
-responsive transfer actions at 390, 1024, and 1280 px,
-absence of locale-provider console errors, the simplified empty states, all
+smoke suite verifies blank startup, the expanded and compact sidebar, the context-only header,
+full-bleed light and dark workflows, keyboard-accessible tonal product destinations, consistent
+nested tabs, uniform computed UI typography, borderless pointer interaction, reduced-motion
+behavior, evenly centered compact icons, the stable collapse control, sidebar-owned locale and
+theme controls without highlighted-row geometry shifts, localized compact tooltips, and responsive shell
+containment at 390, 1024, and 1280 px. It samples the desktop collapse transition to verify a
+monotonic right edge, fixed navigation and collapse-icon coordinates, and clipped label opacity. It
+also verifies stable pointer-down geometry, the ordinary-control shadow budget, the absence of
+locale-provider console errors, the simplified empty states, all
 four scoped workspace Export downloads, state projection append/replace, local avatar workflows,
 hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
 It also verifies silent replacement completion, localized Employee total and match counts, reactive
-count changes, borderless normal and destructive dialog chrome, a contained 390 px Import layout,
-contiguous transparent Employee rows, root-continuous populated workflow layouts, absent source-pane
-rules, aligned top boundaries without per-tab outer top margins, compact Teams and Analytics spacing,
-left-aligned flat Editor controls, the distinct neutral canvas, preserved meaningful outlines, and
-Analytics transparency, dynamic height, row cap, sorting, drill-down, and border behavior.
+count changes, overlay-separated normal and destructive dialog chrome, a contained 390 px Import
+layout, contiguous Employee rows, full-bleed populated workflows, tonal source panes without rules,
+aligned top boundaries without per-tab outer margins, compact Teams and Analytics spacing,
+left-aligned Editor controls, the distinct neutral canvas, preserved meaningful outlines, and
+adaptive grid interval, snapped coordinate operations, and Analytics uniform grouping, dynamic
+height, row cap, sorting, and drill-down behavior.

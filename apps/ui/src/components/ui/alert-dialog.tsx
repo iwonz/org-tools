@@ -24,7 +24,7 @@ function AlertDialogOverlay({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
   return (
     <AlertDialogPrimitive.Overlay
-      className={cn("fixed inset-0 z-50 bg-background/80 backdrop-blur-sm", className)}
+      className={cn("fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]", className)}
       data-slot="alert-dialog-overlay"
       {...props}
     />
@@ -40,7 +40,7 @@ function AlertDialogContent({
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-lg border bg-background p-0 shadow-lg",
+          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-2xl bg-card p-0 shadow-[0_18px_48px_-36px_rgb(0_0_0/0.55)]",
           className,
         )}
         data-slot="alert-dialog-content"
@@ -53,7 +53,7 @@ function AlertDialogContent({
 function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("grid gap-1.5 bg-background px-5 py-4 text-left", className)}
+      className={cn("grid gap-1.5 bg-card px-5 py-4 text-left", className)}
       data-slot="alert-dialog-header"
       {...props}
     />
@@ -64,7 +64,7 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 bg-background px-5 py-4 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2 bg-muted/35 px-5 py-4 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="alert-dialog-footer"

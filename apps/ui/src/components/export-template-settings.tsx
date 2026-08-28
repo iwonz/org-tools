@@ -77,7 +77,7 @@ export function ExportTemplateSettings({
       <div className="grid min-w-0 gap-2">
         <Label htmlFor={`${dataDemoId ?? "export"}-template-format`}>{t("Format")}</Label>
         <Textarea
-          className="h-24 w-full min-w-0 resize-none overflow-x-hidden font-mono"
+          className="h-24 w-full min-w-0 resize-none overflow-x-hidden"
           id={`${dataDemoId ?? "export"}-template-format`}
           onChange={(event) => onFormatChange(event.currentTarget.value)}
           value={format}
@@ -93,7 +93,7 @@ export function ExportTemplateSettings({
           <div className="text-xs text-muted-foreground">{previewMeta}</div>
         </div>
         <div className="max-h-80 min-h-40 overflow-auto rounded-md border bg-muted/30 p-3">
-          <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground">
+          <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground">
             {previewText}
           </pre>
         </div>

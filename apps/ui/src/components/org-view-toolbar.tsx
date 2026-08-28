@@ -47,7 +47,7 @@ import { useOrgStore } from "@/stores/org-store-context";
 type ViewDialogState = { mode: "create"; source: "blank" | "main" } | { mode: "rename" } | null;
 
 const ORG_VIEW_ACTION_CLASS_NAME =
-  "size-9 rounded-md border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset";
+  "size-9 rounded-md border-0 bg-transparent shadow-none hover:bg-accent focus-visible:ring-inset";
 
 const getNextViewName = (names: readonly string[], formatName: (number: number) => string) => {
   const nameSet = new Set(names.map((name) => name.toLocaleLowerCase("en-US")));
@@ -130,7 +130,7 @@ export const OrgViewToolbar = observer(
               <Select onValueChange={store.selectOrgView} value={store.activeOrgViewId}>
                 <SelectTrigger
                   aria-label={t("Active View")}
-                  className="h-9 w-48 max-w-[calc(100vw-6rem)] overflow-hidden rounded-md border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset xl:w-64"
+                  className="h-9 w-48 max-w-[calc(100vw-6rem)] overflow-hidden rounded-md border-0 bg-transparent shadow-none hover:bg-accent focus-visible:ring-inset xl:w-64"
                   title={activeViewDisplayName}
                 >
                   <span

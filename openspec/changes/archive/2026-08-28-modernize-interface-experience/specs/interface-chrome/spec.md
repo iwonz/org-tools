@@ -1,19 +1,14 @@
-# interface-chrome Specification
-
-## Purpose
-Define the restrained layered shell, interaction states, workflow grouping, and overlay hierarchy.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Application chrome uses a restrained layered visual system
 The application SHALL use a dark collapsible navigation sidebar, a compact context-only content
-header, a low-contrast shell, full-bleed primary workflows without decorative outer frames or empty
-perimeter gutters, and restrained tonal inner grouping in both light and dark themes. Primary
-actions SHALL use an accessible graphite treatment; focus, active navigation, and selection SHALL
-use neutral tonal cues while destructive and event colors remain semantic. Surface, typography,
-spacing, radius, shadow, and control-height decisions SHALL be consistent across all six product
-workflows without adding a remote asset, request, or runtime dependency.
-
+header, a low-contrast shell, full-bleed primary
+workflows without decorative outer frames or empty perimeter gutters, and restrained tonal inner
+grouping in both light and dark themes. Primary actions SHALL use an accessible graphite treatment;
+focus, active navigation, and selection SHALL use neutral tonal cues while destructive and event
+colors remain semantic. Surface, typography, spacing, radius, shadow, and control-height decisions
+SHALL be consistent across all six product workflows without adding a remote asset, request, or
+runtime dependency.
 The shared interaction signal SHALL use a restrained steel-blue hue, while larger active, selected,
 and hover surfaces SHALL remain nearly neutral blue-gray rather than violet or lavender. The signal
 SHALL NOT replace graphite primary actions or semantic destructive and calendar-event colors.
@@ -63,10 +58,10 @@ control SHALL use the same 40 px row height, inline padding, 20 px icon size, an
 navigation and action rows in both sidebar modes. It SHALL keep its icon distinguishable from its
 background in every interaction state. The shell SHALL NOT render a decorative Org Tools glyph or
 a visible Org Tools title. Theme and language menu items SHALL NOT translate or otherwise shift
-their content when highlighted, focused, selected, or pressed. Collapsing or expanding SHALL animate
-only the sidebar's right edge and clipped label visibility; navigation and action icons SHALL keep
-one horizontal coordinate, and neither icons nor the toggle SHALL discretely jump between alignment
-modes.
+their content when highlighted, focused, selected, or pressed.
+Collapsing or expanding SHALL animate only the sidebar's right edge and clipped label visibility;
+navigation and action icons SHALL keep one horizontal coordinate, and neither icons nor the toggle
+SHALL discretely jump between alignment modes.
 
 #### Scenario: Active product tab
 - **WHEN** one of the six product tabs is active in either theme
@@ -191,9 +186,10 @@ unchanged.
 ### Requirement: Dialogs and overlays preserve task context
 Dialog and alert-dialog outer surfaces SHALL remain distinct from the shell through radius and
 overlay, with at most one restrained separation shadow and no decorative outline. Headers,
-scrollable bodies, and footers SHALL use consistent spacing and restrained tonal separation when it
-keeps actions or context visible. Popovers and selectable or destructive choices SHALL retain
-semantic boundaries, localized copy, accessible titles, close behavior, and focus management.
+scrollable bodies, and footers SHALL use
+consistent spacing and restrained tonal separation when it keeps actions or context visible. Popovers and
+selectable or destructive choices SHALL retain semantic boundaries, localized copy, accessible
+titles, close behavior, and focus management.
 
 #### Scenario: Long dialog
 - **WHEN** Import, Export, or Employee content scrolls inside a constrained dialog
@@ -209,3 +205,31 @@ semantic boundaries, localized copy, accessible titles, close behavior, and focu
 - **WHEN** the Import dialog renders at a 390 px viewport
 - **THEN** selectable operation cards and actions remain inside the dialog without page-level
   horizontal overflow
+
+## REMOVED Requirements
+
+### Requirement: Application chrome is separated without decorative rules
+**Reason**: The continuous root-surface rule removed necessary hierarchy and pane grouping.
+
+**Migration**: Use the restrained layered visual-system and purposeful-grouping requirements.
+
+### Requirement: Tabs use color-only pointer feedback
+**Reason**: Color-only tab feedback is too subtle for a six-workflow application.
+
+**Migration**: Use the explicit active, neutral hover, and focus states in the navigation
+requirement.
+
+### Requirement: Dialog chrome is borderless inside its outer boundary
+**Reason**: Long task dialogs benefit from consistent context and action separation.
+
+**Migration**: Use the dialogs-and-overlays requirement while retaining accessible dialog behavior.
+
+### Requirement: Repeated rows are separated without line rules
+**Reason**: Dense repeated content needs a subtle scanning landmark without becoming row cards.
+
+**Migration**: Use the scan-friendly repeated-content requirement.
+
+### Requirement: Meaningful component boundaries remain
+**Reason**: The former boundary rule prohibited useful workflow and section grouping.
+
+**Migration**: Use the full-bleed tonal surface model and purposeful-grouping requirement.

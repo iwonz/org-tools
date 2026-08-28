@@ -37,7 +37,7 @@ export function ActionIconButton({
         {icon}
       </Button>
       <span
-        className="pointer-events-none absolute right-0 top-9 z-30 hidden w-64 rounded-md bg-popover px-3 py-2 text-left text-xs text-popover-foreground shadow-md group-hover:block group-focus-within:block"
+        className="pointer-events-none absolute right-0 top-9 z-30 hidden w-64 rounded-md bg-popover px-3 py-2 text-left text-xs text-popover-foreground shadow-[0_8px_20px_-16px_rgb(0_0_0/0.55)] group-hover:block group-focus-within:block"
         role="tooltip"
       >
         {tooltip}

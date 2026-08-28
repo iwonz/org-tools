@@ -1,18 +1,4 @@
-# project-tooling Specification
-
-## Purpose
-Define the specification workflow, privacy-preserving development commands, and public automation.
-## Requirements
-### Requirement: OpenSpec governs repository changes
-The repository SHALL include the Codex OpenSpec integration, English project context, strict validation, and archived capability specifications.
-
-#### Scenario: Specification validation
-- **WHEN** `pnpm spec:validate` runs
-- **THEN** all active changes and main specs pass strict non-interactive validation
-
-#### Scenario: Telemetry-free specification commands
-- **WHEN** a contributor runs OpenSpec through `pnpm spec -- ...`
-- **THEN** the repository wrapper applies the CLI's documented telemetry opt-out variables
+## MODIFIED Requirements
 
 ### Requirement: Documentation and automation are publication-ready
 The repository SHALL include an English README with a concise product summary, a curated gallery of
@@ -39,11 +25,13 @@ only, and publication rules SHALL be expressed as general repository checks.
 
 #### Scenario: Current-schema policy
 - **WHEN** a future change modifies the public state interface
-- **THEN** obsolete types, readers, migrations, fixtures, documentation, and tests are removed in the same change rather than retained for backward compatibility
+- **THEN** obsolete types, readers, migrations, fixtures, documentation, and tests are removed in the
+  same change rather than retained for backward compatibility
 
 #### Scenario: Removed import contract scan
 - **WHEN** publication checks scan source, tests, documentation, and built assets
-- **THEN** the obsolete separate structured-import document kind, format examples, version fields, CSV-import paths, and compatibility code are absent
+- **THEN** the obsolete separate structured-import document kind, format examples, version fields,
+  CSV-import paths, and compatibility code are absent
 
 #### Scenario: Screenshot generation
 - **WHEN** the screenshot command runs against the production build

@@ -481,7 +481,7 @@ export const ImportDialog = observer(
                       : t("Files are processed locally in this browser.")}
                   </div>
                 </div>
-                <Label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring">
+                <Label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md bg-secondary/70 px-4 text-sm font-medium transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/45">
                   <HiOutlineArrowUpTray className="size-4" />
                   {hasSource ? t("Choose another file") : t("Choose file")}
                   <input
@@ -533,13 +533,13 @@ export const ImportDialog = observer(
                       {session.availableStateContents.map((content) => (
                         <label
                           className={cn(
-                            "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent/50",
-                            session.stateContent === content &&
-                              "border-primary/60 bg-primary/5 ring-2 ring-primary/15",
+                            "flex cursor-pointer items-center gap-2 rounded-md bg-muted/35 px-3 py-2 text-sm transition-colors hover:bg-accent/60 active:bg-accent-strong/65",
+                            session.stateContent === content && "bg-accent-strong/65",
                           )}
                           key={content}
                         >
                           <input
+                            className="accent-signal"
                             checked={session.stateContent === content}
                             name="state-content"
                             onChange={() => selectStateContent(content)}
@@ -567,15 +567,14 @@ export const ImportDialog = observer(
                       >
                         <label
                           className={cn(
-                            "flex min-h-24 cursor-pointer items-start gap-3 rounded-lg border bg-background p-3 text-sm transition-colors hover:bg-accent/50",
-                            session.stateOperation === "append" &&
-                              "border-primary/60 bg-primary/5 ring-2 ring-primary/20",
+                            "flex min-h-24 cursor-pointer items-start gap-3 rounded-lg bg-muted/35 p-3 text-sm transition-colors hover:bg-accent/60 active:bg-accent-strong/65",
+                            session.stateOperation === "append" && "bg-accent-strong/65",
                           )}
                           data-demo-id="state-operation-append"
                         >
                           <input
                             checked={session.stateOperation === "append"}
-                            className="mt-1"
+                            className="mt-1 accent-signal"
                             name="state-operation"
                             onChange={() => selectStateOperation("append")}
                             type="radio"
@@ -590,9 +589,8 @@ export const ImportDialog = observer(
                         </label>
                         <label
                           className={cn(
-                            "flex min-h-24 cursor-pointer items-start gap-3 rounded-lg border border-destructive/30 bg-background p-3 text-sm transition-colors hover:bg-destructive/5",
-                            session.stateOperation === "replace" &&
-                              "border-destructive bg-destructive/10 ring-2 ring-destructive/20",
+                            "flex min-h-24 cursor-pointer items-start gap-3 rounded-lg bg-destructive/5 p-3 text-sm transition-colors hover:bg-destructive/10 active:bg-destructive/15",
+                            session.stateOperation === "replace" && "bg-destructive/12",
                           )}
                           data-demo-id="state-operation-replace"
                         >
@@ -640,11 +638,15 @@ export const ImportDialog = observer(
                   <div className="grid gap-2 sm:grid-cols-3">
                     {(Object.keys(GENERIC_TARGET_LABELS) as GenericImportTarget[]).map((target) => (
                       <label
-                        className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2 rounded-md bg-muted/35 px-3 py-2 text-sm transition-colors hover:bg-accent/60 active:bg-accent-strong/65",
+                          session.genericTarget === target && "bg-accent-strong/65",
+                        )}
                         key={target}
                       >
                         <input
                           checked={session.genericTarget === target}
+                          className="accent-signal"
                           name="generic-target"
                           onChange={() => session.setGenericTarget(target)}
                           type="radio"

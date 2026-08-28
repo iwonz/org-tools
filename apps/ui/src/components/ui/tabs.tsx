@@ -6,10 +6,10 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const FLAT_TABS_LIST_CLASS_NAME =
-  "inline-flex h-9 items-center justify-center gap-1 bg-transparent p-0";
+  "inline-flex h-10 items-center justify-center gap-1 bg-transparent p-0";
 
 const FLAT_TABS_TRIGGER_CLASS_NAME =
-  "inline-flex h-full min-h-8 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border-0 bg-transparent px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-transparent data-[state=active]:text-foreground";
+  "relative inline-flex h-full min-h-8 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-sm bg-transparent px-3 text-sm font-medium text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-accent/55 hover:text-foreground active:bg-accent-strong/70 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/45 disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none data-[state=active]:bg-accent/70 data-[state=active]:text-foreground data-[state=active]:hover:bg-accent-strong/65";
 
 function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (

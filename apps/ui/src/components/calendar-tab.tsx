@@ -119,7 +119,7 @@ function CalendarDayCell({
         <span
           className={cn(
             "text-sm font-medium",
-            isToday && "rounded-md bg-primary px-1.5 py-0.5 text-primary-foreground shadow-sm",
+            isToday && "rounded-md bg-primary px-1.5 py-0.5 text-primary-foreground",
           )}
         >
           {calendarDay.day}
@@ -152,8 +152,8 @@ function CalendarDayCell({
     </>
   );
   const classes = cn(
-    "min-h-0 overflow-hidden rounded-sm border border-border/80 bg-transparent p-2 text-left",
-    isToday && "border-primary/50 bg-primary/5",
+    "min-h-0 overflow-hidden rounded-md border border-border/70 bg-background p-2.5 text-left",
+    isToday && "border-signal/50 bg-accent/45",
   );
   return hasContent ? (
     <button
@@ -288,11 +288,11 @@ export const CalendarTab = observer(() => {
   return (
     <>
       <section
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background"
         data-demo-id="calendar-tab"
       >
         <div
-          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-transparent px-4 pb-3 pt-0"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-muted/25 p-4"
           data-demo-id="calendar-header"
         >
           <div className="min-w-0">
@@ -323,7 +323,7 @@ export const CalendarTab = observer(() => {
         {datedTagGroups.length > 0 && (
           <div
             className={cn(
-              "flex shrink-0 flex-wrap gap-1.5 overflow-auto bg-transparent px-3 py-2",
+              "flex shrink-0 flex-wrap gap-1.5 overflow-auto bg-muted/15 px-4 py-2.5",
               cloudExpanded ? "max-h-16" : "max-h-[4.25rem]",
             )}
             data-demo-id="dated-tag-cloud"
@@ -353,7 +353,7 @@ export const CalendarTab = observer(() => {
             )}
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-auto p-3" data-demo-id="calendar-scroll-area">
+        <div className="min-h-0 flex-1 overflow-auto p-4" data-demo-id="calendar-scroll-area">
           <div
             className="grid min-h-full grid-cols-7 gap-2"
             data-demo-id="calendar-month-grid"
@@ -412,7 +412,7 @@ export const CalendarTab = observer(() => {
               {dialogDay && dialogDay.events.length > 0 ? (
                 dialogDay.events.map((event) => (
                   <button
-                    className="flex items-center gap-3 rounded-md border p-2 text-left hover:bg-accent"
+                    className="flex items-center gap-3 rounded-md bg-muted/35 p-2 text-left outline-none transition-colors hover:bg-accent/65 active:bg-accent-strong/70 focus-visible:ring-2 focus-visible:ring-ring/40"
                     key={`${event.employee.id}:${event.label}`}
                     onClick={() =>
                       setDialogTag(

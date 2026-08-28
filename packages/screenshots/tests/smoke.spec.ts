@@ -29,8 +29,74 @@ async function expectTransparentBackground(locator: Locator) {
   expect(await getBackgroundColor(locator)).toBe("rgba(0, 0, 0, 0)");
 }
 
-async function expectFlatProductTabs(page: Page) {
-  await page.mouse.move(1, 200);
+async function expectStableHoverGeometry(locator: Locator) {
+  const getGeometry = () =>
+    locator.evaluate((element) => {
+      const itemBox = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+
+      return {
+        children: [...element.children].map((child) => {
+          const childBox = child.getBoundingClientRect();
+          return {
+            left: childBox.left - itemBox.left,
+            top: childBox.top - itemBox.top,
+          };
+        }),
+        height: itemBox.height,
+        transform: style.transform,
+        translate: style.translate,
+        width: itemBox.width,
+      };
+    });
+  const before = await getGeometry();
+  await locator.hover();
+  const after = await getGeometry();
+
+  expect(after).toEqual(before);
+  expect(after.transform).toBe("none");
+  expect(after.translate).toBe("none");
+}
+
+async function expectStablePressedGeometry(locator: Locator) {
+  const getGeometry = () =>
+    locator.evaluate((element) => {
+      const itemBox = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+
+      return {
+        children: [...element.children].map((child) => {
+          const childBox = child.getBoundingClientRect();
+          return {
+            left: childBox.left - itemBox.left,
+            top: childBox.top - itemBox.top,
+          };
+        }),
+        height: itemBox.height,
+        left: itemBox.left,
+        top: itemBox.top,
+        transform: style.transform,
+        translate: style.translate,
+        width: itemBox.width,
+      };
+    });
+
+  await locator.hover();
+  const before = await getGeometry();
+  const page = locator.page();
+  await page.mouse.down();
+  const pressed = await getGeometry();
+  await page.mouse.move(1, 1);
+  await page.mouse.up();
+
+  expect(pressed).toEqual(before);
+  expect(pressed.transform).toBe("none");
+  expect(pressed.translate).toBe("none");
+}
+
+async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
+  await page.mouse.move(320, 200);
+  const sidebar = page.locator('[data-demo-id="app-sidebar"]');
   const tabsList = page.locator('[data-demo-id="product-tabs-list"]');
   const tabs = tabsList.locator('[data-demo-id^="tab-"]');
   const listStyle = await tabsList.evaluate((element) => {
@@ -38,7 +104,8 @@ async function expectFlatProductTabs(page: Page) {
     return {
       borderWidth: style.borderWidth,
       columnGap: style.columnGap,
-      height: element.getBoundingClientRect().height,
+      flexDirection: style.flexDirection,
+      width: element.getBoundingClientRect().width,
     };
   });
   const tabStyles = await tabs.evaluateAll((elements) =>
@@ -54,50 +121,74 @@ async function expectFlatProductTabs(page: Page) {
     }),
   );
 
-  expect(listStyle).toEqual({ borderWidth: "0px", columnGap: "4px", height: 36 });
+  expect(await sidebar.evaluate((element) => element.getBoundingClientRect().width)).toBe(
+    expectedWidth,
+  );
+  expect(listStyle).toEqual({
+    borderWidth: "0px",
+    columnGap: "4px",
+    flexDirection: "column",
+    width: expectedWidth - 16,
+  });
   expect(tabStyles).toHaveLength(6);
   expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
   expect(new Set(tabStyles.map(({ height }) => height)).size).toBe(1);
+  expect(new Set(tabStyles.map(({ height }) => height))).toEqual(new Set([40]));
 
   const active = tabsList.locator('[data-demo-id^="tab-"][aria-selected="true"]');
   const inactive = tabsList.locator('[data-demo-id^="tab-"][aria-selected="false"]').first();
+  await expect.poll(() => getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
   const restingInactiveColor = await inactive.evaluate(
     (element) => window.getComputedStyle(element).color,
   );
   const activeColor = await active.evaluate((element) => window.getComputedStyle(element).color);
-  expect(await getBackgroundColor(active)).toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(active)).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
+  expect(await active.evaluate((element) => window.getComputedStyle(element).boxShadow)).toBe(
+    "none",
+  );
   expect(restingInactiveColor).not.toBe(activeColor);
   expect(
     Number(await active.evaluate((element) => window.getComputedStyle(element).fontWeight)),
   ).toBe(Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)));
   await inactive.hover();
-  expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
-  await expect
-    .poll(() => inactive.evaluate((element) => window.getComputedStyle(element).color))
-    .not.toBe(restingInactiveColor);
-  const activeMarker = await active.evaluate((element) => {
-    const marker = window.getComputedStyle(element, "::after");
-    return {
-      backgroundColor: marker.backgroundColor,
-      content: marker.content,
-      height: marker.height,
-    };
-  });
-  expect(["none", "normal"]).toContain(activeMarker.content);
-  expect(activeMarker.height).not.toBe("2px");
-  expect(activeMarker.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(inactive)).not.toBe("rgba(0, 0, 0, 0)");
+  expect(await inactive.evaluate((element) => window.getComputedStyle(element).boxShadow)).toBe(
+    "none",
+  );
+  await expect(inactive).toHaveCSS("border-width", "0px");
+  await expect(inactive).toHaveCSS("outline-style", "none");
+  const label = inactive.locator('[data-sidebar-label=""]');
+  const tooltip = inactive.locator('[role="tooltip"]');
+  if (expectedWidth === 64) {
+    await expect(label).toBeHidden();
+    await expect(tooltip).toBeVisible();
+    expect(
+      await tabs.evaluateAll((elements) =>
+        elements.map((element) => {
+          const icon = element.querySelector("svg");
+          if (!icon) return Number.POSITIVE_INFINITY;
+          const rowBox = element.getBoundingClientRect();
+          const iconBox = icon.getBoundingClientRect();
+          return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
+        }),
+      ),
+    ).toEqual(Array.from({ length: 6 }, () => 0));
+  } else {
+    await expect(label).toBeVisible();
+    await expect(tooltip).toBeHidden();
+  }
 }
 
-async function expectFlatHeaderActions(page: Page) {
-  const actions = page.locator('[data-demo-id="header-actions"]');
+async function expectSidebarActions(page: Page) {
+  const actions = page.locator('[data-demo-id="sidebar-actions"]');
   const buttons = actions.locator("button");
   const groupStyle = await actions.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return {
       borderWidth: style.borderWidth,
       columnGap: style.columnGap,
-      height: element.getBoundingClientRect().height,
+      flexDirection: style.flexDirection,
     };
   });
   const buttonStyles = await buttons.evaluateAll((elements) =>
@@ -112,16 +203,53 @@ async function expectFlatHeaderActions(page: Page) {
     }),
   );
 
-  expect(groupStyle).toEqual({ borderWidth: "0px", columnGap: "4px", height: 36 });
+  expect(groupStyle).toEqual({ borderWidth: "0px", columnGap: "4px", flexDirection: "column" });
   expect(buttonStyles).toHaveLength(4);
-  expect(new Set(buttonStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
-  expect(new Set(buttonStyles.map(({ backgroundColor }) => backgroundColor))).toEqual(
-    new Set(["rgba(0, 0, 0, 0)"]),
-  );
   expect(new Set(buttonStyles.map(({ height }) => height)).size).toBe(1);
+  expect(new Set(buttonStyles.map(({ height }) => height))).toEqual(new Set([40]));
+  expect(new Set(buttonStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
+  const preferenceButtons = page.locator(
+    '[data-demo-id="language-toggle"], [data-demo-id="theme-toggle"]',
+  );
+  const preferenceBackgrounds = await preferenceButtons.evaluateAll((elements) =>
+    elements.map((element) => window.getComputedStyle(element).backgroundColor),
+  );
+  expect(new Set(preferenceBackgrounds).size).toBe(1);
+  expect(preferenceBackgrounds[0]).toBe("rgba(0, 0, 0, 0)");
+  await expect(page.locator('[data-demo-id="import-action"]')).toHaveCSS("border-width", "0px");
+  await page.locator('[data-demo-id="import-action"]').hover();
+  expect(
+    await page
+      .locator('[data-demo-id="import-action"]')
+      .evaluate((element) => window.getComputedStyle(element).boxShadow),
+  ).not.toContain("inset");
+  expect(await getBackgroundColor(page.locator('[data-demo-id="import-action"]'))).not.toBe(
+    "rgba(0, 0, 0, 0)",
+  );
+
+  if (
+    (await page
+      .locator('[data-demo-id="app-sidebar"]')
+      .evaluate((element) => element.getBoundingClientRect().width)) === 64
+  ) {
+    expect(
+      await buttons.evaluateAll((elements) =>
+        elements.map((element) => {
+          const icon = [...element.children].find(
+            (child) =>
+              !child.matches('[data-sidebar-label=""]') && !child.matches('[role="tooltip"]'),
+          );
+          if (!icon) return Number.POSITIVE_INFINITY;
+          const rowBox = element.getBoundingClientRect();
+          const iconBox = icon.getBoundingClientRect();
+          return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
+        }),
+      ),
+    ).toEqual(Array.from({ length: 4 }, () => 0));
+  }
 }
 
-async function expectFlatTabGroup(tabsList: Locator) {
+async function expectTonalTabGroup(tabsList: Locator) {
   await tabsList.page().mouse.move(1, 200);
   const triggers = tabsList.getByRole("tab");
   const listStyle = await tabsList.evaluate((element) => {
@@ -155,24 +283,37 @@ async function expectFlatTabGroup(tabsList: Locator) {
 
   const active = tabsList.getByRole("tab", { selected: true });
   const inactive = tabsList.getByRole("tab", { selected: false }).first();
+  await expect.poll(() => getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
   const restingInactiveColor = await inactive.evaluate(
     (element) => window.getComputedStyle(element).color,
   );
   const activeColor = await active.evaluate((element) => window.getComputedStyle(element).color);
-  expect(await getBackgroundColor(active)).toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(active)).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
   expect(restingInactiveColor).not.toBe(activeColor);
   expect(
     Number(await active.evaluate((element) => window.getComputedStyle(element).fontWeight)),
   ).toBe(Number(await inactive.evaluate((element) => window.getComputedStyle(element).fontWeight)));
   await inactive.hover();
-  expect(await getBackgroundColor(inactive)).toBe("rgba(0, 0, 0, 0)");
-  await expect
-    .poll(() => inactive.evaluate((element) => window.getComputedStyle(element).color))
-    .not.toBe(restingInactiveColor);
+  expect(await getBackgroundColor(inactive)).not.toBe("rgba(0, 0, 0, 0)");
+  expect(await inactive.evaluate((element) => window.getComputedStyle(element).boxShadow)).toBe(
+    "none",
+  );
+  await expect(inactive).toHaveCSS("border-width", "0px");
+  await expect(inactive).toHaveCSS("outline-style", "none");
 }
 
-async function expectFlatProductSurface(surface: Locator) {
+async function expectUniformUiFont(page: Page) {
+  const families = await page
+    .locator("body *")
+    .evaluateAll((elements) =>
+      Array.from(new Set(elements.map((element) => window.getComputedStyle(element).fontFamily))),
+    );
+  expect(families.length).toBeGreaterThan(0);
+  expect(families.every((family) => family.startsWith("Inter"))).toBe(true);
+}
+
+async function expectFullBleedProductSurface(surface: Locator) {
   await expect(surface).toBeVisible();
   expect(
     await surface.evaluate((element) => {
@@ -180,16 +321,20 @@ async function expectFlatProductSurface(surface: Locator) {
       return {
         backgroundColor: style.backgroundColor,
         borderRadius: style.borderRadius,
+        borderWidth: style.borderWidth,
+        boxShadow: style.boxShadow,
         overflowX: style.overflowX,
         overflowY: style.overflowY,
       };
     }),
-  ).toEqual({
-    backgroundColor: "rgba(0, 0, 0, 0)",
+  ).toMatchObject({
     borderRadius: "0px",
-    overflowX: "visible",
-    overflowY: "visible",
+    borderWidth: "0px",
+    boxShadow: "none",
+    overflowX: "hidden",
+    overflowY: "hidden",
   });
+  expect(await getBackgroundColor(surface)).not.toBe("rgba(0, 0, 0, 0)");
 }
 
 async function expectContainedBy(parent: Locator, child: Locator) {
@@ -214,22 +359,30 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankWorkspace(page);
 
-  await expectNoHorizontalRule(page.locator('[data-demo-id="app-header"]'));
-  await expectNoHorizontalRule(page.locator('[data-demo-id="product-navigation"]'));
+  await expect(page.locator('[data-demo-id="app-header"]')).toHaveCSS("border-bottom-width", "0px");
+  await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveCSS("border-right-width", "0px");
 
   const header = page.locator('[data-demo-id="app-header"]');
+  const sidebar = page.locator('[data-demo-id="app-sidebar"]');
   const navigation = page.locator('[data-demo-id="product-navigation"]');
-  const actions = page.locator('[data-demo-id="header-actions"]');
-  await expect(header.locator('[data-demo-id="product-navigation"]')).toHaveCount(1);
-  await expect(header.locator('[data-demo-id="header-actions"]')).toHaveCount(1);
+  const actions = page.locator('[data-demo-id="sidebar-actions"]');
+  await expect(sidebar.locator('[data-demo-id="product-navigation"]')).toHaveCount(1);
+  await expect(sidebar.locator('[data-demo-id="sidebar-actions"]')).toHaveCount(1);
+  await expect(header.locator('[data-demo-id="product-navigation"]')).toHaveCount(0);
+  await expect(header.locator('[data-demo-id="sidebar-actions"]')).toHaveCount(0);
   await expect(header.getByRole("img", { name: "Org Tools", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-demo-id="brand-wordmark"]')).toHaveCount(0);
-  expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(56);
+  await expect(sidebar.getByText("Org Tools", { exact: true })).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="sidebar-header"] svg')).toHaveCount(1);
+  await expect(page.locator('[data-demo-id="app-title"]')).toHaveText("Editor");
+  await expect(header).toHaveCSS("box-shadow", "none");
+  await expect(sidebar).toHaveCSS("box-shadow", "none");
+  expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
   const navigationBox = await navigation.boundingBox();
   const actionsBox = await actions.boundingBox();
   expect(navigationBox).not.toBeNull();
   expect(actionsBox).not.toBeNull();
-  expect(navigationBox?.x ?? 0).toBeLessThan(actionsBox?.x ?? 0);
+  expect(navigationBox?.y ?? 0).toBeLessThan(actionsBox?.y ?? 0);
   await expect(page.locator('[data-demo-id="import-action-icon"]')).toHaveAttribute(
     "data-icon",
     "document-arrow-up",
@@ -239,12 +392,21 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
     "document-arrow-down",
   );
   await page.locator('[data-demo-id="theme-toggle"]').click();
-  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  const darkThemeOption = page.getByRole("option", { name: "Dark", exact: true });
+  await expectStableHoverGeometry(darkThemeOption);
+  await darkThemeOption.click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await expectFlatProductTabs(page);
-  await expectFlatHeaderActions(page);
+  await expectSidebarNavigation(page, 240);
+  await expectSidebarActions(page);
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Light", exact: true }).click();
+  await page.locator('[data-demo-id="language-toggle"]').click();
+  await expectStableHoverGeometry(
+    page.locator('[data-demo-id="language-menu"]').getByRole("option").first(),
+  );
+  await page.keyboard.press("Escape");
+  await expectStablePressedGeometry(page.locator('[data-demo-id="tab-units"]'));
+  await expectUniformUiFont(page);
   expect(
     await page
       .locator('[data-demo-id^="tab-"]')
@@ -282,49 +444,192 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("contains the unified header at narrow and desktop widths", async ({ page }) => {
+test("keeps interaction cues accessible with reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openBlankWorkspace(page);
+
+  const tab = page.locator('[data-demo-id="tab-units"]');
+  const action = page.locator('[data-demo-id="save-workspace"]');
+  await tab.focus();
+
+  const reducedMotionStyle = await tab.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      boxShadow: style.boxShadow,
+      transform: style.transform,
+      transitionDuration: style.transitionDuration,
+    };
+  });
+  expect(reducedMotionStyle.transform).toBe("none");
+  expect(reducedMotionStyle.transitionDuration).toBe("0s");
+  expect(reducedMotionStyle.boxShadow).not.toBe("none");
+  await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveCSS(
+    "transition-property",
+    "none",
+  );
+  await expect(action).toHaveCSS("border-width", "0px");
+  await expectUniformUiFont(page);
+});
+
+test("contains the collapsible sidebar at narrow and desktop widths", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openBlankWorkspace(page);
 
   const header = page.locator('[data-demo-id="app-header"]');
-  const navigation = page.locator('[data-demo-id="product-navigation"]');
-  const importLabel = page.locator('[data-demo-id="import-action"] span');
-  const exportLabel = page.locator('[data-demo-id="save-workspace"] span');
+  const sidebar = page.locator('[data-demo-id="app-sidebar"]');
+  const sidebarToggle = page.locator('[data-demo-id="sidebar-toggle"]');
+  const importLabel = page.locator('[data-demo-id="import-action"] [data-sidebar-label=""]');
+  const exportLabel = page.locator('[data-demo-id="save-workspace"] [data-sidebar-label=""]');
 
-  await expectFlatProductTabs(page);
-  await expectFlatHeaderActions(page);
-  await expectTransparentBackground(header);
+  await expectSidebarNavigation(page, 64);
+  await expectSidebarActions(page);
+  expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
   await expect(importLabel).toBeHidden();
   await expect(exportLabel).toBeHidden();
+  await expect(sidebarToggle).toBeHidden();
   await expect(page.locator('[data-demo-id="import-action"]')).toHaveAccessibleName("Import");
   await expect(page.locator('[data-demo-id="save-workspace"]')).toHaveAccessibleName("Export");
-  expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(56);
-  expect(await navigation.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
-    true,
-  );
-  await navigation.evaluate((element) => {
-    element.scrollLeft = element.scrollWidth;
-  });
-  expect(await navigation.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
 
   for (const width of [1024, 1280]) {
     await page.setViewportSize({ width, height: 720 });
-    await expectFlatProductTabs(page);
-    await expectFlatHeaderActions(page);
-    await expectTransparentBackground(header);
+    await expectSidebarNavigation(page, 240);
+    await expectSidebarActions(page);
+    expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
     await expect(importLabel).toBeVisible();
     await expect(exportLabel).toBeVisible();
-    expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(56);
+    await expect(sidebarToggle).toBeVisible();
+    await expectStableHoverGeometry(sidebarToggle);
+    await expectStablePressedGeometry(sidebarToggle);
+    const toggleStyle = await sidebarToggle.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        borderRadius: style.borderRadius,
+        boxShadow: style.boxShadow,
+        color: style.color,
+        height: element.getBoundingClientRect().height,
+        width: element.getBoundingClientRect().width,
+      };
+    });
+    expect(toggleStyle).toMatchObject({
+      borderRadius: "6px",
+      boxShadow: "none",
+      height: 40,
+      width: 224,
+    });
+    expect(toggleStyle.color).not.toBe(toggleStyle.backgroundColor);
+    const [expandedToggleIconBox, expandedNavigationIconBox] = await Promise.all([
+      sidebarToggle.locator("svg").boundingBox(),
+      page.locator('[data-demo-id="tab-units"] svg').boundingBox(),
+    ]);
+    expect(expandedToggleIconBox).not.toBeNull();
+    expect(expandedNavigationIconBox).not.toBeNull();
+    expect(expandedToggleIconBox?.x ?? 0).toBeCloseTo(expandedNavigationIconBox?.x ?? 0, 1);
+    expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
+    const selectedBeforeCollapse = await page
+      .locator('[data-demo-id="product-tabs-list"] [aria-selected="true"]')
+      .getAttribute("data-demo-id");
+    const transitionSamples = await sidebar.evaluate(async (sidebarElement) => {
+      const icon = sidebarElement.querySelector('[data-demo-id="tab-units"] svg');
+      const label = sidebarElement.querySelector('[data-demo-id="tab-units"] [data-sidebar-label]');
+      const toggle = sidebarElement.querySelector<HTMLButtonElement>(
+        '[data-demo-id="sidebar-toggle"]',
+      );
+      const toggleIcon = toggle?.querySelector("svg");
+      if (!icon || !label || !toggle || !toggleIcon) {
+        throw new Error("Missing sidebar transition fixture");
+      }
+
+      const samples: Array<{
+        iconLeft: number;
+        labelOpacity: number;
+        toggleIconLeft: number;
+        width: number;
+      }> = [];
+      const startedAt = performance.now();
+      toggle.click();
+
+      await new Promise<void>((resolve) => {
+        const sample = () => {
+          const sidebarBox = sidebarElement.getBoundingClientRect();
+          const iconBox = icon.getBoundingClientRect();
+          samples.push({
+            iconLeft: iconBox.left,
+            labelOpacity: Number(window.getComputedStyle(label).opacity),
+            toggleIconLeft: toggleIcon.getBoundingClientRect().left,
+            width: sidebarBox.width,
+          });
+          if (performance.now() - startedAt >= 280) {
+            resolve();
+            return;
+          }
+          requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+
+      return samples;
+    });
+    await expect(sidebar).toHaveAttribute("data-collapsed", "true");
+    expect(transitionSamples.length).toBeGreaterThanOrEqual(5);
+    expect(transitionSamples.at(-1)?.width).toBe(64);
+    for (let index = 1; index < transitionSamples.length; index += 1) {
+      expect(transitionSamples[index]?.width ?? 0).toBeLessThanOrEqual(
+        (transitionSamples[index - 1]?.width ?? 0) + 0.5,
+      );
+      expect(transitionSamples[index]?.labelOpacity ?? 0).toBeLessThanOrEqual(
+        (transitionSamples[index - 1]?.labelOpacity ?? 0) + 0.03,
+      );
+    }
+    expect(
+      Math.max(...transitionSamples.map(({ iconLeft }) => iconLeft)) -
+        Math.min(...transitionSamples.map(({ iconLeft }) => iconLeft)),
+    ).toBeLessThanOrEqual(0.5);
+    expect(
+      Math.max(...transitionSamples.map(({ toggleIconLeft }) => toggleIconLeft)) -
+        Math.min(...transitionSamples.map(({ toggleIconLeft }) => toggleIconLeft)),
+    ).toBeLessThanOrEqual(0.5);
+    expect(transitionSamples.at(-1)?.labelOpacity).toBe(0);
+    await expectSidebarNavigation(page, 64);
+    const [compactHeaderBox, compactToggleBox] = await Promise.all([
+      page.locator('[data-demo-id="sidebar-header"]').boundingBox(),
+      sidebarToggle.boundingBox(),
+    ]);
+    expect(compactHeaderBox).not.toBeNull();
+    expect(compactToggleBox).not.toBeNull();
+    expect(compactToggleBox?.width).toBe(48);
+    expect(compactToggleBox?.height).toBe(40);
+    expect(
+      Math.abs(
+        (compactToggleBox?.x ?? 0) +
+          (compactToggleBox?.width ?? 0) / 2 -
+          ((compactHeaderBox?.x ?? 0) + (compactHeaderBox?.width ?? 0) / 2),
+      ),
+    ).toBeLessThanOrEqual(0.5);
+    const [compactToggleIconBox, compactNavigationIconBox] = await Promise.all([
+      sidebarToggle.locator("svg").boundingBox(),
+      page.locator('[data-demo-id="tab-units"] svg').boundingBox(),
+    ]);
+    expect(compactToggleIconBox).not.toBeNull();
+    expect(compactNavigationIconBox).not.toBeNull();
+    expect(compactToggleIconBox?.x ?? 0).toBeCloseTo(compactNavigationIconBox?.x ?? 0, 1);
+    await expect(
+      page.locator('[data-demo-id="product-tabs-list"] [aria-selected="true"]'),
+    ).toHaveAttribute("data-demo-id", selectedBeforeCollapse ?? "tab-org-editor");
+    await sidebarToggle.click();
+    await expect(sidebar).toHaveAttribute("data-collapsed", "false");
+    await expectSidebarNavigation(page, 240);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
   }
 });
 
-test("uses one continuous root surface with a distinct Editor canvas", async ({ page }) => {
+test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await openBlankWorkspace(page);
 
@@ -334,14 +639,25 @@ test("uses one continuous root surface with a distinct Editor canvas", async ({ 
   const lightSurfaceTokens = await shell.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return {
+      accent: style.getPropertyValue("--accent").trim(),
+      accentStrong: style.getPropertyValue("--accent-strong").trim(),
       background: style.getPropertyValue("--background").trim(),
+      primary: style.getPropertyValue("--primary").trim(),
       shell: style.getPropertyValue("--shell").trim(),
+      signal: style.getPropertyValue("--signal").trim(),
     };
   });
 
   expect(lightShellBackground).not.toBe("rgba(0, 0, 0, 0)");
-  expect(lightSurfaceTokens.shell).toBe(lightSurfaceTokens.background);
-  await expectTransparentBackground(header);
+  expect(lightSurfaceTokens.shell).not.toBe(lightSurfaceTokens.background);
+  expect(lightSurfaceTokens).toMatchObject({
+    accent: "oklch(95.5% .014 240)",
+    accentStrong: "oklch(92% .028 240)",
+    primary: "oklch(24.5% 0 0)",
+    shell: "oklch(97.5% .004 245)",
+    signal: "oklch(53% .095 240)",
+  });
+  expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
   await expectTransparentBackground(page.locator('[data-demo-id="top-level-empty-state"]'));
 
   await replaceWithSyntheticWorkspace(page);
@@ -372,17 +688,16 @@ test("uses one continuous root surface with a distinct Editor canvas", async ({ 
   for (const [tabDemoId, selector, leadingSelectors] of surfaces) {
     await page.locator(`[data-demo-id="${tabDemoId}"]`).click();
     const surface = page.locator(selector);
-    await expectTransparentBackground(surface);
+    await expectFullBleedProductSurface(surface);
     const surfaceBox = await surface.boundingBox();
     expect(surfaceBox).not.toBeNull();
     expect(Math.abs((surfaceBox?.y ?? 0) - (editorCanvasBox?.y ?? 0))).toBeLessThanOrEqual(1);
+    expect(Math.abs((surfaceBox?.x ?? 0) - (editorCanvasBox?.x ?? 0))).toBeLessThanOrEqual(1);
+    expect(Math.abs((surfaceBox?.width ?? 0) - (editorCanvasBox?.width ?? 0))).toBeLessThanOrEqual(
+      1,
+    );
     for (const leadingSelector of leadingSelectors) {
-      const leadingBox = await page.locator(leadingSelector).boundingBox();
-      expect(leadingBox).not.toBeNull();
-      expect(
-        Math.abs((leadingBox?.y ?? 0) - (editorCanvasBox?.y ?? 0)),
-        `${leadingSelector} starts at the shared workflow origin`,
-      ).toBeLessThanOrEqual(1);
+      await expectContainedBy(surface, page.locator(leadingSelector));
     }
   }
 
@@ -399,10 +714,29 @@ test("uses one continuous root surface with a distinct Editor canvas", async ({ 
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   const darkShellBackground = await getBackgroundColor(shell);
+  const darkInteractionTokens = await shell.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      accent: style.getPropertyValue("--accent").trim(),
+      accentStrong: style.getPropertyValue("--accent-strong").trim(),
+      primary: style.getPropertyValue("--primary").trim(),
+      shell: style.getPropertyValue("--shell").trim(),
+      signal: style.getPropertyValue("--signal").trim(),
+    };
+  });
   expect(darkShellBackground).not.toBe(lightShellBackground);
+  expect(darkInteractionTokens).toEqual({
+    accent: "oklch(25.5% .028 240)",
+    accentStrong: "oklch(30% .04 240)",
+    primary: "oklch(92% 0 0)",
+    shell: "oklch(11.5% .006 245)",
+    signal: "oklch(72% .085 235)",
+  });
   await expectTransparentBackground(employeeCard);
-  await expectTransparentBackground(header);
-  await expectTransparentBackground(page.locator('[data-demo-id="employees-tab"]'));
+  expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(page.locator('[data-demo-id="employees-surface"]'))).not.toBe(
+    "rgba(0, 0, 0, 0)",
+  );
 });
 
 test("opens the chooser before the dialog and maps ordinary JSON without format examples", async ({
@@ -468,23 +802,22 @@ test("selects and appends Employees from a recognized workspace state", async ({
   const importMode = dialog.locator('[data-demo-id="state-import-mode"]');
   await expect(importMode.getByText("Import mode", { exact: true })).toBeVisible();
   await expectNoHorizontalRule(importMode);
-  await expect(importMode.locator('[data-demo-id="state-operation-append"]')).toHaveClass(
-    /ring-primary/u,
+  const appendOperation = importMode.locator('[data-demo-id="state-operation-append"]');
+  const replaceOperation = importMode.locator('[data-demo-id="state-operation-replace"]');
+  await expect(appendOperation).toHaveCSS("border-top-width", "0px");
+  await expect(replaceOperation).toHaveCSS("border-top-width", "0px");
+  expect(await getBackgroundColor(appendOperation)).not.toBe(
+    await getBackgroundColor(replaceOperation),
   );
-  await expect(importMode.locator('[data-demo-id="state-operation-append"]')).toHaveCSS(
-    "border-top-width",
-    "1px",
-  );
-  await expect(importMode.locator('[data-demo-id="state-operation-replace"]')).toHaveClass(
-    /border-destructive/u,
-  );
+  await expect(appendOperation).toHaveCSS("box-shadow", "none");
   await expect(
     dialog.getByRole("radiogroup", { name: "Import operation" }).getByRole("radio").first(),
   ).toBeChecked();
   await dialog.getByRole("button", { name: "Append", exact: true }).click();
   const importNotice = page.getByRole("status");
   await expect(importNotice).toHaveText("Import merged into Main.");
-  await expectNoHorizontalRule(importNotice);
+  await expect(importNotice).toHaveCSS("border-top-width", "0px");
+  await expect(importNotice).toHaveCSS("border-bottom-width", "0px");
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
@@ -534,7 +867,7 @@ test("previews nested recognized Teams with Employee cards and cancels without m
   await assertLocalRequests();
 });
 
-test("keeps borderless Import chrome contained at 390 pixels", async ({ page }) => {
+test("keeps overlay-separated Import chrome contained at 390 pixels", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankWorkspace(page);
@@ -900,7 +1233,7 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
   await expect(firstUnitRow).toHaveCSS("border-width", "0px");
   await expectTransparentBackground(page.locator('[data-demo-id="unit-tree-item"]').nth(1));
   const unitsSurface = page.locator('[data-demo-id="units-surface"]');
-  await expectFlatProductSurface(unitsSurface);
+  await expectFullBleedProductSurface(unitsSurface);
   await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-tree-panel"]'));
   await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-employee-panel"]'));
 
@@ -909,9 +1242,9 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
     "border-right-width",
     "0px",
   );
-  await expectFlatTabGroup(page.locator('[data-demo-id="export-source-tabs"]'));
+  await expectTonalTabGroup(page.locator('[data-demo-id="export-source-tabs"]'));
   const exportSurface = page.locator('[data-demo-id="export-surface"]');
-  await expectFlatProductSurface(exportSurface);
+  await expectFullBleedProductSurface(exportSurface);
   await expectContainedBy(exportSurface, page.locator('[data-demo-id="export-selection-grid"]'));
   await assertLocalRequests();
 });
@@ -925,7 +1258,7 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await expectNoHorizontalRule(page.locator('[data-demo-id="employees-header"]'));
 
   const employeesSurface = page.locator('[data-demo-id="employees-surface"]');
-  await expectFlatProductSurface(employeesSurface);
+  await expectFullBleedProductSurface(employeesSurface);
   await expectContainedBy(employeesSurface, page.locator('[data-demo-id="employees-header"]'));
   await expectContainedBy(employeesSurface, page.locator('[data-demo-id="employees-list"]'));
 
@@ -990,7 +1323,7 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("renders clean content-sized Analytics groups with working drill-down", async ({ page }) => {
+test("renders tonal content-sized Analytics groups with working drill-down", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankWorkspace(page);
   await replaceWithSyntheticWorkspace(page);
@@ -999,19 +1332,22 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
   const analyticsHeader = page.locator('[data-demo-id="analytics-header"]');
   await expectNoHorizontalRule(analyticsHeader);
   const analyticsSurface = page.locator('[data-demo-id="analytics-surface"]');
-  await expectFlatProductSurface(analyticsSurface);
+  await expectFullBleedProductSurface(analyticsSurface);
   await expectContainedBy(analyticsSurface, analyticsHeader);
   expect(
     await page.locator('[data-demo-id="analytics-grid"]').evaluate((element) => {
       const style = window.getComputedStyle(element);
       return { columnGap: style.columnGap, rowGap: style.rowGap };
     }),
-  ).toEqual({ columnGap: "12px", rowGap: "12px" });
+  ).toEqual({ columnGap: "16px", rowGap: "16px" });
   const positions = page.locator('[data-demo-id="analytics-positions"]');
   await expect(positions).toHaveAttribute("data-analytics-entry-count", "4");
   await expect(positions).toHaveAttribute("data-analytics-visible-rows", "4");
   await expect(positions).toHaveCSS("height", "252px");
-  await expectTransparentBackground(positions);
+  expect(await getBackgroundColor(positions)).not.toBe("rgba(0, 0, 0, 0)");
+  expect(await getBackgroundColor(positions.locator("thead"))).toBe(
+    await getBackgroundColor(positions),
+  );
   await expect(positions).toHaveCSS("border-width", "0px");
   await expect(positions).toHaveCSS("box-shadow", "none");
   await expect(positions.locator("header")).toHaveCSS("border-bottom-width", "0px");
@@ -1037,6 +1373,7 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
   expect(await firstRow.evaluate((row) => window.getComputedStyle(row).backgroundColor)).not.toBe(
     restingBackground,
   );
+  await expect(firstRow).toHaveCSS("box-shadow", "none");
 
   const valueHeader = positions.getByRole("columnheader", { name: /Value/u });
   await valueHeader.getByRole("button", { name: "Value", exact: true }).click();
@@ -1049,6 +1386,11 @@ test("renders clean content-sized Analytics groups with working drill-down", asy
   const duplicates = page.locator('[data-demo-id="analytics-full-name-duplicates"]');
   await expect(duplicates).toHaveAttribute("data-analytics-visible-rows", "0");
   await expect(duplicates).toHaveCSS("height", "148px");
+  await page.locator('[data-demo-id="theme-toggle"]').click();
+  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  expect(await getBackgroundColor(positions.locator("thead"))).toBe(
+    await getBackgroundColor(positions),
+  );
   await assertLocalRequests();
 });
 
@@ -1085,26 +1427,27 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   });
   expect(topStyle).toMatchObject({
     borderRadius: "8px",
-    borderWidth: "1px",
+    borderWidth: "0px",
     columnGap: "4px",
-    padding: "4px",
+    padding: "6px",
   });
   expect(viewportStyle).toMatchObject({
     borderRadius: "8px",
-    borderWidth: "1px",
+    borderWidth: "0px",
     columnGap: "4px",
-    padding: "4px",
+    padding: "6px",
   });
-  for (const { boxShadow } of [topStyle, viewportStyle]) {
-    const shadowColors = boxShadow.match(/rgba?\([^)]+\)/gu) ?? [];
-    expect(shadowColors.every((color) => color === "rgba(0, 0, 0, 0)")).toBe(true);
-  }
+  expect(topStyle.boxShadow).toBe("none");
+  expect(viewportStyle.boxShadow).toBe("none");
   expect(topStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(viewportStyle.backgroundColor).toBe(topStyle.backgroundColor);
   expect(await getBackgroundColor(canvas)).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(canvas)).not.toBe(
     await getBackgroundColor(page.locator('[data-demo-id="app-shell"]')),
   );
+  await expect(canvas).toHaveAttribute("data-grid-base-size", "24");
+  await expect(canvas).toHaveAttribute("data-grid-size", "24");
+  expect(Number(await canvas.getAttribute("data-grid-screen-size"))).toBe(24);
   await expect(topActions.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(1);
   expect(
     await topActions.evaluate(
@@ -1120,6 +1463,41 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
         ),
     ),
   ).toEqual(new Set(["0px"]));
+
+  const zoomOutButton = viewportActions.getByRole("button").first();
+  for (let index = 0; index < 5; index += 1) await zoomOutButton.click();
+  const adaptiveDocumentGridSize = Number(await canvas.getAttribute("data-grid-size"));
+  const adaptiveScreenGridSize = Number(await canvas.getAttribute("data-grid-screen-size"));
+  expect(adaptiveDocumentGridSize).toBeGreaterThan(24);
+  expect(adaptiveDocumentGridSize % 24).toBe(0);
+  expect(adaptiveScreenGridSize).toBeGreaterThanOrEqual(24);
+  expect(adaptiveScreenGridSize).toBeLessThanOrEqual(52.8);
+  const renderedGridSizes = await canvas.evaluate((element) =>
+    window
+      .getComputedStyle(element)
+      .backgroundSize.split(",")
+      .flatMap((layer) => layer.trim().split(" ").map(Number.parseFloat)),
+  );
+  expect(renderedGridSizes).toHaveLength(4);
+  expect(renderedGridSizes.every((size) => Math.abs(size - adaptiveScreenGridSize) <= 0.001)).toBe(
+    true,
+  );
+  await viewportActions.getByRole("button").nth(2).click();
+
+  await page.locator('[data-demo-id="org-editor-align-button"]').click();
+  expect(
+    (
+      await canvas.locator("[data-org-editor-unit-id]").evaluateAll((units) =>
+        units.map((unit) => {
+          const element = unit as HTMLElement;
+          return {
+            x: Number.parseFloat(element.style.left),
+            y: Number.parseFloat(element.style.top),
+          };
+        }),
+      )
+    ).every(({ x, y }) => Math.abs(x % 24) === 0 && Math.abs(y % 24) === 0),
+  ).toBe(true);
   expect(
     new Set(
       await viewportActions
@@ -1157,7 +1535,7 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await expectFlatProductTabs(page);
+  await expectSidebarNavigation(page, 240);
   const darkTopBackground = await getBackgroundColor(topActions);
   expect(darkTopBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(viewportActions)).toBe(darkTopBackground);

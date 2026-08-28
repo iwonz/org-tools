@@ -21,10 +21,10 @@ Use stable item keys and remeasure rows when section composition or filters chan
 receive resolved data and contexts through props rather than observing the whole organization store.
 Employee list rows use a zero-gap virtualizer layout; their measured heights remain content-driven.
 
-Analytics keeps six bounded virtualized lists directly on the root surface. The groups use 12 px
-grid gaps without a background tile, border lattice, or section rules. Internal spacing is included
-in each computed section height so the eight-row viewport cap remains unchanged. The shared
-product-surface wrapper adds neither a paint layer nor an observer or derived-data boundary. Calendar
+Analytics keeps six bounded virtualized lists on lightweight tonal surfaces. The groups use compact
+grid gaps without borders, row cards, or section rules. Internal spacing is included in each
+computed section height so the eight-row viewport cap remains unchanged. The shared product-surface
+wrapper adds no observer or derived-data boundary. Calendar
 uses seven fluid columns, four or five adaptive rows, at most two inline tag
 events per day, and a bounded two-line tag cloud so a 31-day month fits the maintained 1280-by-720
 desktop viewport. Smaller viewports retain local overflow as a safe fallback. Per-tag event dialogs
@@ -38,7 +38,9 @@ Org Editor controls render in compact top-left and bottom-left toolbar surfaces.
 layers add no observers or canvas-data work. Search remains closed and unmounted at its zero-width
 state until requested, then expands to the right of its trigger without changing canvas data or
 forcing a layout pass over canvas nodes. The dedicated canvas background token adds no observer or
-layout work.
+layout work. Its adaptive grid changes only the constant-cost CSS background interval when scale
+changes. Coordinate snapping runs inside explicit add, move, paste, overlap, or layout commands and
+does not add a render-time collection scan or pointer-event observer.
 
 Org Editor Employee rows use deterministic tag-chip packing and cached per-Unit prefix offsets.
 Locale or tag changes invalidate those measurements. Visibility lookup uses the prefix offsets, and

@@ -25,7 +25,7 @@ function PopoverContent({
       <PopoverPrimitive.Content
         align={align}
         className={cn(
-          "pointer-events-auto z-[60] rounded-md border bg-popover text-popover-foreground shadow-md outline-none",
+          "pointer-events-auto z-[60] rounded-lg bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)] outline-none",
           className,
         )}
         collisionPadding={collisionPadding}

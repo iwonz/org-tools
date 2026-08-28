@@ -88,12 +88,9 @@ export const EmployeesTab = observer(() => {
           title={t("No Employees yet")}
         />
       ) : (
-        <ProductSurface
-          className="mx-2 mb-2 flex min-h-0 flex-1 flex-col"
-          data-demo-id="employees-surface"
-        >
+        <ProductSurface className="flex min-h-0 flex-1 flex-col" data-demo-id="employees-surface">
           <div
-            className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 px-3 pb-3 pt-0"
+            className="flex min-h-16 shrink-0 flex-wrap items-start gap-3 bg-muted/30 p-4"
             data-demo-id="employees-header"
           >
             <div className="grid min-w-56 flex-1 gap-1" data-demo-id="employees-search-column">

@@ -242,7 +242,7 @@ function EmployeeFilterOptionList<TId extends UnitId>({
 
           return (
             <div
-              className="absolute left-0 top-0 flex w-full items-start gap-2 px-2 py-1.5 text-sm transition-colors hover:bg-accent/40"
+              className="absolute left-0 top-0 flex w-full items-start gap-2 px-2 py-1.5 text-sm transition-colors hover:bg-accent/50 active:bg-accent-strong/55"
               data-filter-option
               data-filter-option-index={virtualRow.index}
               key={String(option.id)}

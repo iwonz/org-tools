@@ -85,9 +85,9 @@ export const UnitCard = forwardRef<HTMLDivElement, UnitCardProps>(function UnitC
   return (
     <div
       className={cn(
-        "relative flex min-w-0 items-center gap-3 rounded-none bg-transparent p-3 pr-4 transition-colors hover:bg-accent/50",
-        selected && "bg-accent text-accent-foreground",
-        dropTarget?.active && "border-primary bg-primary/10",
+        "relative flex min-w-0 items-center gap-3 rounded-md bg-transparent p-3 pr-4 transition-colors hover:bg-accent/50 active:bg-accent-strong/55",
+        selected && "bg-secondary text-foreground",
+        dropTarget?.active && "border-signal bg-accent-strong/65",
         className,
       )}
       data-demo-id={dataDemoId}
@@ -97,8 +97,8 @@ export const UnitCard = forwardRef<HTMLDivElement, UnitCardProps>(function UnitC
         <section
           aria-label={dropTarget.label}
           className={cn(
-            "absolute inset-0 z-20 flex items-center justify-center rounded-md border-2 border-dashed border-primary/40 bg-primary/[0.03] text-primary transition-colors",
-            dropTarget.active && "border-primary bg-primary/15",
+            "absolute inset-0 z-20 flex items-center justify-center rounded-md border-2 border-dashed border-signal/40 bg-accent/35 text-signal transition-colors",
+            dropTarget.active && "border-signal bg-accent-strong/65",
           )}
           data-demo-id={dropTarget.dataDemoId}
           data-state={dropTarget.active ? "active" : "idle"}
@@ -109,7 +109,7 @@ export const UnitCard = forwardRef<HTMLDivElement, UnitCardProps>(function UnitC
         >
           <span
             className={cn(
-              "pointer-events-none inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background/95 px-3 py-1.5 text-xs font-medium opacity-0 shadow-sm transition-opacity",
+              "pointer-events-none inline-flex items-center gap-2 rounded-full bg-background/95 px-3 py-1.5 text-xs font-medium opacity-0 transition-opacity",
               dropTarget.active && "opacity-100",
             )}
           >

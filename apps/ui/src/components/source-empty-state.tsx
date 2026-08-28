@@ -11,12 +11,12 @@ type EmptyStateContentProps = {
 
 function EmptyStateContent({ action, description, icon, title }: EmptyStateContentProps) {
   return (
-    <div className="grid max-w-sm justify-items-center gap-3 text-center">
-      <span className="inline-flex size-12 items-center justify-center text-muted-foreground">
+    <div className="grid max-w-sm justify-items-center gap-4 text-center">
+      <span className="inline-flex size-14 items-center justify-center rounded-lg bg-[linear-gradient(135deg,var(--accent-strong),var(--accent))] text-signal">
         {icon}
       </span>
       <div className="grid gap-1.5">
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
       {action}
@@ -46,7 +46,7 @@ export function SourceEmptyState({ children, icon }: { children: ReactNode; icon
 export function SourceEmptyBody({ children, icon }: { children: ReactNode; icon: ReactNode }) {
   return (
     <div className="grid justify-items-center gap-2 text-center text-sm text-muted-foreground">
-      <span className="inline-flex size-10 items-center justify-center text-muted-foreground">
+      <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
         {icon}
       </span>
       <div>{children}</div>

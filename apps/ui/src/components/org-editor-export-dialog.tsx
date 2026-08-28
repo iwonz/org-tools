@@ -94,8 +94,8 @@ const getClipboardImageErrorMessage = (error: unknown): UiTextKey => {
 
 const getBackgroundButtonClassName = (isActive: boolean) =>
   cn(
-    "h-9 justify-start border px-2 text-xs",
-    isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-background",
+    "h-9 justify-start px-2 text-xs",
+    isActive ? "bg-accent-strong/70 text-foreground" : "bg-secondary/55",
   );
 
 export function OrgEditorExportDialog({
@@ -624,7 +624,7 @@ export function OrgEditorExportDialog({
                     <div className="grid gap-2">
                       <Label htmlFor="org-editor-export-employee-format">{t("Format")}</Label>
                       <Textarea
-                        className="h-20 resize-none font-mono"
+                        className="h-20 resize-none"
                         id="org-editor-export-employee-format"
                         onChange={(event) =>
                           updateImageSettings({ employeeFormat: event.currentTarget.value })

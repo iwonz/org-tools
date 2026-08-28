@@ -26,6 +26,8 @@ export const ORG_EDITOR_UNIT_ROOT_GAP = 64;
 export const ORG_EDITOR_UNIT_MIN_HEIGHT = 120;
 export const ORG_EDITOR_UNIT_COLLAPSED_HEIGHT = ORG_EDITOR_UNIT_HEADER_HEIGHT;
 export const ORG_EDITOR_DEFAULT_LAYOUT_MODE: OrgEditorLayoutMode = "topDown";
+export const ORG_EDITOR_GRID_SIZE = 24;
+export const ORG_EDITOR_GRID_MIN_SCREEN_SIZE = 24;
 export const ORG_EDITOR_CANVAS_DEFAULT_VIEWPORT: OrgEditorCanvasViewport = {
   scale: 1,
   x: 0,
@@ -45,6 +47,29 @@ export type OrgEditorUnitEmployeeSummary = {
   directCount: number;
   hasChildUnits: boolean;
   totalCount: number;
+};
+
+export const snapOrgEditorCoordinate = (value: number) =>
+  Math.round(value / ORG_EDITOR_GRID_SIZE) * ORG_EDITOR_GRID_SIZE;
+
+export const snapOrgEditorPoint = <Point extends { x: number; y: number }>(
+  point: Point,
+): Point => ({
+  ...point,
+  x: snapOrgEditorCoordinate(point.x),
+  y: snapOrgEditorCoordinate(point.y),
+});
+
+export const snapOrgEditorUnits = (units: OrgEditorUnit[]) =>
+  units.map((unit) => snapOrgEditorPoint(unit));
+
+export const getAdaptiveOrgEditorGridSize = (scale: number) => {
+  const normalizedScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  const minimumMultiplier =
+    ORG_EDITOR_GRID_MIN_SCREEN_SIZE / (ORG_EDITOR_GRID_SIZE * normalizedScale);
+  const multiplier = 2 ** Math.max(0, Math.ceil(Math.log2(minimumMultiplier)));
+
+  return ORG_EDITOR_GRID_SIZE * multiplier;
 };
 
 export const createOrgEditorUnitId = () => createUuid();
@@ -327,20 +352,20 @@ export const layoutOrgEditorUnits = (
     if (!placement) return unit;
 
     if (layoutMode === "leftRight") {
-      return {
+      return snapOrgEditorPoint({
         ...unit,
         updatedAt: now,
         x: layoutOrigin.x + (depthOffsets.get(placement.depth) ?? 0),
         y: layoutOrigin.y + placement.center - getOrgEditorUnitHeight(unit) / 2,
-      };
+      });
     }
 
-    return {
+    return snapOrgEditorPoint({
       ...unit,
       updatedAt: now,
       x: layoutOrigin.x + placement.center - getOrgEditorUnitWidth(unit) / 2,
       y: layoutOrigin.y + (depthOffsets.get(placement.depth) ?? 0),
-    };
+    });
   });
 };
 

@@ -128,15 +128,15 @@ export function SaveDialog({
               return (
                 <label
                   className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors",
-                    selected && "border-primary bg-primary/5",
+                    "flex cursor-pointer items-start gap-3 rounded-md bg-muted/35 p-3 transition-colors duration-150 hover:bg-accent/65 active:bg-accent-strong/70",
+                    selected && "bg-accent-strong/65",
                     disabled && "cursor-not-allowed opacity-50",
                   )}
                   key={definition.value}
                 >
                   <input
                     checked={selected}
-                    className="mt-1 size-4 accent-current"
+                    className="mt-1 size-4 accent-signal"
                     disabled={disabled}
                     name="save-format"
                     onChange={() => setChoice(definition.value)}

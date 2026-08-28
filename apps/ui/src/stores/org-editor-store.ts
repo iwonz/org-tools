@@ -34,8 +34,10 @@ import {
   getOrgEditorUnitHeight,
   getOrgEditorUnitWidth,
   layoutOrgEditorUnits,
+  ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
-  ORG_EDITOR_UNIT_VERTICAL_GAP,
+  snapOrgEditorPoint,
+  snapOrgEditorUnits,
 } from "@/lib/org-editor";
 
 type SelectionMode = "add" | "replace" | "toggle";
@@ -108,8 +110,6 @@ type OrgEditorUnitPosition = {
 
 type UnitBounds = {
   bottom: number;
-  centerX: number;
-  centerY: number;
   height: number;
   right: number;
   width: number;
@@ -117,8 +117,6 @@ type UnitBounds = {
   y: number;
 };
 
-const SNAP_GRID_SIZE = 24;
-const SNAP_THRESHOLD = 12;
 const MIN_UNIT_SPACING = 30;
 const ORG_EDITOR_HISTORY_LIMIT = 100;
 
@@ -287,8 +285,6 @@ const getBoundsForUnit = (unit: OrgEditorUnit): UnitBounds => {
   return {
     ...bounds,
     bottom: bounds.y + bounds.height,
-    centerX: bounds.x + bounds.width / 2,
-    centerY: bounds.y + bounds.height / 2,
     right: bounds.x + bounds.width,
   };
 };
@@ -306,8 +302,6 @@ const getGroupBounds = (units: OrgEditorUnit[]): UnitBounds | null => {
 
   return {
     bottom,
-    centerX: x + width / 2,
-    centerY: y + height / 2,
     height,
     right,
     width,
@@ -328,6 +322,10 @@ const shiftUnits = (units: OrgEditorUnit[], offset: { x: number; y: number }) =>
     x: unit.x + offset.x,
     y: unit.y + offset.y,
   }));
+
+const snapOffsetAwayFromZero = (value: number) =>
+  (value < 0 ? Math.floor(value / ORG_EDITOR_GRID_SIZE) : Math.ceil(value / ORG_EDITOR_GRID_SIZE)) *
+  ORG_EDITOR_GRID_SIZE;
 
 const layoutRootSubtreeKeepingRootPosition = ({
   layoutMode,
@@ -360,7 +358,7 @@ const avoidUnitOverlaps = ({
   movingUnits: OrgEditorUnit[];
   staticUnits: OrgEditorUnit[];
 }) => {
-  let nextMovingUnits = movingUnits;
+  let nextMovingUnits = snapOrgEditorUnits(movingUnits);
 
   for (let iteration = 0; iteration < 80; iteration += 1) {
     const movingBounds = getGroupBounds(nextMovingUnits);
@@ -396,94 +394,14 @@ const avoidUnitOverlaps = ({
       return firstDistance - secondDistance;
     });
 
-    nextMovingUnits = shiftUnits(nextMovingUnits, candidateOffsets[0] ?? { x: 0, y: 0 });
+    const candidateOffset = candidateOffsets[0] ?? { x: 0, y: 0 };
+    nextMovingUnits = shiftUnits(nextMovingUnits, {
+      x: snapOffsetAwayFromZero(candidateOffset.x),
+      y: snapOffsetAwayFromZero(candidateOffset.y),
+    });
   }
 
   return nextMovingUnits;
-};
-
-const findSnapOffset = (values: number[], guides: number[]) => {
-  let bestOffset = 0;
-  let bestDistance = SNAP_THRESHOLD + 1;
-
-  for (const value of values) {
-    const gridOffset = Math.round(value / SNAP_GRID_SIZE) * SNAP_GRID_SIZE - value;
-    const gridDistance = Math.abs(gridOffset);
-
-    if (gridDistance < bestDistance) {
-      bestDistance = gridDistance;
-      bestOffset = gridOffset;
-    }
-
-    for (const guide of guides) {
-      const offset = guide - value;
-      const distance = Math.abs(offset);
-
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestOffset = offset;
-      }
-    }
-  }
-
-  return bestDistance <= SNAP_THRESHOLD ? bestOffset : 0;
-};
-
-const getSnapOffset = ({
-  movingUnits,
-  staticUnits,
-}: {
-  movingUnits: OrgEditorUnit[];
-  staticUnits: OrgEditorUnit[];
-}) => {
-  if (movingUnits.length === 0) return { x: 0, y: 0 };
-
-  const movingBounds = movingUnits.map(getBoundsForUnit);
-  const groupBounds = {
-    bottom: Math.max(...movingBounds.map((bounds) => bounds.bottom)),
-    centerX:
-      (Math.min(...movingBounds.map((bounds) => bounds.x)) +
-        Math.max(...movingBounds.map((bounds) => bounds.right))) /
-      2,
-    centerY:
-      (Math.min(...movingBounds.map((bounds) => bounds.y)) +
-        Math.max(...movingBounds.map((bounds) => bounds.bottom))) /
-      2,
-    right: Math.max(...movingBounds.map((bounds) => bounds.right)),
-    x: Math.min(...movingBounds.map((bounds) => bounds.x)),
-    y: Math.min(...movingBounds.map((bounds) => bounds.y)),
-  };
-  const xGuides = new Set<number>();
-  const yGuides = new Set<number>();
-
-  for (const staticUnit of staticUnits) {
-    const staticBounds = getBoundsForUnit(staticUnit);
-
-    for (const guide of [
-      staticBounds.x,
-      staticBounds.centerX,
-      staticBounds.right,
-      staticBounds.x - staticBounds.width - ORG_EDITOR_UNIT_HORIZONTAL_GAP,
-      staticBounds.right + ORG_EDITOR_UNIT_HORIZONTAL_GAP,
-    ]) {
-      xGuides.add(guide);
-    }
-
-    for (const guide of [
-      staticBounds.y,
-      staticBounds.centerY,
-      staticBounds.bottom,
-      staticBounds.y - staticBounds.height - ORG_EDITOR_UNIT_VERTICAL_GAP,
-      staticBounds.bottom + ORG_EDITOR_UNIT_VERTICAL_GAP,
-    ]) {
-      yGuides.add(guide);
-    }
-  }
-
-  return {
-    x: findSnapOffset([groupBounds.x, groupBounds.centerX, groupBounds.right], [...xGuides]),
-    y: findSnapOffset([groupBounds.y, groupBounds.centerY, groupBounds.bottom], [...yGuides]),
-  };
 };
 
 const areEmployeeIdsEqual = (firstIds: EmployeeId[], secondIds: EmployeeId[]) => {
@@ -900,7 +818,10 @@ export class OrgEditorStore {
   applyLayout(layoutMode: OrgEditorLayoutMode = this.layoutMode): void {
     this.runCommand("Align Units", () => {
       this.layoutMode = layoutMode;
-      this.units = layoutOrgEditorUnits(this.units, layoutMode);
+      this.units = avoidUnitOverlaps({
+        movingUnits: layoutOrgEditorUnits(this.units, layoutMode),
+        staticUnits: [],
+      });
     });
   }
 
@@ -969,6 +890,7 @@ export class OrgEditorStore {
     y: number;
   }): OrgEditorUnitId {
     return this.runCommand("Add Unit", () => {
+      const snappedPoint = snapOrgEditorPoint({ x, y });
       const unit = createOrgEditorUnitFromScratch({
         bossEmployeeId,
         collapsed,
@@ -987,8 +909,8 @@ export class OrgEditorStore {
             0,
           ),
         parentId,
-        x,
-        y,
+        x: snappedPoint.x,
+        y: snappedPoint.y,
       });
       if (unit.liveFilter) {
         validateEmployeeLiveFilterRule({
@@ -1125,16 +1047,16 @@ export class OrgEditorStore {
 
       if (movableUnitIds.size === 0) return;
 
-      this.units = this.units.map((unit) =>
-        movableUnitIds.has(unit.id)
-          ? {
-              ...unit,
-              updatedAt: new Date().toISOString(),
-              x: unit.x + delta.x,
-              y: unit.y + delta.y,
-            }
-          : unit,
-      );
+      this.units = this.units.map((unit) => {
+        if (!movableUnitIds.has(unit.id)) return unit;
+
+        return snapOrgEditorPoint({
+          ...unit,
+          updatedAt: new Date().toISOString(),
+          x: unit.x + delta.x,
+          y: unit.y + delta.y,
+        });
+      });
     });
   }
 
@@ -1145,7 +1067,6 @@ export class OrgEditorStore {
   moveUnitsFromPositions(
     positions: OrgEditorUnitPosition[],
     delta: { x: number; y: number },
-    options: { snap?: boolean } = {},
   ): void {
     const positionByUnitId = new Map(positions.map((position) => [position.unitId, position]));
 
@@ -1163,19 +1084,9 @@ export class OrgEditorStore {
         y: startPosition.y + delta.y,
       };
     });
-    const snapOffset = options.snap
-      ? getSnapOffset({
-          movingUnits: candidateUnits.filter((unit) => movingUnitIds.has(unit.id)),
-          staticUnits: candidateUnits.filter((unit) => !movingUnitIds.has(unit.id)),
-        })
-      : { x: 0, y: 0 };
     const movedUnits = candidateUnits
       .filter((unit) => movingUnitIds.has(unit.id))
-      .map((unit) => ({
-        ...unit,
-        x: unit.x + snapOffset.x,
-        y: unit.y + snapOffset.y,
-      }));
+      .map(snapOrgEditorPoint);
     const staticUnits = candidateUnits.filter((unit) => !movingUnitIds.has(unit.id));
     const positionedMovedUnits = avoidUnitOverlaps({
       movingUnits: movedUnits,

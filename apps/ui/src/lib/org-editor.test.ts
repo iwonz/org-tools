@@ -4,13 +4,56 @@ import { describe, expect, test } from "vitest";
 import {
   buildOrgEditorUnitEmployeeSummaryById,
   findOrgEditorEmployeeRowIndex,
+  getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
   getOrgEditorUnitHeight,
+  layoutOrgEditorUnits,
+  ORG_EDITOR_GRID_MIN_SCREEN_SIZE,
+  ORG_EDITOR_GRID_SIZE,
   type OrgEditorUnitEmployeeSummary,
   setOrgEditorUnitEmployeeRowHeights,
+  snapOrgEditorCoordinate,
 } from "@/lib/org-editor";
+
+describe("Org Editor adaptive grid", () => {
+  test("uses power-of-two document steps while keeping screen spacing legible", () => {
+    expect(getAdaptiveOrgEditorGridSize(2.2)).toBe(24);
+    expect(getAdaptiveOrgEditorGridSize(1)).toBe(24);
+    expect(getAdaptiveOrgEditorGridSize(0.5)).toBe(48);
+    expect(getAdaptiveOrgEditorGridSize(0.25)).toBe(96);
+    expect(getAdaptiveOrgEditorGridSize(0.1)).toBe(384);
+
+    for (const scale of [0.1, 0.25, 0.5, 1, 2.2]) {
+      const documentSize = getAdaptiveOrgEditorGridSize(scale);
+      const screenSize = documentSize * scale;
+
+      expect(documentSize % ORG_EDITOR_GRID_SIZE).toBe(0);
+      expect(screenSize).toBeGreaterThanOrEqual(ORG_EDITOR_GRID_MIN_SCREEN_SIZE);
+      expect(screenSize).toBeLessThanOrEqual(ORG_EDITOR_GRID_SIZE * 2.2);
+    }
+  });
+
+  test("snaps negative and positive coordinates and generated hierarchy layout", () => {
+    expect(snapOrgEditorCoordinate(13)).toBe(24);
+    expect(snapOrgEditorCoordinate(-13)).toBe(-24);
+
+    const layout = layoutOrgEditorUnits(
+      [
+        createUnit({ id: "root", x: 13, y: 37 }),
+        createUnit({ id: "child-a", parentId: "root", x: 181, y: 247 }),
+        createUnit({ id: "child-b", parentId: "root", x: 319, y: 403 }),
+      ],
+      "topDown",
+    );
+
+    for (const unit of layout) {
+      expect(Math.abs(unit.x % ORG_EDITOR_GRID_SIZE)).toBe(0);
+      expect(Math.abs(unit.y % ORG_EDITOR_GRID_SIZE)).toBe(0);
+    }
+  });
+});
 
 const createUnit = (unit: Partial<OrgEditorUnit> & Pick<OrgEditorUnit, "id">): OrgEditorUnit => ({
   bossEmployeeId: null,

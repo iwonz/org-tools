@@ -29,6 +29,12 @@ encoding during lookup. There are no locale URL segments, middleware, request co
 negotiation, or catalog fetches. Before the browser locale is resolved, the application renders a
 neutral text-free surface so the fallback language cannot flash.
 
+The single-route shell owns a dark collapsible sidebar and a context-only workflow header. The
+sidebar keeps the existing Radix product-tab state and order, co-locates language, theme, Import,
+and workspace Export actions, and switches between a 240 px labelled panel and a 64 px icon rail.
+Narrow layouts use the icon rail through responsive CSS. Collapse state is component-local and is
+not added to MobX workspace state, exported files, or browser storage.
+
 ## State flow
 
 ```text
@@ -69,6 +75,12 @@ wrapping. The interactive canvas uses deterministic packing to produce variable 
 and prefix offsets for virtualization, hit testing, connections, layout, and bounds. Localized PNG
 rendering uses a card-consistent neutral chip profile whose shared paint and row-allocation geometry
 keeps exported bounds compact and aligned.
+
+The Editor uses one 24-unit document-space coordinate grid. Explicit coordinate-producing commands
+snap affected Unit origins in the editor store; opening a workspace does not normalize untouched
+legacy coordinates. The canvas derives a power-of-two visible grid interval from the current scale,
+then paints it as a constant-cost CSS background aligned to the viewport origin. Visible grid lines
+therefore remain legible across zoom levels and always describe valid snap coordinates.
 
 Employee avatar editing is also a local draft pipeline. A bounded file or clipboard Blob is decoded,
 optionally downscaled to a temporary 4096-pixel preview, positioned through `react-easy-crop`, and

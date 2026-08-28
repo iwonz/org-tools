@@ -462,7 +462,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                     )}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-                    <Label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring">
+                    <Label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md bg-secondary/70 px-4 text-sm font-medium transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/45">
                       <HiOutlineArrowUpTray className="size-4" />
                       {t("Choose file")}
                       <Input

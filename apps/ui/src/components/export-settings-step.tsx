@@ -330,10 +330,10 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
                 onCheckedChange={() => toggleField(group, field.key)}
               />
               <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(7rem,0.8fr)_minmax(10rem,1.2fr)_auto] sm:items-center">
-                <span className="min-w-0 truncate font-mono text-xs">{field.label}</span>
+                <span className="min-w-0 truncate text-xs">{field.label}</span>
                 <Input
                   aria-label={t("Export field name for {name}", { name: field.label })}
-                  className="h-8 min-w-0 font-mono text-xs"
+                  className="h-8 min-w-0 text-xs"
                   disabled={!isSelected}
                   onChange={(event) =>
                     store.setExportFieldName(field.key, event.currentTarget.value)
@@ -377,7 +377,7 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
         </div>
       </div>
       <div className="max-h-80 min-h-40 overflow-auto rounded-md border bg-muted/30 p-3">
-        <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground">
+        <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground">
           {canExport
             ? previewText
             : hasFieldNameErrors
@@ -416,10 +416,8 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
           return (
             <label
               className={cn(
-                "grid cursor-pointer gap-2 rounded-md border bg-background p-3 text-sm transition-colors",
-                checked
-                  ? "border-primary bg-primary/10 text-primary hover:bg-primary/10"
-                  : "hover:bg-accent/40",
+                "grid cursor-pointer gap-2 rounded-md bg-muted/35 p-3 text-sm transition-colors hover:bg-accent/55 active:bg-accent-strong/65",
+                checked ? "bg-accent-strong/65 text-foreground" : "hover:bg-accent/55",
               )}
               key={option.value}
             >

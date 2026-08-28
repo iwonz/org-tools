@@ -28,7 +28,7 @@ function DialogOverlay({
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
-      className={cn("fixed inset-0 z-50 bg-background/80 backdrop-blur-sm", className)}
+      className={cn("fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]", className)}
       data-slot="dialog-overlay"
       {...props}
     />
@@ -49,7 +49,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-lg border bg-background p-0 shadow-lg",
+          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-2xl bg-card p-0 shadow-[0_18px_48px_-36px_rgb(0_0_0/0.55)]",
           className,
         )}
         data-slot="dialog-content"
@@ -58,7 +58,7 @@ function DialogContent({
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
-            className="absolute right-4 top-3 inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            className="absolute right-4 top-3 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground active:bg-accent-strong/70 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50"
             data-slot="dialog-close"
           >
             <HiMiniXMark className="size-5" />
@@ -73,7 +73,7 @@ function DialogContent({
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("grid shrink-0 gap-1.5 bg-background px-5 py-4 pr-16 text-left", className)}
+      className={cn("grid shrink-0 gap-1.5 bg-card px-5 py-4 pr-16 text-left", className)}
       data-slot="dialog-header"
       {...props}
     />
@@ -88,7 +88,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex shrink-0 flex-col-reverse gap-2 bg-background px-5 py-4 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-col-reverse gap-2 bg-muted/35 px-5 py-4 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="dialog-footer"

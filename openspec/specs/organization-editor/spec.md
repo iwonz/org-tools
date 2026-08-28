@@ -11,7 +11,7 @@ surface SHALL show the total catalog count below search and SHALL additionally s
 count only while search or filters are active. The populated Org Editor SHALL place View management,
 layout, hierarchy, and search controls in one compact top-left toolbar surface and viewport controls
 in one compact bottom-left toolbar surface. The Editor canvas SHALL retain a distinct neutral-gray
-background while application chrome and ordinary workflow content use the continuous root surface.
+background while the sidebar, context header, and ordinary workflows use the layered shell system.
 
 #### Scenario: Product navigation order
 - **WHEN** the product shell renders in either locale
@@ -34,15 +34,17 @@ background while application chrome and ordinary workflow content use the contin
 - **THEN** the localized label remains fully visible on one line inside the View selector without overlapping adjacent controls
 - **AND** longer user-authored View names remain contained with a single-line ellipsis
 
-#### Scenario: Unified application header
+#### Scenario: Sidebar application shell
 - **WHEN** the product shell renders in light or dark theme
-- **THEN** one 56 px header contains the six flat product tabs on the left and flat locale, theme, Import, and Export actions on the right without a visible wordmark
-- **AND** Import and Export use matched document-arrow icons while the active View and organization count subtitle remain omitted
+- **THEN** one dark 240 px sidebar contains the six product destinations followed by Import, Export,
+  locale, and theme controls without a visible wordmark or Org Tools title
+- **AND** one 64 px content header contains only the active workflow icon and localized title
 
-#### Scenario: Narrow application header
+#### Scenario: Narrow application shell
 - **WHEN** the viewport is narrower than 1024 px
-- **THEN** Import and Export hide their visible labels but retain localized accessible names and tooltips
-- **AND** the tab region scrolls horizontally without page-level overflow or changing tab order
+- **THEN** the sidebar uses a 64 px icon rail whose controls hide visible labels while retaining
+  localized accessible names and tooltips
+- **AND** the workspace remains contained without page-level overflow or changing navigation order
 
 #### Scenario: Populated Employee catalog count
 - **WHEN** the Employees surface contains Employees and no search or filter is active
@@ -54,9 +56,10 @@ background while application chrome and ordinary workflow content use the contin
 
 #### Scenario: Editor control surfaces
 - **WHEN** the active View contains Units
-- **THEN** View selection and actions, layout, arrange, hierarchy, and Search appear in one compact top-left surface with an adaptive background, subtle boundary, radius, and padding
+- **THEN** View selection and actions, layout, arrange, hierarchy, and Search appear in one compact
+  top-left surface with an adaptive tonal background, radius, and padding
 - **AND** zoom out, zoom in, scale reset, and primary-Team focus appear in one compact bottom-left surface with the same treatment
-- **AND** individual resting controls remain borderless and the groups add no shadow
+- **AND** individual resting controls and both toolbar groups add no decorative border or shadow
 
 #### Scenario: Editor search placement
 - **WHEN** Search is the final control in the top-left group and the user opens it
@@ -66,6 +69,36 @@ background while application chrome and ordinary workflow content use the contin
 - **WHEN** the Org Editor is visible in light or dark theme
 - **THEN** its canvas uses a neutral-gray canvas background distinct from the root application surface
 - **AND** Team nodes, selection, connectors, search, and viewport controls remain legible
+
+### Requirement: Editor coordinates follow an adaptive snap grid
+The Org Editor SHALL use one 24-unit document-space base grid for visible grid lines and every
+coordinate produced by an explicit Unit movement or arrangement. The visible grid SHALL use
+power-of-two multiples of that base step as needed to keep line density legible while zooming, and
+its origin SHALL follow the transformed document origin. Drag, add, import, paste, overlap
+avoidance, hierarchy relayout, and full arrangement SHALL finish with every affected Unit origin on
+the base step. Opening an existing workspace SHALL NOT mutate legacy coordinates until an explicit
+editor operation affects them. Grid rendering SHALL remain a constant-cost background operation and
+SHALL NOT change PNG dimensions, connection behavior, selection behavior, or organization data.
+
+#### Scenario: Adaptive zoom density
+- **WHEN** the user zooms the Editor from its minimum to maximum supported scale
+- **THEN** the visible line spacing adapts in power-of-two document increments instead of becoming
+  illegibly dense or sparse
+- **AND** every visible line continues to represent a valid 24-unit snap coordinate
+
+#### Scenario: Drag snaps to the visible coordinate system
+- **WHEN** the user finishes dragging one or more Units
+- **THEN** every moved Unit origin is an exact multiple of 24 document units on both axes
+
+#### Scenario: Created and arranged geometry snaps
+- **WHEN** the user adds, imports, pastes, reconnects, expands, collapses, or arranges Units
+- **THEN** every Unit whose coordinates are produced or changed by that operation finishes on the
+  shared 24-unit base grid without overlapping a stationary Unit
+
+#### Scenario: Existing document opens losslessly
+- **WHEN** a valid workspace contains a Unit whose stored coordinate is not on the base grid
+- **THEN** opening and viewing that workspace preserves the coordinate until an explicit editor
+  operation affects that Unit
 
 ### Requirement: Main and custom Views remain independent
 The editor SHALL preserve the canonical Main View, custom Views, Live Units, undo/redo, drag-and-drop, layout, and viewport isolation.
@@ -79,8 +112,9 @@ The application SHALL use nullable `MM-DD` birthdays for Calendar and birthday a
 navigate a selected month and year across year boundaries, SHALL project February 29 birthdays to
 February 28 in non-leap years, SHALL include exact-date global Main Employee tag events, SHALL fit a
 31-day grid and bounded tag cloud without page scroll at the maintained 1280 by 720 desktop
-viewport, and SHALL render Analytics as six content-sized groups directly on one continuous root
-surface with compact gaps and no outer island, nested group fill, header rule, or repeated row rule.
+viewport, and SHALL render Analytics as six content-sized groups in one full-bleed workflow with
+compact gaps and one uniform soft tonal surface per group. Groups SHALL add no outer
+border, shadow, nested header fill, or repeated row rule.
 Each Analytics group SHALL show at most eight estimated 42 px rows before using its existing
 virtualized internal scroll container.
 
@@ -92,10 +126,12 @@ virtualized internal scroll container.
 - **WHEN** Calendar has birthday or dated-tag data on a maintained desktop viewport
 - **THEN** its header shows month and year followed by Previous and Next, and the remaining cloud and grid fit without horizontal or vertical page overflow
 
-#### Scenario: Flat Analytics surface
+#### Scenario: Tonal Analytics surface
 - **WHEN** Analytics is ready
-- **THEN** all six sortable virtualized groups and drill-down actions remain available directly on one continuous root surface in two desktop columns and one narrow-screen column
-- **AND** compact gaps, headings, columns, scrolling, and hover or focus feedback separate groups and rows without an outer island, nested background tile, or horizontal divider line
+- **THEN** all six sortable virtualized groups and drill-down actions remain available in a
+  full-bleed workflow with two desktop columns and one narrow-screen column
+- **AND** each group uses one uniform borderless tone from heading through rows, while compact gaps,
+  typography, scrolling, and hover or focus feedback preserve hierarchy
 
 #### Scenario: Short Analytics group
 - **WHEN** an Analytics group contains fewer than eight entries

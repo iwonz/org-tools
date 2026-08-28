@@ -108,7 +108,7 @@ function UnitEmployeeDragPreview({
   return createPortal(
     <div
       aria-hidden
-      className="pointer-events-none fixed left-0 top-0 z-[80] w-[min(22rem,calc(100vw-1rem))] rounded-lg border bg-popover p-1 text-popover-foreground opacity-95 shadow-2xl will-change-transform"
+      className="pointer-events-none fixed left-0 top-0 z-[80] w-[min(22rem,calc(100vw-1rem))] rounded-lg border bg-popover p-1 text-popover-foreground opacity-95 shadow-[0_10px_28px_-22px_rgb(0_0_0/0.55)] will-change-transform"
       data-demo-id="unit-employee-drag-preview"
       data-employee-id={String(employee.id)}
       ref={previewRef}
@@ -351,18 +351,12 @@ export const UnitsTab = observer(() => {
   return (
     <section className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
       <ProductSurface
-        className="mx-2 mb-2 grid min-h-0 flex-1"
+        className="grid min-h-0 flex-1"
         data-demo-id="units-surface"
         style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
       >
-        <div
-          className="flex min-h-0 min-w-0 flex-col bg-transparent"
-          data-demo-id="units-tree-panel"
-        >
-          <div
-            className="flex shrink-0 items-start gap-2 px-2 pb-2 pt-0"
-            data-demo-id="units-tree-header"
-          >
+        <div className="flex min-h-0 min-w-0 flex-col bg-muted/25" data-demo-id="units-tree-panel">
+          <div className="flex shrink-0 items-start gap-2 p-4" data-demo-id="units-tree-header">
             {showUnitSearch && (
               <UnitSearchInput
                 ariaLabel={t("Search Units by name")}
@@ -374,7 +368,7 @@ export const UnitsTab = observer(() => {
               />
             )}
             <Button
-              className={showUnitSearch ? "shrink-0" : "w-full"}
+              className="shrink-0"
               data-demo-id="unit-create-root-button"
               onClick={() => setUnitDialog({ parentId: null, unitId: null })}
               size="sm"
@@ -386,7 +380,7 @@ export const UnitsTab = observer(() => {
           </div>
           <ScrollArea className="min-h-0 flex-1" scrollbars="none">
             {hasVisibleUnits ? (
-              <ul className="grid min-w-max gap-2 p-2">
+              <ul className="grid min-w-max gap-1.5 p-3">
                 <UnitTree
                   cardClassName="w-max min-w-full"
                   dataDemoId="unit-tree-item"
@@ -500,7 +494,7 @@ export const UnitsTab = observer(() => {
           className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent"
           data-demo-id="units-employee-panel"
         >
-          <div className="grid shrink-0 gap-2 px-2 pb-2 pt-0" data-demo-id="units-employee-header">
+          <div className="grid shrink-0 gap-2 bg-muted/15 p-4" data-demo-id="units-employee-header">
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
               <nav

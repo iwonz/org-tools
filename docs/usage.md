@@ -1,25 +1,42 @@
 # Usage
 
-org-tools opens directly in a blank Main View with Editor selected. One 56 px header places the six
-product tabs on the left and the language, theme, **Import**, and **Export** actions on the right,
-without a visible wordmark. Below 1024 px the transfer actions keep their localized accessible names
-and document-arrow icons while hiding their visible labels, and the tab region scrolls horizontally
-without overflowing the page. The six product tabs form one flat row with small gaps and no shared
-boundary. Stronger foreground text and weight identify the active tab without an underline, fill,
-individual border, or button-like selected pill. Language, theme, **Import**, and **Export** form a
-second flat, spaced group without an enclosing surface. The application does not autosave. Nested
-tab groups use the same flat treatment throughout the application. Empty product tabs show one
-focused next action and omit controls that cannot yet do useful work.
+org-tools opens directly in a blank Main View with Editor selected. A dark 240 px sidebar contains
+the six product destinations followed by **Import**, **Export**, language, and theme controls. Its
+desktop toggle collapses the panel to a 64 px icon rail; narrow layouts use the same compact rail
+automatically. Compact items hide their visible labels while keeping localized accessible names,
+native titles, and pointer tooltips; every icon is centered with equal inline space. There is no
+decorative Org Tools glyph or visible product title. The collapse control uses the same 40 px row,
+14 px inline padding, 20 px icon, and fixed horizontal axis as every navigation and action item in
+expanded and compact modes. During a desktop transition, the right edge travels continuously between
+240 and 64 px while labels clip and fade and every icon remains stationary. The toggle icon keeps
+stable contrast. Narrow automatic compact mode omits the unused header row. Sidebar mode is
+transient UI state and is never written to the workspace or browser storage.
 
-The transparent header and every ordinary top-level workflow share one continuous root surface:
-white in the light theme and a dark neutral in the dark theme. Headers, controls, panes, Analytics
-groups, and repeated rows sit directly on that surface without rounded workflow containers,
-decorative section fills, or horizontal rules. Typography, whitespace, alignment, and hover or
-focus feedback provide hierarchy. Dialogs, fields, popovers, selectable or destructive choices,
-calendar cells, hierarchy guides, focus and error states, and Editor data nodes retain boundaries
-where those boundaries communicate meaning. Adjacent panes in Teams and Download rely on compact
-layout rather than a vertical rule. The Editor canvas is the deliberate exception to the root
-surface and keeps a neutral-gray workspace background.
+The content header contains only the current workflow icon and title. Active navigation uses a calm
+tonal surface and stronger foreground; hover changes tone without introducing a border, outline,
+inset hairline, elevation shadow, or layout shift. Press changes tone without scaling, rotating,
+translating, or resizing content. Keyboard focus remains explicit, and reduced-motion removes the
+sidebar width and label animation. Ordinary controls, selected choices, cards, shell chrome, and
+Editor toolbars do not use decorative shadows; true overlays use only restrained separation depth.
+Nested tabs follow the same borderless tonal state language. The application does not autosave.
+Empty product tabs show one focused next action and omit controls that cannot yet do useful work.
+
+Ordinary product workflows remain full-bleed below the header: there is no decorative outer panel,
+rounded frame, or empty shell-colored gutter around working content. A restrained neutral palette,
+typography, alignment, and soft tonal backgrounds group headers, split panes, and Analytics
+sections without accumulating outlines. Repeated rows stay contiguous and rely on density plus
+hover or focus feedback. Dialogs, fields, popovers, selectable or destructive choices, calendar
+cells, hierarchy guides, focus and error states, and Editor data nodes retain boundaries only where
+those boundaries communicate meaning. The Editor canvas remains the deliberate exception and keeps
+a distinct neutral workspace background.
+
+Inter is the single application typeface for headings, body text, placeholders, native controls,
+menus, dialogs, and template or JSON editing surfaces. Image export can still use a user-selected
+font inside the exported artifact and its explicit preview; that choice never changes the dialog or
+application chrome. A restrained steel-blue signal appears only in focus, selection, and other small
+state details, while larger interaction surfaces use nearly neutral blue-gray. Primary action fills
+remain graphite. Motion is limited to small pressed responses and is removed when the browser
+requests reduced motion.
 
 ## Interface language
 
@@ -29,33 +46,38 @@ immediately to the left of the theme menu to switch in place. Its closed trigger
 active flag; the menu shows each flag with its language name and selected indicator. The choice is
 remembered locally under `org-tools-locale`. Opening or importing a workspace does not change the
 language, and user-entered organization content is never translated.
+Theme and language menu rows keep their content at a stable position while hover, focus, and
+selection change only tone and foreground contrast.
 
 The Russian interface uses localized Team terminology for Unit and Live Unit. English machine keys,
 persisted types, and export fields remain unchanged.
 
 ## Product tabs
 
-- **Units** manages the shared Unit hierarchy and effective membership. Its hierarchy and selected
-  Employee pane sit directly on the root surface with a compact inner seam.
+- **Units** manages the shared Unit hierarchy and effective membership. Its hierarchy uses a quiet
+  tonal pane beside the full-bleed selected-Employee area without a decorative divider.
 - **Employees** manages the global Employee catalog, tags, and contact fields. Its populated header
   shows the total catalog size directly below search and adds the visible match count while search or
-  filters are active. Search, the count, actions, and the continuous zero-gap virtualized list share
-  the root surface.
+  filters are active. Search and counts sit in a quiet tonal header above the continuous zero-gap
+  virtualized list.
 - **Editor** arranges the Main View or an independent custom View on a canvas. View selection,
   history, layout, hierarchy, and search actions form one compact surfaced top-left toolbar. Search
   is the last action and reveals its field to the right of its trigger. Zoom, scale reset, and
   primary-Team focus form a matching surfaced toolbar at the bottom left. The canvas retains its
-  neutral-gray background.
-- **Analytics** summarizes the current organization without sending data elsewhere. Its header and
-  all six groups sit directly on the root surface with compact 12 px gaps.
+  neutral-gray background. Its visible grid adapts at different zoom levels while drag, add,
+  import, paste, hierarchy changes, and Arrange finish on one 24-unit document grid.
+- **Analytics** summarizes the current organization without sending data elsewhere. Its six groups
+  use one uniform borderless surface tone from heading through table rows, plus compact gaps and
+  tonal row feedback, to keep the tables clean and scannable.
 - **Calendar** combines recurring birthdays with one-time dated Employee tag events.
-- **Download** selects local sources and produces CSV, JSON, or separator-based templates on the
-  shared root surface.
+- **Download** selects local sources and produces CSV, JSON, or separator-based templates. Its
+  source pane uses a quiet tone while the selected-Employee area stays visually open.
 
-Populated product tabs begin directly below the unified header. Their first root-level controls add
-no top inset, while horizontal, bottom, and subsequent section spacing keep each workflow readable.
-Product and nested tabs identify the active item by foreground color without changing font weight.
-Pointer hover uses the same color-only feedback and does not add a background fill.
+Populated product workflows begin directly below the context header without an outer workflow
+inset. Sidebar destinations and nested tabs identify the active item with stronger foreground and a
+restrained tonal surface without changing font weight or rendering a border. Pointer hover uses a
+translucent tonal wash without added elevation; focus and press remain distinct without changing
+control geometry.
 
 The Main View is canonical. A custom View can begin as a copy of Main or empty, then keep its own
 document, local Employees, global Employee overrides, canvas layout, viewport, and command history.
@@ -147,10 +169,10 @@ Calendar keeps a selected month and year plus Previous and Next controls in its 
 repeat annually, with February 29 shown on February 28 in non-leap years; dated tags appear only on
 their exact date. Day dialogs separate birthdays and dated tags. The bounded tag cloud opens a
 virtualized dialog with current and future events ascending and past events descending. Analytics
-keeps six sortable, virtualized sections and drill-down dialogs on one page. The six sections sit
-directly on the root surface with 12 px gaps and use headings, columns, whitespace, and hover or
-focus feedback without a nested background, border, shadow, title rule, or row rule. Short sections
-follow their content height, while long sections expose eight rows before scrolling internally.
+keeps six sortable, virtualized sections and drill-down dialogs on one page. The six sections use
+soft borderless tonal backgrounds, headings, columns, whitespace, and hover or focus feedback
+without outlined row cards. Short sections follow their content height, while long sections expose
+eight rows before scrolling internally.
 
 The generic Download surface keeps `tags` as labels. Selecting `tagDates` adds `{tag, date}` objects in
 JSON and `tag=YYYY-MM-DD` values in CSV or templates.

@@ -475,7 +475,7 @@ export const ExportTab = observer(() => {
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       data-demo-id="export-tab"
     >
-      <ProductSurface className="relative mx-2 mb-2 min-h-0 flex-1" data-demo-id="export-surface">
+      <ProductSurface className="relative min-h-0 flex-1" data-demo-id="export-surface">
         <div
           className="grid h-full min-h-0 overflow-hidden pb-[86px]"
           data-demo-id="export-selection-grid"
@@ -487,11 +487,11 @@ export const ExportTab = observer(() => {
           }}
         >
           <aside
-            className="flex min-h-0 min-w-0 flex-col bg-transparent"
+            className="flex min-h-0 min-w-0 flex-col bg-muted/25"
             data-demo-id="export-source-panel"
           >
             {store.orgViewList.length > 1 && (
-              <div className="px-2.5 pb-2.5 pt-0">
+              <div className="p-3 pb-0">
                 <Select
                   onValueChange={(viewId) => {
                     store.selectExportOrgView(viewId);
@@ -520,7 +520,7 @@ export const ExportTab = observer(() => {
               value={sourceSection}
             >
               <TabsList
-                className="mx-2.5 mt-0 h-auto w-fit shrink-0"
+                className="mx-2.5 mt-2.5 h-auto w-fit shrink-0"
                 data-demo-id="export-source-tabs"
               >
                 <TabsTrigger
@@ -698,7 +698,7 @@ export const ExportTab = observer(() => {
             emptyState={<ExportSelectedEmployeesEmptyState />}
             filters={selectedFilters}
             hasSearch={hasSelectedEmployeeSearch}
-            headerClassName="px-3 pb-3 pt-0"
+            headerClassName="bg-muted/15 p-4"
             onClear={() => {
               store.clearExportSelection();
               setStatus(null);
@@ -727,7 +727,7 @@ export const ExportTab = observer(() => {
             visibleRemoveSuffix={(count) => countText("employees", { count })}
           />
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[70px] items-center justify-center bg-gradient-to-t from-background via-background/90 to-background/0 px-6 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[70px] items-center justify-center bg-gradient-to-t from-background via-background/94 to-background/0 px-6 backdrop-blur-sm">
           <Button
             className="pointer-events-auto h-12 min-w-72 text-base"
             data-demo-id="export-continue-button"

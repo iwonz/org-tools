@@ -104,7 +104,8 @@ test("switches the interface in place and persists the choice", async ({ page },
   const themeBox = await themeToggle.boundingBox();
   expect(languageBox).not.toBeNull();
   expect(themeBox).not.toBeNull();
-  expect(languageBox?.x).toBeLessThan(themeBox?.x ?? 0);
+  expect(languageBox?.x).toBe(themeBox?.x);
+  expect(languageBox?.y ?? 0).toBeLessThan(themeBox?.y ?? 0);
 
   await languageToggle.click();
   await expect(
@@ -121,19 +122,22 @@ test("switches the interface in place and persists the choice", async ({ page },
     `${ruMessages.Ui.Language}: ${ruMessages.Ui.Russian}`,
   );
   await expect(languageToggle).toContainText("🇷🇺");
-  await expect(languageToggle).toHaveText("🇷🇺");
+  await expect(languageToggle).toHaveText(`🇷🇺${ruMessages.Ui.Language}`);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     ruMessages.Metadata.description,
   );
   const header = page.locator("header");
+  const sidebar = page.locator('[data-demo-id="app-sidebar"]');
   await expect(header.getByRole("img", { name: "Org Tools", exact: true })).toHaveCount(0);
-  await expect(header.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
+  await expect(header.getByRole("tab")).toHaveCount(0);
+  await expect(header).toContainText(ruMessages.Ui.Editor);
+  await expect(sidebar.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
   await expect(
-    header.getByRole("button", { name: ruMessages.Ui.Import, exact: true }),
+    sidebar.getByRole("button", { name: ruMessages.Ui.Import, exact: true }),
   ).toBeVisible();
   await expect(
-    header.getByRole("button", { name: ruMessages.Ui["Workspace Export"], exact: true }),
+    sidebar.getByRole("button", { name: ruMessages.Ui["Workspace Export"], exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("tab", { name: ruMessages.Ui["Data Download"], exact: true }),

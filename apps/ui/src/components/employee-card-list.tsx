@@ -243,7 +243,7 @@ function EmployeeAvatarWithBossMarker({
       <EmployeeAvatar
         className={cn(
           avatarClassName,
-          bossPosition && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+          bossPosition && "ring-2 ring-signal ring-offset-2 ring-offset-background",
         )}
         employee={employee}
       />
@@ -251,14 +251,14 @@ function EmployeeAvatarWithBossMarker({
         <>
           <button
             aria-label={t("Boss of the selected Unit")}
-            className="absolute left-1/2 top-full inline-flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-help items-center justify-center rounded-full bg-primary text-primary-foreground outline-none ring-2 ring-background transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-primary"
+            className="absolute left-1/2 top-full inline-flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-help items-center justify-center rounded-full bg-signal text-signal-foreground outline-none ring-2 ring-background transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring"
             onClick={(event) => event.stopPropagation()}
             type="button"
           >
             <HiOutlineInformationCircle className="size-3" />
           </button>
           <span
-            className="pointer-events-none absolute left-0 top-full z-50 mt-3 hidden w-72 rounded-md bg-popover px-3 py-2 text-left text-xs text-popover-foreground shadow-md group-hover/boss:block group-focus-within/boss:block"
+            className="pointer-events-none absolute left-0 top-full z-50 mt-3 hidden w-72 rounded-md bg-popover px-3 py-2 text-left text-xs text-popover-foreground shadow-[0_8px_20px_-16px_rgb(0_0_0/0.55)] group-hover/boss:block group-focus-within/boss:block"
             role="tooltip"
           >
             <span className="block font-medium">{t("Boss of the selected Unit")}</span>
@@ -306,10 +306,10 @@ export const EmployeeCard = observer(function EmployeeCard({
     return (
       <article
         className={cn(
-          "flex h-full min-w-0 items-center gap-3 rounded-none bg-transparent px-3 py-2 transition-colors hover:bg-accent/35",
+          "flex h-full min-w-0 items-center gap-3 rounded-none bg-transparent px-3 py-2 transition-colors hover:bg-accent/45 active:bg-accent-strong/55",
           isInteractive && "cursor-pointer",
           draggable && "cursor-grab active:cursor-grabbing",
-          selected && "bg-accent text-accent-foreground",
+          selected && "bg-secondary text-foreground",
           className,
         )}
         data-demo-id={dataDemoId}
@@ -344,10 +344,10 @@ export const EmployeeCard = observer(function EmployeeCard({
   return (
     <article
       className={cn(
-        "relative flex min-w-0 items-start gap-3 rounded-none bg-transparent p-4 transition-colors hover:bg-accent/35",
+        "relative flex min-w-0 items-start gap-3 rounded-none bg-transparent p-3.5 transition-colors hover:bg-accent/45 active:bg-accent-strong/55",
         isInteractive && "cursor-pointer",
         draggable && "cursor-grab active:cursor-grabbing",
-        selected && "bg-accent text-accent-foreground",
+        selected && "bg-secondary text-foreground",
         className,
       )}
       data-demo-id={dataDemoId}

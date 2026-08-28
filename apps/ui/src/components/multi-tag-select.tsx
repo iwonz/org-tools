@@ -130,7 +130,7 @@ export function MultiTagSelect<Id extends number | string>({
         </button>
       </div>
       {open && (
-        <div className="absolute left-0 top-[calc(100%+0.375rem)] z-50 grid w-full min-w-72 gap-2 rounded-md border bg-popover p-2 text-popover-foreground shadow-md">
+        <div className="absolute left-0 top-[calc(100%+0.375rem)] z-50 grid w-full min-w-72 gap-2 rounded-md border bg-popover p-2 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]">
           <div className="relative">
             <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input

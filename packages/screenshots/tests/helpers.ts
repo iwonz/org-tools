@@ -82,6 +82,7 @@ export async function openImportDialog(page: Page, file: ImportFilePayload | str
 }
 
 export async function stabilizeForScreenshot(page: Page): Promise<void> {
+  await page.mouse.move(0, 0);
   await page.addStyleTag({
     content: `
       *, *::before, *::after {

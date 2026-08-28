@@ -123,6 +123,7 @@ import {
   createOrgEditorUnitsFromOrgUnit,
   doRectsIntersect,
   findOrgEditorEmployeeRowIndex,
+  getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
@@ -134,6 +135,7 @@ import {
   getOrgEditorUnitWidth,
   getOrgEditorVisibleEmployeeIds,
   isPointInsideRect,
+  ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
@@ -234,7 +236,6 @@ type OrgEditorSearchResult =
 
 const MIN_CANVAS_SCALE = 0.1;
 const MAX_CANVAS_SCALE = 2.2;
-const CANVAS_GRID_SIZE = 48;
 const DRAG_START_THRESHOLD = 4;
 const CANVAS_VIEWPORT_OVERSCAN_PX = 420;
 const EMPLOYEE_ROW_OVERSCAN = 8;
@@ -406,7 +407,7 @@ const getOrgEditorConnectionPath = ({
 function OrgEditorFloatingMenu({ children, point }: { children: ReactNode; point: ScreenPoint }) {
   return (
     <div
-      className="fixed z-50 grid min-w-60 gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      className="fixed z-50 grid min-w-60 gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
       data-org-editor-context-menu
       onContextMenu={(event) => event.preventDefault()}
       onPointerDown={(event) => event.stopPropagation()}
@@ -619,7 +620,7 @@ function OrgEditorEmployeeTagSubmenu({
       {open && (
         <div
           className={cn(
-            "absolute z-[70] rounded-md border bg-popover text-popover-foreground shadow-md",
+            "absolute z-[70] rounded-md border bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]",
             placement.side === "right" ? "left-[calc(100%+0.25rem)]" : "right-[calc(100%+0.25rem)]",
           )}
           data-demo-id="org-editor-employee-tags-submenu"
@@ -679,8 +680,7 @@ function OrgEditorToolbarButton({
   );
 }
 
-const ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME =
-  "rounded-lg border border-border/70 bg-background/95 p-1 shadow-none backdrop-blur-sm";
+const ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME = "rounded-lg bg-background/95 p-1.5 backdrop-blur-md";
 
 function OrgEditorLayoutSwitch({
   layoutMode,
@@ -831,7 +831,7 @@ function OrgEditorSearchControl({
       </div>
       {open && (
         <div
-          className="absolute right-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+          className="absolute right-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
           data-demo-id="org-editor-search-results"
         >
           {!hasQuery ? (
@@ -920,7 +920,7 @@ function OrgEditorEmployeeDragPreview({
   const countText = useCountText();
   return (
     <div
-      className="pointer-events-none fixed z-50 flex max-w-72 -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-md border bg-background/90 px-2.5 py-2 text-sm text-foreground opacity-85 shadow-lg backdrop-blur"
+      className="pointer-events-none fixed z-50 flex max-w-72 -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-md border bg-background/90 px-2.5 py-2 text-sm text-foreground opacity-85 shadow-[0_8px_20px_-16px_rgb(0_0_0/0.55)] backdrop-blur"
       data-org-editor-employee-drag-preview
       style={{
         left: point.x,
@@ -1045,12 +1045,10 @@ function OrgEditorNode({
     <fieldset
       aria-label={t("Canvas Unit {name}", { name: getOrgEditorUnitDisplayName(unit) })}
       className={cn(
-        "group absolute flex min-w-0 select-none flex-col rounded-md border bg-card p-0 text-card-foreground transition-colors",
-        selected
-          ? "border-primary ring-2 ring-primary/25"
-          : "border-border hover:border-primary/50",
-        isConnectionDropTarget && "border-primary bg-primary/5 ring-2 ring-primary/25",
-        isEmployeeDropTarget && "border-primary bg-primary/5 ring-2 ring-primary/25",
+        "group absolute flex min-w-0 select-none flex-col rounded-lg border bg-card p-0 text-card-foreground transition-colors",
+        selected ? "border-signal bg-accent/30" : "border-border hover:bg-accent/20",
+        isConnectionDropTarget && "border-signal bg-accent/45 ring-2 ring-signal/25",
+        isEmployeeDropTarget && "border-signal bg-accent/45 ring-2 ring-signal/25",
       )}
       data-org-editor-unit-id={unit.id}
       data-org-editor-rendered-employee-count={renderedEmployeeRows.length}
@@ -1068,7 +1066,7 @@ function OrgEditorNode({
       <Button
         aria-label={t("Drag Unit connection")}
         className={cn(
-          "absolute z-20 size-5 cursor-crosshair rounded-full bg-background/95 p-0 opacity-0 shadow-sm backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
+          "absolute z-20 size-5 cursor-crosshair rounded-full bg-background/95 p-0 opacity-0 backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
           layoutMode === "leftRight"
             ? "-left-2.5 top-1/2 -translate-y-1/2"
             : "-top-2.5 left-1/2 -translate-x-1/2",
@@ -1088,7 +1086,7 @@ function OrgEditorNode({
       <Button
         aria-label={t("Add child Unit")}
         className={cn(
-          "absolute z-10 size-8 rounded-full bg-background/95 p-0 opacity-0 shadow-sm backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
+          "absolute z-10 size-8 rounded-full bg-background/95 p-0 opacity-0 backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
           layoutMode === "leftRight"
             ? "-right-4 top-1/2 -translate-y-1/2"
             : "-bottom-4 left-1/2 -translate-x-1/2",
@@ -1249,7 +1247,7 @@ function OrgEditorNode({
       )}
       {isEmployeeDropTarget && (
         <div
-          className="pointer-events-none absolute inset-2 z-30 grid place-items-center rounded-md border-2 border-dashed border-primary bg-background/80 px-3 py-2 text-center text-xs font-medium text-primary backdrop-blur-sm"
+          className="pointer-events-none absolute inset-2 z-30 grid place-items-center rounded-md border-2 border-dashed border-signal bg-background/80 px-3 py-2 text-center text-xs font-medium text-signal backdrop-blur-sm"
           data-org-editor-employee-drop-area
         >
           {t("Move here")}
@@ -2387,7 +2385,7 @@ export const OrgStructureEditorTab = observer(() => {
 
       if (Math.abs(delta.x) < 0.01 && Math.abs(delta.y) < 0.01) return;
 
-      editor.moveUnitsFromPositions(currentDragState.startUnitPositions, delta, { snap: true });
+      editor.moveUnitsFromPositions(currentDragState.startUnitPositions, delta);
     };
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -3076,6 +3074,8 @@ export const OrgStructureEditorTab = observer(() => {
         employeeDragSourceUnitIds ?? undefined,
       )
     : null;
+  const canvasGridSize = getAdaptiveOrgEditorGridSize(editor.viewport.scale);
+  const canvasGridScreenSize = canvasGridSize * editor.viewport.scale;
 
   return (
     <>
@@ -3090,6 +3090,9 @@ export const OrgStructureEditorTab = observer(() => {
             editor.units.length > 0 && "cursor-grab active:cursor-grabbing",
           )}
           data-demo-id="org-editor-canvas"
+          data-grid-base-size={ORG_EDITOR_GRID_SIZE}
+          data-grid-screen-size={canvasGridScreenSize}
+          data-grid-size={canvasGridSize}
           onAuxClick={(event) => event.preventDefault()}
           onContextMenu={handleCanvasContextMenu}
           onPointerDown={handleCanvasPointerDown}
@@ -3100,14 +3103,12 @@ export const OrgStructureEditorTab = observer(() => {
             backgroundImage:
               editor.units.length > 0
                 ? `
-              linear-gradient(to right, hsl(var(--border) / 0.45) 1px, transparent 1px),
-              linear-gradient(to bottom, hsl(var(--border) / 0.45) 1px, transparent 1px)
+              linear-gradient(to right, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px),
+              linear-gradient(to bottom, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px)
             `
                 : "none",
             backgroundPosition: `${editor.viewport.x}px ${editor.viewport.y}px`,
-            backgroundSize: `${CANVAS_GRID_SIZE * editor.viewport.scale}px ${
-              CANVAS_GRID_SIZE * editor.viewport.scale
-            }px`,
+            backgroundSize: `${canvasGridScreenSize}px ${canvasGridScreenSize}px`,
           }}
         >
           <div
@@ -3201,7 +3202,7 @@ export const OrgStructureEditorTab = observer(() => {
           )}
           {selectionRect && (
             <div
-              className="pointer-events-none fixed z-20 rounded-md border border-primary bg-primary/10"
+              className="pointer-events-none fixed z-20 rounded-md border border-signal bg-accent/45"
               data-org-editor-selection-rect
               style={{
                 height: selectionRect.height,

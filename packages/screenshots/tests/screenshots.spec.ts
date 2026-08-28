@@ -237,7 +237,7 @@ test("captures local Employee avatar cropping", async ({ page }) => {
   });
 });
 
-test("captures the dark unified header", async ({ page }) => {
+test("captures the dark expanded sidebar", async ({ page }) => {
   await openBlankWorkspace(page);
   await replaceWithSyntheticWorkspace(page);
   await page.locator('[data-demo-id="theme-toggle"]').click();

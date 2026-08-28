@@ -211,7 +211,9 @@ function AnalyticsList({
 
   return (
     <section
-      className={["flex min-w-0 flex-col bg-transparent p-3", className].filter(Boolean).join(" ")}
+      className={["flex min-w-0 flex-col rounded-lg bg-analytics-surface p-3", className]
+        .filter(Boolean)
+        .join(" ")}
       data-analytics-entry-count={sortedEntries.length}
       data-analytics-visible-rows={visibleRowCount}
       data-demo-id={demoId}
@@ -232,7 +234,7 @@ function AnalyticsList({
             ref={scrollRef}
           >
             <table className="w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-background/95 text-left text-xs text-muted-foreground backdrop-blur">
+              <thead className="sticky top-0 z-10 bg-analytics-surface text-left text-xs text-muted-foreground">
                 <tr>
                   <AnalyticsSortableHeader
                     className="px-3 py-1"
@@ -380,12 +382,9 @@ export const AnalyticsTab = observer(() => {
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
         data-demo-id="analytics-tab"
       >
-        <ProductSurface
-          className="mx-2 mb-2 flex min-h-0 flex-1 flex-col"
-          data-demo-id="analytics-surface"
-        >
+        <ProductSurface className="flex min-h-0 flex-1 flex-col" data-demo-id="analytics-surface">
           <div
-            className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-transparent px-3 pb-3 pt-0"
+            className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-background p-4"
             data-demo-id="analytics-header"
           >
             <div className="min-w-0">
@@ -395,16 +394,13 @@ export const AnalyticsTab = observer(() => {
               </div>
             </div>
           </div>
-          <div
-            className="min-h-0 flex-1 overflow-auto p-3 pt-0"
-            data-demo-id="analytics-scroll-area"
-          >
+          <div className="min-h-0 flex-1 overflow-auto p-4" data-demo-id="analytics-scroll-area">
             {!analytics ? (
               <div className="grid h-full min-h-[320px] place-items-center">
                 <div className="grid justify-items-center gap-3 text-sm text-muted-foreground">
                   <div
                     aria-hidden="true"
-                    className="size-8 rounded-full border-2 border-primary/20 border-t-primary motion-safe:animate-spin"
+                    className="size-8 rounded-full border-2 border-signal/20 border-t-signal motion-safe:animate-spin"
                   />
                   <div>
                     {analyticsBuildStatus === "scheduled"
@@ -415,7 +411,7 @@ export const AnalyticsTab = observer(() => {
               </div>
             ) : (
               <div
-                className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2"
+                className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2"
                 data-demo-id="analytics-grid"
               >
                 <AnalyticsList

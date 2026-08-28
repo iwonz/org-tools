@@ -2,11 +2,13 @@
 
 import { observer } from "mobx-react-lite";
 import { useTheme } from "next-themes";
+import type { ComponentType, ReactNode } from "react";
 import { useRef, useState } from "react";
 import {
   HiOutlineBuildingOffice2,
   HiOutlineCalendarDays,
   HiOutlineChartBar,
+  HiOutlineChevronLeft,
   HiOutlineDocumentArrowDown,
   HiOutlineDocumentArrowUp,
   HiOutlineFolder,
@@ -27,11 +29,41 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitsTab } from "@/components/units-tab";
 import { describeError, type UiMessageDescriptor, uiMessage } from "@/i18n/messages";
-import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
+import { type UiTextKey, useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
+import { cn } from "@/lib/utils";
 import { OrgStoreProvider, useOrgStore } from "@/stores/org-store-context";
 
-const HEADER_ACTION_CLASS_NAME =
-  "h-full w-9 rounded-md border-0 bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:border-transparent focus-visible:ring-inset data-[state=open]:bg-accent data-[state=open]:text-accent-foreground";
+type ProductTabValue = "analytics" | "calendar" | "employees" | "export" | "orgEditor" | "units";
+
+const PRODUCT_NAVIGATION_ITEMS: Array<{
+  icon: ComponentType<{ className?: string }>;
+  label: UiTextKey;
+  value: ProductTabValue;
+}> = [
+  { icon: HiOutlineFolder, label: "Units", value: "units" },
+  { icon: HiOutlineUsers, label: "Employees", value: "employees" },
+  { icon: HiOutlineBuildingOffice2, label: "Editor", value: "orgEditor" },
+  { icon: HiOutlineChartBar, label: "Analytics", value: "analytics" },
+  { icon: HiOutlineCalendarDays, label: "Calendar", value: "calendar" },
+  { icon: HiOutlineShare, label: "Data Download", value: "export" },
+];
+
+const SIDEBAR_CONTROL_CLASS_NAME =
+  "h-10 w-full justify-start gap-3 rounded-md bg-transparent px-3.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-active focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal/70 focus-visible:ring-offset-0 data-[state=open]:bg-sidebar-active data-[state=open]:text-sidebar-foreground";
+
+function SidebarTooltip({ children, collapsed }: { children: ReactNode; collapsed: boolean }) {
+  return (
+    <span
+      className={cn(
+        "pointer-events-none absolute left-[calc(100%+0.625rem)] top-1/2 z-[70] block -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-[0_8px_20px_-16px_rgb(0_0_0/0.55)] transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 lg:hidden",
+        collapsed && "lg:block",
+      )}
+      role="tooltip"
+    >
+      {children}
+    </span>
+  );
+}
 
 const LoadedApp = observer(() => {
   const store = useOrgStore();
@@ -48,6 +80,20 @@ const LoadedApp = observer(() => {
     UiMessageDescriptor | { duplicateCount: number; kind: "import"; newCount: number } | null
   >(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const activeNavigationItem =
+    PRODUCT_NAVIGATION_ITEMS.find((item) => item.value === store.activeTab) ??
+    ({
+      icon: HiOutlineBuildingOffice2,
+      label: "Editor",
+      value: "orgEditor",
+    } satisfies (typeof PRODUCT_NAVIGATION_ITEMS)[number]);
+  const ActiveNavigationIcon = activeNavigationItem.icon;
+  const sidebarLabelClassName = cn(
+    "hidden min-w-0 overflow-hidden truncate whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 ease-out motion-reduce:transition-none lg:inline-block",
+    sidebarCollapsed ? "lg:max-w-0 lg:opacity-0" : "lg:max-w-[10rem] lg:opacity-100",
+  );
 
   const openSaveDialog = () => {
     setError(null);
@@ -62,11 +108,11 @@ const LoadedApp = observer(() => {
   return (
     <>
       <main
-        className="flex h-dvh w-dvw flex-col overflow-hidden bg-shell text-foreground"
+        className="flex h-dvh w-dvw overflow-hidden bg-shell text-foreground"
         data-demo-id="app-shell"
       >
         <Tabs
-          className="min-h-0 flex-1"
+          className="min-h-0 min-w-0 flex-1 flex-row"
           onValueChange={(value) => {
             if (
               value === "units" ||
@@ -79,50 +125,71 @@ const LoadedApp = observer(() => {
               store.setActiveTab(value);
             }
           }}
+          orientation="vertical"
           value={store.activeTab}
         >
-          <header
-            className="flex h-14 shrink-0 items-center gap-2 bg-transparent px-2 sm:gap-3 sm:px-4"
-            data-demo-id="app-header"
+          <aside
+            className={cn(
+              "relative z-30 flex h-full w-16 shrink-0 flex-col overflow-visible bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out motion-reduce:transition-none lg:w-60",
+              sidebarCollapsed && "lg:w-16",
+            )}
+            data-collapsed={sidebarCollapsed ? "true" : "false"}
+            data-demo-id="app-sidebar"
           >
+            <div
+              className="relative flex h-0 shrink-0 items-center px-2 lg:h-16"
+              data-demo-id="sidebar-header"
+            >
+              <Button
+                aria-label={t(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
+                className="z-40 hidden h-10 w-full shrink-0 justify-start rounded-md bg-transparent px-3.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-active active:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal/70 focus-visible:ring-offset-0 lg:inline-flex"
+                data-demo-id="sidebar-toggle"
+                onClick={() => setSidebarCollapsed((value) => !value)}
+                title={t(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
+                type="button"
+                variant="ghost"
+              >
+                <HiOutlineChevronLeft
+                  className={cn(
+                    "!size-5 transition-transform duration-200 ease-out motion-reduce:transition-none",
+                    sidebarCollapsed && "rotate-180",
+                  )}
+                />
+              </Button>
+            </div>
             <nav
               aria-label={t("Product navigation")}
-              className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="min-h-0 flex-1 px-2 py-3"
               data-demo-id="product-navigation"
             >
-              <TabsList className="w-max" data-demo-id="product-tabs-list">
-                <TabsTrigger data-demo-id="tab-units" value="units">
-                  <HiOutlineFolder />
-                  {t("Units")}
-                </TabsTrigger>
-                <TabsTrigger data-demo-id="tab-employees" value="employees">
-                  <HiOutlineUsers />
-                  {t("Employees")}
-                </TabsTrigger>
-                <TabsTrigger data-demo-id="tab-org-editor" value="orgEditor">
-                  <HiOutlineBuildingOffice2 />
-                  {t("Editor")}
-                </TabsTrigger>
-                <TabsTrigger data-demo-id="tab-analytics" value="analytics">
-                  <HiOutlineChartBar />
-                  {t("Analytics")}
-                </TabsTrigger>
-                <TabsTrigger data-demo-id="tab-calendar" value="calendar">
-                  <HiOutlineCalendarDays />
-                  {t("Calendar")}
-                </TabsTrigger>
-                <TabsTrigger data-demo-id="tab-export" value="export">
-                  <HiOutlineShare />
-                  {t("Data Download")}
-                </TabsTrigger>
+              <TabsList
+                className="flex h-auto w-full flex-col items-stretch justify-start gap-1"
+                data-demo-id="product-tabs-list"
+              >
+                {PRODUCT_NAVIGATION_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const label = t(item.label);
+
+                  return (
+                    <TabsTrigger
+                      aria-label={label}
+                      className="group relative h-10 w-full justify-start gap-3 rounded-md px-3.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-active data-[state=active]:bg-sidebar-active data-[state=active]:text-sidebar-foreground data-[state=active]:hover:bg-sidebar-active"
+                      data-demo-id={`tab-${item.value === "orgEditor" ? "org-editor" : item.value}`}
+                      key={item.value}
+                      title={label}
+                      value={item.value}
+                    >
+                      <Icon className="size-5 shrink-0" />
+                      <span className={sidebarLabelClassName} data-sidebar-label="">
+                        {label}
+                      </span>
+                      <SidebarTooltip collapsed={sidebarCollapsed}>{label}</SidebarTooltip>
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
             </nav>
-            <div
-              className="flex h-9 shrink-0 items-center gap-1 bg-transparent"
-              data-demo-id="header-actions"
-            >
-              <LanguageToggle triggerClassName={HEADER_ACTION_CLASS_NAME} />
-              <ThemeToggle triggerClassName={HEADER_ACTION_CLASS_NAME} />
+            <div className="flex shrink-0 flex-col gap-1 p-2 pb-3" data-demo-id="sidebar-actions">
               <input
                 accept=".json,application/json"
                 aria-hidden="true"
@@ -139,7 +206,7 @@ const LoadedApp = observer(() => {
               />
               <Button
                 aria-label={t("Import")}
-                className={`${HEADER_ACTION_CLASS_NAME} px-0 lg:w-auto lg:px-4`}
+                className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
                 data-demo-id="import-action"
                 onClick={() => {
                   if (!importFileInputRef.current) return;
@@ -151,14 +218,18 @@ const LoadedApp = observer(() => {
                 variant="ghost"
               >
                 <HiOutlineDocumentArrowUp
+                  className="!size-5 shrink-0"
                   data-demo-id="import-action-icon"
                   data-icon="document-arrow-up"
                 />
-                <span className="hidden lg:inline">{t("Import")}</span>
+                <span className={sidebarLabelClassName} data-sidebar-label="">
+                  {t("Import")}
+                </span>
+                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Import")}</SidebarTooltip>
               </Button>
               <Button
                 aria-label={t("Workspace Export")}
-                className={`${HEADER_ACTION_CLASS_NAME} px-0 lg:w-auto lg:px-4`}
+                className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
                 data-demo-id="save-workspace"
                 onClick={openSaveDialog}
                 title={t("Workspace Export")}
@@ -166,78 +237,109 @@ const LoadedApp = observer(() => {
                 variant="ghost"
               >
                 <HiOutlineDocumentArrowDown
+                  className="!size-5 shrink-0"
                   data-demo-id="export-action-icon"
                   data-icon="document-arrow-down"
                 />
-                <span className="hidden lg:inline">{t("Workspace Export")}</span>
+                <span className={sidebarLabelClassName} data-sidebar-label="">
+                  {t("Workspace Export")}
+                </span>
+                <SidebarTooltip collapsed={sidebarCollapsed}>
+                  {t("Workspace Export")}
+                </SidebarTooltip>
               </Button>
+              <div className="group relative">
+                <LanguageToggle
+                  labelClassName={sidebarLabelClassName}
+                  triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
+                />
+                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Language")}</SidebarTooltip>
+              </div>
+              <div className="group relative">
+                <ThemeToggle
+                  labelClassName={sidebarLabelClassName}
+                  triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
+                />
+                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Theme")}</SidebarTooltip>
+              </div>
             </div>
-          </header>
-          {error && (
-            <div
-              className="shrink-0 bg-destructive/10 px-4 py-2 text-sm text-destructive"
-              data-demo-id="app-error"
-              role="alert"
+          </aside>
+          <section className="flex min-w-0 flex-1 flex-col bg-background" data-demo-id="workspace">
+            <header
+              className="relative z-20 flex h-16 shrink-0 items-center gap-3 bg-background/96 px-5 backdrop-blur-sm"
+              data-demo-id="app-header"
             >
-              {messageText(error)}
-            </div>
-          )}
-          {notice && (
-            <div
-              className="shrink-0 bg-muted/50 px-4 py-2 text-sm text-muted-foreground"
-              data-demo-id="app-notice"
-              role="status"
+              <ActiveNavigationIcon className="size-5 text-muted-foreground" />
+              <h1 className="truncate text-base font-semibold" data-demo-id="app-title">
+                {t(activeNavigationItem.label)}
+              </h1>
+            </header>
+            {error && (
+              <div
+                className="shrink-0 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive"
+                data-demo-id="app-error"
+                role="alert"
+              >
+                {messageText(error)}
+              </div>
+            )}
+            {notice && (
+              <div
+                className="shrink-0 bg-accent/45 px-4 py-2.5 text-sm text-foreground"
+                data-demo-id="app-notice"
+                role="status"
+              >
+                {"kind" in notice && notice.kind === "import"
+                  ? countText("importSummary", {
+                      duplicateCount: notice.duplicateCount,
+                      newCount: notice.newCount,
+                    })
+                  : messageText(notice as UiMessageDescriptor)}
+              </div>
+            )}
+            <TabsContent
+              className="flex min-h-0 flex-1"
+              data-demo-id="units-tab-content"
+              value="units"
             >
-              {"kind" in notice && notice.kind === "import"
-                ? countText("importSummary", {
-                    duplicateCount: notice.duplicateCount,
-                    newCount: notice.newCount,
-                  })
-                : messageText(notice as UiMessageDescriptor)}
-            </div>
-          )}
-          <TabsContent
-            className="flex min-h-0 flex-1"
-            data-demo-id="units-tab-content"
-            value="units"
-          >
-            <UnitsTab />
-          </TabsContent>
-          <TabsContent
-            className="flex min-h-0 flex-1"
-            data-demo-id="employees-tab-content"
-            value="employees"
-          >
-            <EmployeesTab />
-          </TabsContent>
-          <TabsContent
-            className="flex min-h-0 flex-1"
-            data-demo-id="org-editor-tab-content"
-            value="orgEditor"
-          >
-            <OrgStructureEditorTab />
-          </TabsContent>
-          <TabsContent
-            className="flex min-h-0 flex-1"
-            data-demo-id="analytics-tab-content"
-            value="analytics"
-          >
-            <AnalyticsTab />
-          </TabsContent>
-          <TabsContent
-            className="flex min-h-0 flex-1"
-            data-demo-id="calendar-tab-content"
-            value="calendar"
-          >
-            <CalendarTab />
-          </TabsContent>
-          <TabsContent
-            className="flex min-h-0 flex-1"
-            data-demo-id="export-tab-content"
-            value="export"
-          >
-            <ExportTab />
-          </TabsContent>
+              <UnitsTab />
+            </TabsContent>
+            <TabsContent
+              className="flex min-h-0 flex-1"
+              data-demo-id="employees-tab-content"
+              value="employees"
+            >
+              <EmployeesTab />
+            </TabsContent>
+            <TabsContent
+              className="flex min-h-0 flex-1"
+              data-demo-id="org-editor-tab-content"
+              value="orgEditor"
+            >
+              <OrgStructureEditorTab />
+            </TabsContent>
+            <TabsContent
+              className="flex min-h-0 flex-1"
+              data-demo-id="analytics-tab-content"
+              value="analytics"
+            >
+              <AnalyticsTab />
+            </TabsContent>
+            <TabsContent
+              className="flex min-h-0 flex-1"
+              data-demo-id="calendar-tab-content"
+              value="calendar"
+            >
+              <CalendarTab />
+            </TabsContent>
+            <TabsContent
+              className="flex min-h-0 flex-1"
+              data-demo-id="export-tab-content"
+              value="export"
+            >
+              <ExportTab />
+            </TabsContent>
+          </section>
         </Tabs>
       </main>
       <ImportDialog
