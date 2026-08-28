@@ -1,65 +1,36 @@
 # org-tools
 
-`org-tools` is a private-by-design organization workspace that runs entirely in the browser. Build
-Units, place Employees on an organization canvas, explore local analytics and birthdays, and export
-the result without a server account.
+`org-tools` is a private organization editor that runs entirely in the browser.
 
-## What it does
+- Build Units, manage Employees, and arrange them on a visual canvas.
+- Search the organization, explore analytics, and track birthdays and dated tags.
+- Import JSON and export workspace files, tables, templates, or a canvas PNG.
+- Keep organization data in page memory—there is no account, server database, or telemetry.
 
-- Opens directly into an empty Editor with Units, Employees, Analytics, Calendar, and Download.
-- Keeps a canonical Main View and independent custom Views.
-- Supports Static and Live Units, Unit-scoped positions, tags, drag and drop, and undo/redo.
-- Exports Teams, Employees, their combined Main View, or the complete workspace in one strict
-  unversioned state envelope.
-- Imports recognized state projections through explicit append or replace operations.
-- Maps arbitrary JSON to Employees, nested manual Units, assignments, positions, and bosses.
-- Downloads local CSV, JSON, templates, and a canvas PNG.
+## Screenshots
 
-Organization data stays in page memory. The application has no server database, account system,
-telemetry, background synchronization, or remote avatar loading. See [Privacy](docs/privacy.md) for
-the complete boundary.
+Click a preview to open the full-size image.
 
-## Use the application
+| Organization Editor | Employees |
+| :---: | :---: |
+| [![Synthetic organization in the visual editor](docs/screenshots/synthetic-org-editor.png)](docs/screenshots/synthetic-org-editor.png) | [![Synthetic Employee catalog](docs/screenshots/synthetic-employees.png)](docs/screenshots/synthetic-employees.png) |
+| Analytics | Calendar |
+| [![Synthetic organization analytics](docs/screenshots/synthetic-analytics.png)](docs/screenshots/synthetic-analytics.png) | [![Synthetic Employee Calendar](docs/screenshots/synthetic-calendar.png)](docs/screenshots/synthetic-calendar.png) |
+| Download | JSON import |
+| [![Synthetic data download workspace](docs/screenshots/synthetic-download.png)](docs/screenshots/synthetic-download.png) | [![Synthetic JSON Employee import mapping](docs/screenshots/employee-import-mapping.png)](docs/screenshots/employee-import-mapping.png) |
 
-1. Run `pnpm install` and `pnpm dev`.
-2. Open the local address shown in the terminal.
-3. Create Units and Employees, or choose **Import** to select a saved state or map a JSON
-   collection.
-4. Choose **Export** to download a scoped state or the complete `org-tools-state.json` workspace.
+See the [complete screenshot gallery](docs/screenshots.md) for every workflow.
 
-Sample import files are available in [`examples/`](examples/). The full workflow is documented in
-[Usage](docs/usage.md), and the current state and mapping contracts are documented in
-[Import formats](docs/import-formats.md).
-
-## Development
+## Run locally
 
 Requires Node.js 20 or newer and pnpm 10.33.2.
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm lint
-pnpm typecheck
-pnpm test:unit
-pnpm build
-pnpm spec:validate
-pnpm public:check
+pnpm dev
 ```
 
-Browser smoke tests require Chromium installed by Playwright:
+Open [http://localhost:3000](http://localhost:3000).
 
-```sh
-pnpm --filter @org-tools/screenshots exec playwright install chromium
-pnpm test:browser
-```
-
-Read [Contributing](CONTRIBUTING.md) before proposing a change. Architecture, performance, and
-screenshot documentation live in [`docs/`](docs/).
-
-## Screenshots
-
-The deterministic PNG gallery is described in [Screenshots](docs/screenshots.md). Regenerate it
-with `pnpm screenshots:generate` after a user-visible change.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+More: [Usage](docs/usage.md) · [Privacy](docs/privacy.md) · [Contributing](CONTRIBUTING.md) ·
+[License](LICENSE)
