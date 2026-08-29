@@ -10,7 +10,7 @@ const productionOutput = join(repositoryRoot, "apps", "ui", "out");
 const scannerPath = "scripts/check-public-safety.mjs";
 const screenshotManifestPath = join(repositoryRoot, "docs", "screenshot-demo.json");
 const screenshotsDirectory = join(repositoryRoot, "docs", "screenshots");
-const requiredScreenshotIds = [
+const primaryScreenshotModules = [
   "import",
   "export",
   "theme",
@@ -189,25 +189,76 @@ async function validateScreenshotDemo(violations) {
     return;
   }
 
-  const ids = manifest.map((scenario) => scenario?.id);
-  const files = manifest.map((scenario) => scenario?.file);
-  if (
-    manifest.length !== requiredScreenshotIds.length ||
-    new Set(ids).size !== manifest.length ||
-    [...ids].sort().join("\0") !== [...requiredScreenshotIds].sort().join("\0")
-  ) {
+  const validScenarios = manifest.filter(
+    (scenario) =>
+      scenario !== null &&
+      typeof scenario === "object" &&
+      typeof scenario.id === "string" &&
+      typeof scenario.module === "string" &&
+      typeof scenario.featured === "boolean" &&
+      typeof scenario.title === "string" &&
+      typeof scenario.file === "string" &&
+      typeof scenario.description === "string" &&
+      Array.isArray(scenario.capabilities) &&
+      scenario.capabilities.length > 0 &&
+      scenario.capabilities.every(
+        (capability) => typeof capability === "string" && capability.trim().length > 0,
+      ),
+  );
+  if (validScenarios.length !== manifest.length) {
     violations.push({
       path: "docs/screenshot-demo.json",
-      rule: "manifest must contain each required core scenario exactly once",
+      rule: "every screenshot must declare id, module, featured, title, file, description, and capabilities",
     });
+    return;
+  }
+
+  const ids = validScenarios.map((scenario) => scenario.id);
+  const files = validScenarios.map((scenario) => scenario.file);
+  const modules = validScenarios.map((scenario) => scenario.module);
+  const featuredScenarios = validScenarios.filter((scenario) => scenario.featured);
+  const featuredModules = featuredScenarios.map((scenario) => scenario.module).sort();
+  if (new Set(ids).size !== manifest.length) {
+    violations.push({ path: "docs/screenshot-demo.json", rule: "screenshot ids must be unique" });
   }
   if (
     new Set(files).size !== manifest.length ||
-    files.some((file) => typeof file !== "string" || !/^demo-[a-z-]+\.png$/u.test(file))
+    validScenarios.some(
+      (scenario) =>
+        !/^(?:demo|feature)-[a-z-]+\.png$/u.test(scenario.file) ||
+        (scenario.featured && !scenario.file.startsWith("demo-")) ||
+        (!scenario.featured && !scenario.file.startsWith("feature-")),
+    )
   ) {
     violations.push({
       path: "docs/screenshot-demo.json",
-      rule: "manifest screenshot filenames must be unique demo PNGs",
+      rule: "manifest filenames must be unique demo or feature PNGs",
+    });
+  }
+  if (modules.some((module) => !primaryScreenshotModules.includes(module))) {
+    violations.push({
+      path: "docs/screenshot-demo.json",
+      rule: "every screenshot module must be a primary workflow",
+    });
+  }
+  if (
+    featuredScenarios.length !== primaryScreenshotModules.length ||
+    featuredModules.join("\0") !== [...primaryScreenshotModules].sort().join("\0")
+  ) {
+    violations.push({
+      path: "docs/screenshot-demo.json",
+      rule: "exactly one screenshot per primary workflow must be featured",
+    });
+  }
+  if (
+    primaryScreenshotModules.some(
+      (module) =>
+        !validScenarios.some((scenario) => scenario.module === module && !scenario.featured),
+    )
+  ) {
+    violations.push({
+      path: "docs/screenshot-demo.json",
+      rule: "every primary workflow must include at least one supporting screenshot",
     });
   }
 
@@ -225,16 +276,18 @@ async function validateScreenshotDemo(violations) {
   const screenshotGuide = await readFile(join(repositoryRoot, "docs", "screenshots.md"), "utf8");
   const readmeLinks = matchesFor(readme, /(docs\/screenshots\/[^)\s]+\.png)/gu);
   const guideLinks = matchesFor(screenshotGuide, /(screenshots\/[^)\s]+\.png)/gu);
-  const expectedReadmeLinks = files.map((file) => `docs/screenshots/${file}`).sort();
+  const expectedReadmeLinks = featuredScenarios
+    .map((scenario) => `docs/screenshots/${scenario.file}`)
+    .sort();
   const expectedGuideLinks = files.map((file) => `screenshots/${file}`).sort();
 
   if (
-    readmeLinks.length !== manifest.length * 2 ||
+    readmeLinks.length !== featuredScenarios.length * 2 ||
     [...new Set(readmeLinks)].sort().join("\0") !== expectedReadmeLinks.join("\0")
   ) {
     violations.push({
       path: "README.md",
-      rule: "README must preview and directly link every manifest screenshot exactly once",
+      rule: "README must preview and directly link only the ten featured screenshots",
     });
   }
   if (

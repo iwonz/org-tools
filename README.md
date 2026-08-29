@@ -23,7 +23,8 @@ Click a preview to open the full-size image.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-See the [screenshot guide](docs/screenshots.md) for scenario intent and deterministic generation.
+See the [complete visual capability catalog](docs/screenshots.md) for every secondary workflow,
+open panel, and deterministic generation rule.
 
 ## Run locally
 

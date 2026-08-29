@@ -22,6 +22,9 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     baseURL,
     colorScheme: "light",
+    launchOptions: {
+      args: ["--disable-gpu", "--disable-lcd-text", "--font-render-hinting=none"],
+    },
     locale: "en-US",
     timezoneId: "UTC",
     trace: "retain-on-failure",
