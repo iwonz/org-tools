@@ -1,6 +1,6 @@
 "use client";
 
-import type { UiOrgStructure, UnitId } from "@org-tools/types";
+import type { EmployeeGender, UiOrgStructure, UnitId } from "@org-tools/types";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import type { ReactNode } from "react";
@@ -11,6 +11,7 @@ import {
   HiOutlineChevronDown,
   HiOutlineFolder,
   HiOutlineFunnel,
+  HiOutlineIdentification,
   HiOutlineMagnifyingGlass,
   HiOutlineTag,
   HiOutlineXMark,
@@ -68,6 +69,7 @@ export {
 type EmployeeSearchInputProps = BaseSearchInputProps & {
   excludedUnitIds?: ReadonlySet<UnitId>;
   filters: EmployeeSearchFilters;
+  hideGenderFilter?: boolean;
   onFiltersChange: (filters: EmployeeSearchFilters) => void;
   positionButtonDemoId?: string;
   positionOptions: string[];
@@ -76,7 +78,7 @@ type EmployeeSearchInputProps = BaseSearchInputProps & {
   tagOptions: string[];
   unitStructure?: UiOrgStructure;
 };
-type EmployeeFilterSectionId = "birthday" | "positions" | "tags" | "units";
+type EmployeeFilterSectionId = "birthday" | "gender" | "positions" | "tags" | "units";
 const EMPTY_UNIT_ID_LOOKUP = new Map<UnitId, never>();
 
 export function UnitSearchInput({
@@ -111,7 +113,7 @@ type EmployeeUnitFilterOption<TId extends UnitId> = {
   subtitle?: string;
 };
 
-type EmployeeSelectableFilterOption<TId extends UnitId> = {
+type EmployeeSelectableFilterOption<TId extends string> = {
   id: TId;
   label: string;
   subtitle?: string;
@@ -192,7 +194,7 @@ function EmployeeFilterSection({
   );
 }
 
-function EmployeeFilterOptionList<TId extends UnitId>({
+function EmployeeFilterOptionList<TId extends string>({
   emptyState,
   onToggle,
   options,
@@ -472,6 +474,7 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   dataDemoId,
   excludedUnitIds,
   filters,
+  hideGenderFilter = false,
   id,
   onFiltersChange,
   onValueChange,
@@ -492,7 +495,16 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   const [birthdayDayValue, setBirthdayDayValue] = useState("none");
   const [birthdayMonthValue, setBirthdayMonthValue] = useState("none");
   const selectedPositions = filters.selectedPositions;
+  const selectedGenders = filters.selectedGenders;
   const selectedTags = filters.selectedTags;
+  const genderOptions = useMemo<Array<EmployeeSelectableFilterOption<EmployeeGender>>>(
+    () => [
+      { id: "male", label: t("Male") },
+      { id: "female", label: t("Female") },
+      { id: "unspecified", label: t("Not specified") },
+    ],
+    [t],
+  );
   const unitOptions = useMemo<EmployeeUnitFilterOption<UnitId>[]>(() => {
     if (!isOpen) return [];
 
@@ -508,6 +520,7 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   const availableUnitIds =
     (unitStructure ?? store.units)?.indexes.unitsById ?? EMPTY_UNIT_ID_LOOKUP;
   const activeFilterCount =
+    selectedGenders.length +
     selectedPositions.length +
     selectedTags.length +
     filters.selectedUnitIds.length +
@@ -670,6 +683,32 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                 </Button>
               </div>
             </EmployeeFilterSection>
+            {!hideGenderFilter && (
+              <EmployeeFilterSection
+                count={selectedGenders.length}
+                expanded={expandedSectionId === "gender"}
+                icon={<HiOutlineIdentification className="size-4" />}
+                onClear={() => onFiltersChange({ ...filters, selectedGenders: [] })}
+                onToggle={() => toggleSection("gender")}
+                title={t("Gender")}
+              >
+                <EmployeeFilterOptionList
+                  emptyState={t("No Employees found")}
+                  onToggle={(gender) =>
+                    onFiltersChange({
+                      ...filters,
+                      selectedGenders: selectedGenders.includes(gender)
+                        ? selectedGenders.filter((selectedGender) => selectedGender !== gender)
+                        : [...selectedGenders, gender],
+                    })
+                  }
+                  options={genderOptions}
+                  queryTokens={[]}
+                  selectedValues={selectedGenders}
+                  title={t("Gender")}
+                />
+              </EmployeeFilterSection>
+            )}
             <EmployeeFilterSection
               count={selectedPositions.length}
               expanded={expandedSectionId === "positions"}

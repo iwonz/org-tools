@@ -32,6 +32,7 @@ const createWorkspaceEmployee = (employee: WorkspaceEmployee): Employee => ({
     employee.username ||
     employee.email ||
     "Employee",
+  gender: employee.gender,
   id: employee.id,
   lastName: employee.lastName,
   phone: employee.phone,

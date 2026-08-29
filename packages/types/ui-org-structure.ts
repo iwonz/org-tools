@@ -1,4 +1,4 @@
-import type { EmployeeTag } from "./employee.js";
+import type { EmployeeGender, EmployeeTag } from "./employee.js";
 import type { EmployeeId, UnitId } from "./ids.js";
 
 /** Derived organization model used only at runtime. */
@@ -13,6 +13,7 @@ export type UiOrgStructure = {
 export type EmployeeSearchDocument = {
   birthdayKey: string | null;
   employeeId: EmployeeId;
+  gender: EmployeeGender;
   positionLabelSet: Set<string>;
   positionLabels: string[];
   searchText: string;
@@ -85,6 +86,7 @@ export type Employee = {
   email: string | null;
   firstName: string;
   fullName: string;
+  gender: EmployeeGender;
   id: EmployeeId;
   lastName: string;
   phone: string | null;

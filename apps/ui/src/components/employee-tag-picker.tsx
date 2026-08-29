@@ -26,13 +26,14 @@ import {
 import { normalizeSearchValue } from "@/lib/search-index";
 import { cn } from "@/lib/utils";
 
-const TAG_OPTION_HEIGHT = 62;
+const TAG_OPTION_HEIGHT = 44;
 
 export function EmployeeTagPickerPanel({
   className,
   dataDemoId,
   employees,
   onApply,
+  onDatePopoverOpenChange,
   tagOptions,
   autoFocus = true,
 }: {
@@ -41,6 +42,7 @@ export function EmployeeTagPickerPanel({
   dataDemoId?: string;
   employees: readonly EmployeeTagTarget[];
   onApply: (updates: EmployeeTagUpdate[]) => void;
+  onDatePopoverOpenChange?: (open: boolean) => void;
   tagOptions: readonly string[];
 }) {
   const t = useUiText();
@@ -146,7 +148,7 @@ export function EmployeeTagPickerPanel({
 
               return (
                 <div
-                  className="absolute left-0 top-0 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 text-xs transition-colors hover:bg-accent/60 active:bg-accent-strong/65"
+                  className="absolute left-0 top-0 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground active:bg-accent-strong"
                   data-employee-tag-option
                   data-state={
                     checked === "indeterminate"
@@ -186,6 +188,9 @@ export function EmployeeTagPickerPanel({
                           }),
                         )
                       }
+                      {...(onDatePopoverOpenChange
+                        ? { onOpenChange: onDatePopoverOpenChange }
+                        : {})}
                     />
                   )}
                 </div>
@@ -204,12 +209,12 @@ export function EmployeeTagPickerPanel({
 }
 
 export function EmployeeTagPopover({
-  dataDemoId,
+  dataDemoId = "employee-tag-picker",
   employee,
   onApply,
   tagOptions,
 }: {
-  dataDemoId: string;
+  dataDemoId?: string;
   employee: EmployeeTagTarget;
   onApply: (updates: EmployeeTagUpdate[]) => void;
   tagOptions: readonly string[];

@@ -7,8 +7,8 @@ canvas arrangement can render all nodes simultaneously.
 ## Data and indexing
 
 - Persist normalized IDs and relationships rather than nested Employee copies.
-- Build shared derived maps, search documents, Unit order, membership, birthday, dated-tag event,
-  position, and tag indexes outside component render paths.
+- Build shared derived maps, search documents, Unit order, membership, birthday, gender, dated-tag
+  event, position, and tag indexes outside component render paths.
 - Build expensive indexes lazily for Main and the active or exported custom View.
 - A custom View references the global catalog and stores only local Employees and sparse overrides.
 - Live Unit resolution uses its dedicated manual-assignment search indexes to avoid recursive Live
@@ -28,7 +28,8 @@ wrapper adds no observer or derived-data boundary. Calendar
 uses seven fluid columns, four or five adaptive rows, at most two inline tag
 events per day, and a bounded two-line tag cloud so a 31-day month fits the maintained 1280-by-720
 desktop viewport. Smaller viewports retain local overflow as a safe fallback. Per-tag event dialogs
-virtualize upcoming and past rows.
+virtualize upcoming and past rows. The selected Calendar day is stored as one ISO key and resolves
+against current indexes, avoiding duplicated Employee snapshots after edits or deletion.
 
 Canvas pointer movement should update imperative preview state without triggering a complete React
 render for every event. Portaled drag previews and full-size valid drop targets should avoid
@@ -46,6 +47,8 @@ Org Editor Employee rows use deterministic tag-chip packing and cached per-Unit 
 Locale or tag changes invalidate those measurements. Visibility lookup uses the prefix offsets, and
 the PNG pipeline separately reuses one compact chip geometry for both painting and exported
 row-height growth without hidden-tag counters or unused tag rows.
+Quick Employee tag options keep one fixed 44 px virtualizer estimate so their compact layout does
+not require content measurement or clip the checkbox and date action.
 
 ## Import and export
 

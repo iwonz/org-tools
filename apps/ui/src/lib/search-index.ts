@@ -34,6 +34,7 @@ export const createEmployeeSearchDocument = (employee: Employee): EmployeeSearch
   return {
     birthdayKey: getEmployeeBirthdayKey(employee),
     employeeId: employee.id,
+    gender: employee.gender,
     positionLabelSet: new Set(positionLabels),
     positionLabels,
     searchText: normalizeSearchValue(

@@ -2,7 +2,9 @@
 
 ## Purpose
 Define blank startup and the strict, file-based, UUID-referenced workspace contract.
+
 ## Requirements
+
 ### Requirement: New sessions start with an editable workspace
 The application SHALL open directly in a blank organization workspace with the Org Editor active and without a landing screen.
 
@@ -12,17 +14,21 @@ The application SHALL open directly in a blank organization workspace with the O
 
 ### Requirement: Workspace state is current-schema and file-based
 The application SHALL use one strict unversioned `org-tools-state` JSON contract with a required
-`content` value of `teams`, `employees`, `teamsEmployees`, or `workspace`, SHALL keep organization
+`content` value of `teams`, `employees`, `teamsEmployees`, or `workspace`, SHALL require one
+normalized gender value on every persisted Employee and Employee override, SHALL keep organization
 data out of browser persistence and remote services, and SHALL reject obsolete or mismatched shapes
 without migration.
 
 #### Scenario: Full workspace round trip
 - **WHEN** a user saves and opens a state with `content: "workspace"`
-- **THEN** Employees, dated tags, Views, Units, assignments, layout, and UI state are restored atomically
+- **THEN** Employees including gender, dated tags, Views, Units, assignments, layout, and UI state
+  are restored atomically
 
 #### Scenario: Obsolete or mismatched state
-- **WHEN** a claimed state contains a version field, unknown field, invalid reference, invalid tag date, or payload inconsistent with `content`
-- **THEN** the current workspace remains unchanged and an actionable error is shown without generic-mapping fallback
+- **WHEN** a claimed state contains a version field, unknown field, missing or invalid Employee
+  gender, invalid reference, invalid tag date, or payload inconsistent with `content`
+- **THEN** the current workspace remains unchanged and an actionable error is shown without
+  generic-mapping fallback
 
 ### Requirement: Persisted entity references use UUIDs
 The application SHALL use UUID strings for every persisted Employee, Unit, and View identifier.

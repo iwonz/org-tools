@@ -1,13 +1,28 @@
 "use client";
 
+import { useLocale } from "next-intl";
+import { useState } from "react";
+import { enUS, ru } from "react-day-picker/locale";
 import { HiOutlineCalendarDays } from "react-icons/hi2";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
 
 export type EmployeeTagDateValue = string | null | "mixed";
+
+const isoDateToLocalDate = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+};
+
+const localDateToIsoDate = (value: Date) =>
+  [
+    String(value.getFullYear()).padStart(4, "0"),
+    String(value.getMonth() + 1).padStart(2, "0"),
+    String(value.getDate()).padStart(2, "0"),
+  ].join("-");
 
 export function EmployeeTagDateText({
   date,
@@ -43,14 +58,24 @@ export function EmployeeTagDatePopover({
   date,
   label,
   onChange,
+  onOpenChange,
 }: {
   date: EmployeeTagDateValue;
   label: string;
   onChange: (date: string | null) => void;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const t = useUiText();
+  const locale = useLocale();
+  const [open, setOpen] = useState(false);
+  const selectedDate = date === null || date === "mixed" ? undefined : isoDateToLocalDate(date);
+  const setPopoverOpen = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+
   return (
-    <Popover>
+    <Popover onOpenChange={setPopoverOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
           aria-label={t("Date for tag {name}", { name: label })}
@@ -63,24 +88,37 @@ export function EmployeeTagDatePopover({
           <HiOutlineCalendarDays className="size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="grid w-64 gap-3" sideOffset={6}>
-        <div className="text-sm font-medium">
-          <EmployeeTagDateText date={date} label={label} />
-        </div>
-        <Input
-          aria-label={t("Date for tag {name}", { name: label })}
-          onChange={(event) => onChange(event.currentTarget.value || null)}
-          type="date"
-          value={date === "mixed" ? "" : (date ?? "")}
+      <PopoverContent
+        align="end"
+        className="w-auto p-0"
+        data-demo-id="tag-date-popover"
+        sideOffset={6}
+      >
+        <Calendar
+          data-demo-id="tag-date-calendar"
+          locale={locale === "ru" ? ru : enUS}
+          mode="single"
+          onSelect={(nextDate) => {
+            if (!nextDate) return;
+            onChange(localDateToIsoDate(nextDate));
+            setPopoverOpen(false);
+          }}
+          {...(selectedDate ? { defaultMonth: selectedDate, selected: selectedDate } : {})}
         />
-        <Button
-          disabled={date === null}
-          onClick={() => onChange(null)}
-          type="button"
-          variant="outline"
-        >
-          {t("Clear date")}
-        </Button>
+        <div className="border-t p-3">
+          <Button
+            className="w-full"
+            disabled={date === null}
+            onClick={() => {
+              onChange(null);
+              setPopoverOpen(false);
+            }}
+            type="button"
+            variant="outline"
+          >
+            {t("Clear date")}
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );

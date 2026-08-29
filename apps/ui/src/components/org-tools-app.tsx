@@ -80,7 +80,7 @@ const LoadedApp = observer(() => {
     UiMessageDescriptor | { duplicateCount: number; kind: "import"; newCount: number } | null
   >(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   const activeNavigationItem =
     PRODUCT_NAVIGATION_ITEMS.find((item) => item.value === store.activeTab) ??
@@ -142,7 +142,7 @@ const LoadedApp = observer(() => {
             >
               <Button
                 aria-label={t(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
-                className="z-40 hidden h-10 w-full shrink-0 justify-start rounded-md bg-transparent px-3.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-active active:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal/70 focus-visible:ring-offset-0 lg:inline-flex"
+                className="z-40 hidden h-10 w-12 shrink-0 justify-start rounded-md bg-transparent px-3.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-active active:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal/70 focus-visible:ring-offset-0 lg:inline-flex"
                 data-demo-id="sidebar-toggle"
                 onClick={() => setSidebarCollapsed((value) => !value)}
                 title={t(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}

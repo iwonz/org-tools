@@ -20,7 +20,8 @@ type OrgToolsState = {
 ```
 
 The contract has exact fields and no format or schema version. UUIDs, references, Live dependency
-graphs, tag dates, avatars, URLs, and `content` invariants are strictly validated. JSON that claims
+graphs, tag dates, required Employee gender values, avatars, URLs, and `content` invariants are
+strictly validated. JSON that claims
 `kind: "org-tools-state"` but fails validation is rejected and never falls through to ordinary
 mapping.
 
@@ -49,7 +50,9 @@ collection, then map source fields. A Team collection can map recursive `childre
 can also map an inline `employees` array. The same field mapping applies at every nested level.
 
 Generic Teams are manual. Live filters and Live roles are accepted only in a recognized scoped
-state. Employee tags from ordinary mapping are undated.
+state. Employee tags from ordinary mapping are undated. Gender can be mapped from bounded English
+aliases into `male`, `female`, or `unspecified`; an empty or unmapped value becomes
+`unspecified`, while an unsupported mapped value blocks the detached candidate.
 
 ## Validation and current-schema policy
 

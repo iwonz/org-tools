@@ -43,6 +43,9 @@ machine preferences cannot change gallery copy.
 
 ![Dated tag quick editor](screenshots/dated-tag-popover.png)
 
+The quick editor uses the same localized UI-kit calendar in every Employee workflow and keeps date
+clearing separate from day selection without repeating the tag label.
+
 ### Dated tag events
 
 ![Dated tag events](screenshots/dated-tag-events.png)
@@ -74,7 +77,7 @@ machine preferences cannot change gallery copy.
 The Calendar fixture includes exact dated-tag events and its compact cloud. Scoped state operation
 cards, nested Team and Employee previews, generic mapping, the collapsible sidebar, and localized empty
 states are also covered by browser assertions. Every gallery capture uses the deterministic English
-locale; targeted Russian desktop checks verify wider labels.
+locale; targeted Russian desktop checks verify wider labels and the bare numeric Calendar year.
 Populated captures intentionally omit a replacement-import filename banner. The Employees capture
 shows search, its total catalog count, actions, and contiguous rows directly on the root surface.
 Successful workspace and Download-tab saves also remain visually silent; browser tests assert the
@@ -85,14 +88,17 @@ restrained steel-blue signal details with nearly neutral blue-gray interaction s
 compact tonal split panes without vertical rules; pointer states without decorative borders,
 outlines, inset hairlines, or added hover elevation; no decorative brand glyph; centered compact
 sidebar icons that keep their horizontal coordinate through a continuous right-edge transition; no
-visible Org Tools title; a collapse row with the same padding, icon size, and fixed icon axis as the
-navigation items; geometry-stable pressed states; no decorative shadow on ordinary controls, cards,
+visible Org Tools title; a collapse control with the same 48 by 40 px compact footprint, 14 px
+horizontal padding, icon size, and fixed icon axis as compact navigation items in both sidebar modes;
+geometry-stable pressed states; no decorative shadow on ordinary controls, cards,
 shell chrome, or Editor toolbars; restrained separation depth only on true overlays;
 stable theme and language menu rows; surfaced
 Org Editor top-left and bottom-left toolbar groups over a neutral canvas and adaptive snap grid;
 card-consistent neutral tags in local image export; right-revealing Editor search; borderless tonal
-Analytics groups with one uniform inner tone and compact gaps; and preserved semantic boundaries for fields, calendar cells,
-data previews, hierarchy guides, Editor nodes, focus, drag targets, and destructive states.
+Analytics groups with one uniform inner tone and compact gaps; borderless tonal Calendar cells with
+fixed date-number geometry and a stronger today state; compact tag rows; Employee gender fields and
+filters; Calendar Employee actions; and preserved semantic boundaries for fields, data previews,
+hierarchy guides, Editor nodes, focus, drag targets, and destructive states.
 
 ## Regenerate
 
@@ -117,7 +123,7 @@ monotonic right edge, fixed navigation and collapse-icon coordinates, and clippe
 also verifies stable pointer-down geometry, the ordinary-control shadow budget, the absence of
 locale-provider console errors, the simplified empty states, all
 four scoped workspace Export downloads, state projection append/replace, local avatar workflows,
-hidden tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
+UI-kit tag date popovers, the 1280 by 720 Calendar layout, generic JSON mapping, rejection of malformed
 claimed states, wrapped Org Editor and PNG tags, and same-origin-only requests.
 It also verifies silent replacement completion, localized Employee total and match counts, reactive
 count changes, overlay-separated normal and destructive dialog chrome, a contained 390 px Import
@@ -126,3 +132,7 @@ aligned top boundaries without per-tab outer margins, compact Teams and Analytic
 left-aligned Editor controls, the distinct neutral canvas, preserved meaningful outlines, and
 adaptive grid interval, snapped coordinate operations, and Analytics uniform grouping, dynamic
 height, row cap, sorting, and drill-down behavior.
+Focused assertions also cover opaque Editor command hover, exact-value gender filtering and form
+round trips, 44 px quick-tag rows, the localized non-native tag calendar and clear action, uniformly
+actionable Calendar dates, locale-clean month titles, and live Calendar day updates after Employee
+edit or deletion.

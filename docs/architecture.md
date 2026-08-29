@@ -45,7 +45,8 @@ ordinary JSON ──nested mapping and atomic append────────┼�
 `OrgToolsState` is the sole current transfer format. Its `content` discriminator declares Teams,
 Employees, Teams + Employees, or Full workspace. A parser verifies the declared scope, exact
 structure, UUID identifiers, Employee tag records and dates, references, URLs, avatar bounds, and
-graph invariants before any mutation. Partial states contain one canonical Main View and UI shell;
+the required normalized Employee gender enum before graph invariants and any mutation. Partial
+states contain one canonical Main View and UI shell;
 Full workspace can contain every View and UI field. Obsolete and scope-mismatched shapes are
 rejected without migration.
 
@@ -69,6 +70,11 @@ Employee tags use one normalized runtime record with a label and nullable `YYYY-
 documents, Live rules, and option identity project only labels. Shared derived indexes group exact
 dated-tag events by ISO day and normalized label alongside birthday indexes, so Calendar cells and
 virtualized dialogs do not rescan the Employee catalog during render.
+
+Employee gender is one required stable value: `male`, `female`, or `unspecified`.
+Transient Employee search documents carry that value for exact-value catalog filters. Live Unit
+rules deliberately omit gender, so the new field does not expand the persisted rule contract or
+trigger inference from names, avatars, or other profile data.
 
 Tag dates stay behind focused calendar popovers. Cards and the Org Editor render every chip with
 wrapping. The interactive canvas uses deterministic packing to produce variable Employee row heights

@@ -64,6 +64,7 @@ const createEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   unitPositions: [rootPosition, childPosition],
   username: "ada",
   ...overrides,
+  gender: overrides.gender ?? "female",
 });
 
 const createText = ({
@@ -157,6 +158,7 @@ describe("generic export formats", () => {
       "avatarBase64Url",
       "phone",
       "birthday",
+      "gender",
       "tags",
     ];
     const json = JSON.parse(
@@ -168,6 +170,7 @@ describe("generic export formats", () => {
       birthday: "12-10",
       email: "ada@example.test",
       firstName: "Ada",
+      gender: "female",
       lastName: "Lovelace",
       phone: "+1 555-0101",
       profileUrl: "https://example.test/profiles/ada",

@@ -22,6 +22,7 @@ const employeeFields = (
   tags: [{ date: null, label: "Platform" }],
   username: "alex",
   ...overrides,
+  gender: overrides.gender ?? "unspecified",
 });
 
 const manualUnit = (name: string): OrgEditorUnitConfiguration => ({
@@ -58,6 +59,7 @@ describe("OrgToolsState", () => {
       employeeFields({
         avatarBase64Url: "data:image/png;base64,iVBORw==",
         birthday: "02-29",
+        gender: "female",
         phone: "+1 555-0101",
         profileUrl: "https://example.test/profiles/alex",
         tags: [
@@ -86,6 +88,7 @@ describe("OrgToolsState", () => {
     expect(restored.workspaceEmployees[0]).toMatchObject({
       avatarBase64Url: "data:image/png;base64,iVBORw==",
       birthday: "02-29",
+      gender: "female",
       profileUrl: "https://example.test/profiles/alex",
       tags: [
         { date: "2026-02-28", label: "Platform" },
@@ -164,6 +167,22 @@ describe("OrgToolsState", () => {
     if (!birthdayEmployee) throw new Error("Expected a test Employee.");
     birthdayEmployee.birthday = "31.12.2000";
     expect(() => parseOrgToolsState(badBirthday)).toThrow("invalid Employee");
+
+    const missingGender = JSON.parse(JSON.stringify(store.createOrgToolsState())) as {
+      employees: Array<Record<string, unknown>>;
+    };
+    const employeeWithoutGender = missingGender.employees[0];
+    if (!employeeWithoutGender) throw new Error("Expected a test Employee.");
+    delete employeeWithoutGender.gender;
+    expect(() => parseOrgToolsState(missingGender)).toThrow("invalid Employee");
+
+    const invalidGender = JSON.parse(JSON.stringify(store.createOrgToolsState())) as {
+      employees: Array<Record<string, unknown>>;
+    };
+    const employeeWithInvalidGender = invalidGender.employees[0];
+    if (!employeeWithInvalidGender) throw new Error("Expected a test Employee.");
+    employeeWithInvalidGender.gender = "custom";
+    expect(() => parseOrgToolsState(invalidGender)).toThrow("invalid Employee");
 
     const numericId = JSON.parse(JSON.stringify(store.createOrgToolsState())) as {
       employees: Array<{ id: unknown }>;

@@ -21,6 +21,7 @@ export const EMPLOYEE_IMPORT_TARGETS = [
   "avatarBase64Url",
   "phone",
   "birthday",
+  "gender",
   "tags",
 ] as const;
 
@@ -120,6 +121,10 @@ export const EMPLOYEE_IMPORT_TARGET_DEFINITIONS: Record<
     aliases: ["firstname", "givenname", "given", "forename"],
     label: "First name",
   },
+  gender: {
+    aliases: ["gender", "sex"],
+    label: "Gender",
+  },
   lastName: {
     aliases: ["lastname", "surname", "familyname", "family"],
     label: "Last name",
@@ -147,6 +152,7 @@ const EMPTY_MAPPING: EmployeeFieldMapping = {
   birthday: null,
   email: null,
   firstName: null,
+  gender: null,
   lastName: null,
   phone: null,
   profileUrl: null,
@@ -427,6 +433,18 @@ const normalizeBirthday = (value: string | null, errors: string[]) => {
   return `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 };
 
+const normalizeGender = (value: string | null, errors: string[]) => {
+  if (value === null) return "unspecified" as const;
+  const normalized = value.toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, "");
+  if (["female", "f", "woman", "women"].includes(normalized)) return "female" as const;
+  if (["male", "m", "man", "men"].includes(normalized)) return "male" as const;
+  if (["unspecified", "unknown", "notset", "prefernottoanswer"].includes(normalized)) {
+    return "unspecified" as const;
+  }
+  errors.push("Gender must be Male, Female, or Unspecified.");
+  return "unspecified" as const;
+};
+
 const normalizeTags = (value: unknown, delimiter: string, errors: string[]) => {
   if (isEmptySourceValue(value)) return [];
   if (Array.isArray(value)) {
@@ -501,6 +519,10 @@ export const normalizeEmployeeImportRows = (
       sourceValueToText(getMappedValue(row.values, mapping, "birthday"), "birthday", errors),
       errors,
     );
+    const gender = normalizeGender(
+      sourceValueToText(getMappedValue(row.values, mapping, "gender"), "gender", errors),
+      errors,
+    );
     const tags = normalizeTags(getMappedValue(row.values, mapping, "tags"), tagDelimiter, errors);
 
     if (!firstName && !lastName && !username && !email) {
@@ -513,6 +535,7 @@ export const normalizeEmployeeImportRows = (
         birthday,
         email,
         firstName,
+        gender,
         lastName,
         phone,
         profileUrl,

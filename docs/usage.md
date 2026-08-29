@@ -1,16 +1,17 @@
 # Usage
 
-org-tools opens directly in a blank Main View with Editor selected. A dark 240 px sidebar contains
-the six product destinations followed by **Import**, **Export**, language, and theme controls. Its
-desktop toggle collapses the panel to a 64 px icon rail; narrow layouts use the same compact rail
-automatically. Compact items hide their visible labels while keeping localized accessible names,
-native titles, and pointer tooltips; every icon is centered with equal inline space. There is no
-decorative Org Tools glyph or visible product title. The collapse control uses the same 40 px row,
-14 px inline padding, 20 px icon, and fixed horizontal axis as every navigation and action item in
-expanded and compact modes. During a desktop transition, the right edge travels continuously between
-240 and 64 px while labels clip and fade and every icon remains stationary. The toggle icon keeps
-stable contrast. Narrow automatic compact mode omits the unused header row. Sidebar mode is
-transient UI state and is never written to the workspace or browser storage.
+org-tools opens directly in a blank Main View with Editor selected. A dark 64 px compact sidebar
+contains the six product destinations followed by **Import**, **Export**, language, and theme
+controls. Its desktop toggle expands the panel to 240 px; narrow layouts keep the compact rail.
+Compact items hide their visible labels while keeping localized accessible names, native titles,
+and pointer tooltips; every icon is centered with equal inline space. There is no decorative Org
+Tools glyph or visible product title. The collapse control is a left-aligned 48 px by 40 px compact
+item instead of a full-width row and uses the same 14 px horizontal padding around its 20 px icon as
+compact navigation and action items in both sidebar modes. During a desktop transition, the right
+edge travels continuously between 240 and 64 px while labels clip and fade and every icon remains
+stationary. The toggle icon keeps stable contrast. Narrow automatic compact mode omits the unused
+header row. Sidebar mode is transient UI state and is never written to the workspace or browser
+storage.
 
 The content header contains only the current workflow icon and title. Active navigation uses a calm
 tonal surface and stronger foreground; hover changes tone without introducing a border, outline,
@@ -58,7 +59,8 @@ persisted types, and export fields remain unchanged.
   tonal pane beside the full-bleed selected-Employee area without a decorative divider.
 - **Employees** manages the global Employee catalog, tags, and contact fields. Its populated header
   shows the total catalog size directly below search and adds the visible match count while search or
-  filters are active. Search and counts sit in a quiet tonal header above the continuous zero-gap
+  filters are active. Exact-value Gender choices compose with birthday, position, tag, Unit, and
+  text filters. Search and counts sit in a quiet tonal header above the continuous zero-gap
   virtualized list.
 - **Editor** arranges the Main View or an independent custom View on a canvas. View selection,
   history, layout, hierarchy, and search actions form one compact surfaced top-left toolbar. Search
@@ -69,7 +71,9 @@ persisted types, and export fields remain unchanged.
 - **Analytics** summarizes the current organization without sending data elsewhere. Its six groups
   use one uniform borderless surface tone from heading through table rows, plus compact gaps and
   tonal row feedback, to keep the tables clean and scannable.
-- **Calendar** combines recurring birthdays with one-time dated Employee tag events.
+- **Calendar** combines recurring birthdays with one-time dated Employee tag events. Every date is
+  an interactive tonal target with a fixed top date row, while today receives the stronger signal
+  treatment.
 - **Download** selects local sources and produces CSV, JSON, or separator-based templates. Its
   source pane uses a quiet tone while the selected-Employee area stays visually open.
 
@@ -124,7 +128,7 @@ Any JSON file that does not claim `kind: "org-tools-state"` opens a mapping work
 manual Teams.
 
 1. For JSON with multiple object arrays, choose the root collection. Map Team fields, recursive
-   `children`, inline `employees`, and applicable Employee fields.
+   `children`, inline `employees`, and applicable Employee fields, including optional Gender.
 2. For combined JSON, map the inline `employees` array plus optional `employeeKey`, `position`, and
    `isBoss` fields.
 3. If tags arrive in text, choose the delimiter. JSON tag arrays remain arrays and produce undated
@@ -147,13 +151,16 @@ using only synthetic values.
 ## Employee data
 
 An Employee can have a name, email, username, explicit profile URL, embedded avatar, phone,
-`MM-DD` birthday, and tags. Each tag can optionally carry one exact `YYYY-MM-DD` date. Tag identity,
-search, and Live Unit filtering remain label-based. Positions and boss status belong to each
-Employee-to-Unit assignment, so the same Employee can have different roles in different Units.
+`MM-DD` birthday, required normalized gender, and tags. Gender is stored as `male`, `female`, or
+`unspecified`; the form never infers it, and catalog filters use exact selected
+values. Each tag can optionally carry one exact `YYYY-MM-DD` date. Tag identity, search, and Live
+Unit filtering remain label-based. Positions and boss status belong to each Employee-to-Unit
+assignment, so the same Employee can have different roles in different Units.
 
 The Employee form and quick tag menu hide date controls behind a calendar action. A dated chip reads
 `label · localized date`; bulk editing displays mixed dates and can apply or clear one date for all
-selected Employees that have the label. Every Employee surface and PNG image shows all tags on
+selected Employees that have the label. Quick tag options remain 44 px high with centered checkbox,
+label, and date actions. Every Employee surface and PNG image shows all tags on
 wrapped rows without `+N` counters. PNG tags use the same neutral rounded treatment and localized
 `label · date` content as Employee cards, with compact row spacing. Ordinary JSON mapping creates
 undated tags; scoped state files carry dated tags.
@@ -165,14 +172,22 @@ embedded 512-by-512 WebP in the form draft; saving the Employee applies it to th
 keeps the previous avatar. A saved avatar can be re-cropped, replaced, or removed, while remote
 images and raw data-URL editing are not accepted.
 
-Calendar keeps a selected month and year plus Previous and Next controls in its header. Birthdays
-repeat annually, with February 29 shown on February 28 in non-leap years; dated tags appear only on
-their exact date. Day dialogs separate birthdays and dated tags. The bounded tag cloud opens a
-virtualized dialog with current and future events ascending and past events descending. Analytics
+Calendar keeps a selected month and bare numeric year plus Previous and Next controls in its header.
+Every in-month date remains a pointer and keyboard button whether or not it has events, and the date
+number stays in the same top position. Birthdays repeat annually, with February 29 shown on February
+28 in non-leap years; dated tags appear only on their exact date. A tag's calendar action opens a
+localized single-date calendar without repeating the tag label. Select a day to apply it or use
+**Clear date** to remove the current value. Day dialogs show birthday rows without extra horizontal
+list padding and expose
+the same tag, edit, and delete actions as the Employee catalog. The open day re-derives its rows
+after each mutation. The dated-tag section appears only when that day has events. The bounded tag
+cloud opens a virtualized dialog with current and future events ascending and past events descending.
+Analytics
 keeps six sortable, virtualized sections and drill-down dialogs on one page. The six sections use
 soft borderless tonal backgrounds, headings, columns, whitespace, and hover or focus feedback
 without outlined row cards. Short sections follow their content height, while long sections expose
 eight rows before scrolling internally.
 
-The generic Download surface keeps `tags` as labels. Selecting `tagDates` adds `{tag, date}` objects in
-JSON and `tag=YYYY-MM-DD` values in CSV or templates.
+The generic Download surface keeps `tags` as labels. Gender is a selectable raw stable enum field.
+Selecting `tagDates` adds `{tag, date}` objects in JSON and `tag=YYYY-MM-DD` values in CSV or
+templates.

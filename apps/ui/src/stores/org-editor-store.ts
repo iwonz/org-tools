@@ -1342,6 +1342,7 @@ export class OrgEditorStore {
           email: employeeOverride?.email ?? update.employee.email,
           employeeId,
           firstName: employeeOverride?.firstName ?? update.employee.firstName ?? "",
+          gender: employeeOverride?.gender ?? update.employee.gender,
           lastName: employeeOverride?.lastName ?? update.employee.lastName ?? "",
           phone: employeeOverride?.phone ?? update.employee.phone,
           profileUrl: employeeOverride?.profileUrl ?? update.employee.profileUrl,

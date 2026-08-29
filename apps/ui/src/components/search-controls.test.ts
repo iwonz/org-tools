@@ -35,6 +35,7 @@ const employee = (id: string, fields: Partial<WorkspaceEmployee>): WorkspaceEmpl
   updatedAt: timestamp,
   username: null,
   ...fields,
+  gender: fields.gender ?? "unspecified",
 });
 
 const employees: WorkspaceEmployee[] = [
@@ -42,6 +43,7 @@ const employees: WorkspaceEmployee[] = [
     birthday: "03-12",
     email: "alex@example.test",
     firstName: "Alex",
+    gender: "female",
     tags: [{ date: null, label: "Critical" }],
     username: "alex",
   }),
@@ -49,9 +51,10 @@ const employees: WorkspaceEmployee[] = [
     birthday: "04-18",
     email: "blair@example.test",
     firstName: "Blair",
+    gender: "male",
     username: "blair",
   }),
-  employee(CASEY_ID, { firstName: "Casey", username: "casey" }),
+  employee(CASEY_ID, { firstName: "Casey", gender: "unspecified", username: "casey" }),
   employee(DANA_ID, {
     email: "dana@example.test",
     firstName: "Dana",
@@ -188,6 +191,7 @@ describe("Employee Unit filters", () => {
           birthday: { day: 12, month: 3 },
           includeWithoutTags: false,
           includeWithoutUnits: false,
+          selectedGenders: ["female"],
           selectedPositions: ["QA"],
           selectedTags: ["Critical"],
           selectedUnitIds: [FIRST_TEAM_ID],
@@ -202,6 +206,18 @@ describe("Employee Unit filters", () => {
         includeWithoutUnits: true,
       }),
     ).toEqual([DANA_ID]);
+  });
+
+  test("matches exact gender values and ORs selections inside the group", () => {
+    expect(filter({ ...createEmptyEmployeeSearchFilters(), selectedGenders: ["female"] })).toEqual([
+      ALEX_ID,
+    ]);
+    expect(
+      filter({
+        ...createEmptyEmployeeSearchFilters(),
+        selectedGenders: ["male", "unspecified"],
+      }),
+    ).toEqual([BLAIR_ID, CASEY_ID, DANA_ID]);
   });
 
   test("prunes unavailable Unit IDs without changing other filters", () => {

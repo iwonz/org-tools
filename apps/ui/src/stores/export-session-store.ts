@@ -10,6 +10,7 @@ export type ExportEmployeeFieldKey =
   | "firstName"
   | "lastName"
   | "fullName"
+  | "gender"
   | "username"
   | "profileUrl"
   | "email"
@@ -47,6 +48,7 @@ export const exportEmployeeFieldKeys: ExportEmployeeFieldKey[] = [
   "firstName",
   "lastName",
   "fullName",
+  "gender",
   "username",
   "profileUrl",
   "email",

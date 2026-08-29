@@ -1,4 +1,10 @@
-import type { Employee, EmployeeId, EmployeeSearchDocument, UnitId } from "@org-tools/types";
+import type {
+  Employee,
+  EmployeeGender,
+  EmployeeId,
+  EmployeeSearchDocument,
+  UnitId,
+} from "@org-tools/types";
 
 import { createBirthdayKey } from "@/lib/birthday";
 import type { EmployeeUnitMembership } from "@/lib/employee-unit-contexts";
@@ -12,6 +18,7 @@ export type EmployeeSearchFilters = {
   birthday: EmployeeBirthdayFilter | null;
   includeWithoutTags: boolean;
   includeWithoutUnits: boolean;
+  selectedGenders: EmployeeGender[];
   selectedPositions: string[];
   selectedTags: string[];
   selectedUnitIds: UnitId[];
@@ -21,6 +28,7 @@ export const createEmptyEmployeeSearchFilters = (): EmployeeSearchFilters => ({
   birthday: null,
   includeWithoutTags: false,
   includeWithoutUnits: false,
+  selectedGenders: [],
   selectedPositions: [],
   selectedTags: [],
   selectedUnitIds: [],
@@ -28,6 +36,7 @@ export const createEmptyEmployeeSearchFilters = (): EmployeeSearchFilters => ({
 
 export const getEmployeeSearchFiltersKey = (filters: EmployeeSearchFilters) =>
   [
+    filters.selectedGenders.join("|"),
     filters.selectedPositions.join("|"),
     filters.selectedTags.join("|"),
     filters.selectedUnitIds.join("|"),
@@ -39,6 +48,7 @@ export const getEmployeeSearchFiltersKey = (filters: EmployeeSearchFilters) =>
   ].join(":");
 
 export const hasActiveEmployeeSearchFilters = (filters: EmployeeSearchFilters) =>
+  filters.selectedGenders.length > 0 ||
   filters.selectedPositions.length > 0 ||
   filters.selectedTags.length > 0 ||
   filters.selectedUnitIds.length > 0 ||
@@ -77,6 +87,10 @@ export const employeeSearchDocumentMatches = ({
     if (!filters.selectedPositions.some((position) => document.positionLabelSet.has(position))) {
       return false;
     }
+  }
+
+  if (filters.selectedGenders.length > 0 && !filters.selectedGenders.includes(document.gender)) {
+    return false;
   }
 
   if (filters.selectedTags.length > 0 || filters.includeWithoutTags) {

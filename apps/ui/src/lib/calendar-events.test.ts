@@ -10,6 +10,7 @@ const employee = (id: string): Employee => ({
   email: null,
   firstName: "Leap",
   fullName: `Leap ${id}`,
+  gender: "unspecified",
   id,
   lastName: id,
   phone: null,

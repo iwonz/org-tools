@@ -100,11 +100,13 @@ describe("Employee mapping and normalization", () => {
         "person.surname",
         "mail_address",
         "user_login",
+        "gender",
         "labels",
       ]),
     ).toMatchObject({
       email: "mail_address",
       firstName: "person.first_name",
+      gender: "gender",
       lastName: "person.surname",
       tags: "labels",
       username: "user_login",
@@ -137,6 +139,41 @@ describe("Employee mapping and normalization", () => {
         { date: null, label: "Leadership" },
       ],
     });
+  });
+
+  it("normalizes mapped gender aliases and defaults an unmapped or empty value", () => {
+    const collection = getFirstCollection([
+      { gender: "Female", name: "Ada" },
+      { gender: "Male", name: "Avery" },
+      { gender: "", name: "Sam" },
+    ]);
+    const mappedRows = normalizeEmployeeImportRows(
+      collection,
+      withMapping({ firstName: "name", gender: "gender" }),
+    );
+
+    expect(mappedRows.map((row) => row.draft?.gender)).toEqual(["female", "male", "unspecified"]);
+
+    const unmappedRows = normalizeEmployeeImportRows(
+      collection,
+      withMapping({ firstName: "name" }),
+    );
+    expect(unmappedRows.map((row) => row.draft?.gender)).toEqual([
+      "unspecified",
+      "unspecified",
+      "unspecified",
+    ]);
+  });
+
+  it("rejects unsupported mapped gender values", () => {
+    const collection = getFirstCollection([{ gender: "non-binary", name: "Ada" }]);
+    const [row] = normalizeEmployeeImportRows(
+      collection,
+      withMapping({ firstName: "name", gender: "gender" }),
+    );
+
+    expect(row?.status).toBe("invalid");
+    expect(row?.errors).toContain("Gender must be Male, Female, or Unspecified.");
   });
 
   it("rejects invalid profile, avatar, birthday, and missing identity values", () => {

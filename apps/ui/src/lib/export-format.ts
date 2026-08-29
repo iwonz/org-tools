@@ -287,6 +287,8 @@ export const getExportEmployeeFieldValue = (
       return employee.lastName;
     case "fullName":
       return employee.fullName;
+    case "gender":
+      return employee.gender;
     case "username":
       return employee.username;
     case "profileUrl":

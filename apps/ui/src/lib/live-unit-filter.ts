@@ -49,6 +49,7 @@ export const employeeLiveFilterRuleToSearchFilters = (
   birthday: rule.birthday ? { ...rule.birthday } : null,
   includeWithoutTags: rule.includeWithoutTags,
   includeWithoutUnits: rule.includeWithoutUnits,
+  selectedGenders: [],
   selectedPositions: [...rule.selectedPositions],
   selectedTags: [...rule.selectedTags],
   selectedUnitIds: [...rule.selectedUnitIds],

@@ -230,6 +230,7 @@ export class OrgViewsStore {
             createdAt: now,
             email: employeeOverride?.email ?? employee.email,
             firstName: employeeOverride?.firstName ?? employee.firstName,
+            gender: employeeOverride?.gender ?? employee.gender,
             id: localEmployeeId,
             lastName: employeeOverride?.lastName ?? employee.lastName,
             phone: employeeOverride?.phone ?? employee.phone,

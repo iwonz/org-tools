@@ -132,9 +132,9 @@ test("captures dated tag editing and event details", async ({ page }) => {
 
   await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
   await page.getByRole("button", { name: "Date for tag Remote" }).click();
-  await expect(page.locator('input[type="date"][aria-label="Date for tag Remote"]')).toHaveValue(
-    "2026-08-12",
-  );
+  await expect(
+    page.locator('[data-demo-id="tag-date-calendar"] [data-day="2026-08-12"]'),
+  ).toHaveAttribute("data-selected", "true");
   await stabilizeForScreenshot(page);
   await page.screenshot({
     animations: "disabled",
@@ -243,6 +243,11 @@ test("captures the dark expanded sidebar", async ({ page }) => {
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.locator('[data-demo-id="sidebar-toggle"]').click();
+  await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveAttribute(
+    "data-collapsed",
+    "false",
+  );
   await stabilizeForScreenshot(page);
 
   await page.screenshot({

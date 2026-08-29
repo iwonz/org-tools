@@ -86,6 +86,7 @@ const ruleToFilters = (rule: EmployeeLiveFilterRule): EmployeeSearchFilters => (
   birthday: rule.birthday ? { ...rule.birthday } : null,
   includeWithoutTags: rule.includeWithoutTags,
   includeWithoutUnits: rule.includeWithoutUnits,
+  selectedGenders: [],
   selectedPositions: [...rule.selectedPositions],
   selectedTags: [...rule.selectedTags],
   selectedUnitIds: [...rule.selectedUnitIds],
@@ -460,7 +461,6 @@ export function UnitDialog({
                 {parentName ? t("Parent: {name}", { name: parentName }) : t("Root level")}
               </div>
               <div className="grid gap-2">
-                <Label>{t("Membership mode")}</Label>
                 <Tabs onValueChange={changeMode} value={mode}>
                   <TabsList
                     aria-label={t("Unit membership mode")}
@@ -597,6 +597,7 @@ export function UnitDialog({
                   dataDemoId="live-unit-employee-search"
                   excludedUnitIds={invalidDependencyIds}
                   filters={liveFilters}
+                  hideGenderFilter
                   onFiltersChange={setLiveFilters}
                   onValueChange={setLiveQuery}
                   placeholder={t("Search Employees")}

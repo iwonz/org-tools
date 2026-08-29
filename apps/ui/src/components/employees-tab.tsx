@@ -3,16 +3,11 @@
 import type { Employee } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
 import { useDeferredValue, useMemo, useState } from "react";
-import {
-  HiOutlinePencilSquare,
-  HiOutlinePlus,
-  HiOutlineTrash,
-  HiOutlineUsers,
-} from "react-icons/hi2";
+import { HiOutlinePlus, HiOutlineUsers } from "react-icons/hi2";
 
+import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
-import { EmployeeTagPopover } from "@/components/employee-tag-picker";
 import { HighlightedText } from "@/components/highlighted-text";
 import {
   createEmptyEmployeeSearchFilters,
@@ -135,33 +130,14 @@ export const EmployeesTab = observer(() => {
           <EmployeeCardList
             actions={(employee) => {
               return (
-                <>
-                  <EmployeeTagPopover
-                    dataDemoId="employees-tag-picker"
-                    employee={employee}
-                    onApply={store.updateEmployeeTags}
-                    tagOptions={units.indexes.tagOptions}
-                  />
-                  <Button
-                    data-demo-id="employee-edit-button"
-                    onClick={() => setEditingEmployee(employee)}
-                    size="icon"
-                    title={t("Edit")}
-                    type="button"
-                    variant="ghost"
-                  >
-                    <HiOutlinePencilSquare />
-                  </Button>
-                  <Button
-                    onClick={() => setDeletingEmployee(employee)}
-                    size="icon"
-                    title={t("Delete")}
-                    type="button"
-                    variant="ghost"
-                  >
-                    <HiOutlineTrash />
-                  </Button>
-                </>
+                <EmployeeCardActions
+                  employee={employee}
+                  onApplyTags={store.updateEmployeeTags}
+                  onDelete={setDeletingEmployee}
+                  onEdit={setEditingEmployee}
+                  tagOptions={units.indexes.tagOptions}
+                  tagPickerDataDemoId="employees-tag-picker"
+                />
               );
             }}
             className="flex-1 p-0"

@@ -94,6 +94,25 @@ async function expectStablePressedGeometry(locator: Locator) {
   expect(pressed.translate).toBe("none");
 }
 
+async function getSidebarControlGeometry(locator: Locator) {
+  return locator.evaluate((element) => {
+    const icon = element.querySelector("svg");
+    if (!icon) throw new Error("Missing sidebar control icon");
+    const itemBox = element.getBoundingClientRect();
+    const iconBox = icon.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+
+    return {
+      height: itemBox.height,
+      iconLeft: iconBox.left - itemBox.left,
+      iconRight: itemBox.right - iconBox.right,
+      paddingLeft: style.paddingLeft,
+      paddingRight: style.paddingRight,
+      width: itemBox.width,
+    };
+  });
+}
+
 async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
   await page.mouse.move(320, 200);
   const sidebar = page.locator('[data-demo-id="app-sidebar"]');
@@ -396,7 +415,7 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
   await expectStableHoverGeometry(darkThemeOption);
   await darkThemeOption.click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await expectSidebarNavigation(page, 240);
+  await expectSidebarNavigation(page, 64);
   await expectSidebarActions(page);
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Light", exact: true }).click();
@@ -496,39 +515,49 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
 
   for (const width of [1024, 1280]) {
     await page.setViewportSize({ width, height: 720 });
-    await expectSidebarNavigation(page, 240);
+    await expectSidebarNavigation(page, 64);
     await expectSidebarActions(page);
     expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
-    await expect(importLabel).toBeVisible();
-    await expect(exportLabel).toBeVisible();
+    await expect(importLabel).toBeHidden();
+    await expect(exportLabel).toBeHidden();
     await expect(sidebarToggle).toBeVisible();
     await expectStableHoverGeometry(sidebarToggle);
     await expectStablePressedGeometry(sidebarToggle);
-    const toggleStyle = await sidebarToggle.evaluate((element) => {
-      const style = window.getComputedStyle(element);
-      return {
-        backgroundColor: style.backgroundColor,
-        borderRadius: style.borderRadius,
-        boxShadow: style.boxShadow,
-        color: style.color,
-        height: element.getBoundingClientRect().height,
-        width: element.getBoundingClientRect().width,
-      };
-    });
+    const compactNavigationItem = page.locator('[data-demo-id="tab-units"]');
+    const [toggleStyle, compactToggleGeometry, compactNavigationGeometry] = await Promise.all([
+      sidebarToggle.evaluate((element) => {
+        const style = window.getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderRadius: style.borderRadius,
+          boxShadow: style.boxShadow,
+          color: style.color,
+        };
+      }),
+      getSidebarControlGeometry(sidebarToggle),
+      getSidebarControlGeometry(compactNavigationItem),
+    ]);
     expect(toggleStyle).toMatchObject({
       borderRadius: "6px",
       boxShadow: "none",
+    });
+    expect(compactToggleGeometry).toEqual(compactNavigationGeometry);
+    expect(compactToggleGeometry).toMatchObject({
       height: 40,
-      width: 224,
+      iconLeft: 14,
+      iconRight: 14,
+      paddingLeft: "14px",
+      paddingRight: "14px",
+      width: 48,
     });
     expect(toggleStyle.color).not.toBe(toggleStyle.backgroundColor);
-    const [expandedToggleIconBox, expandedNavigationIconBox] = await Promise.all([
+    const [compactToggleIconBox, compactNavigationIconBox] = await Promise.all([
       sidebarToggle.locator("svg").boundingBox(),
-      page.locator('[data-demo-id="tab-units"] svg').boundingBox(),
+      compactNavigationItem.locator("svg").boundingBox(),
     ]);
-    expect(expandedToggleIconBox).not.toBeNull();
-    expect(expandedNavigationIconBox).not.toBeNull();
-    expect(expandedToggleIconBox?.x ?? 0).toBeCloseTo(expandedNavigationIconBox?.x ?? 0, 1);
+    expect(compactToggleIconBox).not.toBeNull();
+    expect(compactNavigationIconBox).not.toBeNull();
+    expect(compactToggleIconBox?.x ?? 0).toBeCloseTo(compactNavigationIconBox?.x ?? 0, 1);
     expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
     const selectedBeforeCollapse = await page
       .locator('[data-demo-id="product-tabs-list"] [aria-selected="true"]')
@@ -574,15 +603,15 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
 
       return samples;
     });
-    await expect(sidebar).toHaveAttribute("data-collapsed", "true");
+    await expect(sidebar).toHaveAttribute("data-collapsed", "false");
     expect(transitionSamples.length).toBeGreaterThanOrEqual(5);
-    expect(transitionSamples.at(-1)?.width).toBe(64);
+    expect(transitionSamples.at(-1)?.width).toBe(240);
     for (let index = 1; index < transitionSamples.length; index += 1) {
-      expect(transitionSamples[index]?.width ?? 0).toBeLessThanOrEqual(
-        (transitionSamples[index - 1]?.width ?? 0) + 0.5,
+      expect(transitionSamples[index]?.width ?? 0).toBeGreaterThanOrEqual(
+        (transitionSamples[index - 1]?.width ?? 0) - 0.5,
       );
-      expect(transitionSamples[index]?.labelOpacity ?? 0).toBeLessThanOrEqual(
-        (transitionSamples[index - 1]?.labelOpacity ?? 0) + 0.03,
+      expect(transitionSamples[index]?.labelOpacity ?? 0).toBeGreaterThanOrEqual(
+        (transitionSamples[index - 1]?.labelOpacity ?? 0) - 0.03,
       );
     }
     expect(
@@ -593,36 +622,32 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
       Math.max(...transitionSamples.map(({ toggleIconLeft }) => toggleIconLeft)) -
         Math.min(...transitionSamples.map(({ toggleIconLeft }) => toggleIconLeft)),
     ).toBeLessThanOrEqual(0.5);
-    expect(transitionSamples.at(-1)?.labelOpacity).toBe(0);
-    await expectSidebarNavigation(page, 64);
-    const [compactHeaderBox, compactToggleBox] = await Promise.all([
+    expect(transitionSamples.at(-1)?.labelOpacity).toBe(1);
+    await expectSidebarNavigation(page, 240);
+    await expect(importLabel).toBeVisible();
+    await expect(exportLabel).toBeVisible();
+    const [expandedHeaderBox, expandedToggleBox, expandedToggleGeometry] = await Promise.all([
       page.locator('[data-demo-id="sidebar-header"]').boundingBox(),
       sidebarToggle.boundingBox(),
+      getSidebarControlGeometry(sidebarToggle),
     ]);
-    expect(compactHeaderBox).not.toBeNull();
-    expect(compactToggleBox).not.toBeNull();
-    expect(compactToggleBox?.width).toBe(48);
-    expect(compactToggleBox?.height).toBe(40);
-    expect(
-      Math.abs(
-        (compactToggleBox?.x ?? 0) +
-          (compactToggleBox?.width ?? 0) / 2 -
-          ((compactHeaderBox?.x ?? 0) + (compactHeaderBox?.width ?? 0) / 2),
-      ),
-    ).toBeLessThanOrEqual(0.5);
-    const [compactToggleIconBox, compactNavigationIconBox] = await Promise.all([
+    expect(expandedHeaderBox).not.toBeNull();
+    expect(expandedToggleBox).not.toBeNull();
+    expect(expandedToggleGeometry).toEqual(compactNavigationGeometry);
+    expect(expandedToggleBox?.x ?? 0).toBeCloseTo((expandedHeaderBox?.x ?? 0) + 8, 1);
+    const [expandedToggleIconBox, expandedNavigationIconBox] = await Promise.all([
       sidebarToggle.locator("svg").boundingBox(),
-      page.locator('[data-demo-id="tab-units"] svg').boundingBox(),
+      compactNavigationItem.locator("svg").boundingBox(),
     ]);
-    expect(compactToggleIconBox).not.toBeNull();
-    expect(compactNavigationIconBox).not.toBeNull();
-    expect(compactToggleIconBox?.x ?? 0).toBeCloseTo(compactNavigationIconBox?.x ?? 0, 1);
+    expect(expandedToggleIconBox).not.toBeNull();
+    expect(expandedNavigationIconBox).not.toBeNull();
+    expect(expandedToggleIconBox?.x ?? 0).toBeCloseTo(expandedNavigationIconBox?.x ?? 0, 1);
     await expect(
       page.locator('[data-demo-id="product-tabs-list"] [aria-selected="true"]'),
     ).toHaveAttribute("data-demo-id", selectedBeforeCollapse ?? "tab-org-editor");
     await sidebarToggle.click();
-    await expect(sidebar).toHaveAttribute("data-collapsed", "false");
-    await expectSidebarNavigation(page, 240);
+    await expect(sidebar).toHaveAttribute("data-collapsed", "true");
+    await expectSidebarNavigation(page, 64);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
@@ -1304,16 +1329,48 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await search.getByRole("searchbox").fill("");
   await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
 
+  await page.locator('[data-demo-id="employees-position-filter"]').click();
+  const filterPopover = page.locator('[data-demo-id="employees-position-popover"]');
+  await filterPopover.getByRole("button", { name: "Gender", exact: true }).click();
+  await filterPopover.getByRole("checkbox", { name: "Gender: Female", exact: true }).click();
+  await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveText("· 2 matches");
+  await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Riley Chen");
+  await filterPopover.getByRole("button", { name: "Clear all", exact: true }).click();
+  await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
   await page.locator('[data-demo-id="employee-create-button"]').click();
   const createDialog = page.getByRole("dialog", { name: "Create Employee" });
   await expectNoHorizontalRule(createDialog.locator('[data-slot="dialog-header"]'));
   await expectNoHorizontalRule(createDialog.locator('[data-slot="dialog-footer"]'));
+  await expect(
+    createDialog.getByText("The Employee is stored only in this in-memory workspace.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    createDialog.getByText(
+      "PNG, JPEG, or WebP, up to 25 MiB and 40 megapixels. The saved avatar is a 512 × 512 WebP embedded in the workspace.",
+      { exact: true },
+    ),
+  ).toHaveCount(0);
   await createDialog.getByLabel("First name", { exact: true }).fill("Taylor");
   await createDialog.getByLabel("Last name", { exact: true }).fill("Tester");
+  const genderSelect = createDialog.getByRole("combobox", { name: "Gender", exact: true });
+  await expect(genderSelect).toContainText("Not specified");
+  await genderSelect.click();
+  await expect(page.getByRole("option")).toHaveText(["Male", "Female", "Not specified"]);
+  await page.getByRole("option", { name: "Female", exact: true }).click();
   await createDialog.getByRole("button", { name: "Create", exact: true }).click();
   await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("5 Employees");
 
   const createdEmployee = page.locator("article").filter({ hasText: "Taylor Tester" });
+  await createdEmployee.getByRole("button", { name: "Edit", exact: true }).click();
+  const editDialog = page.getByRole("dialog", { name: "Edit Employee" });
+  await expect(editDialog.getByRole("combobox", { name: "Gender", exact: true })).toContainText(
+    "Female",
+  );
+  await editDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await createdEmployee.getByRole("button", { name: "Delete", exact: true }).click();
   const deleteDialog = page.getByRole("alertdialog");
   await expectNoHorizontalRule(deleteDialog.locator('[data-slot="alert-dialog-header"]'));
@@ -1464,6 +1521,26 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
     ),
   ).toEqual(new Set(["0px"]));
 
+  const editorCommand = page.locator('[data-demo-id="org-editor-align-button"]');
+  await expectStableHoverGeometry(editorCommand);
+  const editorCommandHover = await editorCommand.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    const background = style.backgroundColor;
+    const slashAlpha = /\/\s*([\d.]+)(%)?\s*\)$/.exec(background);
+    const commaAlpha = /rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/.exec(background);
+    const alpha = slashAlpha
+      ? Number(slashAlpha[1]) / (slashAlpha[2] ? 100 : 1)
+      : commaAlpha
+        ? Number(commaAlpha[1])
+        : background === "rgba(0, 0, 0, 0)"
+          ? 0
+          : 1;
+    return { alpha, background, opacity: style.opacity };
+  });
+  expect(editorCommandHover.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(editorCommandHover.alpha).toBe(1);
+  expect(editorCommandHover.opacity).toBe("1");
+
   const zoomOutButton = viewportActions.getByRole("button").first();
   for (let index = 0; index < 5; index += 1) await zoomOutButton.click();
   const adaptiveDocumentGridSize = Number(await canvas.getAttribute("data-grid-size"));
@@ -1484,7 +1561,7 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   );
   await viewportActions.getByRole("button").nth(2).click();
 
-  await page.locator('[data-demo-id="org-editor-align-button"]').click();
+  await editorCommand.click();
   expect(
     (
       await canvas.locator("[data-org-editor-unit-id]").evaluateAll((units) =>
@@ -1535,7 +1612,7 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await expectSidebarNavigation(page, 240);
+  await expectSidebarNavigation(page, 64);
   const darkTopBackground = await getBackgroundColor(topActions);
   expect(darkTopBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(viewportActions)).toBe(darkTopBackground);
@@ -1605,11 +1682,38 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   const julyBirthday = page.locator('[data-calendar-date="2026-07-22"]');
   await expect(julyBirthday).toHaveRole("button");
   await julyBirthday.click();
-  await expect(page.getByRole("dialog", { name: /July 22, 2026/ })).toContainText("Jordan Reed");
+  const birthdayDialog = page.getByRole("dialog", { name: /July 22, 2026/ });
+  await expect(birthdayDialog).toContainText("Jordan Reed");
+  await expect(
+    birthdayDialog.getByText("Birthdays and dated tags for this day", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="calendar-birthday-list"]')).toHaveCSS(
+    "padding-left",
+    "0px",
+  );
+  await expect(page.locator('[data-demo-id="calendar-birthday-list"]')).toHaveCSS(
+    "padding-right",
+    "0px",
+  );
+  await expect(
+    birthdayDialog.getByRole("button", { name: "Edit Employee tags", exact: true }),
+  ).toBeVisible();
+  await birthdayDialog.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Edit Employee" })).toBeVisible();
   await page
-    .getByRole("dialog", { name: /July 22, 2026/ })
-    .getByRole("button", { name: "Close" })
+    .getByRole("dialog", { name: "Edit Employee" })
+    .getByRole("button", { name: "Cancel", exact: true })
     .click();
+  await birthdayDialog.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.locator('[data-demo-id="calendar-confirm-delete-employee"]').click();
+  await expect(birthdayDialog).toContainText("No birthdays");
+  await expect(birthdayDialog.getByText("Dated tags", { exact: true })).toHaveCount(0);
+  await birthdayDialog.getByRole("button", { name: "Close" }).click();
+  await page.locator('[data-calendar-date="2026-07-10"]').click();
+  const datedTagDayDialog = page.getByRole("dialog", { name: /July 10, 2026/ });
+  await expect(datedTagDayDialog.getByText("Dated tags", { exact: true })).toBeVisible();
+  await expect(datedTagDayDialog).toContainText("Morgan Park");
+  await datedTagDayDialog.getByRole("button", { name: "Close" }).click();
   await page
     .locator('[data-demo-id="dated-tag-cloud"]')
     .getByRole("button", { name: /Operations/ })
@@ -1631,10 +1735,38 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   const navigation = page.locator('[data-demo-id="calendar-header-navigation"]');
   await expectNoHorizontalRule(page.locator('[data-demo-id="calendar-header"]'));
   await expectNoHorizontalRule(page.locator('[data-demo-id="dated-tag-cloud"]'));
-  await expect(page.locator('[data-calendar-date="2026-07-01"]')).toHaveCSS(
-    "border-top-width",
-    "1px",
+  const emptyDate = page.locator('[data-calendar-date="2026-07-01"]');
+  const eventDate = page.locator('[data-calendar-date="2026-07-10"]');
+  await expect(emptyDate).toHaveRole("button");
+  await expect(eventDate).toHaveRole("button");
+  await expect(emptyDate).toHaveCSS("border-top-width", "0px");
+  await expect(emptyDate).toHaveCSS("cursor", "pointer");
+  await expect(eventDate).toHaveCSS("cursor", "pointer");
+  const emptyRestingBackground = await getBackgroundColor(emptyDate);
+  await expectStableHoverGeometry(emptyDate);
+  await expect.poll(() => getBackgroundColor(emptyDate)).not.toBe(emptyRestingBackground);
+  const eventRestingBackground = await getBackgroundColor(eventDate);
+  await expectStableHoverGeometry(eventDate);
+  await expect.poll(() => getBackgroundColor(eventDate)).not.toBe(eventRestingBackground);
+  const dateNumberOffsets = await Promise.all(
+    [emptyDate, eventDate].map((date) =>
+      date.evaluate((element) => {
+        const number = element.querySelector("span");
+        if (!(number instanceof HTMLElement)) throw new Error("Calendar date number is missing.");
+        return number.getBoundingClientRect().top - element.getBoundingClientRect().top;
+      }),
+    ),
   );
+  expect(dateNumberOffsets[0]).toBeCloseTo(dateNumberOffsets[1] ?? 0, 1);
+  const todayDate = page.locator('[data-today="true"]');
+  await expect(todayDate).toHaveCount(1);
+  expect(await getBackgroundColor(todayDate)).not.toBe(await getBackgroundColor(emptyDate));
+  expect(
+    await todayDate
+      .locator("span")
+      .first()
+      .evaluate((element) => window.getComputedStyle(element).backgroundColor),
+  ).not.toBe("rgba(0, 0, 0, 0)");
   await expect(navigation).toContainText("July 2026");
   await expect(navigation.getByRole("button")).toHaveText(["Previous", "Next"]);
   const layout = await page.locator('[data-demo-id="calendar-scroll-area"]').evaluate((element) => {
@@ -1657,6 +1789,19 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   expect(layout.gridRight).toBeLessThanOrEqual(layout.scrollRight);
   expect(layout.gridBottom).toBeLessThanOrEqual(layout.scrollBottom);
 
+  await page.locator('[data-demo-id="language-toggle"]').click();
+  await page.locator('[data-demo-id="language-menu"]').getByRole("option").first().click();
+  await navigation.getByRole("button").last().click();
+  const localizedMonthTitle = (
+    await page.locator('[data-demo-id="calendar-month-title"]').textContent()
+  )?.trim();
+  expect(localizedMonthTitle?.split(/\s+/u)).toHaveLength(2);
+  expect(localizedMonthTitle?.endsWith("2026")).toBe(true);
+  await navigation.getByRole("button").first().click();
+  await page.locator('[data-demo-id="language-toggle"]').click();
+  await page.locator('[data-demo-id="language-menu"]').getByRole("option").nth(1).click();
+  await expect(navigation).toContainText("July 2026");
+
   for (let index = 0; index < 6; index += 1) {
     await navigation.getByRole("button", { name: "Next", exact: true }).click();
   }
@@ -1674,29 +1819,53 @@ test("edits and clears a dated tag from quick and full Employee editors", async 
   await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
   const tagPopover = page.locator('[data-demo-id="employees-tag-picker-popover"]');
   await expect(tagPopover.locator('input[type="date"]')).toHaveCount(0);
+  const firstTagOption = tagPopover.locator("[data-employee-tag-option]").first();
+  await expect(firstTagOption).toBeVisible();
+  const tagOptionGeometry = await firstTagOption.evaluate((element) => {
+    const row = element.getBoundingClientRect();
+    return {
+      childrenInside: [...element.children].every((child) => {
+        const box = child.getBoundingClientRect();
+        return box.top >= row.top && box.bottom <= row.bottom;
+      }),
+      height: row.height,
+    };
+  });
+  expect(tagOptionGeometry).toEqual({ childrenInside: true, height: 44 });
   await tagPopover.getByRole("button", { name: "Date for tag Remote" }).click();
-  const quickDateInput = page.locator('input[type="date"][aria-label="Date for tag Remote"]');
-  await expect(quickDateInput).toHaveValue("2026-08-12");
-  await quickDateInput.fill("2026-08-15");
-  await page.keyboard.press("Escape");
+  const quickDatePopover = page.locator('[data-demo-id="tag-date-popover"]');
+  const quickCalendar = quickDatePopover.locator('[data-demo-id="tag-date-calendar"]');
+  await expect(quickDatePopover.locator('input[type="date"]')).toHaveCount(0);
+  await expect(quickDatePopover.getByText("Remote", { exact: true })).toHaveCount(0);
+  await expect(quickCalendar.locator('[data-day="2026-08-12"]')).toHaveAttribute(
+    "data-selected",
+    "true",
+  );
+  await quickCalendar.locator('[data-day="2026-08-15"] button').click();
+  await expect(quickDatePopover).toBeHidden();
   await page.keyboard.press("Escape");
 
   await page.locator('[data-demo-id="employee-edit-button"]').first().click();
   let employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
   await expect(employeeDialog.locator('input[type="date"]')).toHaveCount(0);
   await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
-  const employeeTagDate = page.locator('input[type="date"][aria-label="Date for tag Remote"]');
-  await expect(employeeTagDate).toHaveValue("2026-08-15");
-  await page.getByRole("button", { name: "Clear date", exact: true }).click();
+  let employeeTagDatePopover = page.locator('[data-demo-id="tag-date-popover"]');
+  await expect(employeeTagDatePopover.locator('[data-day="2026-08-15"]')).toHaveAttribute(
+    "data-selected",
+    "true",
+  );
+  await employeeTagDatePopover.getByRole("button", { name: "Clear date", exact: true }).click();
   await employeeDialog.getByRole("button", { name: "Save", exact: true }).click();
 
   await page.locator('[data-demo-id="employee-edit-button"]').first().click();
   employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
   await expect(employeeDialog.locator('input[type="date"]')).toHaveCount(0);
   await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
-  await expect(page.locator('input[type="date"][aria-label="Date for tag Remote"]')).toHaveValue(
-    "",
-  );
+  employeeTagDatePopover = page.locator('[data-demo-id="tag-date-popover"]');
+  await expect(employeeTagDatePopover.locator("[data-selected]")).toHaveCount(0);
+  await expect(
+    employeeTagDatePopover.getByRole("button", { name: "Clear date", exact: true }),
+  ).toBeDisabled();
   await page.keyboard.press("Escape");
   await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await assertLocalRequests();
@@ -1721,8 +1890,9 @@ test("adds a tag and applies one date through the bulk Org Editor menu", async (
   await expect(tagPanel).toBeVisible();
   await tagPanel.getByRole("checkbox", { name: "Remote", exact: true }).click();
   await tagPanel.getByRole("button", { name: "Date for tag Remote" }).click();
-  await page.locator('input[type="date"][aria-label="Date for tag Remote"]').fill("2026-08-18");
-  await page.keyboard.press("Escape");
+  const bulkTagCalendar = page.locator('[data-demo-id="tag-date-calendar"]');
+  await bulkTagCalendar.getByRole("button", { name: "Go to the Next Month", exact: true }).click();
+  await bulkTagCalendar.locator('[data-day="2026-08-18"] button').click();
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
 
@@ -1730,9 +1900,9 @@ test("adds a tag and applies one date through the bulk Org Editor menu", async (
   await page.locator('[data-demo-id="employee-edit-button"]').nth(3).click();
   const employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
   await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
-  await expect(page.locator('input[type="date"][aria-label="Date for tag Remote"]')).toHaveValue(
-    "2026-08-18",
-  );
+  await expect(
+    page.locator('[data-demo-id="tag-date-calendar"] [data-day="2026-08-18"]'),
+  ).toHaveAttribute("data-selected", "true");
   await page.keyboard.press("Escape");
   await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await assertLocalRequests();

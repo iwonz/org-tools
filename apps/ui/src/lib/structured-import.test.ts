@@ -18,6 +18,7 @@ const employee = (id: string, username = "avery"): WorkspaceEmployee => ({
   createdAt: timestamp,
   email: `${username}@example.test`,
   firstName: "Avery",
+  gender: "unspecified",
   id,
   lastName: "Stone",
   phone: null,

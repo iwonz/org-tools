@@ -8,8 +8,20 @@ import { useMemo, useRef, useState } from "react";
 import { HiOutlineCalendarDays, HiOutlineTag, HiOutlineUserGroup } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
+import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList } from "@/components/employee-card-list";
+import { EmployeeDialog } from "@/components/employee-dialog";
 import { TopLevelEmptyState } from "@/components/source-empty-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -119,7 +131,7 @@ function CalendarDayCell({
         <span
           className={cn(
             "text-sm font-medium",
-            isToday && "rounded-md bg-primary px-1.5 py-0.5 text-primary-foreground",
+            isToday && "rounded-md bg-signal px-1.5 py-0.5 text-signal-foreground",
           )}
         >
           {calendarDay.day}
@@ -151,31 +163,20 @@ function CalendarDayCell({
       </div>
     </>
   );
-  const classes = cn(
-    "min-h-0 overflow-hidden rounded-md border border-border/70 bg-background p-2.5 text-left",
-    isToday && "border-signal/50 bg-accent/45",
-  );
-  return hasContent ? (
+  return (
     <button
       className={cn(
-        classes,
-        "outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring",
+        "flex min-h-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg bg-muted/30 p-2.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        isToday && "bg-signal/15 hover:bg-signal/20",
       )}
       data-calendar-date={calendarDay.date}
+      data-has-content={hasContent ? "true" : "false"}
       data-today={isToday ? "true" : undefined}
       onClick={() => onOpen(calendarDay)}
       type="button"
     >
       {content}
     </button>
-  ) : (
-    <div
-      className={classes}
-      data-calendar-date={calendarDay.date}
-      data-today={isToday ? "true" : undefined}
-    >
-      {content}
-    </div>
   );
 }
 
@@ -244,21 +245,27 @@ export const CalendarTab = observer(() => {
     [employeesByBirthday],
   );
   const [{ monthIndex, year }, setSelection] = useState(getInitialCalendarSelection);
-  const [dialogDay, setDialogDay] = useState<CalendarDay | null>(null);
+  const [dialogDayKey, setDialogDayKey] = useState<string | null>(null);
   const [dialogTag, setDialogTag] = useState<DatedTagGroup | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [cloudExpanded, setCloudExpanded] = useState(false);
   const todayDate = useMemo(getTodayDate, []);
-  const todayIso = getTodayDate();
+  const todayIso = todayDate;
   const monthDays = useMemo(
     () => getMonthDays(year, monthIndex, employeesByBirthday, datedEventsByDate),
     [datedEventsByDate, employeesByBirthday, monthIndex, year],
   );
+  const dialogDay = useMemo(
+    () => monthDays.find((day) => day.key === dialogDayKey) ?? null,
+    [dialogDayKey, monthDays],
+  );
   const rowCount = Math.ceil(monthDays.length / 7);
-  const title = format.dateTime(new Date(Date.UTC(year, monthIndex, 1)), {
+  const monthTitle = format.dateTime(new Date(Date.UTC(year, monthIndex, 1)), {
     month: "long",
     timeZone: "UTC",
-    year: "numeric",
   });
+  const title = `${monthTitle} ${format.number(year, { useGrouping: false })}`;
   const step = (direction: -1 | 1) =>
     setSelection((current) => {
       const next = new Date(Date.UTC(current.year, current.monthIndex + direction, 1));
@@ -366,14 +373,14 @@ export const CalendarTab = observer(() => {
                 calendarDay={day}
                 isToday={day.date === todayDate}
                 key={day.key}
-                onOpen={setDialogDay}
+                onOpen={(calendarDay) => setDialogDayKey(calendarDay.key)}
               />
             ))}
           </div>
         </div>
       </section>
 
-      <Dialog onOpenChange={(open) => !open && setDialogDay(null)} open={dialogDay !== null}>
+      <Dialog onOpenChange={(open) => !open && setDialogDayKey(null)} open={dialogDay !== null}>
         <DialogContent className="flex h-[min(760px,90dvh)] max-w-4xl flex-col">
           <DialogHeader>
             <DialogTitle>
@@ -384,9 +391,13 @@ export const CalendarTab = observer(() => {
                   })
                 : ""}
             </DialogTitle>
-            <DialogDescription>{t("Birthdays and dated tags for this day")}</DialogDescription>
           </DialogHeader>
-          <DialogBody className="grid min-h-0 flex-1 gap-4 overflow-auto md:grid-cols-2">
+          <DialogBody
+            className={cn(
+              "grid min-h-0 flex-1 gap-4 overflow-auto",
+              dialogDay && dialogDay.events.length > 0 && "md:grid-cols-2",
+            )}
+          >
             <section className="flex min-h-0 flex-col gap-2">
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <HiOutlineUserGroup />
@@ -394,7 +405,18 @@ export const CalendarTab = observer(() => {
               </h3>
               {dialogDay && dialogDay.birthdayEmployees.length > 0 ? (
                 <EmployeeCardList
-                  className="min-h-48 flex-1"
+                  actions={(employee) => (
+                    <EmployeeCardActions
+                      employee={employee}
+                      onApplyTags={store.updateEmployeeTags}
+                      onDelete={setDeletingEmployee}
+                      onEdit={setEditingEmployee}
+                      tagOptions={store.units?.indexes.tagOptions ?? []}
+                      tagPickerDataDemoId="calendar-employee-tag-picker"
+                    />
+                  )}
+                  className="min-h-48 flex-1 p-0"
+                  dataDemoId="calendar-birthday-list"
                   employees={dialogDay.birthdayEmployees}
                   onUnitContextClick={(context) => store.selectUnitFromEmployeeCard(context.unitId)}
                   resetKey={`calendar:${dialogDay.key}:birthdays`}
@@ -404,13 +426,13 @@ export const CalendarTab = observer(() => {
                 <p className="text-sm text-muted-foreground">{t("No birthdays")}</p>
               )}
             </section>
-            <section className="grid content-start gap-2">
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <HiOutlineTag />
-                {t("Dated tags")}
-              </h3>
-              {dialogDay && dialogDay.events.length > 0 ? (
-                dialogDay.events.map((event) => (
+            {dialogDay && dialogDay.events.length > 0 && (
+              <section className="grid content-start gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <HiOutlineTag />
+                  {t("Dated tags")}
+                </h3>
+                {dialogDay.events.map((event) => (
                   <button
                     className="flex items-center gap-3 rounded-md bg-muted/35 p-2 text-left outline-none transition-colors hover:bg-accent/65 active:bg-accent-strong/70 focus-visible:ring-2 focus-visible:ring-ring/40"
                     key={`${event.employee.id}:${event.label}`}
@@ -432,14 +454,57 @@ export const CalendarTab = observer(() => {
                       </div>
                     </div>
                   </button>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("No dated tags")}</p>
-              )}
-            </section>
+                ))}
+              </section>
+            )}
           </DialogBody>
         </DialogContent>
       </Dialog>
+
+      {editingEmployee && store.units && (
+        <EmployeeDialog
+          employee={editingEmployee}
+          mode="global"
+          onOpenChange={(open) => !open && setEditingEmployee(null)}
+          onSave={(fields, memberships) =>
+            store.updateEmployee(editingEmployee.id, fields, memberships)
+          }
+          open={Boolean(editingEmployee)}
+          tagOptions={store.units.indexes.tagOptions}
+          units={store.units}
+        />
+      )}
+      <AlertDialog
+        onOpenChange={(open) => !open && setDeletingEmployee(null)}
+        open={Boolean(deletingEmployee)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Delete Employee?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingEmployee
+                ? t(
+                    "Employee {name} will be removed from the global catalog and Main. Custom Views will keep a local copy.",
+                    { name: deletingEmployee.fullName },
+                  )
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              data-demo-id="calendar-confirm-delete-employee"
+              onClick={() => {
+                if (deletingEmployee) store.deleteWorkspaceEmployee(deletingEmployee.id);
+                setDeletingEmployee(null);
+              }}
+            >
+              {t("Delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog onOpenChange={(open) => !open && setDialogTag(null)} open={dialogTag !== null}>
         <DialogContent className="flex h-[min(760px,90dvh)] max-w-2xl flex-col">

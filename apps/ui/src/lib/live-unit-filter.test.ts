@@ -40,6 +40,7 @@ const createEmployee = (id: string, fields: Partial<WorkspaceEmployee>): Workspa
   updatedAt: timestamp,
   username: null,
   ...fields,
+  gender: fields.gender ?? "unspecified",
 });
 
 const employees: WorkspaceEmployee[] = [

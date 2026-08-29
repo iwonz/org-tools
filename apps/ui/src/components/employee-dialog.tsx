@@ -34,7 +34,6 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -99,6 +98,7 @@ const getInitialFields = (
   avatarBase64Url: employee?.avatarBase64Url ?? null,
   email: employee?.email ?? null,
   firstName: employee?.firstName ?? "",
+  gender: employee?.gender ?? "unspecified",
   lastName: employee?.lastName ?? "",
   phone: employee?.phone ?? null,
   profileUrl: employee?.profileUrl ?? null,
@@ -343,11 +343,6 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
         >
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>
-              {mode === "global"
-                ? t("The Employee is stored only in this in-memory workspace.")
-                : t("The Employee is stored only in the current Org Editor View.")}
-            </DialogDescription>
           </DialogHeader>
           <form
             className="flex min-h-0 flex-1 flex-col"
@@ -443,6 +438,26 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                     </Select>
                   </div>
                 </Field>
+                <Field htmlFor="employee-gender" label={t("Gender")}>
+                  <Select
+                    onValueChange={(gender) =>
+                      setFields((currentFields) => ({
+                        ...currentFields,
+                        gender: gender as EditableEmployeeFields["gender"],
+                      }))
+                    }
+                    value={fields.gender}
+                  >
+                    <SelectTrigger data-demo-id="employee-gender" id="employee-gender">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">{t("Male")}</SelectItem>
+                      <SelectItem value="female">{t("Female")}</SelectItem>
+                      <SelectItem value="unspecified">{t("Not specified")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
               </section>
 
               <section className="grid gap-3">
@@ -525,11 +540,6 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                     {messageText(avatarError)}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  {t(
-                    "PNG, JPEG, or WebP, up to 25 MiB and 40 megapixels. The saved avatar is a 512 × 512 WebP embedded in the workspace.",
-                  )}
-                </p>
               </section>
 
               <section className="grid gap-3">

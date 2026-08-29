@@ -77,6 +77,7 @@ describe("ImportSessionStore", () => {
       createdAt: "2026-08-04T08:00:00.000Z",
       email: "avery@example.test",
       firstName: "Avery",
+      gender: "unspecified",
       id: "00000000-0000-4000-8000-000000000001",
       lastName: "Stone",
       phone: null,

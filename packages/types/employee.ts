@@ -1,5 +1,8 @@
 import type { EmployeeId, OrgEditorEmployeeId } from "./ids.js";
 
+/** Stable persisted Employee gender value. */
+export type EmployeeGender = "male" | "female" | "unspecified";
+
 /** A label assigned to one Employee, optionally tied to a one-time calendar date. */
 export type EmployeeTag = {
   date: string | null;
@@ -12,6 +15,7 @@ export type EditableEmployeeFields = {
   birthday: string | null;
   email: string | null;
   firstName: string;
+  gender: EmployeeGender;
   lastName: string;
   phone: string | null;
   profileUrl: string | null;

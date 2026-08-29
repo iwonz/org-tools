@@ -482,6 +482,7 @@ function OrgEditorEmployeeTagSubmenu({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
+  const datePopoverOpenRef = useRef(false);
   const suppressNextFocusOpenRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [placement, setPlacement] = useState<{
@@ -503,6 +504,7 @@ function OrgEditorEmployeeTagSubmenu({
     setOpen(false);
   };
   const scheduleClose = () => {
+    if (datePopoverOpenRef.current) return;
     cancelClose();
     closeTimeoutRef.current = window.setTimeout(() => {
       setOpen(false);
@@ -633,6 +635,10 @@ function OrgEditorEmployeeTagSubmenu({
             dataDemoId="org-editor-employee-tags-panel"
             employees={employees}
             onApply={onApply}
+            onDatePopoverOpenChange={(datePopoverOpen) => {
+              datePopoverOpenRef.current = datePopoverOpen;
+              if (datePopoverOpen) cancelClose();
+            }}
             tagOptions={tagOptions}
           />
         </div>
@@ -664,7 +670,7 @@ function OrgEditorToolbarButton({
     <Button
       aria-label={ariaLabel}
       className={cn(
-        "h-9 rounded-md border-0 bg-transparent shadow-none hover:bg-accent/60 focus-visible:ring-inset",
+        "h-9 rounded-md border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-inset",
         className,
       )}
       data-demo-id={dataDemoId}
@@ -694,7 +700,7 @@ function OrgEditorLayoutSwitch({
     <Button
       aria-checked={layoutMode === "leftRight"}
       aria-label={t("Change layout direction")}
-      className="h-9 gap-1 rounded-md border-0 bg-transparent px-1 shadow-none hover:bg-accent/60 focus-visible:ring-inset"
+      className="h-9 gap-1 rounded-md border-0 bg-transparent px-1 shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-inset"
       data-demo-id="org-editor-layout-switch"
       onClick={onToggle}
       role="switch"

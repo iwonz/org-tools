@@ -20,6 +20,7 @@ const employee: Employee = {
   email: "avery@example.test",
   firstName: "Avery",
   fullName: "Avery Stone",
+  gender: "unspecified",
   id: "00000000-0000-4000-8000-000000000011",
   lastName: "Stone",
   phone: "+1 555-0111",

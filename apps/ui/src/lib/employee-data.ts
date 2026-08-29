@@ -1,6 +1,7 @@
 import type {
   EditableEmployeeFields,
   Employee,
+  EmployeeGender,
   EmployeeId,
   OrgEditorEmployee,
   OrgEditorEmployeeOverride,
@@ -29,6 +30,18 @@ export const createUuid = (): string => {
 };
 
 export const createWorkspaceEmployeeId = (): EmployeeId => createUuid();
+
+export const EMPLOYEE_GENDERS = ["male", "female", "unspecified"] as const;
+
+export const isEmployeeGender = (value: unknown): value is EmployeeGender =>
+  typeof value === "string" && EMPLOYEE_GENDERS.includes(value as EmployeeGender);
+
+export const normalizeEmployeeGender = (value: unknown): EmployeeGender => {
+  if (!isEmployeeGender(value)) {
+    throw new LocalizedError(uiMessage("Gender is invalid."));
+  }
+  return value;
+};
 
 export const normalizeOptionalEmployeeText = (value: string | null | undefined) =>
   value?.trim() || null;
@@ -111,6 +124,7 @@ export const normalizeEditableEmployeeFields = (
     birthday: normalizeBirthday(fields.birthday),
     email: normalizeOptionalEmployeeText(fields.email),
     firstName: fields.firstName.trim(),
+    gender: normalizeEmployeeGender(fields.gender),
     lastName: fields.lastName.trim(),
     phone: normalizeOptionalEmployeeText(fields.phone),
     profileUrl: normalizeProfileUrl(fields.profileUrl),
@@ -133,6 +147,7 @@ export const createEmployeeFromOrgEditorEmployee = (employee: OrgEditorEmployee)
     employee.username ||
     employee.email ||
     "Employee",
+  gender: employee.gender,
   id: employee.id,
   lastName: employee.lastName,
   phone: employee.phone,
@@ -161,6 +176,7 @@ export const applyOrgEditorEmployeeOverride = (
     email: employeeOverride.email,
     firstName: employeeOverride.firstName,
     fullName,
+    gender: employeeOverride.gender,
     lastName: employeeOverride.lastName,
     phone: employeeOverride.phone,
     profileUrl: employeeOverride.profileUrl,

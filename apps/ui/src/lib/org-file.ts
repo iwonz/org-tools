@@ -20,7 +20,12 @@ import type {
   WorkspaceEmployee,
 } from "@org-tools/types";
 
-import { createUuid, isUuid, normalizeEditableEmployeeFields } from "@/lib/employee-data";
+import {
+  createUuid,
+  isEmployeeGender,
+  isUuid,
+  normalizeEditableEmployeeFields,
+} from "@/lib/employee-data";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import { createDefaultOrgEditorState } from "@/lib/org-editor";
@@ -35,6 +40,7 @@ const EMPLOYEE_FIELD_KEYS = [
   "birthday",
   "email",
   "firstName",
+  "gender",
   "lastName",
   "phone",
   "profileUrl",
@@ -112,6 +118,7 @@ const normalizeEmployeeFields = (value: Record<string, unknown>): EditableEmploy
     !isNullableString(value.birthday) ||
     !isNullableString(value.email) ||
     !isString(value.firstName) ||
+    !isEmployeeGender(value.gender) ||
     !isString(value.lastName) ||
     !isNullableString(value.phone) ||
     !isNullableString(value.profileUrl) ||
@@ -127,6 +134,7 @@ const normalizeEmployeeFields = (value: Record<string, unknown>): EditableEmploy
       birthday: value.birthday,
       email: value.email,
       firstName: value.firstName,
+      gender: value.gender,
       lastName: value.lastName,
       phone: value.phone,
       profileUrl: value.profileUrl,

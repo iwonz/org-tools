@@ -21,6 +21,7 @@ const buildState = (): OrgToolsState => {
       createdAt: timestamp,
       email: "avery.stone@example.test",
       firstName: "Avery",
+      gender: "female",
       id: employeeId,
       lastName: "Stone",
       phone: null,
