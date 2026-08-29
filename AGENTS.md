@@ -1,8 +1,8 @@
 # Agent guide
 
-This repository uses OpenSpec as its only change-management workflow. Before changing behavior,
-create or continue an OpenSpec change and read its proposal, design, tasks, and relevant capability
-specifications.
+This repository uses OpenSpec as its only change-management workflow. Before changing the
+repository, create or continue an OpenSpec change and read its proposal, design, tasks, and relevant
+capability specifications.
 
 Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables CLI telemetry.
 
@@ -54,8 +54,31 @@ browser reports, caches, or generated performance fixtures.
 
 ## Delivery
 
-- Use short-lived branches named `change/<openspec-change-name>` after the repository begins using
-  commits.
-- Do not add a remote, publish, or push unless the user explicitly asks.
-- Preserve the performance target of 20,000 Employees and 4,000 Units.
-- Run the checks proportional to the change, then run the complete validation suite before release.
+Every change must complete this closed lifecycle. A task is not delivered while its OpenSpec change,
+commit, or branch is still active or unmerged.
+
+1. Fetch the configured origin, switch to `main`, update it without rewriting history, and verify
+   that the worktree is clean and local `main` matches `origin/main`. Resolve an existing active
+   OpenSpec change before starting unrelated work.
+2. Create a short-lived branch named `change/<openspec-change-name>`. Create or continue exactly one
+   matching OpenSpec change, then read its proposal, design, tasks, relevant capability specs, and
+   required project documentation before implementation.
+3. Implement the complete task list on that branch. Keep behavior, tests, documentation,
+   screenshots, capability deltas, and checked task status in the same change.
+4. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build`,
+   `pnpm test:browser`, `pnpm screenshots:generate`, `pnpm public:check`,
+   `pnpm spec:validate`, and `git diff --check`. Inspect every generated PNG and regenerate the
+   gallery a second time to compare deterministic hashes. Preserve the performance target of 20,000
+   Employees and 4,000 Units.
+5. Synchronize delta specs into canonical specs, archive the completed OpenSpec change according to
+   the repository workflow, validate strictly again, and require `pnpm spec -- list --json` to show
+   no active changes.
+6. Create meaningful commits, fetch and integrate any new `origin/main` work, merge the change branch
+   into `main`, and push `main` to the configured origin. Do not force-push or rewrite shared history.
+7. Delete the merged local change branch and its remote counterpart if one was published. Verify
+   that `HEAD`, local `main`, and `origin/main` resolve to the same commit, the worktree is clean,
+   there are no unique commits on the change branch, and OpenSpec has no active changes.
+
+Do not add an unrequested remote or delete unknown or unmerged work. If the user explicitly forbids
+publication, or an external service blocks the final merge or push, stop at the safest clean local
+state and report the exact unfinished integration instead of claiming the lifecycle is complete.

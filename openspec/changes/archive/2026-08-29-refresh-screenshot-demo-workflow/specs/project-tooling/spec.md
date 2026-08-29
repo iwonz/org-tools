@@ -1,18 +1,4 @@
-# project-tooling Specification
-
-## Purpose
-Define the specification workflow, privacy-preserving development commands, and public automation.
-## Requirements
-### Requirement: OpenSpec governs repository changes
-The repository SHALL include the Codex OpenSpec integration, English project context, strict validation, and archived capability specifications.
-
-#### Scenario: Specification validation
-- **WHEN** `pnpm spec:validate` runs
-- **THEN** all active changes and main specs pass strict non-interactive validation
-
-#### Scenario: Telemetry-free specification commands
-- **WHEN** a contributor runs OpenSpec through `pnpm spec -- ...`
-- **THEN** the repository wrapper applies the CLI's documented telemetry opt-out variables
+## ADDED Requirements
 
 ### Requirement: Repository changes complete one closed delivery lifecycle
 Every repository change MUST begin from a clean current default branch, proceed through one isolated
@@ -50,6 +36,8 @@ dangling work.
   push
 - **THEN** the contributor preserves the safest clean local state and reports the exact incomplete
   integration instead of claiming that the delivery lifecycle is complete
+
+## MODIFIED Requirements
 
 ### Requirement: Documentation and automation are publication-ready
 The repository SHALL include an English README with a concise product summary, a curated gallery of

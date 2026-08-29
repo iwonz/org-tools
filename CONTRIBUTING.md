@@ -7,9 +7,12 @@ synthetic public data, English public artifacts, and accessible component conven
 
 1. Install Node.js 20 or newer and the pnpm version declared in `package.json`.
 2. Run `pnpm install --frozen-lockfile`.
-3. Create an OpenSpec change with `pnpm spec -- new change <short-kebab-name>`.
-4. Complete the proposal, design, capability deltas, and task list before implementation.
-5. Run `pnpm spec:validate` and keep the artifacts current as implementation decisions change.
+3. Fetch `origin`, switch to `main`, update it without rewriting history, and verify that the
+   worktree is clean, local `main` matches `origin/main`, and no unrelated OpenSpec change is active.
+4. Create `change/<short-kebab-name>`, then create the matching OpenSpec change with
+   `pnpm spec -- new change <short-kebab-name>`.
+5. Complete and read the proposal, design, capability deltas, and task list before implementation.
+   Keep them current as implementation decisions change.
 
 Generated Codex workflows are available under `.codex/skills/` for proposing, applying, syncing,
 and archiving OpenSpec changes. Run every OpenSpec command through `pnpm spec -- ...`; the wrapper
@@ -26,25 +29,36 @@ disables the CLI's anonymous telemetry for this repository.
   dependencies in the OpenSpec design.
 - Add tests for behavior changes and accessible names for user controls.
 
-## Validation
+## Complete the change
 
-Before opening a pull request, run:
+Finish every task and run the complete validation cycle:
 
 ```sh
+pnpm format
 pnpm lint
 pnpm typecheck
 pnpm test:unit
 pnpm build
-pnpm spec:validate
-pnpm public:check
 pnpm test:browser
+pnpm screenshots:generate
+pnpm public:check
+pnpm spec:validate
+git diff --check
 ```
 
-Run `pnpm screenshots:generate` for visible UI changes and inspect every PNG. Formatting is an
-explicit mutation: use `pnpm format`, then review its diff.
+Inspect every generated PNG, regenerate the gallery, and compare hashes to confirm deterministic
+output. Formatting is an explicit mutation, so review its diff. Synchronize completed delta specs,
+archive the OpenSpec change, validate strictly again, and confirm `pnpm spec -- list --json` reports
+no active changes.
 
-## Pull requests
+## Integrate and publish
 
-Describe the user-visible result, link the OpenSpec change, summarize privacy and performance
-effects, and list the checks you ran. A maintainer will sync completed capability specs and archive
-the change before release.
+Create meaningful commits that keep the implementation, tests, documentation, generated screenshots,
+canonical specs, and archived change together. Update `main` from `origin/main`, merge the short-lived
+branch, and push `main` without rewriting shared history. Delete the merged change branch and its
+remote counterpart if one was published.
+
+Delivery is complete only when `HEAD`, local `main`, and `origin/main` agree, the worktree is clean,
+no change-branch commit remains unique, and OpenSpec has no active changes. Do not delete unknown or
+unmerged work. If publication was explicitly forbidden or an external service blocks it, preserve
+the safest clean local state and report the exact remaining integration.

@@ -8,6 +8,20 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const productionOutput = join(repositoryRoot, "apps", "ui", "out");
 const scannerPath = "scripts/check-public-safety.mjs";
+const screenshotManifestPath = join(repositoryRoot, "docs", "screenshot-demo.json");
+const screenshotsDirectory = join(repositoryRoot, "docs", "screenshots");
+const requiredScreenshotIds = [
+  "import",
+  "export",
+  "theme",
+  "language",
+  "teams",
+  "employees",
+  "editor",
+  "analytics",
+  "calendar",
+  "download",
+];
 
 const blockedPathSegments = new Set([
   ".cache",
@@ -157,12 +171,91 @@ function removeOpaqueIntegrityValues(path, content) {
   );
 }
 
+function matchesFor(content, pattern) {
+  return [...content.matchAll(pattern)].map((match) => match[1]);
+}
+
+async function validateScreenshotDemo(violations) {
+  let manifest;
+  try {
+    manifest = JSON.parse(await readFile(screenshotManifestPath, "utf8"));
+  } catch {
+    violations.push({ path: "docs/screenshot-demo.json", rule: "invalid screenshot manifest" });
+    return;
+  }
+
+  if (!Array.isArray(manifest)) {
+    violations.push({ path: "docs/screenshot-demo.json", rule: "manifest must be an array" });
+    return;
+  }
+
+  const ids = manifest.map((scenario) => scenario?.id);
+  const files = manifest.map((scenario) => scenario?.file);
+  if (
+    manifest.length !== requiredScreenshotIds.length ||
+    new Set(ids).size !== manifest.length ||
+    [...ids].sort().join("\0") !== [...requiredScreenshotIds].sort().join("\0")
+  ) {
+    violations.push({
+      path: "docs/screenshot-demo.json",
+      rule: "manifest must contain each required core scenario exactly once",
+    });
+  }
+  if (
+    new Set(files).size !== manifest.length ||
+    files.some((file) => typeof file !== "string" || !/^demo-[a-z-]+\.png$/u.test(file))
+  ) {
+    violations.push({
+      path: "docs/screenshot-demo.json",
+      rule: "manifest screenshot filenames must be unique demo PNGs",
+    });
+  }
+
+  const actualFiles = (await readdir(screenshotsDirectory))
+    .filter((file) => file.endsWith(".png"))
+    .sort();
+  if (actualFiles.join("\0") !== [...files].sort().join("\0")) {
+    violations.push({
+      path: "docs/screenshots",
+      rule: "PNG files must exactly match the screenshot manifest",
+    });
+  }
+
+  const readme = await readFile(join(repositoryRoot, "README.md"), "utf8");
+  const screenshotGuide = await readFile(join(repositoryRoot, "docs", "screenshots.md"), "utf8");
+  const readmeLinks = matchesFor(readme, /(docs\/screenshots\/[^)\s]+\.png)/gu);
+  const guideLinks = matchesFor(screenshotGuide, /(screenshots\/[^)\s]+\.png)/gu);
+  const expectedReadmeLinks = files.map((file) => `docs/screenshots/${file}`).sort();
+  const expectedGuideLinks = files.map((file) => `screenshots/${file}`).sort();
+
+  if (
+    readmeLinks.length !== manifest.length * 2 ||
+    [...new Set(readmeLinks)].sort().join("\0") !== expectedReadmeLinks.join("\0")
+  ) {
+    violations.push({
+      path: "README.md",
+      rule: "README must preview and directly link every manifest screenshot exactly once",
+    });
+  }
+  if (
+    guideLinks.length !== manifest.length * 2 ||
+    [...new Set(guideLinks)].sort().join("\0") !== expectedGuideLinks.join("\0")
+  ) {
+    violations.push({
+      path: "docs/screenshots.md",
+      rule: "screenshot guide must preview and directly link every manifest screenshot exactly once",
+    });
+  }
+}
+
 async function main() {
   const violations = [];
   const worktreePaths = repositoryFiles();
   const outputExists = await stat(productionOutput)
     .then((entry) => entry.isDirectory())
     .catch(() => false);
+
+  await validateScreenshotDemo(violations);
 
   if (!outputExists) {
     violations.push({

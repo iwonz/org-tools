@@ -82,7 +82,14 @@ export async function openImportDialog(page: Page, file: ImportFilePayload | str
 }
 
 export async function stabilizeForScreenshot(page: Page): Promise<void> {
-  await page.mouse.move(0, 0);
+  await page.mouse.move(1400, 30);
+  await page.evaluate(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement && !activeElement.closest('[role="listbox"]')) {
+      activeElement.blur();
+    }
+  });
+  await page.waitForTimeout(500);
   await page.addStyleTag({
     content: `
       *, *::before, *::after {

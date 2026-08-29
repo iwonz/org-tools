@@ -1,0 +1,62 @@
+[
+  {
+    "id": "import",
+    "title": "Import",
+    "file": "demo-import.png",
+    "description": "Recognized workspace content, operation choices, and a structured preview before import."
+  },
+  {
+    "id": "export",
+    "title": "Workspace Export",
+    "file": "demo-export.png",
+    "description": "Content-scoped workspace export formats and local-only save controls."
+  },
+  {
+    "id": "theme",
+    "title": "Theme",
+    "file": "demo-theme.png",
+    "description": "The populated dark workspace with the expanded sidebar and theme menu."
+  },
+  {
+    "id": "language",
+    "title": "Language",
+    "file": "demo-language.png",
+    "description": "The bundled Russian interface with the expanded sidebar and language menu."
+  },
+  {
+    "id": "teams",
+    "title": "Teams",
+    "file": "demo-teams.png",
+    "description": "A populated Unit hierarchy and the selected Team's Employee roster."
+  },
+  {
+    "id": "employees",
+    "title": "Employees",
+    "file": "demo-employees.png",
+    "description": "The searchable Employee catalog with filters, tags, and row actions."
+  },
+  {
+    "id": "editor",
+    "title": "Editor",
+    "file": "demo-editor.png",
+    "description": "The visual organization canvas with adaptive grid-aligned Unit cards."
+  },
+  {
+    "id": "analytics",
+    "title": "Analytics",
+    "file": "demo-analytics.png",
+    "description": "Organization totals, distributions, and drill-down analytics."
+  },
+  {
+    "id": "calendar",
+    "title": "Calendar",
+    "file": "demo-calendar.png",
+    "description": "Employee birthdays and dated tags in the monthly Calendar."
+  },
+  {
+    "id": "download",
+    "title": "Data Download",
+    "file": "demo-download.png",
+    "description": "A selected Employee set with download format, fields, and local preview."
+  }
+]
