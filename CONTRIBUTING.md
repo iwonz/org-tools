@@ -22,9 +22,9 @@ disables the CLI's anonymous telemetry for this repository.
 
 - Keep each change focused and update user or architecture documentation with the code.
 - Reuse shared Employee and Unit components, derived indexes, and store operations.
-- Persist organizational state only through the prepared-statement SQLite repository behind the
-  loopback same-origin API or an explicit local workspace file in the browser-only runtime. Keep
-  Import, Export, and browser-file operations entirely local.
+- Persist organization state only through the prepared-statement singleton SQLite repository behind
+  the loopback same-origin API. Browser-only state stays in live tab memory. Keep Import, Export,
+  and tab synchronization entirely local.
 - Use synthetic fixtures with reserved domains and phone ranges. Do not submit real names, contact
   details, local filesystem paths, access tokens, or exported organization data.
 - Avoid adding dependencies unless they materially reduce complexity. Explain new runtime
@@ -69,7 +69,7 @@ unmerged work. If publication was explicitly forbidden or an external service bl
 the safest clean local state and report the exact remaining integration.
 
 The GitHub Pages site is the functional browser-only application. Its static artifact contains no
-SQLite backend or project API; workspace data stays in memory and explicit local files or downloads.
+SQLite backend or state API; organization data stays in live tab memory and explicit downloads.
 After the change is merged and pushed, an authorized maintainer may run `pnpm pages:publish` from
 clean synchronized `main`; the command configures the Actions publishing source and manually
 dispatches the least-privilege Pages workflow.

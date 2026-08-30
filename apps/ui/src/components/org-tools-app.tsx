@@ -1,21 +1,21 @@
 "use client";
 
-import { OrgToolsWorkspace } from "@/components/org-tools-workspace";
-import { ProjectWorkspaceController } from "@/components/project-workspace-controller";
+import { OrgToolsShell } from "@/components/org-tools-shell";
+import { SqliteStateController } from "@/components/sqlite-state-controller";
 import { OrgStoreProvider } from "@/stores/org-store-context";
 
-function ProjectApp({ projectId }: { projectId: string }) {
+function StateApp() {
   return (
-    <ProjectWorkspaceController projectId={projectId}>
-      <OrgToolsWorkspace />
-    </ProjectWorkspaceController>
+    <SqliteStateController>
+      <OrgToolsShell />
+    </SqliteStateController>
   );
 }
 
-export function OrgToolsApp({ projectId }: { projectId: string }) {
+export function OrgToolsApp() {
   return (
     <OrgStoreProvider>
-      <ProjectApp projectId={projectId} />
+      <StateApp />
     </OrgStoreProvider>
   );
 }

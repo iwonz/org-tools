@@ -8,7 +8,6 @@ import { HiOutlineChartBar, HiOutlineChevronDown, HiOutlineEye } from "react-ico
 import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { HighlightedText } from "@/components/highlighted-text";
 import {
-  createEmptyEmployeeSearchFilters,
   EmployeeSearchInput,
   filterEmployeesBySearch,
   getEmployeeSearchFiltersKey,
@@ -315,8 +314,8 @@ export const AnalyticsTab = observer(() => {
   const getEntryLabel = useAnalyticsEntryLabel();
   const units = store.units;
   const [view, setView] = useState<AnalyticsView | null>(null);
-  const [viewSearchQuery, setViewSearchQuery] = useState("");
-  const [viewFilters, setViewFilters] = useState(createEmptyEmployeeSearchFilters);
+  const viewSearchQuery = store.analyticsUi.query;
+  const viewFilters = store.analyticsUi.filters;
   const analytics = store.analyticsResult;
   const analyticsBuildStatus = store.analyticsBuildStatus;
   const employeePositionOptions = units?.indexes.positionOptions ?? [];
@@ -368,8 +367,6 @@ export const AnalyticsTab = observer(() => {
   }
 
   const openView = (groupTitleKey: UiTextKey, entry: AnalyticsCountEntry) => {
-    setViewSearchQuery("");
-    setViewFilters(createEmptyEmployeeSearchFilters());
     setView({
       entry,
       groupTitleKey,
@@ -467,8 +464,6 @@ export const AnalyticsTab = observer(() => {
           if (open) return;
 
           setView(null);
-          setViewSearchQuery("");
-          setViewFilters(createEmptyEmployeeSearchFilters());
         }}
         open={Boolean(view)}
       >
@@ -501,8 +496,8 @@ export const AnalyticsTab = observer(() => {
                 ariaLabel={t("Search Employees")}
                 dataDemoId="analytics-employees-search"
                 filters={viewFilters}
-                onFiltersChange={setViewFilters}
-                onValueChange={setViewSearchQuery}
+                onFiltersChange={(filters) => store.setAnalyticsUi(viewSearchQuery, filters)}
+                onValueChange={(query) => store.setAnalyticsUi(query, viewFilters)}
                 placeholder={t("Search Employees")}
                 positionButtonDemoId="analytics-employees-position-filter"
                 positionOptions={employeePositionOptions}

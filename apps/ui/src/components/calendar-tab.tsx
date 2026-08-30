@@ -57,11 +57,6 @@ const padDatePart = (value: number) => String(value).padStart(2, "0");
 const createIsoDate = (year: number, month: number, day: number) =>
   `${year}-${padDatePart(month)}-${padDatePart(day)}`;
 
-const getInitialCalendarSelection = () => {
-  const now = new Date();
-  return { monthIndex: now.getMonth(), year: now.getFullYear() };
-};
-
 const getTodayDate = () => {
   const now = new Date();
   return createIsoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
@@ -244,12 +239,11 @@ export const CalendarTab = observer(() => {
     () => [...employeesByBirthday.values()].reduce((sum, employees) => sum + employees.length, 0),
     [employeesByBirthday],
   );
-  const [{ monthIndex, year }, setSelection] = useState(getInitialCalendarSelection);
+  const { cloudExpanded, monthIndex, year } = store.calendarUi;
   const [dialogDayKey, setDialogDayKey] = useState<string | null>(null);
   const [dialogTag, setDialogTag] = useState<DatedTagGroup | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
-  const [cloudExpanded, setCloudExpanded] = useState(false);
   const todayDate = useMemo(getTodayDate, []);
   const todayIso = todayDate;
   const monthDays = useMemo(
@@ -266,11 +260,10 @@ export const CalendarTab = observer(() => {
     timeZone: "UTC",
   });
   const title = `${monthTitle} ${format.number(year, { useGrouping: false })}`;
-  const step = (direction: -1 | 1) =>
-    setSelection((current) => {
-      const next = new Date(Date.UTC(current.year, current.monthIndex + direction, 1));
-      return { monthIndex: next.getUTCMonth(), year: next.getUTCFullYear() };
-    });
+  const step = (direction: -1 | 1) => {
+    const next = new Date(Date.UTC(year, monthIndex + direction, 1));
+    store.setCalendarUi({ monthIndex: next.getUTCMonth(), year: next.getUTCFullYear() });
+  };
   const visibleGroups = cloudExpanded
     ? datedTagGroups
     : datedTagGroups.slice(0, CLOUD_VISIBLE_LIMIT);
@@ -350,7 +343,7 @@ export const CalendarTab = observer(() => {
             {hiddenGroupCount > 0 && (
               <Button
                 className="h-7 rounded-full px-2.5 text-xs"
-                onClick={() => setCloudExpanded(true)}
+                onClick={() => store.setCalendarUi({ cloudExpanded: true })}
                 size="sm"
                 type="button"
                 variant="outline"
@@ -496,7 +489,7 @@ export const CalendarTab = observer(() => {
               className="bg-destructive text-white hover:bg-destructive/90"
               data-demo-id="calendar-confirm-delete-employee"
               onClick={() => {
-                if (deletingEmployee) store.deleteWorkspaceEmployee(deletingEmployee.id);
+                if (deletingEmployee) store.deleteOrganizationEmployee(deletingEmployee.id);
                 setDeletingEmployee(null);
               }}
             >

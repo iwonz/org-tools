@@ -1,85 +1,85 @@
 # interface-localization Specification
 
 ## Purpose
-Define supported interface locales, local preference resolution, runtime switching, and locale-independent workspace data.
+Define complete English/Russian runtime localization, bounded bootstrap metadata, and in-place locale switching.
+
 ## Requirements
+
 ### Requirement: The interface supports English and Russian
 The application SHALL provide complete English and Russian translations for every runtime label,
-status, empty state, dialog, validation error, accessibility name, tooltip, plural, number, tag date,
-workspace replacement summary, destructive warning, and calendar date while leaving user-authored
-and imported content unchanged. All user-facing copy SHALL call the editable organization a Project
-and its selected JSON file a Project file; it SHALL NOT expose workspace or working-area terminology.
-Russian UI copy SHALL present Unit as Team with grammatical declension and Live Unit as Dynamic Team
-while machine contracts remain English.
+status, empty state, dialog, validation and persistence error, accessibility name, tooltip, plural,
+number, tag date, state replacement summary, destructive warning, and calendar date while leaving
+user-authored content unchanged. Product copy SHALL use neutral Import, Export, and state language
+and SHALL NOT expose project, workspace, working-area, Save, or Autosave terminology. Russian UI
+copy SHALL present Unit as Team with grammatical declension and Live Unit as Dynamic Team while
+machine contracts remain English.
 
-#### Scenario: English transfer interface
+#### Scenario: English runtime surfaces
 - **WHEN** the active locale is English
-- **THEN** project filename, size, counts, replacement warning, errors, and transient Save states are
-  English and use Project terminology
+- **THEN** every visible, error, menu, dialog, tooltip, and accessibility surface is English except
+  user-authored data and explicitly allowed format tokens
 
-#### Scenario: Russian transfer interface
+#### Scenario: Russian runtime surfaces
 - **WHEN** the active locale is Russian
-- **THEN** project filename, size, counts, replacement warning, errors, and transient Save states are
-  Russian and use the localized Project noun with grammatical inflection
-
-#### Scenario: Localized state machine content
-- **WHEN** either locale imports or exports a workspace document
-- **THEN** explanatory copy is localized and calls it a Project while `kind`, `content`, field keys,
-  ISO dates, filenames, and synthetic data remain English
+- **THEN** the same surfaces are Russian without an untranslated English fallback or key identifier
 
 #### Scenario: Namespace-safe catalog initialization
 - **WHEN** sentence-style typed UI IDs contain period characters
-- **THEN** the client provider receives deterministically encoded dot-free keys and initializes without an `INVALID_KEY` console error
-- **AND** runtime lookups continue to resolve the original typed IDs in both locales
+- **THEN** provider initialization and runtime lookup succeed in both locales without an invalid-key
+  console error
 
 ### Requirement: Locale is detected and persisted locally
-The application SHALL use a valid saved `en` or `ru` preference, otherwise select the first
-supported browser language and fall back to English, then persist only that locale preference on a
-best-effort basis.
+The application SHALL use a valid saved `en` or `ru` bootstrap preference, otherwise select the
+first supported browser language and fall back to English. It SHALL persist only that bounded
+bootstrap preference on a best-effort basis, then treat the current validated state as authoritative
+and synchronize locale with the other durable UI context.
 
 #### Scenario: First Russian browser load
-- **WHEN** no valid locale preference exists and the browser languages include Russian
-- **THEN** the first rendered interface is Russian and `ru` is saved locally
+- **WHEN** no valid state or preference exists and browser languages include Russian
+- **THEN** the blank state starts in Russian and the bounded preference is saved locally
 
-#### Scenario: Unsupported browser language
-- **WHEN** no valid locale preference exists and no browser language is supported
-- **THEN** the first rendered interface is English and `en` is saved locally
+#### Scenario: Loaded state locale
+- **WHEN** SQLite, Import, or a live peer supplies a valid state locale
+- **THEN** that locale overrides bootstrap metadata and updates the rendered interface
 
 #### Scenario: Unavailable local storage
-- **WHEN** reading or writing the locale preference throws an error
-- **THEN** the detected locale remains active in memory and the application remains usable
+- **WHEN** reading or writing the locale preference throws
+- **THEN** the active in-memory state locale and application remain usable
 
 ### Requirement: Users can switch locale without routing
-The application SHALL provide a Russian/English selector immediately before the theme selector with
-only the decorative active flag in its closed trigger and flag, localized language name, and
-selected indicator in each menu option. It SHALL apply a selection without navigation, reload,
-middleware, locale URL segments, or remote catalog requests.
+The application SHALL provide a Russian/English selector immediately before theme with only the
+decorative active flag in its trigger and flag, localized language name, and selected indicator in
+each option. Selection SHALL update the current durable state and live tabs without navigation,
+reload, middleware, locale URL segments, or remote catalog requests.
 
 #### Scenario: Runtime switch
 - **WHEN** the user selects the other language
-- **THEN** the open interface, accessibility names, document language, metadata, flag, and localized reference content update in place and the new choice remains active after reload
+- **THEN** open copy, accessibility names, document metadata, state, bootstrap preference, flag, and
+  live tabs update in place
 
 #### Scenario: Compact closed trigger
 - **WHEN** the language selector is closed
-- **THEN** its square trigger shows only the active Russian or United Kingdom flag and no visible language name
+- **THEN** its square trigger shows only the active Russian or United Kingdom flag
 
 #### Scenario: Complete language menu
 - **WHEN** the language selector is open
-- **THEN** both options show their flag and language name and the active option shows its selected indicator
+- **THEN** both options show their localized language name and the active option shows its indicator
 
 #### Scenario: Accessible flag presentation
-- **WHEN** assistive technology reads the language selector
-- **THEN** the accessible name identifies the active language without treating the decorative flag as content
+- **WHEN** assistive technology reads the selector
+- **THEN** the accessible name identifies the active language without treating the flag as content
 
-### Requirement: Locale is independent of workspace state
-The application SHALL keep locale outside `OrgToolsState` and SHALL NOT translate persisted tag
-labels, organization content, export keys, state discriminators, machine values, ISO dates, or
-filenames.
+### Requirement: Localization completeness is automatically enforced
+Catalog validation SHALL require identical non-empty keys and placeholder sets. Static checks SHALL
+reject uncatalogued user-facing literals and unexpected English fallbacks in the Russian interface,
+except an explicit allowlist for Org Tools, JSON, CSV, English, filenames, and user-authored data.
+Runtime error codes SHALL map to catalog entries and raw internal messages MUST NOT be rendered.
 
-#### Scenario: Open a workspace in Russian
-- **WHEN** a Russian-interface user opens an English-authored workspace containing dated tags
-- **THEN** the interface and displayed date formatting remain Russian while tag labels and serialized contracts remain unchanged
+#### Scenario: Catalog mismatch
+- **WHEN** a locale omits a key, placeholder, or non-empty translation
+- **THEN** repository validation fails before build publication
 
-#### Scenario: Obsolete contract error
-- **WHEN** a selected state contains obsolete version fields or an invalid content payload
-- **THEN** the localized error describes an unsupported current state without offering generic mapping fallback
+#### Scenario: Runtime localization audit
+- **WHEN** browser tests switch locale and open menus, dialogs, empty states, and error states
+- **THEN** no untranslated key, raw internal error, or unexpected foreign-language product copy is
+  visible or announced

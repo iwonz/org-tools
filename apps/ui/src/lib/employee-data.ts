@@ -29,7 +29,7 @@ export const createUuid = (): string => {
   });
 };
 
-export const createWorkspaceEmployeeId = (): EmployeeId => createUuid();
+export const createOrganizationEmployeeId = (): EmployeeId => createUuid();
 
 export const EMPLOYEE_GENDERS = ["male", "female", "unspecified"] as const;
 

@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 
+import type { OrgToolsState } from "@org-tools/types";
 import { expect, type Page } from "@playwright/test";
 
 export type ImportFilePayload = {
@@ -8,8 +9,8 @@ export type ImportFilePayload = {
   name: string;
 };
 
-export const syntheticWorkspacePath = fileURLToPath(
-  new URL("../fixtures/synthetic-workspace.json", import.meta.url),
+export const syntheticStatePath = fileURLToPath(
+  new URL("../fixtures/synthetic-state.json", import.meta.url),
 );
 export const productTabs = [
   "Units",
@@ -21,25 +22,63 @@ export const productTabs = [
 ] as const;
 
 export const localeStorageKey = "org-tools-locale";
-let projectSequence = 0;
+const emptyEmployeeFilters = () => ({
+  birthday: null,
+  includeWithoutTags: false,
+  includeWithoutUnits: false,
+  selectedGenders: [],
+  selectedPositions: [],
+  selectedTags: [],
+  selectedUnitIds: [],
+});
 
-export async function createIsolatedProject(page: Page): Promise<string> {
+export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): Promise<string> {
   const port = process.env.ORG_TOOLS_PORT ?? "4273";
   const origin = process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    projectSequence += 1;
-    const response = await page.request.post("/api/projects", {
-      data: { name: `Org Tools demo ${projectSequence}` },
-      headers: { Origin: origin },
-    });
-    if (response.ok()) {
-      const project = (await response.json()) as { id: string };
-      return `/projects/${project.id}`;
-    }
-    const body = (await response.json()) as { error?: { code?: string } };
-    if (body.error?.code !== "duplicate_name") throw new Error(JSON.stringify(body));
-  }
-  throw new Error("Could not allocate an isolated test project.");
+  const response = await page.request.get("/api/state", {
+    headers: { Host: new URL(origin).host },
+  });
+  if (!response.ok()) throw new Error(JSON.stringify(await response.json()));
+  const document = (await response.json()) as { state: OrgToolsState };
+  const state = document.state;
+  const main = state.organization.views.find((view) => view.kind === "main");
+  if (!main) throw new Error("Main View is unavailable.");
+  main.document.employeeOverrides = [];
+  main.document.employees = [];
+  main.document.units = [];
+  state.organization.employees = [];
+  state.organization.views = [main];
+  state.ui.activeTab = "orgEditor";
+  state.ui.activeViewId = main.id;
+  state.ui.analytics = { filters: emptyEmployeeFilters(), query: "" };
+  state.ui.calendar = { cloudExpanded: false, monthIndex: 6, year: 2026 };
+  state.ui.editor = { searchOpen: false, searchQuery: "" };
+  state.ui.employees = { filters: emptyEmployeeFilters(), query: "" };
+  state.ui.expandedUnitIds = [];
+  state.ui.locale = locale;
+  state.ui.selectedUnitId = null;
+  state.ui.sidebarCollapsed = true;
+  state.ui.theme = "light";
+  state.ui.units = {
+    employeeFilters: emptyEmployeeFilters(),
+    employeeQuery: "",
+    unitQuery: "",
+  };
+  state.ui.download.employeeFilters = emptyEmployeeFilters();
+  state.ui.download.employeeQuery = "";
+  state.ui.download.excludedEmployeeIds = [];
+  state.ui.download.selectedFilters = emptyEmployeeFilters();
+  state.ui.download.selectedQuery = "";
+  state.ui.download.selections = [];
+  state.ui.download.sourceViewId = main.id;
+  state.ui.download.unitQuery = "";
+  state.ui.views = [{ selectedItems: [], viewId: main.id, viewport: { scale: 1, x: 0, y: 0 } }];
+  const write = await page.request.put("/api/state", {
+    data: { scope: "all", state },
+    headers: { Origin: origin },
+  });
+  if (!write.ok()) throw new Error(JSON.stringify(await write.json()));
+  return "/";
 }
 
 export async function expectLocalRequestsOnly(page: Page): Promise<() => Promise<void>> {
@@ -64,28 +103,28 @@ export async function expectLocalRequestsOnly(page: Page): Promise<() => Promise
   };
 }
 
-export async function openBlankWorkspace(page: Page): Promise<void> {
+export async function openBlankState(page: Page): Promise<void> {
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await page.clock.setFixedTime(new Date("2026-07-31T12:00:00.000Z"));
   await page.addInitScript(({ key, locale }) => window.localStorage.setItem(key, locale), {
     key: localeStorageKey,
     locale: "en",
   });
-  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
+  await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
   );
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
 }
 
-export async function replaceWithSyntheticWorkspace(page: Page): Promise<void> {
-  const dialog = await openImportDialog(page, syntheticWorkspacePath);
-  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
+export async function replaceWithSyntheticState(page: Page): Promise<void> {
+  const dialog = await openImportDialog(page, syntheticStatePath);
+  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
     "4 Employees",
   );
-  await dialog.getByRole("button", { name: "Replace project", exact: true }).click();
+  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
 }
 
@@ -94,7 +133,7 @@ export async function openImportDialog(page: Page, file: ImportFilePayload | str
   await page.getByRole("button", { name: "Import", exact: true }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(file);
-  const dialog = page.getByRole("dialog", { name: "Import project" });
+  const dialog = page.getByRole("dialog", { name: "Import state" });
   await expect(dialog).toBeVisible();
   return dialog;
 }

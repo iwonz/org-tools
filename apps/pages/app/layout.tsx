@@ -27,7 +27,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
-  description: "A private-by-design browser-only organization workspace.",
+  description: "A private-by-design browser-only organization editor.",
   icons: {
     icon: "/org-tools/favicon.svg",
   },

@@ -15,7 +15,6 @@ import { ActionIconButton } from "@/components/action-icon-button";
 import { EmployeeSourcePicker } from "@/components/employee-source-picker";
 import { ExportSettingsStep } from "@/components/export-settings-step";
 import {
-  createEmptyEmployeeSearchFilters,
   filterEmployeesBySearch,
   getEmployeeSearchFiltersKey,
   getSearchTokens,
@@ -109,11 +108,8 @@ export const ExportTab = observer(() => {
   const [status, setStatus] = useState<UiTextKey | null>(null);
   const [isExportSettingsDialogOpen, setIsExportSettingsDialogOpen] = useState(false);
   const [sourceSection, setSourceSection] = useState<ExportSourceSection>("units");
-  const [unitQuery, setUnitQuery] = useState("");
-  const [employeeQuery, setEmployeeQuery] = useState("");
-  const [selectedQuery, setSelectedQuery] = useState("");
-  const [employeeFilters, setEmployeeFilters] = useState(createEmptyEmployeeSearchFilters);
-  const [selectedFilters, setSelectedFilters] = useState(createEmptyEmployeeSearchFilters);
+  const { employeeFilters, employeeQuery, selectedFilters, selectedQuery, unitQuery } =
+    store.downloadUi;
   const [expandedExportUnitIds, setExpandedExportUnitIds] = useState<Set<UnitId>>(
     () => new Set(units?.roots.map((root) => root.id) ?? []),
   );
@@ -550,7 +546,9 @@ export const ExportTab = observer(() => {
                       ariaLabel={t("Search Units by name")}
                       className="mx-2.5 mt-2.5"
                       dataDemoId="export-unit-search"
-                      onValueChange={setUnitQuery}
+                      onValueChange={(nextUnitQuery) =>
+                        store.setDownloadUi({ unitQuery: nextUnitQuery })
+                      }
                       placeholder={t("Search Units by name")}
                       value={unitQuery}
                     />
@@ -655,8 +653,12 @@ export const ExportTab = observer(() => {
                   onAddFound={addFoundEmployeesToExport}
                   onExcludeFound={excludeFoundEmployeesFromExport}
                   filters={employeeFilters}
-                  onFiltersChange={setEmployeeFilters}
-                  onQueryChange={setEmployeeQuery}
+                  onFiltersChange={(nextEmployeeFilters) =>
+                    store.setDownloadUi({ employeeFilters: nextEmployeeFilters })
+                  }
+                  onQueryChange={(nextEmployeeQuery) =>
+                    store.setDownloadUi({ employeeQuery: nextEmployeeQuery })
+                  }
                   onUnitContextClick={(unitContext) => {
                     store.selectUnitFromOrgView(exportViewId, unitContext.unitId);
                   }}
@@ -703,8 +705,12 @@ export const ExportTab = observer(() => {
               store.clearExportSelection();
               setStatus(null);
             }}
-            onFiltersChange={setSelectedFilters}
-            onQueryChange={setSelectedQuery}
+            onFiltersChange={(nextSelectedFilters) =>
+              store.setDownloadUi({ selectedFilters: nextSelectedFilters })
+            }
+            onQueryChange={(nextSelectedQuery) =>
+              store.setDownloadUi({ selectedQuery: nextSelectedQuery })
+            }
             onRemoveVisibleEmployees={removeVisibleSelectedEmployees}
             onUnitContextClick={(unitContext) => {
               store.selectUnitFromOrgView(exportViewId, unitContext.unitId);

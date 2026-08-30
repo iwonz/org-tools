@@ -40,8 +40,14 @@ describe("locale catalogs", () => {
       /\u043f\u043e\u0434\u0440\u0430\u0437\u0434\u0435\u043b|\u044e\u043d\u0438\u0442/iu,
     );
     expect(ru.Ui.Units).toBe("\u041a\u043e\u043c\u0430\u043d\u0434\u044b");
-    expect(ru.Ui["Live Team"]).toBe(
-      "\u0414\u0438\u043d\u0430\u043c\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u043a\u043e\u043c\u0430\u043d\u0434\u0430",
-    );
+  });
+
+  it("does not silently fall back to source keys in the Russian UI", () => {
+    const allowedEnglishValues = new Set(["CSV", "English", "Org Tools"]);
+    const untranslated = Object.entries(ru.Ui)
+      .filter(([key, value]) => key === value && !allowedEnglishValues.has(value))
+      .map(([key]) => key);
+
+    expect(untranslated).toEqual([]);
   });
 });

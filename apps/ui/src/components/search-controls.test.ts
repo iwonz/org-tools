@@ -1,7 +1,7 @@
-import type { OrgEditorState, WorkspaceEmployee } from "@org-tools/types";
+import type { OrganizationEmployee, OrgEditorState } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
-import { buildWorkspaceOrgStructure } from "@/lib/build-workspace-org-structure";
+import { buildOrganizationStructure } from "@/lib/build-organization-structure";
 import {
   createEmptyEmployeeSearchFilters,
   filterEmployeesBySearch,
@@ -21,7 +21,7 @@ const CASEY_ID = uuid(3);
 const DANA_ID = uuid(4);
 const timestamp = "2026-07-31T00:00:00.000Z";
 
-const employee = (id: string, fields: Partial<WorkspaceEmployee>): WorkspaceEmployee => ({
+const employee = (id: string, fields: Partial<OrganizationEmployee>): OrganizationEmployee => ({
   avatarBase64Url: null,
   birthday: null,
   createdAt: timestamp,
@@ -38,7 +38,7 @@ const employee = (id: string, fields: Partial<WorkspaceEmployee>): WorkspaceEmpl
   gender: fields.gender ?? "unspecified",
 });
 
-const employees: WorkspaceEmployee[] = [
+const employees: OrganizationEmployee[] = [
   employee(ALEX_ID, {
     birthday: "03-12",
     email: "alex@example.test",
@@ -95,7 +95,7 @@ const editorState: OrgEditorState = {
   ],
 };
 
-const structure = buildWorkspaceOrgStructure(employees, editorState);
+const structure = buildOrganizationStructure(employees, editorState);
 const membershipIndex = buildEmployeeUnitMembershipIndex(
   structure.allEmployees,
   structure.indexes.unitsById,

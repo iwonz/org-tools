@@ -9,14 +9,15 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
 ## Product invariants
 
 - The application is local-only. Organization data may stay in browser memory, move through an
-  explicitly selected local file, or travel between the browser and the loopback same-origin Org
+  explicit state Import or Export, or travel between the browser and the loopback same-origin Org
   Tools runtime; it must never be sent to a third party or remote service.
 - Do not add telemetry, analytics SDKs, remote logging, remote synchronization, or background
   requests.
-- Persist server-mode projects only in the configured local SQLite database. Browser mode may write
-  a complete workspace only to an explicitly selected file. Do not persist organization snapshots
-  in cookies, IndexedDB, session storage, or local storage; IndexedDB may contain only the active
-  `FileSystemFileHandle`, while theme, locale, and autosave preference remain metadata.
+- Persist the server-mode singleton state only in the configured local SQLite database. Browser mode
+  keeps organization state only in live tab memory and synchronizes live tabs through
+  `BroadcastChannel`. Do not persist organization snapshots in cookies, IndexedDB, Cache Storage,
+  session storage, local storage, or service workers. Theme and locale are the only allowed browser
+  metadata.
 - Employee avatars are bounded embedded PNG, JPEG, or WebP data URLs. Never fetch remote avatars.
 - Profile and email navigation must require an explicit user action and use referrer protections.
 - Source comments, fixtures, tests, specifications, and documentation are English. Cyrillic product
@@ -50,7 +51,7 @@ Keep the README concise and link to the detailed documents.
 - `pnpm test:browser` runs browser smoke tests against the production build.
 - `pnpm screenshots:generate` regenerates the PNG gallery.
 - `pnpm pages:build` builds the ignored browser-only GitHub Pages application.
-- `pnpm pages:dev` starts the browser-only workspace locally.
+- `pnpm pages:dev` starts the browser-only application locally.
 - `pnpm pages:check` validates the generated Pages artifact.
 - `pnpm pages:publish` publishes Pages from clean synchronized `main`; use it only when authorized.
 - `pnpm spec:validate` validates all OpenSpec changes and capability specs strictly.
@@ -61,7 +62,7 @@ Run `pnpm build` and `pnpm pages:build` before `pnpm public:check`. Never commit
 `.org-tools/config.json`, SQLite database files, `apps/ui/next-env.d.ts`, `apps/pages/next-env.d.ts`,
 build or Pages output, browser reports, caches, or generated performance fixtures. GitHub Pages is
 the functional browser-only editor; it must never contain organization fixtures, telemetry, remote
-assets, SQLite code, server chunks, or project API calls.
+assets, SQLite code, server chunks, or state API calls.
 
 ## Delivery
 

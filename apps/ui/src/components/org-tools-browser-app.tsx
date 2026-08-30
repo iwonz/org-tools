@@ -1,15 +1,15 @@
 "use client";
 
-import { BrowserWorkspaceController } from "@/components/browser-workspace-controller";
-import { OrgToolsWorkspace } from "@/components/org-tools-workspace";
+import { BrowserStateController } from "@/components/browser-state-controller";
+import { OrgToolsShell } from "@/components/org-tools-shell";
 import { OrgStoreProvider } from "@/stores/org-store-context";
 
 export function OrgToolsBrowserApp() {
   return (
     <OrgStoreProvider>
-      <BrowserWorkspaceController>
-        <OrgToolsWorkspace />
-      </BrowserWorkspaceController>
+      <BrowserStateController>
+        <OrgToolsShell />
+      </BrowserStateController>
     </OrgStoreProvider>
   );
 }

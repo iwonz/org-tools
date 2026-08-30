@@ -15,7 +15,7 @@ const employee = (id: string): Employee => ({
   lastName: id,
   phone: null,
   profileUrl: null,
-  scope: "workspace",
+  scope: "organization",
   tags: [],
   unitIds: [],
   unitPositions: [],

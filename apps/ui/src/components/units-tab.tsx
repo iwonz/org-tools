@@ -27,7 +27,6 @@ import { EmployeeTagPopover } from "@/components/employee-tag-picker";
 import { HighlightedText } from "@/components/highlighted-text";
 import { MiddleDot } from "@/components/middle-dot";
 import {
-  createEmptyEmployeeSearchFilters,
   EmployeeSearchInput,
   filterEmployeesBySearch,
   getEmployeeSearchFiltersKey,
@@ -128,11 +127,9 @@ export const UnitsTab = observer(() => {
   const getUnitEmployeeSummary = useUnitEmployeeSummary();
   const units = store.units;
   const selectedUnit = store.selectedUnit;
-  const [unitSearchQuery, setUnitSearchQuery] = useState("");
-  const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
-  const [employeeSearchFilters, setEmployeeSearchFilters] = useState(
-    createEmptyEmployeeSearchFilters,
-  );
+  const unitSearchQuery = store.unitsUi.unitQuery;
+  const employeeSearchQuery = store.unitsUi.employeeQuery;
+  const employeeSearchFilters = store.unitsUi.employeeFilters;
   const [unitDialog, setUnitDialog] = useState<UnitDialogState | null>(null);
   const [deletingUnit, setDeletingUnit] = useState<Unit | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -362,7 +359,7 @@ export const UnitsTab = observer(() => {
                 ariaLabel={t("Search Units by name")}
                 className="min-w-40 flex-1"
                 dataDemoId="units-search"
-                onValueChange={setUnitSearchQuery}
+                onValueChange={(unitQuery) => store.setUnitsUi({ unitQuery })}
                 placeholder={t("Search Units by name")}
                 value={unitSearchQuery}
               />
@@ -520,8 +517,8 @@ export const UnitsTab = observer(() => {
                 ariaLabel={t("Search Employees in the selected Unit")}
                 dataDemoId="units-employee-search"
                 filters={employeeSearchFilters}
-                onFiltersChange={setEmployeeSearchFilters}
-                onValueChange={setEmployeeSearchQuery}
+                onFiltersChange={(employeeFilters) => store.setUnitsUi({ employeeFilters })}
+                onValueChange={(employeeQuery) => store.setUnitsUi({ employeeQuery })}
                 placeholder={t("Search Employees")}
                 positionButtonDemoId="units-employee-position-filter"
                 positionOptions={units.indexes.positionOptions}
@@ -661,7 +658,7 @@ export const UnitsTab = observer(() => {
               data-demo-id="unit-delete-employee-confirm"
               onClick={() => {
                 if (deletingEmployee) {
-                  store.deleteWorkspaceEmployee(deletingEmployee.id);
+                  store.deleteOrganizationEmployee(deletingEmployee.id);
                 }
                 setDeletingEmployee(null);
               }}

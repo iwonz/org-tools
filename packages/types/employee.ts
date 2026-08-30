@@ -9,7 +9,7 @@ export type EmployeeTag = {
   label: string;
 };
 
-/** Generic fields shared by workspace Employees and View-local Employees. */
+/** Generic fields shared by organization Employees and View-local Employees. */
 export type EditableEmployeeFields = {
   avatarBase64Url: string | null;
   birthday: string | null;
@@ -30,7 +30,7 @@ export type OrgEditorEmployee = EditableEmployeeFields & {
   updatedAt: string;
 };
 
-/** Sparse copy-on-write record for a workspace Employee edited in one custom View. */
+/** Sparse copy-on-write record for an organization Employee edited in one custom View. */
 export type OrgEditorEmployeeOverride = EditableEmployeeFields & {
   employeeId: EmployeeId;
   updatedAt: string;

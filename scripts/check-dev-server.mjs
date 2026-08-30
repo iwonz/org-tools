@@ -57,19 +57,18 @@ async function stopChild(child) {
   await waitForExit(child, 5_000);
 }
 
-function validateProjectList(value, projectId) {
+function validateStateDocument(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const response = value;
   return (
-    response.currentProjectId === projectId &&
-    Array.isArray(response.projects) &&
-    response.projects.some(
-      (project) =>
-        project !== null &&
-        typeof project === "object" &&
-        project.id === projectId &&
-        typeof project.name === "string",
-    )
+    Number.isSafeInteger(response.revision) &&
+    response.state !== null &&
+    typeof response.state === "object" &&
+    !Array.isArray(response.state) &&
+    response.state.organization !== null &&
+    typeof response.state.organization === "object" &&
+    response.state.ui !== null &&
+    typeof response.state.ui === "object"
   );
 }
 
@@ -83,43 +82,21 @@ async function probe(origin, child) {
     }
 
     try {
-      const rootResponse = await fetch(`${origin}/`, { redirect: "manual" });
+      const rootResponse = await fetch(`${origin}/`);
       const rootHtml = await rootResponse.text();
-      const location = rootResponse.headers.get("location");
-      const streamedRedirect =
-        rootResponse.status === 200
-          ? rootHtml.match(
-              /\/projects\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/u,
-            )?.[0]
-          : undefined;
-      const projectPath = location ? new URL(location, origin).pathname : (streamedRedirect ?? "");
-      if (![200, 307, 308].includes(rootResponse.status)) {
-        throw new Error(
-          `Expected the root project redirect, received HTTP ${rootResponse.status}.`,
-        );
-      }
-      const projectMatch =
-        /^\/projects\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/u.exec(
-          projectPath,
-        );
-      if (!projectMatch?.[1])
-        throw new Error("Root did not redirect to a stable UUID project URL.");
-
-      const projectResponse = await fetch(`${origin}${projectPath}`);
-      const projectHtml = await projectResponse.text();
-      if (!projectResponse.ok || !projectHtml.includes("<title>Org Tools</title>")) {
-        throw new Error(`Project route failed to render (HTTP ${projectResponse.status}).`);
+      if (!rootResponse.ok || !rootHtml.includes("<title>Org Tools</title>")) {
+        throw new Error(`Root route failed to render (HTTP ${rootResponse.status}).`);
       }
 
-      const apiResponse = await fetch(`${origin}/api/projects`, {
+      const apiResponse = await fetch(`${origin}/api/state`, {
         headers: { Accept: "application/json" },
       });
       const apiValue = await apiResponse.json();
-      if (!apiResponse.ok || !validateProjectList(apiValue, projectMatch[1])) {
-        throw new Error(`Project API returned an invalid response (HTTP ${apiResponse.status}).`);
+      if (!apiResponse.ok || !validateStateDocument(apiValue)) {
+        throw new Error(`State API returned an invalid response (HTTP ${apiResponse.status}).`);
       }
 
-      return { projectPath };
+      return;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       await delay(pollIntervalMs);
@@ -129,7 +106,7 @@ async function probe(origin, child) {
   throw new Error(`Development server probe timed out: ${lastError.message}`);
 }
 
-async function probeBrowser(origin, projectPath) {
+async function probeBrowser(origin) {
   const browser = await chromium.launch({
     headless: true,
     args: ["--disable-gpu", "--disable-lcd-text", "--font-render-hinting=none"],
@@ -160,7 +137,6 @@ async function probeBrowser(origin, projectPath) {
     if (!response?.ok()) {
       throw new Error(`Root browser navigation failed (HTTP ${response?.status() ?? "unknown"}).`);
     }
-    await page.waitForURL(new URL(projectPath, origin).href, { timeout: startupTimeoutMs });
     await page.locator('[data-demo-id="app-shell"]').waitFor({
       state: "visible",
       timeout: startupTimeoutMs,
@@ -205,9 +181,9 @@ child.stderr.on("data", (chunk) => {
 });
 
 try {
-  const result = await probe(origin, child);
-  await probeBrowser(origin, result.projectPath);
-  console.log(`Development server check passed (${origin}${result.projectPath}).`);
+  await probe(origin, child);
+  await probeBrowser(origin);
+  console.log(`Development server check passed (${origin}/).`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   if (logs.trim()) console.error(`\nDevelopment server output:\n${logs.trim()}`);

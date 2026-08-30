@@ -2,9 +2,12 @@
 
 ## Purpose
 Define the specification workflow, privacy-preserving development commands, and public automation.
+
 ## Requirements
+
 ### Requirement: OpenSpec governs repository changes
-The repository SHALL include the Codex OpenSpec integration, English project context, strict validation, and archived capability specifications.
+The repository SHALL include the Codex OpenSpec integration, English project context, strict
+validation, and archived capability specifications.
 
 #### Scenario: Specification validation
 - **WHEN** `pnpm spec:validate` runs
@@ -70,153 +73,111 @@ dangling work.
 
 ### Requirement: Local runtime and database artifacts are publication-safe
 The repository SHALL build and test a Node.js 22.13+ Next.js server that binds to loopback and uses a
-configurable ignored SQLite file. Runtime databases, rollback journals, WAL files, shared-memory
-files, local configuration, build output, and test databases SHALL NOT enter the tracked or staged
-publication set. The public-safety scan SHALL inspect the production application and reject tracked
-database artifacts, local paths, organization data, and secrets.
+configurable ignored singleton SQLite file. Runtime databases, rollback journals, WAL files,
+shared-memory files, local configuration, build output, and test databases SHALL NOT enter the
+tracked or staged publication set. The public-safety scan SHALL inspect production output and reject
+tracked database artifacts, local paths, organization data, obsolete project routes, and secrets.
 
 #### Scenario: Production build and start
-- **WHEN** contributors run the documented build and start commands
-- **THEN** the Next.js server serves project routes and same-origin APIs on `127.0.0.1` without
-  requiring static `out` output
+- **WHEN** contributors run documented build and start commands
+- **THEN** the server renders one state at `/` and exposes only the same-origin singleton state API
 
 #### Scenario: Default database remains untracked
-- **WHEN** the application creates its default database or SQLite creates a transient journal
-- **THEN** Git status and the staged publication set remain unchanged
+- **WHEN** the application creates its default database or transient journal
+- **THEN** Git status and staged publication remain unchanged
 
 #### Scenario: Tracked database scan
-- **WHEN** publication checks encounter a SQLite database, journal, WAL, shared-memory file, or local
-  database configuration in the tracked set
-- **THEN** the check fails before publication
+- **WHEN** publication checks encounter a database, journal, WAL, shared-memory file, or local
+  database configuration in tracked files
+- **THEN** validation fails before publication
 
 ### Requirement: Documentation and automation are publication-ready
-The repository SHALL include an English README with a concise product summary, a curated set of
-exactly ten local deterministic featured screenshot previews linked to their full-size PNGs, and
-minimal local-start instructions, together with a comprehensive grouped screenshot capability
-catalog, contributor and security guidance, license, source comments, tests, fixtures,
-specifications, detailed documentation, CI, browser smoke tests, and PNG screenshots without demo
-video. The reviewed Russian message catalog SHALL be the only source file permitted to contain
-Cyrillic product copy. The sole public Org Tools state contract SHALL be unversioned, current-only,
-workspace-only, synthetic where bundled, and validated by the production parser without partial
-content, generic mapping, a separate import schema, or legacy migrations. Project and SQLite
-metadata SHALL remain outside that public state, and publication rules SHALL be expressed as general
-repository checks.
+The repository SHALL include an English README with exactly ten deterministic featured screenshot
+previews, a comprehensive grouped screenshot catalog, contributor and security guidance, license,
+tests, specifications, detailed documentation, CI, and generated PNGs. The reviewed Russian catalog
+SHALL be the only source file containing Cyrillic product copy. The public state contract SHALL be
+unversioned, current-only, complete, and validated without discriminators, partial scopes, generic
+mapping, legacy migration, project metadata, or compatibility readers.
 
 #### Scenario: README visual showcase
-- **WHEN** a visitor opens the rendered repository README
-- **THEN** they can quickly understand the product, inspect exactly one featured full-size Import,
-  Export, theme, language, Teams, Employees, Editor, Analytics, Calendar, and Download screenshot
-  through direct local image links, and find the commands required to run it locally
+- **WHEN** a visitor opens README
+- **THEN** exactly one full-size Import, Export, theme, language, Teams, Employees, Editor, Analytics,
+  Calendar, and Download preview is linked locally
 
 #### Scenario: Complete visual capability catalog
 - **WHEN** a visitor opens the detailed screenshot guide
-- **THEN** every primary workflow has one featured frame, workflows with additional visible states
-  have grouped supporting frames, and cross-cutting project frames explain switch, link, create,
-  rename, delete, Save, and conflict behavior
-
-#### Scenario: Visual documentation changes with the product
-- **WHEN** a repository change adds, removes, or materially changes user-visible functionality
-- **THEN** the same change updates the screenshot capability manifest, affected generated frames,
-  detailed guide, and featured README frame when applicable
+- **THEN** the 38-frame gallery contains ten featured workflows and only currently visible supporting
+  behavior, without project, file, Save, autosave, or conflict frames
 
 #### Scenario: Continuous validation
-- **WHEN** the CI workflow runs on a clean checkout
-- **THEN** install, lint, typecheck, SQLite repository and API, locale, project lifecycle, Save and
-  conflict, collapsible responsive sidebar, complete workspace transfer, transient status, outlined
-  dropdowns, tag packing, editor and PNG geometry, data download, unit, Node server build, OpenSpec,
-  localized browser smoke, and public-safety checks complete successfully against isolated state
+- **WHEN** CI runs on a clean checkout
+- **THEN** locale completeness, singleton repository/API, tab synchronization, automatic writes,
+  complete state transfer, both builds, browser suites, screenshots, OpenSpec, and public-safety
+  checks pass against isolated synthetic state
 
 #### Scenario: Current-schema policy
-- **WHEN** a future change modifies the public state interface
-- **THEN** obsolete types, readers, migrations, fixtures, documentation, and tests are removed in the same change rather than retained for backward compatibility
-
-#### Scenario: Removed transfer contract scan
-- **WHEN** publication checks scan source, tests, documentation, and built assets
-- **THEN** partial state content, projection filenames, mapping modules and examples, version fields,
-  and compatibility code are absent
+- **WHEN** the public state interface changes
+- **THEN** obsolete types, readers, migrations, fixtures, docs, and tests are removed in the same
+  change rather than retained
 
 #### Scenario: Screenshot generation
-- **WHEN** the screenshot command runs against both production runtimes
-- **THEN** it replaces the 48-frame gallery using deterministic synthetic data and an isolated
-  temporary database, including exactly ten featured primary-workflow PNGs and every declared
-  supporting feature and project state
+- **WHEN** screenshot generation runs against both production runtimes
+- **THEN** it deterministically replaces exactly 38 declared PNGs, including ten featured frames
 
 #### Scenario: Screenshot manifest consistency
-- **WHEN** screenshot generation or publication checks inspect the gallery
-- **THEN** identifiers and filenames are unique, exactly one entry per primary workflow is featured,
-  supporting-only cross-cutting modules are permitted, supporting frames are required only when the
-  manifest declares additional UI behavior, files equal the complete manifest, README links equal
-  only featured files, and screenshot-guide links equal all files
+- **WHEN** generation or publication checks inspect the gallery
+- **THEN** identifiers and filenames are unique, featured and guide links match the manifest, and
+  removed persistence images are absent
 
 #### Scenario: Publication language scan
-- **WHEN** the public-safety check scans tracked source files and the production build
-- **THEN** Cyrillic outside the exact Russian message catalog path causes a failing exit code
+- **WHEN** public-safety checks scan tracked source and production output
+- **THEN** Cyrillic outside the exact Russian catalog path fails validation
 
 ### Requirement: Development startup has a bounded functional probe
-The repository SHALL provide a development smoke command that starts the documented loopback
-Next.js development entry point with its explicit supported compiler and an isolated temporary
-SQLite database inside the ignored runtime boundary, excludes runtime database writes from module
-watching, excludes ignored browser-diagnostic writes from module watching, resolves the current
-project through a pre-render server redirect, verifies project
-initialization, stable browser routing, interactive rendered output, and the project list API, and
-always terminates its browser and server child processes.
-
-The interactive development command SHALL warm the root route, selected project route, and local
-project API before presenting the workspace URL as ready, and SHALL forward termination to the
-owned Next.js process.
+The repository SHALL provide a development smoke command that starts the loopback Next.js entry
+point with an isolated singleton SQLite database, excludes runtime and diagnostic directories from
+watching, verifies `/`, `GET /api/state`, the rendered shell, and Editor canvas, and always terminates
+owned browser and server processes.
 
 #### Scenario: Healthy development server
-- **WHEN** `pnpm dev:check` runs with a free loopback port and installed Chromium
-- **THEN** the command observes the root navigation settle on a stable UUID project URL, the
-  interactive application shell and Editor canvas become visible, the current project API response
-  is valid, and temporary browser and database state are removed before success
+- **WHEN** `pnpm dev:check` runs with a free loopback port and Chromium
+- **THEN** root remains `/`, the singleton API returns valid state, the Editor is interactive, and
+  temporary runtime state is removed
 
 #### Scenario: Runtime database write
-- **WHEN** project startup or interaction writes a database, journal, or configuration below the
-  reserved `.org-tools` runtime directory
-- **THEN** the development compiler does not invalidate or rebuild application modules for that
-  runtime-only change
+- **WHEN** automatic persistence writes below `.org-tools`
+- **THEN** the development compiler does not rebuild application modules for that runtime-only change
 
 #### Scenario: Browser diagnostic write
-- **WHEN** a local browser smoke tool writes snapshots or logs below the ignored
-  `.playwright-cli` directory
-- **THEN** the development compiler does not invalidate or rebuild application modules for that
-  diagnostic-only change
-
-#### Scenario: Existing project root navigation
-- **WHEN** `/` resolves an existing current project during development
-- **THEN** the server redirects to its stable UUID route before page rendering and the browser does
-  not depend on a streamed client redirect or development overlay timing
+- **WHEN** a smoke tool writes below `.playwright-cli`
+- **THEN** the development compiler does not rebuild application modules for that diagnostic-only
+  change
 
 #### Scenario: Interactive cold start
-- **WHEN** `pnpm dev` starts against an existing or newly created local database
-- **THEN** it presents the workspace URL only after root resolution and initial project route and
-  API compilation complete, so the first browser load reaches the interactive shell without a
-  cold-compilation Fast Refresh race
+- **WHEN** `pnpm dev` starts against an empty or existing singleton database
+- **THEN** it reports ready only after root and state API compilation and initialization complete
 
 #### Scenario: Development startup failure
-- **WHEN** the server cannot start, initialize SQLite, compile through the documented compiler,
-  settle browser routing, render the interactive shell, or answer within the fixed deadline
-- **THEN** the command closes the browser, terminates the server child, removes temporary state,
-  prints bounded diagnostic output, and exits unsuccessfully
+- **WHEN** startup, SQLite, compilation, API, or browser rendering misses its deadline
+- **THEN** owned processes and temporary state are cleaned and the command exits unsuccessfully with
+  bounded diagnostics
 
 ### Requirement: Repository validation includes the static browser application
 The repository SHALL provide development, static build, inspection, browser-test, and guarded
-publication commands for the ignored GitHub Pages application artifact.
+publication commands for the ignored GitHub Pages artifact.
 
 #### Scenario: Build Pages application
 - **WHEN** `pnpm pages:build` runs
-- **THEN** it replaces `pages-out` with the static `/org-tools/` application and `.nojekyll` without
-  changing tracked files
+- **THEN** it replaces `pages-out` with the static `/org-tools/` application and `.nojekyll`
 
 #### Scenario: Validate Pages application
 - **WHEN** Pages and publication checks inspect the artifact
-- **THEN** they reject server modules, project API references, dynamic project routes, secrets, local
-  paths, organization fixtures, missing static assets, and an incorrect base path
+- **THEN** they reject server modules, singleton API references, project routes, secrets, local paths,
+  organization fixtures, file persistence code, missing assets, and an incorrect base path
 
 #### Scenario: Continuous browser validation
 - **WHEN** CI runs on a clean checkout
-- **THEN** it builds and tests the SQLite server and static browser runtimes before publication
+- **THEN** it builds and tests the SQLite and memory-only static runtimes before publication
 
 ### Requirement: Public automation uses supported action runtimes
 Repository CI and Pages publication workflows SHALL use maintained official action major versions

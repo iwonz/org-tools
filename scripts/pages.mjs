@@ -52,9 +52,9 @@ export async function validatePagesOutput() {
   }
   const blocked = [
     ["node:sqlite", "node:sqlite must not appear in the Pages output"],
-    ["/api/projects", "project API routes must not appear in the Pages output"],
+    ["/api/state", "state API routes must not appear in the Pages output"],
     ["ORG_TOOLS_DB_PATH", "database configuration must not appear in the Pages output"],
-    ["state_json", "SQLite storage fields must not appear in the Pages output"],
+    ["organization_json", "SQLite storage fields must not appear in the Pages output"],
   ];
   for (const [needle, message] of blocked) {
     if (combined.includes(needle)) violations.push(message);

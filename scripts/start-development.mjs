@@ -70,14 +70,7 @@ async function stopChild() {
   if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
 }
 
-function projectPathFromResponse(response) {
-  const location = response.headers.get("location");
-  if (!location) return null;
-  const path = new URL(location, origin).pathname;
-  return /^\/projects\/[0-9a-f-]+$/u.test(path) ? path : null;
-}
-
-async function warmDevelopmentWorkspace() {
+async function warmDevelopmentState() {
   const deadline = Date.now() + startupTimeoutMs;
   let lastError = new Error("Development server did not answer.");
 
@@ -87,34 +80,18 @@ async function warmDevelopmentWorkspace() {
     }
 
     try {
-      const rootResponse = await fetch(`${origin}/`, { redirect: "manual" });
-      const projectPath = projectPathFromResponse(rootResponse);
-
-      if (projectPath) {
-        const projectResponse = await fetch(`${origin}${projectPath}`);
-        const projectHtml = await projectResponse.text();
-        if (!projectResponse.ok || !projectHtml.includes("<title>Org Tools</title>")) {
-          throw new Error(`Project route returned HTTP ${projectResponse.status}.`);
-        }
-
-        const apiResponse = await fetch(`${origin}/api/projects`, {
-          headers: { Accept: "application/json" },
-        });
-        if (!apiResponse.ok) {
-          throw new Error(`Project API returned HTTP ${apiResponse.status}.`);
-        }
-
-        await delay(500);
-        return `${origin}${projectPath}`;
-      }
-
+      const rootResponse = await fetch(`${origin}/`);
       const rootHtml = await rootResponse.text();
-      if (rootResponse.ok && rootHtml.includes("<title>Org Tools</title>")) {
-        await delay(500);
-        return origin;
+      if (!rootResponse.ok || !rootHtml.includes("<title>Org Tools</title>")) {
+        throw new Error(`Root route returned HTTP ${rootResponse.status}.`);
       }
+      const apiResponse = await fetch(`${origin}/api/state`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!apiResponse.ok) throw new Error(`State API returned HTTP ${apiResponse.status}.`);
 
-      throw new Error(`Root route returned HTTP ${rootResponse.status}.`);
+      await delay(500);
+      return origin;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       await delay(pollIntervalMs);
@@ -133,9 +110,9 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 }
 
 try {
-  const workspaceUrl = await warmDevelopmentWorkspace();
+  const stateUrl = await warmDevelopmentState();
   revealOutput();
-  console.log(`\n✓ Development workspace ready: ${workspaceUrl}`);
+  console.log(`\n✓ Development state runtime ready: ${stateUrl}`);
   const exitCode = await new Promise((resolveExit) => {
     child.once("exit", (code) => resolveExit(code ?? 1));
   });

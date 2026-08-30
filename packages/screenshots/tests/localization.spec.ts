@@ -1,13 +1,16 @@
+import { readFile } from "node:fs/promises";
+
+import type { OrgToolsState } from "@org-tools/types";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import enMessages from "../../../apps/ui/messages/en.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import {
-  createIsolatedProject,
   expectLocalRequestsOnly,
   type ImportFilePayload,
   localeStorageKey,
-  syntheticWorkspacePath,
+  resetServerState,
+  syntheticStatePath,
 } from "./helpers.js";
 
 type Messages = typeof enMessages;
@@ -41,7 +44,7 @@ const chooseImportFile = async (
   await page.getByRole("button", { name: messages.Ui.Import, exact: true }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(file);
-  const dialog = page.getByRole("dialog", { name: messages.Ui["Import workspace"] });
+  const dialog = page.getByRole("dialog", { name: messages.Ui["Import state"] });
   await expect(dialog).toBeVisible();
   return dialog;
 };
@@ -66,7 +69,7 @@ const readSelectValueLayout = async (value: Locator) =>
 test("detects Russian from browser preferences on first use", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await setBrowserLanguages(page, ["de-DE", "ru-RU", "en-US"]);
-  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
+  await page.goto(await resetServerState(page, "ru"), { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
   await expect(page.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
@@ -82,7 +85,7 @@ test("detects Russian from browser preferences on first use", async ({ page }) =
 
 test("falls back to English for an unsupported browser locale", async ({ page }) => {
   await setBrowserLanguages(page, ["de-DE", "fr-FR"]);
-  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
+  await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("tab", { name: enMessages.Ui.Editor, exact: true })).toBeVisible();
@@ -96,7 +99,7 @@ test("switches the interface in place and persists the choice", async ({ page },
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
-  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
+  await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
 
   const languageToggle = page.locator('[data-demo-id="language-toggle"]');
   const themeToggle = page.locator('[data-demo-id="theme-toggle"]');
@@ -137,7 +140,7 @@ test("switches the interface in place and persists the choice", async ({ page },
     sidebar.getByRole("button", { name: ruMessages.Ui.Import, exact: true }),
   ).toBeVisible();
   await expect(
-    sidebar.getByRole("button", { name: ruMessages.Ui["Workspace Export"], exact: true }),
+    sidebar.getByRole("button", { name: ruMessages.Ui["Export state"], exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("tab", { name: ruMessages.Ui["Data Download"], exact: true }),
@@ -151,12 +154,9 @@ test("switches the interface in place and persists the choice", async ({ page },
     path: testInfo.outputPath("russian-shell.png"),
   });
 
-  const workspaceDownloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: ruMessages.Ui["Workspace Export"], exact: true }).click();
-  expect((await workspaceDownloadPromise).suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("dialog", { name: ruMessages.Ui["Export workspace"] })).toHaveCount(
-    0,
-  );
+  const stateDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: ruMessages.Ui["Export state"], exact: true }).click();
+  expect((await stateDownloadPromise).suggestedFilename()).toBe("org-tools-state.json");
 
   await page.getByRole("tab", { name: ruMessages.Ui.Employees, exact: true }).click();
   await page.getByRole("button", { name: ruMessages.Ui["Create Employee"], exact: true }).click();
@@ -196,13 +196,13 @@ test("switches the interface in place and persists the choice", async ({ page },
     fullPage: true,
     path: testInfo.outputPath("russian-view-selector.png"),
   });
-  const dialog = await chooseImportFile(page, ruMessages, syntheticWorkspacePath);
+  const dialog = await chooseImportFile(page, ruMessages, syntheticStatePath);
   await expect(dialog.getByRole("tab")).toHaveCount(0);
-  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText("4");
+  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("4");
   await expect(
     dialog.getByText(
       ruMessages.Ui[
-        "Replacing imports all workspace data and interface state over the current working copy."
+        "Import replaces all organization data and interface settings in the current state."
       ],
       { exact: true },
     ),
@@ -242,20 +242,20 @@ for (const [locale, messages] of [
   }, testInfo) => {
     const assertLocalRequests = await expectLocalRequestsOnly(page);
     await seedLocale(page, locale);
-    await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
+    await page.goto(await resetServerState(page, locale), { waitUntil: "domcontentloaded" });
 
     const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: messages.Ui["Workspace Export"], exact: true }).click();
+    await page.getByRole("button", { name: messages.Ui["Export state"], exact: true }).click();
     expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
-    await expect(page.getByRole("dialog", { name: messages.Ui["Export workspace"] })).toHaveCount(
-      0,
-    );
-
-    let dialog = await chooseImportFile(page, messages, syntheticWorkspacePath);
-    await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText("4");
-    await dialog
-      .getByRole("button", { name: messages.Ui["Replace workspace"], exact: true })
-      .click();
+    const localizedState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+    localizedState.ui.locale = locale;
+    let dialog = await chooseImportFile(page, messages, {
+      buffer: Buffer.from(JSON.stringify(localizedState)),
+      mimeType: "application/json",
+      name: "synthetic-state.json",
+    });
+    await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("4");
+    await dialog.getByRole("button", { name: messages.Ui["Replace state"], exact: true }).click();
     await expect(dialog).toBeHidden();
     await page.locator('[data-demo-id="tab-employees"]').click();
     await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
@@ -301,13 +301,13 @@ for (const [locale, messages] of [
       name: "partial.json",
     });
     await expect(
-      dialog.getByText(messages.Ui["Only a complete Org Tools workspace can be imported."], {
+      dialog.getByText(messages.Ui["Only a complete Org Tools state can be imported."], {
         exact: true,
       }),
     ).toBeVisible();
     await dialog.getByRole("button", { name: messages.Ui.Cancel, exact: true }).click();
     await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
-    await expect(page.locator('[data-demo-id="project-save-status"]')).toBeVisible();
+    await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
     await page.locator('[data-demo-id="tab-employees"]').click();
     await expect(page.locator('[data-demo-id="employees-total-count"]')).toContainText("4");
     await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);

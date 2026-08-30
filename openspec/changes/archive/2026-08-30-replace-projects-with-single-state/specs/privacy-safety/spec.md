@@ -1,0 +1,44 @@
+## MODIFIED Requirements
+
+### Requirement: Organization data remains local
+The application SHALL transmit state only between the local-server page and its loopback same-origin
+singleton state API. Pages SHALL process state only in current page memory, live same-origin tab
+messages, explicit Import, and explicit Export. Neither runtime SHALL transmit organization data,
+durable UI, candidates, tag dates, events, avatars, searches, analytics, or exports to a third party
+or non-loopback service. State snapshots SHALL remain out of cookies, IndexedDB, local storage,
+session storage, and Cache Storage. The browser MAY persist only bounded locale and theme bootstrap
+metadata, and the local database MAY persist the validated singleton state.
+
+#### Scenario: Core workflow network audit
+- **WHEN** either runtime loads, imports, edits, searches, analyzes, renders, synchronizes tabs, or
+  exports
+- **THEN** requests contain no third-party organization data and are limited to assets plus the
+  loopback singleton API in server mode
+
+#### Scenario: Singleton database persistence
+- **WHEN** a valid organization or UI projection changes in server mode
+- **THEN** it is written only to the configured local SQLite database and not copied to browser
+  storage, logs, telemetry, or another service
+
+#### Scenario: Pages tab synchronization
+- **WHEN** Pages initializes or updates state with live same-origin peers
+- **THEN** bytes use only in-memory BroadcastChannel messages and disappear after the final tab closes
+
+#### Scenario: Preference persistence
+- **WHEN** locale or theme changes
+- **THEN** local storage contains only bounded bootstrap identifiers and no organization or other
+  durable UI snapshot
+
+#### Scenario: Candidate validation failure
+- **WHEN** any imported, exported, synchronized, or API-written state fails strict validation
+- **THEN** current state and its durable destination remain unchanged
+
+### Requirement: Public browser workspace cannot upload organization data
+The functional Pages application SHALL contain local scripts required by the product but SHALL
+contain no backend endpoint, remote asset, telemetry, remote logging, remote synchronization,
+background organization-data request, File System Access persistence, or browser snapshot store.
+
+#### Scenario: Public browser workflow
+- **WHEN** a visitor completes a normal Pages workflow
+- **THEN** state moves only among current page memory, live same-origin tabs, explicit Import,
+  explicit download, clipboard actions, and user-activated protected external navigation

@@ -3,17 +3,17 @@
     "id": "import",
     "module": "import",
     "featured": true,
-    "title": "Project import confirmation",
+    "title": "State import confirmation",
     "file": "demo-import.png",
-    "description": "Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current project.",
-    "capabilities": ["Strict project validation", "Summary counts", "Atomic replacement"]
+    "description": "Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current state.",
+    "capabilities": ["Strict state validation", "Summary counts", "Atomic replacement"]
   },
   {
-    "id": "import-invalid-workspace",
+    "id": "import-invalid-state",
     "module": "import",
     "featured": false,
-    "title": "Invalid project recovery",
-    "file": "feature-import-invalid-workspace.png",
+    "title": "Invalid state recovery",
+    "file": "feature-import-invalid-state.png",
     "description": "Reject partial, arbitrary, or malformed JSON without changing data and offer an immediate file re-selection action.",
     "capabilities": ["Strict rejection", "No mutation", "Choose another file"]
   },
@@ -21,10 +21,10 @@
     "id": "export",
     "module": "export",
     "featured": true,
-    "title": "Direct project Export",
+    "title": "Direct state Export",
     "file": "demo-export.png",
-    "description": "Download the complete current project in one click, including changes that have not yet been saved to the bound project or file.",
-    "capabilities": ["One-click JSON", "Complete project", "Includes unsaved changes"]
+    "description": "Download the complete current state in one click, including current in-memory changes.",
+    "capabilities": ["One-click JSON", "Complete state", "Includes current changes"]
   },
   {
     "id": "theme",
@@ -41,7 +41,7 @@
     "featured": false,
     "title": "Light shell and expanded navigation",
     "file": "feature-theme-light-shell.png",
-    "description": "Inspect the light workspace with expanded module labels and locally accessible actions.",
+    "description": "Inspect the light interface with expanded module labels and locally accessible actions.",
     "capabilities": ["Light theme", "Expanded sidebar", "Module labels", "Local actions"]
   },
   {
@@ -183,7 +183,7 @@
     "featured": false,
     "title": "Local avatar crop",
     "file": "feature-employees-avatar-crop.png",
-    "description": "Crop and zoom a local PNG, JPEG, WebP, or pasted image before embedding it into the workspace.",
+    "description": "Crop and zoom a local PNG, JPEG, WebP, or pasted image before embedding it into the organization state.",
     "capabilities": ["Local file", "Clipboard image", "Crop and zoom", "Embedded WebP"]
   },
   {
@@ -398,114 +398,5 @@
     "file": "feature-download-json-preview.png",
     "description": "Inspect the lower field list and formatted JSON structure before copying or downloading the local file.",
     "capabilities": ["Remaining fields", "Formatted JSON", "Copy", "Local download"]
-  },
-  {
-    "id": "project-switcher-link",
-    "module": "projects",
-    "featured": false,
-    "title": "Project switcher and stable link",
-    "file": "feature-project-switcher-link.png",
-    "description": "Switch durable projects from the sidebar footer and copy the stable deep link of the current project.",
-    "capabilities": ["Project list", "Current selection", "Stable deep link", "Compact sidebar"]
-  },
-  {
-    "id": "project-create",
-    "module": "projects",
-    "featured": false,
-    "title": "Create a project",
-    "file": "feature-project-create.png",
-    "description": "Create a named empty project without leaving the current product shell.",
-    "capabilities": ["Project creation", "Required name", "Unique name", "Compact dialog"]
-  },
-  {
-    "id": "project-rename",
-    "module": "projects",
-    "featured": false,
-    "title": "Rename a project",
-    "file": "feature-project-rename.png",
-    "description": "Rename the current project while preserving its UUID link and saved organization state.",
-    "capabilities": ["Project rename", "Stable UUID", "Unique normalized name"]
-  },
-  {
-    "id": "project-delete",
-    "module": "projects",
-    "featured": false,
-    "title": "Delete a project",
-    "file": "feature-project-delete.png",
-    "description": "Confirm destructive project deletion before opening a remaining or automatically recreated project.",
-    "capabilities": [
-      "Deletion confirmation",
-      "Remaining project recovery",
-      "Final-project recovery"
-    ]
-  },
-  {
-    "id": "project-revision-conflict",
-    "module": "projects",
-    "featured": false,
-    "title": "Resolve a revision conflict",
-    "file": "feature-project-revision-conflict.png",
-    "description": "Choose whether to load the saved project, explicitly overwrite it, or keep local unsaved work.",
-    "capabilities": ["Optimistic revision", "Load saved version", "Explicit overwrite", "Cancel"]
-  },
-  {
-    "id": "project-autosave",
-    "module": "projects",
-    "featured": false,
-    "title": "SQLite project autosave",
-    "file": "feature-project-autosave.png",
-    "description": "Enable the shared default-off autosave preference for the current revisioned SQLite project.",
-    "capabilities": [
-      "Default-off autosave",
-      "Revisioned Save",
-      "Manual Save remains available",
-      "Shared preference"
-    ]
-  },
-  {
-    "id": "browser-file-menu",
-    "module": "browser",
-    "featured": false,
-    "title": "Browser project file menu",
-    "file": "feature-browser-file-menu.png",
-    "description": "Manage one browser project through New project, Open project, Save As, and the bound filename.",
-    "capabilities": ["New project", "Open project", "Save As", "Bound filename"]
-  },
-  {
-    "id": "browser-autosave",
-    "module": "browser",
-    "featured": false,
-    "title": "Browser file autosave",
-    "file": "feature-browser-autosave.png",
-    "description": "Persist organization edits to the explicitly selected file after the shared trailing debounce.",
-    "capabilities": [
-      "Explicit opt-in",
-      "One-second debounce",
-      "Single-flight writes",
-      "Visible Save status"
-    ]
-  },
-  {
-    "id": "browser-reconnect",
-    "module": "browser",
-    "featured": false,
-    "title": "Reconnect a project file",
-    "file": "feature-browser-reconnect.png",
-    "description": "Restore only the remembered file handle and require permission before organization data is loaded.",
-    "capabilities": ["Handle-only metadata", "Permission recovery", "Reconnect file", "Start blank"]
-  },
-  {
-    "id": "browser-fallback",
-    "module": "browser",
-    "featured": false,
-    "title": "Browser download fallback",
-    "file": "feature-browser-fallback.png",
-    "description": "Use standard project-file input and download when native File System Access is unavailable.",
-    "capabilities": [
-      "JSON file input",
-      "Download Save",
-      "Tab-lifetime workspace",
-      "Autosave unavailable"
-    ]
   }
 ]

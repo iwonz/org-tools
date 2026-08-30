@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { parseOrgToolsState } from "@/lib/org-file";
 
 const syntheticWorkspaceUrl = new URL(
-  "../../../../packages/screenshots/fixtures/synthetic-workspace.json",
+  "../../../../packages/screenshots/fixtures/synthetic-state.json",
   import.meta.url,
 );
 
@@ -14,11 +14,10 @@ describe("public synthetic fixtures", () => {
     const source = await readFile(syntheticWorkspaceUrl, "utf8");
     const state = parseOrgToolsState(JSON.parse(source));
 
-    expect(state.kind).toBe("org-tools-state");
-    expect(state.content).toBe("workspace");
+    expect(Object.keys(state).sort()).toEqual(["organization", "ui"]);
     expect(state).not.toHaveProperty("formatVersion");
-    expect(state.employees).toHaveLength(4);
-    expect(state.views).toHaveLength(1);
-    expect(state.views[0]?.state.units).toHaveLength(2);
+    expect(state.organization.employees).toHaveLength(4);
+    expect(state.organization.views).toHaveLength(1);
+    expect(state.organization.views[0]?.document.units).toHaveLength(2);
   });
 });

@@ -7,11 +7,12 @@
     "generate": "playwright test tests/screenshots.spec.ts --project=chromium",
     "generate:pages": "playwright test tests/pages-screenshots.spec.ts --config=playwright.pages.config.ts --project=chromium",
     "pages:smoke": "playwright test tests/pages.spec.ts --config=playwright.pages.config.ts --project=chromium",
-    "smoke": "playwright test tests/smoke.spec.ts tests/localization.spec.ts tests/projects.spec.ts --project=chromium",
+    "smoke": "playwright test tests/smoke.spec.ts tests/localization.spec.ts tests/state.spec.ts --project=chromium",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@org-tools/types": "workspace:*",
     "@types/node": "^25.9.1",
     "sharp": "^0.34.5",
     "typescript": "^6.0.3"

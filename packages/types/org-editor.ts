@@ -1,6 +1,6 @@
 import type { OrgEditorEmployee, OrgEditorEmployeeOverride } from "./employee.js";
 import type { EmployeeId, UnitId } from "./ids.js";
-import type { EmployeeLiveFilterRule } from "./workspace.js";
+import type { EmployeeLiveFilterRule } from "./organization.js";
 
 export type OrgEditorUnitId = UnitId;
 

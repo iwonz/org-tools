@@ -6,11 +6,11 @@ import sharp from "sharp";
 
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import {
-  openBlankWorkspace,
+  openBlankState,
   openImportDialog,
-  replaceWithSyntheticWorkspace,
+  replaceWithSyntheticState,
   stabilizeForScreenshot,
-  syntheticWorkspacePath,
+  syntheticStatePath,
 } from "./helpers.js";
 
 type ScreenshotScenario = {
@@ -38,12 +38,6 @@ function screenshotPath(id: string): string {
 }
 
 async function capture(page: Page, id: string) {
-  if (id !== "project-autosave") {
-    const saveStatus = page.locator('[data-demo-id="project-save-status"]');
-    if (["Unsaved", "Saved"].includes((await saveStatus.textContent()) ?? "")) {
-      await expect(saveStatus).toHaveText("");
-    }
-  }
   await stabilizeForScreenshot(page);
   const screenshot = await page.screenshot({ animations: "disabled" });
   const path = screenshotPath(id);
@@ -105,13 +99,13 @@ async function capture(page: Page, id: string) {
   await writeFile(path, screenshot);
 }
 
-async function openSyntheticWorkspace(page: Page) {
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+async function openSyntheticState(page: Page) {
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
 }
 
 async function openSyntheticTab(page: Page, tab: string) {
-  await openSyntheticWorkspace(page);
+  await openSyntheticState(page);
   await page.getByRole("tab", { name: tab, exact: true }).click();
 }
 
@@ -124,13 +118,6 @@ async function openEditorExport(page: Page) {
   const dialog = page.getByRole("dialog", { name: "Export" });
   await expect(dialog).toBeVisible();
   return dialog;
-}
-
-async function openProjectSwitcher(page: Page) {
-  await page.locator('[data-demo-id="project-switcher"]').click();
-  const popover = page.locator('[data-demo-id="project-switcher-popover"]');
-  await expect(popover).toBeVisible();
-  return popover;
 }
 
 test.beforeAll(async () => {
@@ -150,75 +137,19 @@ test.afterAll(async () => {
   expect(generatedFiles).toEqual(screenshotManifest.map((scenario) => scenario.file).sort());
 });
 
-test("captures persistent project management", async ({ page }) => {
-  await openBlankWorkspace(page);
-  await page.locator('[data-demo-id="sidebar-toggle"]').click();
-  let popover = await openProjectSwitcher(page);
-  await popover.getByRole("button", { name: "Copy project link", exact: true }).click();
-  await expect(page.locator('[data-demo-id="project-link-copied"]')).toBeVisible();
-  popover = await openProjectSwitcher(page);
-  await capture(page, "project-switcher-link");
-  await expect(page.locator('[data-demo-id="project-link-copied"]')).toBeHidden({
-    timeout: 10_000,
-  });
-
-  await popover.getByText("Autosave", { exact: true }).click();
-  await expect(popover.locator('[data-demo-id="autosave-checkbox"]')).toHaveAttribute(
-    "aria-checked",
-    "true",
-  );
-  await page.keyboard.press("Escape");
-  await replaceWithSyntheticWorkspace(page);
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Saved", {
-    timeout: 5_000,
-  });
-  popover = await openProjectSwitcher(page);
-  await capture(page, "project-autosave");
-
-  await popover.getByRole("button", { name: "Create project", exact: true }).click();
-  let dialog = page.getByRole("dialog", { name: "Create project" });
-  await dialog.getByLabel("Project name", { exact: true }).fill("Annual planning");
-  await capture(page, "project-create");
-  await page.keyboard.press("Escape");
-
-  popover = await openProjectSwitcher(page);
-  await popover.getByRole("button", { name: "Rename project", exact: true }).click();
-  dialog = page.getByRole("dialog", { name: "Rename project" });
-  await dialog.getByLabel("Project name", { exact: true }).fill("Organization roadmap");
-  await capture(page, "project-rename");
-  await page.keyboard.press("Escape");
-
-  popover = await openProjectSwitcher(page);
-  await popover.getByRole("button", { name: "Delete project", exact: true }).click();
-  await expect(page.getByRole("alertdialog", { name: "Delete project?" })).toBeVisible();
-  await capture(page, "project-delete");
-});
-
-test("captures project revision conflict resolution", async ({ page, context }) => {
-  await openBlankWorkspace(page);
-  const route = new URL(page.url()).pathname;
-  const secondPage = await context.newPage();
-  await secondPage.goto(route, { waitUntil: "domcontentloaded" });
-  await replaceWithSyntheticWorkspace(page);
-  await page.locator('[data-demo-id="project-save"]').click();
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Saved");
-  await replaceWithSyntheticWorkspace(secondPage);
-  await secondPage.locator('[data-demo-id="project-save"]').click();
-  await expect(secondPage.getByRole("alertdialog", { name: "Conflict" })).toBeVisible();
-  await capture(secondPage, "project-revision-conflict");
-  await secondPage.close();
-});
-
-test("captures valid and invalid workspace imports", async ({ page }) => {
-  await openBlankWorkspace(page);
-  let dialog = await openImportDialog(page, syntheticWorkspacePath);
-  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
+test("captures valid and invalid state imports", async ({ page }) => {
+  await openBlankState(page);
+  let dialog = await openImportDialog(page, syntheticStatePath);
+  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
     "4 Employees",
   );
   await expect(
-    dialog.getByText("Importing replaces all data and interface state in the current project.", {
-      exact: true,
-    }),
+    dialog.getByText(
+      "Import replaces all organization data and interface settings in the current state.",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await capture(page, "import");
 
@@ -226,31 +157,30 @@ test("captures valid and invalid workspace imports", async ({ page }) => {
   dialog = await openImportDialog(page, {
     buffer: Buffer.from('[{"name":"Unsupported row"}]'),
     mimeType: "application/json",
-    name: "invalid-workspace.json",
+    name: "invalid-state.json",
   });
   await expect(
-    dialog.getByText("Only a complete Org Tools project can be imported.", {
+    dialog.getByText("Only a complete Org Tools state can be imported.", {
       exact: true,
     }),
   ).toBeVisible();
   await expect(dialog.getByText("Choose another file", { exact: true })).toBeVisible();
-  await capture(page, "import-invalid-workspace");
+  await capture(page, "import-invalid-state");
 });
 
-test("captures direct workspace export", async ({ page }) => {
-  await openSyntheticWorkspace(page);
+test("captures direct state export", async ({ page }) => {
+  await openSyntheticState(page);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
-  const action = page.getByRole("button", { name: "Export", exact: true });
+  const action = page.getByRole("button", { name: "Export state", exact: true });
   await action.hover();
   await capture(page, "export");
   const downloadPromise = page.waitForEvent("download");
   await action.click();
   expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("dialog", { name: "Export project" })).toHaveCount(0);
 });
 
 test("captures both themes and both language states", async ({ page }) => {
-  await openSyntheticWorkspace(page);
+  await openSyntheticState(page);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
   await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveAttribute(
     "data-collapsed",
@@ -265,9 +195,6 @@ test("captures both themes and both language states", async ({ page }) => {
   await capture(page, "theme");
 
   await page.getByRole("option", { name: "Light", exact: true }).click();
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("", {
-    timeout: 5_000,
-  });
   await page.locator('[data-demo-id="language-toggle"]').click();
   await capture(page, "language-english-menu");
 
@@ -382,7 +309,7 @@ test("captures the complete Employee workflow", async ({ page }) => {
 });
 
 test("captures Editor navigation, commands, and export tooling", async ({ page }) => {
-  await openSyntheticWorkspace(page);
+  await openSyntheticState(page);
   await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
   await capture(page, "editor");
 

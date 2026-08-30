@@ -1,16 +1,16 @@
 import type {
   EmployeeLiveFilterRule,
+  OrganizationEmployee,
   OrgEditorState,
   OrgEditorUnit,
-  WorkspaceEmployee,
 } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
 import { buildAnalytics } from "@/lib/analytics";
 import {
-  buildWorkspaceOrgStructure,
-  buildWorkspaceOrgStructureWithResolution,
-} from "@/lib/build-workspace-org-structure";
+  buildOrganizationStructure,
+  buildOrganizationStructureWithResolution,
+} from "@/lib/build-organization-structure";
 import {
   createEmptyEmployeeLiveFilterRule,
   getLiveUnitTopologicalOrder,
@@ -26,7 +26,10 @@ const CASEY_ID = uuid(3);
 const MANUAL_ID = uuid(101);
 const LIVE_ID = uuid(102);
 
-const createEmployee = (id: string, fields: Partial<WorkspaceEmployee>): WorkspaceEmployee => ({
+const createEmployee = (
+  id: string,
+  fields: Partial<OrganizationEmployee>,
+): OrganizationEmployee => ({
   avatarBase64Url: null,
   birthday: null,
   createdAt: timestamp,
@@ -43,7 +46,7 @@ const createEmployee = (id: string, fields: Partial<WorkspaceEmployee>): Workspa
   gender: fields.gender ?? "unspecified",
 });
 
-const employees: WorkspaceEmployee[] = [
+const employees: OrganizationEmployee[] = [
   createEmployee(ALEX_ID, {
     birthday: "03-12",
     email: "alex@example.test",
@@ -85,7 +88,7 @@ const state = (units: OrgEditorUnit[]): OrgEditorState => ({
 
 describe("Live Unit resolver", () => {
   test("combines query, birthday, tags, positions, and Unit filters", () => {
-    const structure = buildWorkspaceOrgStructure(
+    const structure = buildOrganizationStructure(
       employees,
       state([
         unit(MANUAL_ID, {
@@ -116,7 +119,7 @@ describe("Live Unit resolver", () => {
   test("derives positions from manual Units and applies sparse overrides", () => {
     const defaultLiveId = uuid(103);
     const overriddenLiveId = uuid(104);
-    const structure = buildWorkspaceOrgStructure(
+    const structure = buildOrganizationStructure(
       employees,
       state([
         unit(MANUAL_ID, {
@@ -160,7 +163,7 @@ describe("Live Unit resolver", () => {
       unit(withoutManualId, { liveFilter: rule({ includeWithoutUnits: true }) }),
       unit(downstreamId, { liveFilter: rule({ selectedUnitIds: [qaLiveId] }) }),
     ]);
-    const result = buildWorkspaceOrgStructureWithResolution(employees, editorState);
+    const result = buildOrganizationStructureWithResolution(employees, editorState);
 
     expect(getLiveUnitTopologicalOrder(editorState.units).map((current) => current.id)).toEqual([
       qaLiveId,

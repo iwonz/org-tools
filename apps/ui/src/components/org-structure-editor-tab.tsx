@@ -1720,8 +1720,7 @@ export const OrgStructureEditorTab = observer(() => {
     null,
   );
   const [exportUnitId, setExportUnitId] = useState<OrgEditorUnitId | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { searchOpen, searchQuery } = store.editorUi;
   const [searchPinnedUnitId, setSearchPinnedUnitId] = useState<OrgEditorUnitId | null>(null);
   const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
   const selectedItemKeySet = useMemo(
@@ -2047,7 +2046,7 @@ export const OrgStructureEditorTab = observer(() => {
       if (result.type === "unit") {
         editor.setSelectedItems([{ type: "unit", unitId: nextUnit.id }]);
         centerCanvasRectInViewport(unitBounds, 1);
-        setSearchOpen(false);
+        store.setEditorUi({ searchOpen: false });
         return;
       }
 
@@ -2070,9 +2069,9 @@ export const OrgStructureEditorTab = observer(() => {
       centerCanvasRectInViewport(unitBounds, 1, {
         ensureRect: employeeBounds,
       });
-      setSearchOpen(false);
+      store.setEditorUi({ searchOpen: false });
     },
-    [centerCanvasRectInViewport, editor, employeeById, unitById],
+    [centerCanvasRectInViewport, editor, employeeById, store, unitById],
   );
 
   useEffect(() => {
@@ -3527,8 +3526,10 @@ export const OrgStructureEditorTab = observer(() => {
                   {toggleAllUnitsLabel}
                 </OrgEditorToolbarButton>
                 <OrgEditorSearchControl
-                  onOpenChange={setSearchOpen}
-                  onQueryChange={setSearchQuery}
+                  onOpenChange={(nextSearchOpen) =>
+                    store.setEditorUi({ searchOpen: nextSearchOpen })
+                  }
+                  onQueryChange={(searchQuery) => store.setEditorUi({ searchQuery })}
                   onSelectResult={selectOrgEditorSearchResult}
                   open={searchOpen}
                   query={searchQuery}
@@ -3672,7 +3673,7 @@ export const OrgStructureEditorTab = observer(() => {
                   fields,
                   assignments,
                 );
-              } else if (employeeDialogState.employee.scope === "workspace") {
+              } else if (employeeDialogState.employee.scope === "organization") {
                 editor.updateSourceEmployee(employeeDialogState.employee.id, fields, assignments);
               }
             } else {

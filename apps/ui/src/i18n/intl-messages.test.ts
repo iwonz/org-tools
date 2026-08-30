@@ -13,7 +13,7 @@ describe("next-intl message preparation", () => {
   it("encodes sentence periods without changing translated values", () => {
     const english = prepareMessagesForNextIntl(enMessages);
     const russian = prepareMessagesForNextIntl(ruMessages);
-    const sourceKey = "Workspace state downloaded.";
+    const sourceKey = "Could not read or parse the selected file.";
     const encodedKey = encodeUiMessageKey(sourceKey);
 
     expect(encodedKey).not.toContain(".");

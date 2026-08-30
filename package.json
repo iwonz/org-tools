@@ -1,7 +1,7 @@
 {
   "name": "org-tools",
   "version": "0.1.0",
-  "description": "A private-by-design organization editor with local-file and SQLite projects.",
+  "description": "A private-by-design organization editor with synchronized in-memory and SQLite state.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -45,7 +45,6 @@
     "@biomejs/biome": "^2.4.16",
     "@fission-ai/openspec": "1.5.0",
     "@types/node": "^25.9.1",
-    "fake-indexeddb": "^6.2.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }

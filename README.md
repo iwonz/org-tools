@@ -1,69 +1,48 @@
 # org-tools
 
-`org-tools` is a private organization editor that runs either as a browser file workspace or as a
-local multi-project SQLite application.
+`org-tools` is a private organization editor for Units, Employees, visual structure, Analytics,
+Calendar, and local data downloads.
 
-[Open Org Tools in the browser](https://iwonz.github.io/org-tools/) — the complete browser-only app,
-with local JSON Open/Save and no backend.
-
-- Build Units, manage Employees, and arrange them on a visual canvas.
-- Search the organization, explore analytics, and track birthdays and dated tags.
-- Import and export complete workspace JSON, or download tables, templates, and canvas PNGs.
-- Keep organization data in an explicitly selected local file or in the loopback-only SQLite
-  runtime—there is no account, telemetry, remote service, or background synchronization.
+[Open Org Tools on GitHub Pages](https://iwonz.github.io/org-tools/) — the complete browser-only
+application. Its organization state exists only in memory, can synchronize between currently open
+tabs, and enters or leaves through explicit Import and Export. It has no backend, accounts,
+telemetry, remote logging, or background requests.
 
 ## Screenshots
 
-Click a preview to open the full-size image.
-
-| Import | Workspace Export |
+| Import | State Export |
 | :---: | :---: |
-| [![Workspace import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct workspace export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
+| [![State import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct state export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
 | Theme | Language |
 | [![Dark theme menu](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) | [![Russian language menu](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) |
 | Teams | Employees |
-| [![Populated Teams workspace](docs/screenshots/demo-teams.png)](docs/screenshots/demo-teams.png) | [![Searchable Employee catalog](docs/screenshots/demo-employees.png)](docs/screenshots/demo-employees.png) |
+| [![Populated Teams](docs/screenshots/demo-teams.png)](docs/screenshots/demo-teams.png) | [![Searchable Employee catalog](docs/screenshots/demo-employees.png)](docs/screenshots/demo-employees.png) |
 | Editor | Analytics |
 | [![Visual organization Editor](docs/screenshots/demo-editor.png)](docs/screenshots/demo-editor.png) | [![Organization Analytics](docs/screenshots/demo-analytics.png)](docs/screenshots/demo-analytics.png) |
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-See the [complete visual capability catalog](docs/screenshots.md) for every secondary workflow,
-open panel, and deterministic generation rule.
+The [complete visual capability catalog](docs/screenshots.md) documents all 38 maintained scenarios.
 
 ## Run locally
 
-The local multi-project runtime requires Node.js 22.13 or newer and pnpm 11.24.0.
+The durable runtime requires Node.js 22.13 or newer and pnpm 11.24.0.
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The default database is
-`.org-tools/org-tools.sqlite3`; override it with `ORG_TOOLS_DB_PATH` or copy
-`.org-tools/config.example.json` to `.org-tools/config.json` and set `databasePath`. Relative paths
-resolve from the repository root. Stop Org Tools before copying the SQLite file as a backup. Import
-an older `org-tools-state.json` once into the first project, then use **Save** for durable changes.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Every organization or durable interface
+change is written automatically to the singleton SQLite state; there is no Save action. The default
+database is `.org-tools/org-tools.sqlite3`. Override it with `ORG_TOOLS_DB_PATH`, or copy
+`.org-tools/config.example.json` to `.org-tools/config.json` and set `databasePath`. Stop the server
+before copying the SQLite file.
 
-More: [Usage](docs/usage.md) · [Privacy](docs/privacy.md) · [Contributing](CONTRIBUTING.md) ·
-[License](LICENSE)
+Use `pnpm pages:dev` for the in-memory static runtime. `pnpm pages:build` exports it to ignored
+`pages-out`, and `pnpm pages:check` verifies the `/org-tools` base path and absence of API or SQLite
+code. Publishing remains an explicit maintainer action through `pnpm pages:publish`.
 
-## Development and Pages
-
-`pnpm dev` uses the explicit webpack development compiler for parity with the production server and
-ignores `.org-tools` runtime plus `.playwright-cli` diagnostic writes so local tooling cannot
-trigger Fast Refresh. Open the URL printed by `Development workspace ready`; the launcher emits it
-after the initial project route and API are compiled.
-`pnpm dev:check` starts it with an isolated temporary database, verifies the root-to-project route,
-interactive UI, and API in Chromium, then stops it. Install the browser once with
-`pnpm --filter @org-tools/screenshots exec playwright install chromium` if needed.
-`pnpm pages:dev` starts the browser-only variant;
-`pnpm pages:build` exports it to ignored `pages-out`, and `pnpm pages:check` verifies the `/org-tools`
-base path and absence of backend code. An authenticated maintainer can publish the already merged,
-clean, synchronized `main` with `pnpm pages:publish`.
-
-On Chromium browsers, **Open project**, **Save**, **Save As**, and optional autosave use the File
-System Access API. Other browsers use a standard project-file upload and download; their project lasts only
-for the current tab and autosave is unavailable. The public state contract is identical in both
-modes. See [Usage](docs/usage.md) for the complete workflow and compatibility details.
+More: [Usage](docs/usage.md) · [Architecture](docs/architecture.md) ·
+[Privacy](docs/privacy.md) · [Performance](docs/performance.md) ·
+[Contributing](CONTRIBUTING.md) · [License](LICENSE)

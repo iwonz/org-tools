@@ -10,7 +10,6 @@ import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-l
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { HighlightedText } from "@/components/highlighted-text";
 import {
-  createEmptyEmployeeSearchFilters,
   EmployeeSearchInput,
   getEmployeeSearchFiltersKey,
   getEmployeesForSearch,
@@ -38,8 +37,7 @@ export const EmployeesTab = observer(() => {
   const t = useUiText();
   const countText = useCountText();
   const units = store.units;
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState(createEmptyEmployeeSearchFilters);
+  const { filters, query } = store.employeesUi;
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
@@ -94,8 +92,8 @@ export const EmployeesTab = observer(() => {
                 className="w-full"
                 dataDemoId="employees-search"
                 filters={filters}
-                onFiltersChange={setFilters}
-                onValueChange={setQuery}
+                onFiltersChange={(nextFilters) => store.setEmployeesUi(query, nextFilters)}
+                onValueChange={(nextQuery) => store.setEmployeesUi(nextQuery, filters)}
                 placeholder={t("Search Employees")}
                 positionButtonDemoId="employees-position-filter"
                 positionOptions={units.indexes.positionOptions}
@@ -207,7 +205,7 @@ export const EmployeesTab = observer(() => {
               data-demo-id="confirm-delete-employee"
               onClick={() => {
                 if (deletingEmployee) {
-                  store.deleteWorkspaceEmployee(deletingEmployee.id);
+                  store.deleteOrganizationEmployee(deletingEmployee.id);
                 }
                 setDeletingEmployee(null);
               }}

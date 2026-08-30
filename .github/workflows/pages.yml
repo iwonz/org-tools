@@ -36,10 +36,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build browser workspace
+      - name: Build browser application
         run: pnpm pages:build
 
-      - name: Validate browser workspace
+      - name: Validate browser application
         run: pnpm pages:check
 
       - name: Configure GitHub Pages

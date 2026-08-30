@@ -78,7 +78,7 @@ export type UnitPath = {
 
 /**
  * Derived Employee. Positions and boss status remain scoped to Unit assignments.
- * `scope` distinguishes workspace Employees from custom-View-local Employees at runtime only.
+ * `scope` distinguishes organization Employees from custom-View-local Employees at runtime only.
  */
 export type Employee = {
   avatarBase64Url: string | null;
@@ -91,7 +91,7 @@ export type Employee = {
   lastName: string;
   phone: string | null;
   profileUrl: string | null;
-  scope: "view" | "workspace";
+  scope: "organization" | "view";
   tags: EmployeeTag[];
   unitIds: UnitId[];
   unitPositions: EmployeeUnitPosition[];

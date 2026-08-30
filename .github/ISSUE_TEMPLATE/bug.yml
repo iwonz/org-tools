@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Do not attach a real workspace, contact list, or organization screenshot. Reduce the issue to
+        Do not attach a real state file, contact list, or organization screenshot. Reduce the issue to
         synthetic data under a reserved domain before filing.
   - type: textarea
     id: behavior

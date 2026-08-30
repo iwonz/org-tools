@@ -1,10 +1,10 @@
 import type {
   EmployeeId,
+  OrganizationEmployee,
   OrgEditorState,
   OrgView,
   OrgViewKind,
   UnitId,
-  WorkspaceEmployee,
 } from "@org-tools/types";
 import { makeAutoObservable, observable } from "mobx";
 import { createUuid } from "@/lib/employee-data";
@@ -189,7 +189,7 @@ export class OrgViewsStore {
   }
 
   materializeEmployeeBeforeDelete(
-    employee: WorkspaceEmployee,
+    employee: OrganizationEmployee,
     liveEmployeeIdsByViewId: ReadonlyMap<
       string,
       ReadonlyMap<UnitId, readonly EmployeeId[]>

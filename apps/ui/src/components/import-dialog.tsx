@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useAppFormatter, useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
-import { parseWorkspaceImportFile, type WorkspaceImportCandidate } from "@/lib/workspace-transfer";
+import { parseStateImportFile, type StateImportCandidate } from "@/lib/state-transfer";
 
 const formatFileSize = (
   size: number,
@@ -39,7 +39,7 @@ export function ImportDialog({
   open,
 }: {
   initialFile: File | null;
-  onCommit: (candidate: WorkspaceImportCandidate) => void;
+  onCommit: (candidate: StateImportCandidate) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }) {
@@ -48,7 +48,7 @@ export function ImportDialog({
   const format = useAppFormatter();
   const messageText = useMessageText();
   const loadedInitialFileRef = useRef<File | null>(null);
-  const [candidate, setCandidate] = useState<WorkspaceImportCandidate | null>(null);
+  const [candidate, setCandidate] = useState<StateImportCandidate | null>(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
   const [isReading, setIsReading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -60,9 +60,9 @@ export function ImportDialog({
     setError(null);
     setIsReading(true);
     try {
-      setCandidate(await parseWorkspaceImportFile(file));
+      setCandidate(await parseStateImportFile(file));
     } catch (readError) {
-      setError(describeError(readError, "Only a complete Org Tools workspace can be imported."));
+      setError(describeError(readError, "Only a complete Org Tools state can be imported."));
     } finally {
       setIsReading(false);
     }
@@ -87,9 +87,9 @@ export function ImportDialog({
     <Dialog onOpenChange={(nextOpen) => !isReading && onOpenChange(nextOpen)} open={open}>
       <DialogContent className="max-w-xl" data-demo-id="import-dialog">
         <DialogHeader>
-          <DialogTitle>{t("Import workspace")}</DialogTitle>
+          <DialogTitle>{t("Import state")}</DialogTitle>
           <DialogDescription>
-            {t("Select a complete Org Tools workspace to replace the current working copy.")}
+            {t("Select a complete Org Tools state to replace the current state.")}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="grid gap-4">
@@ -130,7 +130,7 @@ export function ImportDialog({
           {error && (
             <div
               className="flex gap-2 rounded-md bg-destructive/7 p-3 text-sm text-destructive"
-              data-demo-id="workspace-import-error"
+              data-demo-id="state-import-error"
               role="alert"
             >
               <HiOutlineExclamationTriangle className="mt-0.5 size-4 shrink-0" />
@@ -140,7 +140,7 @@ export function ImportDialog({
 
           {candidate && (
             <>
-              <div className="grid grid-cols-3 gap-2" data-demo-id="workspace-import-summary">
+              <div className="grid grid-cols-3 gap-2" data-demo-id="state-import-summary">
                 {[
                   {
                     icon: HiOutlineUsers,
@@ -165,7 +165,7 @@ export function ImportDialog({
                 <HiOutlineExclamationTriangle className="mt-0.5 size-4 shrink-0" />
                 <span>
                   {t(
-                    "Replacing imports all workspace data and interface state over the current working copy.",
+                    "Import replaces all organization data and interface settings in the current state.",
                   )}
                 </span>
               </div>
@@ -182,7 +182,7 @@ export function ImportDialog({
             type="button"
             variant="destructive"
           >
-            {t("Replace workspace")}
+            {t("Replace state")}
           </Button>
         </DialogFooter>
       </DialogContent>

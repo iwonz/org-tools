@@ -1,20 +1,22 @@
 import type {
+  AppLocale,
   EditableEmployeeFields,
   EmployeeId,
   EmployeeTag,
+  OrganizationEmployee,
   OrgToolsState,
   UiActiveTab,
   UiOrgStructure,
   UiTheme,
   UnitAssignment,
   UnitId,
-  WorkspaceEmployee,
 } from "@org-tools/types";
 import { makeAutoObservable, observable, reaction } from "mobx";
 
 import { type AnalyticsResult, buildAnalytics } from "@/lib/analytics";
-import { buildWorkspaceOrgStructureWithResolution } from "@/lib/build-workspace-org-structure";
-import { createWorkspaceEmployeeId, normalizeEditableEmployeeFields } from "@/lib/employee-data";
+import { buildOrganizationStructureWithResolution } from "@/lib/build-organization-structure";
+import { createOrganizationEmployeeId, normalizeEditableEmployeeFields } from "@/lib/employee-data";
+import type { EmployeeSearchFilters } from "@/lib/employee-search";
 import { type EmployeeTagUpdate, normalizeEmployeeTags } from "@/lib/employee-tags";
 import {
   buildEmployeeUnitContextIndex,
@@ -22,8 +24,12 @@ import {
   type EmployeeUnitContext,
   type EmployeeUnitMembership,
 } from "@/lib/employee-unit-contexts";
-import { createBlankOrgToolsState, parseOrgToolsState } from "@/lib/org-file";
-import type { ProjectUiState } from "@/lib/project-workspace";
+import {
+  createBlankOrgToolsState,
+  createEmptyEmployeeFiltersState,
+  materializeOrgViews,
+  parseOrgToolsState,
+} from "@/lib/org-file";
 import type {
   ExportEmployeeFieldKey,
   ExportFieldDropPlacement,
@@ -91,13 +97,35 @@ const areTagsEqual = (firstTags: readonly EmployeeTag[], secondTags: readonly Em
   });
 
 export class OrgStore {
-  workspaceEmployees: WorkspaceEmployee[] = [];
+  organizationEmployees: OrganizationEmployee[] = [];
   uiOrgStructure: UiOrgStructure | null = null;
   activeViewOrgStructure: UiOrgStructure | null = null;
   theme: UiTheme = "system";
   activeTab: UiActiveTab = "orgEditor";
   selectedUnitId: UnitId | null = null;
   expandedUnitIds: UnitId[] = [];
+  locale: AppLocale = "en";
+  sidebarCollapsed = true;
+  unitsUi = {
+    employeeFilters: createEmptyEmployeeFiltersState(),
+    employeeQuery: "",
+    unitQuery: "",
+  };
+  employeesUi = { filters: createEmptyEmployeeFiltersState(), query: "" };
+  editorUi = { searchOpen: false, searchQuery: "" };
+  analyticsUi = { filters: createEmptyEmployeeFiltersState(), query: "" };
+  calendarUi = {
+    cloudExpanded: false,
+    monthIndex: new Date().getMonth(),
+    year: new Date().getFullYear(),
+  };
+  downloadUi = {
+    employeeFilters: createEmptyEmployeeFiltersState(),
+    employeeQuery: "",
+    selectedFilters: createEmptyEmployeeFiltersState(),
+    selectedQuery: "",
+    unitQuery: "",
+  };
   employeeUnitContextsByEmployeeId = new Map<EmployeeId, EmployeeUnitContext[]>();
   employeeUnitMembershipsByEmployeeId = new Map<EmployeeId, EmployeeUnitMembership>();
   exportSession = new ExportSessionStore();
@@ -127,16 +155,22 @@ export class OrgStore {
         employeeUnitContextsByEmployeeId: observable.ref,
         employeeUnitMembershipsByEmployeeId: observable.ref,
         expandedUnitIds: observable.shallow,
+        unitsUi: observable.ref,
+        employeesUi: observable.ref,
+        editorUi: observable.ref,
+        analyticsUi: observable.ref,
+        calendarUi: observable.ref,
+        downloadUi: observable.ref,
         exportSession: observable.ref,
         fallbackEditor: observable.ref,
         isApplyingState: false,
         orgViews: observable.ref,
         uiOrgStructure: observable.ref,
-        workspaceEmployees: observable.shallow,
+        organizationEmployees: observable.shallow,
       },
       { autoBind: true },
     );
-    this.createBlankWorkspace();
+    this.createBlankState();
     reaction(
       () => this.organizationObservation,
       () => {
@@ -153,7 +187,7 @@ export class OrgStore {
 
   private get organizationObservation() {
     return [
-      this.workspaceEmployees,
+      this.organizationEmployees,
       this.orgViews.viewRecords,
       ...this.orgViews.views.flatMap((view) => {
         const editor = this.orgViews.editorByViewId.get(view.id);
@@ -167,10 +201,31 @@ export class OrgStore {
   private get uiObservation() {
     return [
       this.activeTab,
+      this.locale,
+      this.sidebarCollapsed,
       this.expandedUnitIds,
       this.orgViews.activeViewId,
       this.selectedUnitId,
       this.theme,
+      this.unitsUi,
+      this.employeesUi,
+      this.editorUi,
+      this.analyticsUi,
+      this.calendarUi,
+      this.downloadUi,
+      this.exportSession.tabMode,
+      this.exportSession.rowMode,
+      this.exportSession.selectedEmployeeFieldKeys,
+      this.exportSession.employeeFieldOrder,
+      this.exportSession.selectedFlatUnitFieldKeys,
+      this.exportSession.flatUnitFieldOrder,
+      this.exportSession.selectedJsonUnitFieldKeys,
+      this.exportSession.jsonUnitFieldOrder,
+      this.exportSession.fieldNames,
+      this.exportSession.unitFullPathSeparator,
+      this.exportSession.templateFormat,
+      this.exportSession.selections,
+      this.exportSession.excludedEmployeeIds,
       ...this.orgViews.views.flatMap((view) => {
         const editor = this.orgViews.editorByViewId.get(view.id);
         return editor ? [editor.selectedItems, editor.viewport] : [];
@@ -265,8 +320,8 @@ export class OrgStore {
     this.applyOrgToolsState(parseOrgToolsState(state), sourceFileName, sourceFileSizeBytes);
   }
 
-  createBlankWorkspace(): void {
-    this.applyOrgToolsState(createBlankOrgToolsState("system"), null, null);
+  createBlankState(): void {
+    this.applyOrgToolsState(createBlankOrgToolsState("system", this.locale), null, null);
   }
 
   private applyOrgToolsState(
@@ -274,7 +329,7 @@ export class OrgStore {
     sourceFileName: string | null,
     sourceFileSizeBytes: number | null,
   ): void {
-    const nextEmployees = state.employees.map((employee) => ({
+    const nextEmployees = state.organization.employees.map((employee) => ({
       ...employee,
       tags: employee.tags.map((tag) => ({ ...tag })),
     }));
@@ -284,10 +339,10 @@ export class OrgStore {
     const previousIsApplyingState = this.isApplyingState;
     this.isApplyingState = true;
     try {
-      nextViews.load(state.views, state.activeViewId);
+      nextViews.load(materializeOrgViews(state), state.ui.activeViewId);
       const mainEditor = nextViews.mainEditor;
       if (!mainEditor) throw new Error("The Main View is unavailable.");
-      const mainResult = buildWorkspaceOrgStructureWithResolution(
+      const mainResult = buildOrganizationStructureWithResolution(
         nextEmployees,
         mainEditor.createState(),
       );
@@ -296,26 +351,43 @@ export class OrgStore {
       const activeResult =
         nextViews.activeView?.kind === "main"
           ? mainResult
-          : buildWorkspaceOrgStructureWithResolution(nextEmployees, activeEditor.createState());
+          : buildOrganizationStructureWithResolution(nextEmployees, activeEditor.createState());
 
       mainEditor.synchronizeLiveResolution(mainResult.liveEmployeeIdsByUnitId);
       if (activeEditor !== mainEditor) {
         activeEditor.synchronizeLiveResolution(activeResult.liveEmployeeIdsByUnitId);
       }
 
-      this.workspaceEmployees = nextEmployees;
+      this.organizationEmployees = nextEmployees;
       this.orgViews = nextViews;
       this.uiOrgStructure = mainResult.structure;
       this.activeViewOrgStructure = activeResult.structure;
       this.theme = state.ui.theme;
+      this.locale = state.ui.locale;
       this.activeTab = state.ui.activeTab;
+      this.sidebarCollapsed = state.ui.sidebarCollapsed;
       this.selectedUnitId = state.ui.selectedUnitId;
       this.expandedUnitIds = [...state.ui.expandedUnitIds];
+      this.unitsUi = structuredClone(state.ui.units);
+      this.employeesUi = structuredClone(state.ui.employees);
+      this.editorUi = structuredClone(state.ui.editor);
+      this.analyticsUi = structuredClone(state.ui.analytics);
+      this.calendarUi = { ...state.ui.calendar };
+      this.downloadUi = {
+        employeeFilters: structuredClone(state.ui.download.employeeFilters),
+        employeeQuery: state.ui.download.employeeQuery,
+        selectedFilters: structuredClone(state.ui.download.selectedFilters),
+        selectedQuery: state.ui.download.selectedQuery,
+        unitQuery: state.ui.download.unitQuery,
+      };
       this.sourceFileName = sourceFileName;
       this.sourceFileSizeBytes = sourceFileSizeBytes;
       this.exportSourceViewId = nextViews.mainView?.id ?? "";
+      if (nextViews.editorByViewId.has(state.ui.download.sourceViewId)) {
+        this.exportSourceViewId = state.ui.download.sourceViewId;
+      }
       this.refreshEmployeeUnitContexts();
-      this.resetExportSessionState();
+      this.exportSession.loadState(state.ui.download);
       this.resetAnalyticsCache();
       this.scheduleAnalyticsPrecompute();
     } finally {
@@ -331,14 +403,39 @@ export class OrgStore {
     this.theme = theme;
   }
 
+  setLocale(locale: AppLocale): void {
+    this.locale = locale;
+  }
+
+  setSidebarCollapsed(sidebarCollapsed: boolean): void {
+    this.sidebarCollapsed = sidebarCollapsed;
+  }
+
+  setUnitsUi(next: Partial<typeof this.unitsUi>): void {
+    this.unitsUi = { ...this.unitsUi, ...structuredClone(next) };
+  }
+
+  setEmployeesUi(query: string, filters: EmployeeSearchFilters): void {
+    this.employeesUi = { filters: structuredClone(filters), query };
+  }
+
+  setEditorUi(next: Partial<typeof this.editorUi>): void {
+    this.editorUi = { ...this.editorUi, ...next };
+  }
+
+  setAnalyticsUi(query: string, filters: EmployeeSearchFilters): void {
+    this.analyticsUi = { filters: structuredClone(filters), query };
+  }
+
+  setCalendarUi(next: Partial<typeof this.calendarUi>): void {
+    this.calendarUi = { ...this.calendarUi, ...next };
+  }
+
+  setDownloadUi(next: Partial<typeof this.downloadUi>): void {
+    this.downloadUi = { ...this.downloadUi, ...structuredClone(next) };
+  }
+
   setActiveTab(activeTab: UiActiveTab): void {
-    if (
-      activeTab === "export" &&
-      (this.activeTab !== "export" || this.exportSourceViewId !== this.mainOrgViewId)
-    ) {
-      this.exportSourceViewId = this.mainOrgViewId;
-      this.resetExportSessionState();
-    }
     this.activeTab = activeTab;
   }
 
@@ -389,8 +486,8 @@ export class OrgStore {
     const editor = this.orgViews.editorByViewId.get(viewId);
     if (!editor) return null;
 
-    const result = buildWorkspaceOrgStructureWithResolution(
-      this.workspaceEmployees,
+    const result = buildOrganizationStructureWithResolution(
+      this.organizationEmployees,
       editor.createState(),
     );
     editor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
@@ -410,8 +507,8 @@ export class OrgStore {
       return;
     }
 
-    const result = buildWorkspaceOrgStructureWithResolution(
-      this.workspaceEmployees,
+    const result = buildOrganizationStructureWithResolution(
+      this.organizationEmployees,
       mainEditor.createState(),
     );
     mainEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
@@ -436,8 +533,8 @@ export class OrgStore {
       return;
     }
 
-    const result = buildWorkspaceOrgStructureWithResolution(
-      this.workspaceEmployees,
+    const result = buildOrganizationStructureWithResolution(
+      this.organizationEmployees,
       editor.createState(),
     );
     editor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
@@ -694,16 +791,16 @@ export class OrgStore {
 
   createEmployee(fields: EditableEmployeeFields, unitMemberships: UnitAssignment[]): EmployeeId {
     const now = new Date().toISOString();
-    const id = createWorkspaceEmployeeId();
-    const employee: WorkspaceEmployee = {
+    const id = createOrganizationEmployeeId();
+    const employee: OrganizationEmployee = {
       ...normalizeEditableEmployeeFields(fields),
       createdAt: now,
       id,
       updatedAt: now,
     };
 
-    this.workspaceEmployees = [...this.workspaceEmployees, employee];
-    this.applyWorkspaceEmployeeAssignments(id, unitMemberships);
+    this.organizationEmployees = [...this.organizationEmployees, employee];
+    this.applyOrganizationEmployeeAssignments(id, unitMemberships);
     this.rebuildMainModel();
 
     return id;
@@ -714,18 +811,18 @@ export class OrgStore {
     fields: EditableEmployeeFields,
     unitMemberships: UnitAssignment[],
   ): void {
-    this.updateWorkspaceEmployee(employeeId, fields, unitMemberships);
+    this.updateOrganizationEmployee(employeeId, fields, unitMemberships);
   }
 
   updateEmployeeTags(updates: readonly EmployeeTagUpdate[]): void {
-    if (!this.applyWorkspaceEmployeeTagUpdates(updates)) return;
+    if (!this.applyOrganizationEmployeeTagUpdates(updates)) return;
     this.rebuildMainModel();
   }
 
   updateEmployeeTagsFromEditor(updates: readonly EmployeeTagUpdate[]): void {
     const updateByEmployeeId = this.normalizeEmployeeTagUpdates(updates);
     const before = [...updateByEmployeeId].flatMap(([employeeId]) => {
-      const employee = this.workspaceEmployees.find((candidate) => candidate.id === employeeId);
+      const employee = this.organizationEmployees.find((candidate) => candidate.id === employeeId);
       return employee ? [{ employeeId, tags: employee.tags.map((tag) => ({ ...tag })) }] : [];
     });
     const after = [...updateByEmployeeId].map(([employeeId, tags]) => ({
@@ -733,14 +830,14 @@ export class OrgStore {
       tags: tags.map((tag) => ({ ...tag })),
     }));
 
-    if (!this.applyWorkspaceEmployeeTagUpdates(after)) return;
+    if (!this.applyOrganizationEmployeeTagUpdates(after)) return;
 
     this.mainOrgEditor.commitExternalCommand("Update Employee tags", {
       redo: () => {
-        this.applyWorkspaceEmployeeTagUpdates(after);
+        this.applyOrganizationEmployeeTagUpdates(after);
       },
       undo: () => {
-        this.applyWorkspaceEmployeeTagUpdates(before);
+        this.applyOrganizationEmployeeTagUpdates(before);
       },
     });
   }
@@ -757,14 +854,14 @@ export class OrgStore {
     return updateByEmployeeId;
   }
 
-  private applyWorkspaceEmployeeTagUpdates(updates: readonly EmployeeTagUpdate[]): boolean {
+  private applyOrganizationEmployeeTagUpdates(updates: readonly EmployeeTagUpdate[]): boolean {
     const updateByEmployeeId = this.normalizeEmployeeTagUpdates(updates);
     if (updateByEmployeeId.size === 0) return false;
 
     const now = new Date().toISOString();
     let changed = false;
 
-    this.workspaceEmployees = this.workspaceEmployees.map((employee) => {
+    this.organizationEmployees = this.organizationEmployees.map((employee) => {
       const tags = updateByEmployeeId.get(employee.id);
       if (!tags || areTagsEqual(employee.tags, tags)) return employee;
 
@@ -779,22 +876,22 @@ export class OrgStore {
     return changed;
   }
 
-  private updateWorkspaceEmployee(
+  private updateOrganizationEmployee(
     employeeId: EmployeeId,
     fields: EditableEmployeeFields,
     unitMemberships: UnitAssignment[],
   ): void {
     const now = new Date().toISOString();
-    this.workspaceEmployees = this.workspaceEmployees.map((employee) =>
+    this.organizationEmployees = this.organizationEmployees.map((employee) =>
       employee.id === employeeId
         ? { ...employee, ...normalizeEditableEmployeeFields(fields), updatedAt: now }
         : employee,
     );
-    this.applyWorkspaceEmployeeAssignments(employeeId, unitMemberships);
+    this.applyOrganizationEmployeeAssignments(employeeId, unitMemberships);
     this.rebuildMainModel();
   }
 
-  private applyWorkspaceEmployeeAssignments(
+  private applyOrganizationEmployeeAssignments(
     employeeId: EmployeeId,
     memberships: UnitAssignment[],
   ): void {
@@ -812,8 +909,8 @@ export class OrgStore {
     this.mainOrgEditor.setEmployeeAssignments(employeeId, [...assignmentByUnitId.values()]);
   }
 
-  deleteWorkspaceEmployee(employeeId: EmployeeId): void {
-    const employee = this.workspaceEmployees.find((candidate) => candidate.id === employeeId);
+  deleteOrganizationEmployee(employeeId: EmployeeId): void {
+    const employee = this.organizationEmployees.find((candidate) => candidate.id === employeeId);
     if (!employee) return;
 
     const liveEmployeeIdsByViewId = new Map<string, ReadonlyMap<UnitId, readonly EmployeeId[]>>();
@@ -824,14 +921,14 @@ export class OrgStore {
       if (!editor?.units.some((unit) => unit.liveFilter !== null)) continue;
       liveEmployeeIdsByViewId.set(
         view.id,
-        buildWorkspaceOrgStructureWithResolution(this.workspaceEmployees, editor.createState())
+        buildOrganizationStructureWithResolution(this.organizationEmployees, editor.createState())
           .liveEmployeeIdsByUnitId,
       );
     }
 
     this.orgViews.materializeEmployeeBeforeDelete(employee, liveEmployeeIdsByViewId);
     this.mainOrgEditor.purgeEmployeeReferences(employeeId);
-    this.workspaceEmployees = this.workspaceEmployees.filter(
+    this.organizationEmployees = this.organizationEmployees.filter(
       (candidate) => candidate.id !== employeeId,
     );
     this.exportSession.purgeEmployee(employeeId);
@@ -846,48 +943,117 @@ export class OrgStore {
     }
 
     return parseOrgToolsState({
-      activeViewId: this.activeOrgViewId,
-      content: "workspace",
-      employees: this.workspaceEmployees.map((employee) => ({
-        ...employee,
-        tags: employee.tags.map((tag) => ({ ...tag })),
-      })),
-      kind: "org-tools-state",
-      ui: {
-        activeTab: this.activeTab,
-        expandedUnitIds: [...this.expandedUnitIds],
-        selectedUnitId: this.selectedUnitId,
-        theme: this.theme,
-      },
-      views,
+      organization: this.createOrganizationState(views),
+      ui: this.createDurableUiState(views),
     });
   }
 
-  createProjectUiState(): ProjectUiState {
+  createOrganizationState(views = this.orgViews.createState()): OrgToolsState["organization"] {
     return {
-      activeViewId: this.activeOrgViewId,
-      ui: {
-        activeTab: this.activeTab,
-        expandedUnitIds: [...this.expandedUnitIds],
-        selectedUnitId: this.selectedUnitId,
-        theme: this.theme,
-      },
-      views: this.orgViews.views.flatMap((view) => {
-        const editor = this.orgViews.editorByViewId.get(view.id);
-        return editor
-          ? [
-              {
-                selectedItems: editor.selectedItems.map((item) => ({ ...item })),
-                viewId: view.id,
-                viewport: { ...editor.viewport },
-              },
-            ]
-          : [];
-      }),
+      employees: this.organizationEmployees.map((employee) => ({
+        ...employee,
+        tags: employee.tags.map((tag) => ({ ...tag })),
+      })),
+      views: views.map((view) => ({
+        createdAt: view.createdAt,
+        document: {
+          employeeOverrides: view.state.employeeOverrides.map((employee) => ({
+            ...employee,
+            tags: employee.tags.map((tag) => ({ ...tag })),
+          })),
+          employees: view.state.employees.map((employee) => ({
+            ...employee,
+            tags: employee.tags.map((tag) => ({ ...tag })),
+          })),
+          layoutMode: view.state.layoutMode,
+          units: view.state.units.map((unit) => ({
+            ...unit,
+            employeeIds: [...unit.employeeIds],
+            employeePositions: unit.employeePositions.map((position) => ({ ...position })),
+            liveFilter: unit.liveFilter ? structuredClone(unit.liveFilter) : null,
+          })),
+        },
+        id: view.id,
+        kind: view.kind,
+        name: view.name,
+        updatedAt: view.updatedAt,
+      })),
     };
   }
 
-  resetProjectChangeTracking(): void {
+  createDurableUiState(views = this.orgViews.createState()): OrgToolsState["ui"] {
+    const exportState = this.exportSession.createState();
+    return {
+      activeTab: this.activeTab,
+      activeViewId: this.activeOrgViewId,
+      analytics: structuredClone(this.analyticsUi),
+      calendar: { ...this.calendarUi },
+      download: {
+        ...exportState,
+        employeeFilters: structuredClone(this.downloadUi.employeeFilters),
+        employeeQuery: this.downloadUi.employeeQuery,
+        selectedFilters: structuredClone(this.downloadUi.selectedFilters),
+        selectedQuery: this.downloadUi.selectedQuery,
+        sourceViewId: this.exportSourceViewId,
+        unitQuery: this.downloadUi.unitQuery,
+      },
+      editor: { ...this.editorUi },
+      employees: structuredClone(this.employeesUi),
+      expandedUnitIds: [...this.expandedUnitIds],
+      locale: this.locale,
+      selectedUnitId: this.selectedUnitId,
+      sidebarCollapsed: this.sidebarCollapsed,
+      theme: this.theme,
+      units: structuredClone(this.unitsUi),
+      views: views.map((view) => ({
+        selectedItems: view.state.selectedItems.map((item) => ({ ...item })),
+        viewId: view.id,
+        viewport: { ...view.state.viewport },
+      })),
+    };
+  }
+
+  applyDurableUiState(ui: OrgToolsState["ui"]): void {
+    const previousIsApplyingState = this.isApplyingState;
+    this.isApplyingState = true;
+    try {
+      this.locale = ui.locale;
+      this.theme = ui.theme;
+      this.activeTab = ui.activeTab;
+      this.sidebarCollapsed = ui.sidebarCollapsed;
+      this.selectedUnitId = ui.selectedUnitId;
+      this.expandedUnitIds = [...ui.expandedUnitIds];
+      this.unitsUi = structuredClone(ui.units);
+      this.employeesUi = structuredClone(ui.employees);
+      this.editorUi = structuredClone(ui.editor);
+      this.analyticsUi = structuredClone(ui.analytics);
+      this.calendarUi = { ...ui.calendar };
+      this.downloadUi = {
+        employeeFilters: structuredClone(ui.download.employeeFilters),
+        employeeQuery: ui.download.employeeQuery,
+        selectedFilters: structuredClone(ui.download.selectedFilters),
+        selectedQuery: ui.download.selectedQuery,
+        unitQuery: ui.download.unitQuery,
+      };
+      this.exportSession.loadState(ui.download);
+      this.exportSourceViewId = this.orgViews.editorByViewId.has(ui.download.sourceViewId)
+        ? ui.download.sourceViewId
+        : this.mainOrgViewId;
+      this.orgViews.selectView(ui.activeViewId);
+      for (const viewUi of ui.views) {
+        const editor = this.orgViews.editorByViewId.get(viewUi.viewId);
+        if (!editor) continue;
+        editor.setViewport({ ...viewUi.viewport });
+        editor.setSelectedItems(viewUi.selectedItems.map((item) => ({ ...item })));
+      }
+      this.rebuildActiveViewModel();
+    } finally {
+      this.isApplyingState = previousIsApplyingState;
+    }
+    if (!previousIsApplyingState) this.uiChangeSequence += 1;
+  }
+
+  resetChangeTracking(): void {
     this.organizationChangeSequence = 0;
     this.uiChangeSequence = 0;
   }

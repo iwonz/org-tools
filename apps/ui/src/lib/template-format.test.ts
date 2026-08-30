@@ -89,7 +89,7 @@ describe("createExportText template mode", () => {
       lastName: "Lovelace",
       phone: "",
       profileUrl: "https://example.test/profiles/ada",
-      scope: "workspace",
+      scope: "organization",
       tags: [],
       unitIds: [],
       unitPositions: [],
@@ -123,7 +123,7 @@ describe("createExportText template mode", () => {
       lastName: "Lovelace",
       phone: null,
       profileUrl: null,
-      scope: "workspace",
+      scope: "organization",
       tags: [
         { date: null, label: "Mentor" },
         { date: "2026-09-01", label: "Backend" },

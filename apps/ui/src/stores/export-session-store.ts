@@ -1,4 +1,4 @@
-import type { EmployeeId, UnitId } from "@org-tools/types";
+import type { EmployeeId, OrgToolsDownloadState, UnitId } from "@org-tools/types";
 import { makeAutoObservable, observable } from "mobx";
 
 import { UI_UNIT_PATH_SEPARATOR } from "@/lib/build-ui-org-structure";
@@ -200,6 +200,86 @@ export class ExportSessionStore {
     this.templateFormat = "{email}, ";
     this.selections = [];
     this.excludedEmployeeIds = [];
+  }
+
+  loadState(state: OrgToolsDownloadState): void {
+    const employeeFieldKeySet = new Set<ExportEmployeeFieldKey>(exportEmployeeFieldKeys);
+    const unitFieldKeySet = new Set<ExportUnitFieldKey>(exportUnitFieldKeys);
+    const jsonUnitFieldKeySet = new Set<ExportJsonUnitFieldKey>(exportJsonUnitFieldKeys);
+    const employeeOrder = state.employeeFieldOrder.filter((key): key is ExportEmployeeFieldKey =>
+      employeeFieldKeySet.has(key as ExportEmployeeFieldKey),
+    );
+    const flatOrder = state.flatUnitFieldOrder.filter((key): key is ExportUnitFieldKey =>
+      unitFieldKeySet.has(key as ExportUnitFieldKey),
+    );
+    const jsonOrder = state.jsonUnitFieldOrder.filter((key): key is ExportJsonUnitFieldKey =>
+      jsonUnitFieldKeySet.has(key as ExportJsonUnitFieldKey),
+    );
+    this.tabMode = state.tabMode;
+    this.rowMode = state.rowMode;
+    this.employeeFieldOrder =
+      employeeOrder.length > 0 ? employeeOrder : [...defaultExportEmployeeFieldOrder];
+    this.flatUnitFieldOrder =
+      flatOrder.length > 0 ? flatOrder : [...defaultExportFlatUnitFieldOrder];
+    this.jsonUnitFieldOrder =
+      jsonOrder.length > 0 ? jsonOrder : [...defaultExportJsonUnitFieldOrder];
+    this.selectedEmployeeFieldKeys = this.employeeFieldOrder.filter((key) =>
+      state.selectedEmployeeFieldKeys.includes(key),
+    );
+    this.selectedFlatUnitFieldKeys = this.flatUnitFieldOrder.filter((key) =>
+      state.selectedFlatUnitFieldKeys.includes(key),
+    );
+    this.selectedJsonUnitFieldKeys = this.jsonUnitFieldOrder.filter((key) =>
+      state.selectedJsonUnitFieldKeys.includes(key),
+    );
+    if (this.selectedJsonUnitFieldKeys.length === 0) {
+      this.selectedJsonUnitFieldKeys = [...defaultExportJsonUnitFieldKeys];
+    }
+    this.fieldNames = {
+      ...createDefaultExportFieldNames(),
+      ...Object.fromEntries(
+        Object.entries(state.fieldNames).filter(([key]) =>
+          exportFieldKeys.includes(key as ExportFieldKey),
+        ),
+      ),
+    } as ExportFieldNameMap;
+    this.unitFullPathSeparator = normalizeUnitFullPathSeparator(state.unitFullPathSeparator);
+    this.templateFormat = state.templateFormat;
+    this.selections = state.selections.map((selection) => ({ ...selection })) as ExportSelection[];
+    this.excludedEmployeeIds = [...state.excludedEmployeeIds];
+  }
+
+  createState(): Pick<
+    OrgToolsDownloadState,
+    | "employeeFieldOrder"
+    | "excludedEmployeeIds"
+    | "fieldNames"
+    | "flatUnitFieldOrder"
+    | "jsonUnitFieldOrder"
+    | "rowMode"
+    | "selectedEmployeeFieldKeys"
+    | "selectedFlatUnitFieldKeys"
+    | "selectedJsonUnitFieldKeys"
+    | "selections"
+    | "tabMode"
+    | "templateFormat"
+    | "unitFullPathSeparator"
+  > {
+    return {
+      employeeFieldOrder: [...this.employeeFieldOrder],
+      excludedEmployeeIds: [...this.excludedEmployeeIds],
+      fieldNames: { ...this.fieldNames },
+      flatUnitFieldOrder: [...this.flatUnitFieldOrder],
+      jsonUnitFieldOrder: [...this.jsonUnitFieldOrder],
+      rowMode: this.rowMode,
+      selectedEmployeeFieldKeys: [...this.selectedEmployeeFieldKeys],
+      selectedFlatUnitFieldKeys: [...this.selectedFlatUnitFieldKeys],
+      selectedJsonUnitFieldKeys: [...this.selectedJsonUnitFieldKeys],
+      selections: this.selections.map((selection) => ({ ...selection })),
+      tabMode: this.tabMode,
+      templateFormat: this.templateFormat,
+      unitFullPathSeparator: this.unitFullPathSeparator,
+    };
   }
 
   setTabMode(tabMode: ExportTabMode): void {

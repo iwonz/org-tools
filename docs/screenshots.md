@@ -1,334 +1,337 @@
 # Screenshots
 
-The repository screenshot demo has two levels. The README keeps a concise ten-frame module overview; this guide is
-the complete visual capability catalog. Its contract lives in `docs/screenshot-demo.json`, including
-module ownership, featured status, description, and capability coverage for every frame. Generation
-and publication checks fail when the manifest, files, README links, or this guide diverge.
+The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 38 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
 
-Playwright captures the production Next.js server in Chromium at 1440 by 1000, UTC, with a fixed
-clock, reduced motion, disabled animations, loaded local fonts, and an isolated SQLite database in
-the system temporary directory. Every workflow creates its own obviously synthetic project. The
-default locale and color scheme are English and light; the language and theme frames intentionally
-display Russian and dark mode respectively. The complete manifest contains exactly 48 PNGs.
+The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
 
-Five supporting frames cover persistence surfaces: SQLite autosave plus the browser file menu,
-browser autosave, reconnect recovery, and the unsupported-browser fallback. The latter four are
-captured from the static Pages production build; all other frames use the local SQLite production
-server. `pnpm screenshots:generate` runs both suites and requires exact manifest/file parity.
+## Import
 
-## Core workflow gallery
+### State import confirmation
 
-| Import | Workspace Export |
-| :---: | :---: |
-| [![Workspace import confirmation](screenshots/demo-import.png)](screenshots/demo-import.png) | [![Direct workspace export](screenshots/demo-export.png)](screenshots/demo-export.png) |
-| Theme | Language |
-| [![Dark theme menu](screenshots/demo-theme.png)](screenshots/demo-theme.png) | [![Russian language menu](screenshots/demo-language.png)](screenshots/demo-language.png) |
-| Teams | Employees |
-| [![Populated Teams workspace](screenshots/demo-teams.png)](screenshots/demo-teams.png) | [![Searchable Employee catalog](screenshots/demo-employees.png)](screenshots/demo-employees.png) |
-| Editor | Analytics |
-| [![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png) | [![Organization Analytics](screenshots/demo-analytics.png)](screenshots/demo-analytics.png) |
-| Calendar | Data Download |
-| [![Employee Calendar](screenshots/demo-calendar.png)](screenshots/demo-calendar.png) | [![Configured data Download](screenshots/demo-download.png)](screenshots/demo-download.png) |
+[![State import confirmation](screenshots/demo-import.png)](screenshots/demo-import.png)
 
-## Scenario intent
+Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current state.
 
-| Scenario | Required visible state |
-| --- | --- |
-| Import | A strict workspace with filename, size, summary counts, warning, and replacement action. |
-| Workspace Export | The expanded-sidebar direct action with no format dialog or success banner. |
-| Theme | The populated dark Editor, expanded sidebar, and open theme menu. |
-| Language | The populated Russian Editor, expanded sidebar, and open language menu. |
-| Teams | A selected Unit in a populated hierarchy with its Employee roster and actions. |
-| Employees | The searchable catalog, total count, filters, tags, and Employee actions. |
-| Editor | Populated Unit cards on the adaptive snap grid with the canvas tool groups. |
-| Analytics | Organization totals and distribution groups from the synthetic workspace. |
-| Calendar | The current month, clear today state, birthdays, and dated-tag cloud. |
-| Data Download | A non-empty selection followed by format, field, row-mode, and preview settings. |
+Capabilities: Strict state validation, Summary counts, Atomic replacement.
 
-## Complete capability catalog
+### Invalid state recovery
 
-The overview frames above establish each primary module. The supporting frames below deliberately
-open secondary panels, dialogs, menus, and lower content so the full user-visible feature set can be
-understood without running the application.
+[![Invalid state recovery](screenshots/feature-import-invalid-state.png)](screenshots/feature-import-invalid-state.png)
 
-### Project workspaces
+Reject partial, arbitrary, or malformed JSON without changing data and offer an immediate file re-selection action.
 
-#### Project switcher and stable link
+Capabilities: Strict rejection, No mutation, Choose another file.
 
-[![Project switcher and stable link](screenshots/feature-project-switcher-link.png)](screenshots/feature-project-switcher-link.png)
+## Export
 
-Shows the sidebar-footer project list, current selection, management actions, and stable-link copy.
+### Direct state Export
 
-#### Create a project
+[![Direct state Export](screenshots/demo-export.png)](screenshots/demo-export.png)
 
-[![Create a project](screenshots/feature-project-create.png)](screenshots/feature-project-create.png)
+Download the complete current state in one click, including current in-memory changes.
 
-Shows required normalized project naming in the compact creation dialog.
+Capabilities: One-click JSON, Complete state, Includes current changes.
 
-#### Rename a project
+## Theme
 
-[![Rename a project](screenshots/feature-project-rename.png)](screenshots/feature-project-rename.png)
+### Dark theme
 
-Shows project rename while the stable project UUID and saved workspace remain unchanged.
+[![Dark theme](screenshots/demo-theme.png)](screenshots/demo-theme.png)
 
-#### Delete a project
+Use the expanded sidebar theme menu to choose Light, Dark, or System appearance.
 
-[![Delete a project](screenshots/feature-project-delete.png)](screenshots/feature-project-delete.png)
+Capabilities: Dark theme, Light option, System option, Expanded sidebar.
 
-Shows explicit destructive confirmation and remaining or final-project recovery.
-
-#### Revision conflict
-
-[![Revision conflict](screenshots/feature-project-revision-conflict.png)](screenshots/feature-project-revision-conflict.png)
-
-Shows Load saved version, explicit overwrite, and Cancel after a stale revision Save.
-
-#### SQLite project autosave
-
-[![SQLite project autosave](screenshots/feature-project-autosave.png)](screenshots/feature-project-autosave.png)
-
-Shows the shared default-off autosave option inside the revisioned project switcher.
-
-### Browser file project
-
-#### Browser project file menu
-
-[![Browser project file menu](screenshots/feature-browser-file-menu.png)](screenshots/feature-browser-file-menu.png)
-
-Shows New project, Open project, Save As, bound filename, and the shared autosave option.
-
-#### Browser file autosave
-
-[![Browser file autosave](screenshots/feature-browser-autosave.png)](screenshots/feature-browser-autosave.png)
-
-Shows an explicitly bound file, enabled autosave, and stable Saved status after a local write.
-
-#### Reconnect a project file
-
-[![Reconnect a project file](screenshots/feature-browser-reconnect.png)](screenshots/feature-browser-reconnect.png)
-
-Shows permission recovery using only the remembered file handle, without loading a snapshot first.
-
-#### Browser download fallback
-
-[![Browser download fallback](screenshots/feature-browser-fallback.png)](screenshots/feature-browser-fallback.png)
-
-Shows standard project-file input/download behavior with unavailable autosave UI omitted.
-
-### Import and workspace Export
-
-#### Invalid workspace recovery
-
-[![Invalid workspace recovery](screenshots/feature-import-invalid-workspace.png)](screenshots/feature-import-invalid-workspace.png)
-
-Shows strict rejection without mutation plus the immediate **Choose another file** recovery action.
-
-### Theme and language
-
-#### Light shell and expanded navigation
+### Light shell and expanded navigation
 
 [![Light shell and expanded navigation](screenshots/feature-theme-light-shell.png)](screenshots/feature-theme-light-shell.png)
 
-Shows the light theme, expanded module labels, local file actions, and sidebar collapse control.
+Inspect the light interface with expanded module labels and locally accessible actions.
 
-#### English language menu
+Capabilities: Light theme, Expanded sidebar, Module labels, Local actions.
+
+## Language
+
+### Russian interface
+
+[![Russian interface](screenshots/demo-language.png)](screenshots/demo-language.png)
+
+Switch the complete interface in place using the bundled Russian and English catalogs.
+
+Capabilities: Russian locale, In-place switching, Localized navigation, Persistent locale.
+
+### English language menu
 
 [![English language menu](screenshots/feature-language-english-menu.png)](screenshots/feature-language-english-menu.png)
 
-Shows the bundled English locale, flag selector, selected indicator, and stable menu geometry.
+Open the English language selector with stable rows, flags, names, and selected state.
 
-### Teams
+Capabilities: English locale, Flag selector, Selected indicator, Stable menu geometry.
 
-#### Create a manual Team
+## Teams
+
+### Team hierarchy and roster
+
+[![Team hierarchy and roster](screenshots/demo-teams.png)](screenshots/demo-teams.png)
+
+Browse the hierarchy, selected path, direct Employees, descendant Employees, tags, and row actions.
+
+Capabilities: Nested Teams, Direct roster, Descendant roster, Employee actions.
+
+### Create a manual Team
 
 [![Create a manual Team](screenshots/feature-teams-create-manual.png)](screenshots/feature-teams-create-manual.png)
 
-Shows root-level Team creation, Static membership, Employee search, assignments, and positions.
+Create a root Team with manual membership and configure its identity and structure.
 
-#### Configure a Live Team
+Capabilities: Create Team, Manual membership, Root hierarchy.
+
+### Configure a Live Team
 
 [![Configure a Live Team](screenshots/feature-teams-create-live.png)](screenshots/feature-teams-create-live.png)
 
-Shows dynamic membership with birthday, position, tag, and source-Team rules plus a live preview.
+Build dynamic membership from Employee birthday, position, tags, and source Team rules.
 
-#### Edit Team assignments
+Capabilities: Live membership, Birthday filters, Position filters, Tag filters, Source Teams.
+
+### Edit Team assignments
 
 [![Edit Team assignments](screenshots/feature-teams-edit.png)](screenshots/feature-teams-edit.png)
 
-Shows Team editing, boss assignment, membership changes, and per-Team Employee positions.
+Edit a Team, select its boss, and manage Employee positions and membership assignments.
 
-### Employees
+Capabilities: Edit Team, Boss assignment, Membership, Per-Team positions.
 
-#### Compound Employee filters
+## Employees
+
+### Employee catalog
+
+[![Employee catalog](screenshots/demo-employees.png)](screenshots/demo-employees.png)
+
+Search the complete Employee catalog and use tag, edit, delete, contact, and Team context actions.
+
+Capabilities: Virtualized catalog, Search and counts, Tags, Contact links, Row actions.
+
+### Compound Employee filters
 
 [![Compound Employee filters](screenshots/feature-employees-filters.png)](screenshots/feature-employees-filters.png)
 
-Shows birthday, gender, position, tag, Team, and text criteria with an explicit match count.
+Compose birthday, gender, position, tag, Team, and text criteria with visible match counts.
 
-#### Employee profile and assignments
+Capabilities: Birthday filter, Gender filter, Position filter, Tag filter, Team filter.
+
+### Employee profile and assignments
 
 [![Employee profile and assignments](screenshots/feature-employees-form.png)](screenshots/feature-employees-form.png)
 
-Shows identity, contact, gender, birthday, embedded avatar, tags, Teams, boss state, and positions.
+Edit identity, contact, gender, birthday, embedded avatar, tags, Team membership, boss state, and positions.
 
-#### Employee Team assignments
+Capabilities: Identity and contact, Gender and birthday, Embedded avatar, Tags, Team assignments.
 
-[![Employee Team assignments](screenshots/feature-employees-form-assignments.png)](screenshots/feature-employees-form-assignments.png)
-
-Shows the lower form with multiple Team memberships, boss state, and per-Team positions.
-
-#### Tag date calendar
+### Tag date calendar
 
 [![Tag date calendar](screenshots/feature-employees-tag-date.png)](screenshots/feature-employees-tag-date.png)
 
-Shows quick tags, exact tag dates, the localized picker, and date clearing.
+Apply or clear one exact date for an Employee tag through the localized calendar popover.
 
-#### Local avatar crop
+Capabilities: Quick tags, Dated tags, Calendar picker, Clear date.
+
+### Employee Team assignments
+
+[![Employee Team assignments](screenshots/feature-employees-form-assignments.png)](screenshots/feature-employees-form-assignments.png)
+
+Inspect the lower Employee form with Team membership, boss state, and per-Team positions.
+
+Capabilities: Team membership, Boss state, Per-Team positions, Multiple assignments.
+
+### Local avatar crop
 
 [![Local avatar crop](screenshots/feature-employees-avatar-crop.png)](screenshots/feature-employees-avatar-crop.png)
 
-Shows local PNG, JPEG, WebP, or clipboard input with crop, zoom, and embedded-image output.
+Crop and zoom a local PNG, JPEG, WebP, or pasted image before embedding it into the organization state.
 
-### Editor
+Capabilities: Local file, Clipboard image, Crop and zoom, Embedded WebP.
 
-#### Custom View management
+## Editor
+
+### Visual organization Editor
+
+[![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png)
+
+Arrange Unit cards on the adaptive snap grid with hierarchy lines, zoom, history, and layout controls.
+
+Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse.
+
+### Custom View management
 
 [![Custom View management](screenshots/feature-editor-views.png)](screenshots/feature-editor-views.png)
 
-Shows Main and custom Views plus creation from an empty canvas or a copy of Main.
+Switch Views and create an empty or Main-derived independent organization canvas.
 
-#### Editor search
+Capabilities: Main View, Custom Views, Copy from Main, Empty View.
+
+### Editor search
 
 [![Editor search](screenshots/feature-editor-search.png)](screenshots/feature-editor-search.png)
 
-Shows Unit and Employee search results and direct navigation within the canvas.
+Reveal the right-growing search field and locate Units and Employees without leaving the canvas.
 
-#### Custom View selection and actions
+Capabilities: Unit search, Employee search, Canvas navigation.
+
+### Custom View selection and actions
 
 [![Custom View selection and actions](screenshots/feature-editor-view-management.png)](screenshots/feature-editor-view-management.png)
 
-Shows switching between Main and custom Views plus the contextual rename and delete actions.
+Switch between Main and independent custom Views and access contextual rename and delete actions.
 
-#### Unit context commands
+Capabilities: View selection, Main and custom Views, Rename, Delete.
+
+### Unit context commands
 
 [![Unit context commands](screenshots/feature-editor-unit-commands.png)](screenshots/feature-editor-unit-commands.png)
 
-Shows hierarchy creation, editing, collapse and expand, copy, and local export commands.
+Open Unit commands for editing, adding hierarchy, collapse and expand, copy, and local export.
 
-#### Bulk Employee commands
+Capabilities: Context menu, Add child Unit, Edit, Collapse and expand, Copy, Export.
+
+### Bulk Employee commands
 
 [![Bulk Employee commands](screenshots/feature-editor-bulk-employees.png)](screenshots/feature-editor-bulk-employees.png)
 
-Shows multiple selection and shared boss, tag, edit, copy, and delete actions.
+Select multiple Employee rows and apply shared boss, tag, edit, copy, or delete actions.
 
-#### Editor image export
+Capabilities: Multi-selection, Boss assignment, Bulk tags, Edit, Copy, Delete.
+
+### Editor image export
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Shows local PNG preview, scope, and transparent, solid, or gradient background choices.
+Preview a local PNG export and choose scope, transparent, solid, or gradient backgrounds.
 
-#### Editor text template export
+Capabilities: PNG export, Scope, Live preview, Background presets.
+
+### Editor text template export
 
 [![Editor text template export](screenshots/feature-editor-template-export.png)](screenshots/feature-editor-template-export.png)
 
-Shows text templates, Unit and Employee field tokens, scope, preview, copy, and local download.
+Build a text representation from Employee and Unit tokens with a live preview.
 
-#### Editor image detail settings
+Capabilities: Text template, Field tokens, Scope, Live preview.
+
+### Editor image detail settings
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Shows title, font, spacing, alignment, boss label, and Employee card-content settings.
+Configure PNG title, font, spacing, alignment, boss label, and Employee card content below the preview.
 
-### Analytics
+Capabilities: Title and font, Spacing and alignment, Boss label, Employee card content.
 
-#### Complete Analytics groups
+## Analytics
+
+### Organization Analytics
+
+[![Organization Analytics](screenshots/demo-analytics.png)](screenshots/demo-analytics.png)
+
+Review sortable position, birth month, birthday, first-name, last-name, and full-name distributions.
+
+Capabilities: Six distributions, Counts, Sorting, Virtualized rows.
+
+### Complete Analytics groups
 
 [![Complete Analytics groups](screenshots/feature-analytics-complete-groups.png)](screenshots/feature-analytics-complete-groups.png)
 
-Shows the lower last-name and full-name distributions with bounded, content-sized groups.
+Scroll the unified Analytics surface to inspect the remaining name distributions and bounded groups.
 
-#### Analytics drill-down
+Capabilities: Last names, Full names, Content-sized groups, Internal scrolling.
+
+### Analytics drill-down
 
 [![Analytics drill-down](screenshots/feature-analytics-drilldown.png)](screenshots/feature-analytics-drilldown.png)
 
-Shows matching Employees for one distribution value with normal Employee context and actions.
+Open a distribution value to inspect matching Employee cards and their normal actions.
 
-### Calendar
+Capabilities: Value drill-down, Matching Employees, Employee actions.
 
-#### Calendar day details
+## Calendar
+
+### Employee Calendar
+
+[![Employee Calendar](screenshots/demo-calendar.png)](screenshots/demo-calendar.png)
+
+Navigate a monthly calendar with birthdays, dated tags, event counts, and a strong current-day state.
+
+Capabilities: Monthly navigation, Birthdays, Dated tags, Today state, Tag cloud.
+
+### Calendar day details
 
 [![Calendar day details](screenshots/feature-calendar-day-details.png)](screenshots/feature-calendar-day-details.png)
 
-Shows one interactive date with birthday and dated-tag rows plus Employee actions.
+Open any date to inspect birthday and dated-tag Employees with tag, edit, and delete actions.
 
-#### Dated-tag event history
+Capabilities: Interactive dates, Birthday rows, Dated-tag rows, Employee actions.
+
+### Dated-tag event history
 
 [![Dated-tag event history](screenshots/feature-calendar-tag-events.png)](screenshots/feature-calendar-tag-events.png)
 
-Shows current, future, and past events opened from the bounded tag cloud.
+Open a tag from the bounded cloud to inspect current, future, and past Employee events.
 
-### Data Download
+Capabilities: Tag cloud, Past events, Current and future events, Virtualized dialog.
 
-#### Download source selection
+## Download
+
+### Template Data Download
+
+[![Template Data Download](screenshots/demo-download.png)](screenshots/demo-download.png)
+
+Configure a separator-based template, row mode, field tokens, live preview, copy, and local download.
+
+Capabilities: Template format, Row mode, Field tokens, Preview, Copy and download.
+
+### Download source selection
 
 [![Download source selection](screenshots/feature-download-source-selection.png)](screenshots/feature-download-source-selection.png)
 
-Shows Team and Employee sources, the selected set, search, filters, and row exclusions.
+Select Employees from Teams or the catalog, inspect the resulting set, filter it, and exclude rows.
 
-#### CSV Download settings
+Capabilities: Team sources, Employee sources, Selected set, Search and filters, Exclusions.
+
+### CSV Download settings
 
 [![CSV Download settings](screenshots/feature-download-csv-settings.png)](screenshots/feature-download-csv-settings.png)
 
-Shows field selection, rename and reorder controls, and row modes for CSV output.
+Choose row behavior and reorder, select, or rename Employee and Team fields for CSV output.
 
-#### JSON Download settings
+Capabilities: CSV, Field selection, Rename and reorder, Row modes.
+
+### JSON Download settings
 
 [![JSON Download settings](screenshots/feature-download-json-settings.png)](screenshots/feature-download-json-settings.png)
 
-Shows Employee fields, nested Team fields, and output field order for JSON.
+Choose Employee fields and configure the fields of each nested Team object for JSON output.
 
-#### CSV Download preview
+Capabilities: JSON, Employee fields, Nested Team fields, Field order.
+
+### CSV Download preview
 
 [![CSV Download preview](screenshots/feature-download-csv-preview.png)](screenshots/feature-download-csv-preview.png)
 
-Shows the remaining field list and live CSV rows before copy or local download.
+Inspect the lower field list and live CSV rows before copying or downloading the local file.
 
-#### JSON Download preview
+Capabilities: Remaining fields, Live CSV rows, Copy, Local download.
+
+### JSON Download preview
 
 [![JSON Download preview](screenshots/feature-download-json-preview.png)](screenshots/feature-download-json-preview.png)
 
-Shows the remaining field list and formatted JSON structure before copy or local download.
+Inspect the lower field list and formatted JSON structure before copying or downloading the local file.
 
-## Regenerate and review
+Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
-Install the matching browser once, then generate the production build and the exact gallery:
+## Review checklist
 
-```sh
-pnpm --filter @org-tools/screenshots exec playwright install chromium
-pnpm screenshots:generate
-```
-
-Inspect every manifest image at full size. Confirm that dialogs are contained, menus and secondary
-panels are open where declared, populated surfaces are legible, previews are non-empty, and neither
-light nor dark chrome has clipping or unintended overlays. Reject any image containing real
-organization data, a local filesystem path, a browser notification, a nondeterministic timestamp,
-or an external image.
-
-Regenerate immediately and compare every image. Dimensions, visible content, and geometry must be
-identical. Treat raw PNG hashes as diagnostics rather than the sole pass criterion because the
-platform rasterizer can vary a handful of antialiasing pixels even with a pinned browser; any change
-beyond that tiny edge-only tolerance requires review. The generator preserves an expected PNG only
-when a fresh frame differs by at most two RGB steps across no more than 32 pixels, replaces every
-materially changed frame, removes unexpected PNGs directly inside the dedicated screenshot
-directory, and fails if any expected file is missing or a stale file remains.
-
-`pnpm test:browser` runs non-visual smoke suites against both production modes. The SQLite suite uses
-an isolated temporary database and verifies project redirect, CRUD, compact and expanded
-switcher geometry, stable links, explicit Save, UI persistence, dirty navigation, conflicts,
-cross-origin rejection, and
-blank startup, populated workflows, English and Russian copy, light and dark themes, expanded and
-compact responsive sidebar geometry, keyboard and focus behavior, hover and pressed geometry,
-adaptive Editor snapping, Analytics and Calendar layout, strict workspace Import, local avatar
-handling, direct workspace Export, Download formats, actual browser downloads, and same-origin-only
-requests. The Pages suite verifies the `/org-tools/` entry, file and fallback persistence,
-autosave/reconnect, all product tabs, JSON download, and the absence of API or external requests.
+- Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
+- Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
+- Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
+- Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
+- Regenerate immediately; all 38 PNGs must retain identical hashes. Material differences require review and a deliberate update.

@@ -66,34 +66,88 @@ const units = Array.from({ length: unitCount }, (_, index) => {
   };
 });
 
+const emptyFilters = {
+  birthday: null,
+  includeWithoutTags: false,
+  includeWithoutUnits: false,
+  selectedGenders: [],
+  selectedPositions: [],
+  selectedTags: [],
+  selectedUnitIds: [],
+};
+const unitFields = ["unitId", "unitName", "unitFullPath", "position", "isBoss"];
+const employeeFields = [
+  "id",
+  "firstName",
+  "lastName",
+  "fullName",
+  "gender",
+  "username",
+  "profileUrl",
+  "email",
+  "phone",
+  "avatarBase64Url",
+  "birthday",
+  "tags",
+  "tagDates",
+];
 const state = {
-  activeViewId: mainViewId,
-  content: "workspace",
-  employees,
-  kind: "org-tools-state",
+  organization: {
+    employees,
+    views: [
+      {
+        createdAt: timestamp,
+        document: {
+          employeeOverrides: [],
+          employees: [],
+          layoutMode: "topDown",
+          units,
+        },
+        id: mainViewId,
+        kind: "main",
+        name: "Main",
+        updatedAt: timestamp,
+      },
+    ],
+  },
   ui: {
     activeTab: "orgEditor",
-    expandedUnitIds: [],
-    selectedUnitId: null,
-    theme: "light",
-  },
-  views: [
-    {
-      createdAt: timestamp,
-      id: mainViewId,
-      kind: "main",
-      name: "Main",
-      state: {
-        employeeOverrides: [],
-        employees: [],
-        layoutMode: "topDown",
-        selectedItems: [],
-        units,
-        viewport: { scale: 1, x: 0, y: 0 },
-      },
-      updatedAt: timestamp,
+    activeViewId: mainViewId,
+    analytics: { filters: emptyFilters, query: "" },
+    calendar: { cloudExpanded: false, monthIndex: 6, year: 2026 },
+    download: {
+      employeeFieldOrder: employeeFields,
+      employeeFilters: emptyFilters,
+      employeeQuery: "",
+      excludedEmployeeIds: [],
+      fieldNames: Object.fromEntries(
+        [...employeeFields, ...unitFields].map((field) => [field, field]),
+      ),
+      flatUnitFieldOrder: unitFields,
+      jsonUnitFieldOrder: unitFields,
+      rowMode: "allUnits",
+      selectedEmployeeFieldKeys: ["username"],
+      selectedFilters: emptyFilters,
+      selectedFlatUnitFieldKeys: ["unitName", "unitFullPath"],
+      selectedJsonUnitFieldKeys: unitFields,
+      selectedQuery: "",
+      selections: [],
+      sourceViewId: mainViewId,
+      tabMode: "csv",
+      templateFormat: "{email}, ",
+      unitFullPathSeparator: " / ",
+      unitQuery: "",
     },
-  ],
+    editor: { searchOpen: false, searchQuery: "" },
+    employees: { filters: emptyFilters, query: "" },
+    expandedUnitIds: [],
+    locale: "en",
+    selectedUnitId: null,
+    sidebarCollapsed: true,
+    theme: "light",
+    units: { employeeFilters: emptyFilters, employeeQuery: "", unitQuery: "" },
+    views: [{ selectedItems: [], viewId: mainViewId, viewport: { scale: 1, x: 0, y: 0 } }],
+  },
 };
 
 const directory = await mkdtemp(join(tmpdir(), "org-tools-performance-"));

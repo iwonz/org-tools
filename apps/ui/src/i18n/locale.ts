@@ -1,5 +1,8 @@
-export const APP_LOCALES = ["en", "ru"] as const;
-export type AppLocale = (typeof APP_LOCALES)[number];
+import type { AppLocale } from "@org-tools/types";
+
+export type { AppLocale } from "@org-tools/types";
+
+export const APP_LOCALES = ["en", "ru"] as const satisfies readonly AppLocale[];
 
 export const DEFAULT_LOCALE: AppLocale = "en";
 export const LOCALE_STORAGE_KEY = "org-tools-locale";

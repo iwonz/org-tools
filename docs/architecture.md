@@ -1,177 +1,102 @@
 # Architecture
 
-org-tools has two delivery modes over the same in-memory MobX product and strict unversioned
-`OrgToolsState`. The local Next.js server binds to `127.0.0.1` and persists multiple projects in one
-SQLite database through a same-origin API. The browser-only Next.js static export manages one local
-JSON file or a tab-lifetime workspace without a backend. Import and Export use the same complete
-`content: "workspace"` contract in both modes.
+Org Tools has two deliveries over the same React, MobX, and strict `OrgToolsState` implementation.
 
-## Workspace layout
+- `apps/ui` is a local Next.js server bound to `127.0.0.1`. It renders the application and exposes
+  the same-origin singleton state API backed by SQLite.
+- `apps/pages` is a static Next.js export at `/org-tools`. It imports browser-safe UI only and keeps
+  organization state in the memory of currently open tabs.
+- `packages/types` defines the state, Employee, Unit, View, editor, and output contracts.
+- `packages/screenshots` contains production browser checks and the deterministic gallery.
 
-- `apps/ui` contains the Next.js runtime, local API, SQLite repository, React components, stores,
-  parsers, exporters, and UI tests.
-- `apps/pages` contains the static-export app tree and configuration. It reuses browser-safe
-  components and stores from `apps/ui` but never imports the server repository or API routes.
-- `packages/types` defines the public state, Employee, Unit, View, and editor contracts.
-- `packages/screenshots` contains production-build browser smoke tests and deterministic PNG
-  capture.
-- `openspec` contains active changes and canonical capability specifications.
+## State contract
 
-The `pnpm spec -- ...` wrapper is the repository entry point for OpenSpec and disables its
-development-only anonymous telemetry.
+The public JSON value has exactly two top-level properties:
 
-The local production build is a Next.js server build in `apps/ui/.next`; `pnpm start` binds it to
-`127.0.0.1`. The separate `apps/pages` build uses `output: "export"`, `basePath: "/org-tools"`, and
-unoptimized local images. It provides the full client product but deliberately omits multi-project
-SQLite persistence and server mutation handlers.
-
-`pnpm dev` selects webpack explicitly, matching the supported production compiler instead of relying
-on the Next.js development default. Its watcher excludes the reserved `.org-tools` and
-`.playwright-cli` path segments, so database, journal, runtime-configuration, snapshot, and browser
-log writes cannot invalidate application modules or interrupt root navigation. The bounded launcher
-warms the root route, current project, and project API before presenting the workspace URL, avoiding
-a first-browser hydration race with Next's on-demand route compilation. It forwards termination to
-the owned server and never requests a non-loopback URL. A root-only Node.js Proxy resolves the
-current project through a
-short-lived SQLite connection and issues the stable redirect before rendering; database failures
-fall through to the existing localized recovery page. `pnpm dev:check` verifies that boundary
-independently: it reserves a
-loopback port, creates a unique database below the ignored runtime directory, checks root project
-resolution and the project list API, then uses the existing Playwright Chromium installation to
-require the stable project URL, application shell, and Editor canvas. It closes the browser,
-terminates the server child, and removes its temporary runtime child on every outcome. This is a
-functional startup probe rather than a replacement runtime.
-
-GitHub Pages receives the browser-only Next.js export in ignored `pages-out`, plus `.nojekyll`.
-`pnpm pages:check` requires application HTML, local CSS and JavaScript with the `/org-tools` base
-path, and rejects SQLite symbols, project API routes, server chunks, and database configuration. A
-manually dispatched Actions workflow builds and validates that artifact, uploads it through the
-official Pages artifact action, and deploys it to the `github-pages` environment.
-
-The application uses `/projects/<uuid>` as its stable project route. `/` resolves the last opened
-project, creating `New project` when the database is empty, and redirects to that stable URL. A
-client locale provider statically imports the English and
-Russian catalogs, deterministically encodes reserved periods in sentence-style UI IDs, and passes
-the active namespace-safe catalog to `NextIntlClientProvider`. The typed UI wrapper applies the same
-encoding during lookup. There are no locale URL segments or catalog fetches.
-
-The single-route shell owns a dark collapsible sidebar and a context-only workflow header. The
-sidebar keeps the existing Radix product-tab state and order, co-locates the project switcher,
-language, theme, Import, and workspace Export actions, and switches between a 240 px labelled panel
-and a 64 px icon rail.
-Narrow layouts use the icon rail through responsive CSS. Collapse state is component-local and is
-not added to MobX workspace state, exported files, or browser storage.
-
-## State flow
-
-```text
-SQLite state_json ──strict read + UI overlay──────┐
-selected JSON file ──strict workspace read────────┼──> in-memory stores ──> UI and local output
-workspace Import ──validate + atomic replacement─┘          │
-                                                             ├──Save──> SQLite
-                                                             ├──Save──> selected file/download
-                                                             └──Export──> workspace JSON download
+```ts
+type OrgToolsState = {
+  organization: {
+    employees: OrganizationEmployee[];
+    views: OrgToolsViewDocument[];
+  };
+  ui: OrgToolsUiState;
+};
 ```
 
-The shell consumes a discriminated persistence controller. The SQLite controller exposes project
-CRUD, stable URLs, revision conflicts, bounded UI saves, and project Save. The browser controller
-exposes New project, Open project, Save, Save As, file conflicts, and fallback download. Browser entry
-code imports only the latter; shared product components depend on the controller interface rather
-than on project routes.
+There is no kind, content discriminator, version, compatibility alias, or partial transfer scope.
+View documents contain structural editor data. Viewport and selection live in the bounded `ui.views`
+projection so ordinary interface writes do not serialize the Employee catalog or Unit graph. The UI
+projection also contains locale, theme, sidebar mode, active section and View, filters, searches,
+calendar period, Analytics settings, and Data Download settings. Open surfaces, notifications, and
+unfinished forms are transient.
 
-SQLite schema v1 stores multiple projects in `projects`, the last opened project in the singleton
-`app_state` row, and its internal schema version in `PRAGMA user_version`. `state_json` is a complete
-validated workspace snapshot. `ui_json` is a bounded overlay containing the active tab and View,
-theme, selected and expanded Units, and per-View viewport and selection. Dangling UI references are
-discarded when a project opens. The repository uses prepared statements, `foreign_keys=ON`, rollback
-journal mode, `synchronous=FULL`, a busy timeout, and atomic transactions. It deliberately avoids
-WAL so a stopped, idle runtime has one durable database file.
+Import parses one detached value, validates exact keys, identifiers, dates, URLs, embedded avatars,
+references, graph invariants, and UI references, then performs one atomic store replacement. Export
+validates and downloads the current live value as `org-tools-state.json`. Old JSON shapes and
+arbitrary JSON are rejected.
 
-The path resolves in strict precedence order: `ORG_TOOLS_DB_PATH`,
-`.org-tools/config.json`, then `.org-tools/org-tools.sqlite3`. Relative paths resolve from the
-repository root. Invalid configuration or an inaccessible path is a blocking error; there is no
-ephemeral fallback. The connection is opened lazily and reused across development hot reloads.
+## Local SQLite runtime
 
-`GET /api/projects`, project CRUD, revisioned state Save, and last-write-wins UI Save form the local
-same-origin API. Every response is `Cache-Control: no-store`. Mutations accept only JSON and require
-a matching loopback Origin and Host. The runtime does not enable CORS.
+`/` renders the application directly. `GET /api/state` returns `{ revision, state }` and
+`PUT /api/state` accepts exact `organization`, `ui`, or `all` scoped updates. Every response uses
+`Cache-Control: no-store`. Mutations require JSON, a loopback Host, and a matching same-origin
+Origin. CORS is not enabled.
 
-`OrgToolsState` is the sole current transfer format. Its `content` discriminator is the literal
-`"workspace"`. The parser verifies the exact structure, UUID identifiers, Employee tag records and
-dates, references, URLs, avatar bounds, required normalized Employee gender enum, UI references, and
-graph invariants before any mutation. Former partial scopes and arbitrary JSON are rejected without
-migration or fallback.
+SQLite schema v1 contains one strict `application_state` row with `organization_json`, `ui_json`,
+revision, and timestamps. The repository uses prepared statements, immediate transactions,
+rollback journal mode, `foreign_keys=ON`, `synchronous=FULL`, and a busy timeout. An exact obsolete
+`projects` plus `app_state` schema is destructively replaced on first open without data migration;
+unknown schemas and corrupt current rows are blocked rather than silently reset.
 
-Workspace Import keeps only the selected `File`, validated detached candidate, summary counts, and
-owned error transiently. Confirming performs one complete store replacement, including theme and UI
-state, without changing the persistence controller's project identity or browser file handle.
-Workspace Export creates and validates the current live snapshot once and immediately downloads it;
-there is no projection serializer or export dialog. The data Download session remains an independent
-reporting pipeline for CSV, JSON, templates, and PNG.
+The database path resolves in this order:
 
-Employee tags use one normalized runtime record with a label and nullable `YYYY-MM-DD` date. Search
-documents, Live rules, and option identity project only labels. Shared derived indexes group exact
-dated-tag events by ISO day and normalized label alongside birthday indexes, so Calendar cells and
-virtualized dialogs do not rescan the Employee catalog during render.
+1. `ORG_TOOLS_DB_PATH`;
+2. `.org-tools/config.json` with one non-empty `databasePath` string;
+3. `.org-tools/org-tools.sqlite3`.
 
-Employee gender is one required stable value: `male`, `female`, or `unspecified`.
-Transient Employee search documents carry that value for exact-value catalog filters. Live Unit
-rules deliberately omit gender, so the new field does not expand the persisted rule contract or
-trigger inference from names, avatars, or other profile data.
+Relative paths resolve from the repository root. The connection is lazy and shared across
+development hot reloads. Invalid configuration never falls back to ephemeral storage.
 
-Tag dates stay behind focused calendar popovers. Cards and the Org Editor render every chip with
-wrapping. The interactive canvas uses deterministic packing to produce variable Employee row heights
-and prefix offsets for virtualization, hit testing, connections, layout, and bounds. Localized PNG
-rendering uses a card-consistent neutral chip profile whose shared paint and row-allocation geometry
-keeps exported bounds compact and aligned.
+Organization actions enqueue an immediate full-state write. Durable UI changes use a 300 ms trailing
+delay and a scoped UI write. The single-flight writer permits one active transaction, replaces an
+older queued snapshot with the latest one, retries failures with a bounded backoff, and retains an
+in-memory warning plus `beforeunload` protection until recovery. There is no Save button, dirty UI,
+revision conflict dialog, or user-controlled autosave.
 
-The Editor uses one 24-unit document-space coordinate grid. Explicit coordinate-producing commands
-snap affected Unit origins in the editor store; opening a workspace does not normalize untouched
-legacy coordinates. The canvas derives a power-of-two visible grid interval from the current scale,
-then paints it as a constant-cost CSS background aligned to the viewport origin. Visible grid lines
-therefore remain legible across zoom levels and always describe valid snap coordinates.
+## Static runtime and tab synchronization
 
-Employee avatar editing is also a local draft pipeline. A bounded file or clipboard Blob is decoded,
-optionally downscaled to a temporary 4096-pixel preview, positioned through `react-easy-crop`, and
-drawn to a 512-by-512 WebP canvas. Only the validated data URL enters the Employee draft; temporary
-object URLs and the original source are not retained.
+The static runtime never imports server modules or references `/api/state`. A new tab requests the
+latest state over the same-origin `BroadcastChannel`. A live tab answers with the current validated
+state; if no tab answers, the new tab starts empty. Closing the final tab destroys organization data.
+Only locale and theme may remain as browser metadata.
 
-## Store responsibilities
+Messages include a per-tab origin and logical stamp. Exact parsing, deterministic last-write-wins
+ordering, and origin checks prevent echo loops. Organization updates broadcast full state; UI-only
+updates broadcast the bounded projection. This provides convergence between local tabs, not users,
+history, collaborative cursors, or remote synchronization.
 
-- The organization store owns the global Employee catalog and canonical Main View.
-- The Views store owns custom View documents and their independent editor stores.
-- Each editor store owns document commands, canvas selection, layout, viewport, and undo/redo.
-- The data-download session owns transient source selection and output settings.
-- The workspace Import dialog owns one transient file, complete validated candidate, and summary.
-- The workspace Export action validates and downloads one complete live-state snapshot.
-- The locale provider owns the independent `en` or `ru` UI preference and updates document metadata.
+## Store and UI boundaries
 
-Derived indexes resolve IDs into display models and search documents. Components receive resolved
-data through props and shared list components instead of rebuilding indexes during render.
+- `OrgStore` owns the organization catalog, Views, derived structures, durable UI projection, and
+  separate organization/UI change sequences.
+- `OrgViewsStore` owns structural View documents and editor stores.
+- `AutomaticStateWriter` owns write serialization and retry state.
+- `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
+  and write observation; the SQLite transport is imported only by `apps/ui`.
+- Import owns one transient `File` and validated candidate. Export performs a direct download.
+- Data Download remains a separate reporting pipeline for CSV, JSON, templates, and PNG.
 
-## Persistence and current-schema policy
+The sidebar contains only product navigation, Import, state Export, language, theme, and its collapse
+control. The header contains only the active section icon and title. Floating non-modal surfaces use
+one neutral border and restrained shadow; hover and active states change tone without changing
+geometry.
 
-The active project or file is edited as an in-memory working copy. Organization mutations make it
-dirty. Explicit **Save** and `Ctrl+S`/`Cmd+S` always remain available. Optional autosave is off by
-default and uses one 1000 ms trailing debounce with one write in flight; changes made during a write
-schedule the next save. SQLite Save increments `state_revision`, while browser Save writes and
-closes the bound file before reporting success. Both modes pause autosave on error or conflict.
+## Builds and development
 
-Theme, tab, active View, viewport, and selection never make organization data dirty. SQLite stores
-that bounded UI overlay after 300 ms. Browser mode does not persist it as organization data.
-IndexedDB `org-tools-browser` stores only `active-file-handle`; local storage stores only theme,
-locale, and the `org-tools-autosave-enabled` boolean. No organization snapshot enters browser
-storage.
+`pnpm dev` starts the local server with webpack and warms `/` plus `/api/state`. `pnpm dev:check`
+uses an isolated ignored database and Chromium to verify the root application, state API, local-only
+requests, and Editor canvas. `pnpm build` produces the server build.
 
-The browser controller uses File System Access only after a direct action and checks both picker
-functions at runtime. Open accepts only a strict `content: "workspace"` file. Before each write it
-compares `lastModified` and size with the last known fingerprint. An external change offers Load
-file, Overwrite file, Save As, or Cancel. A remembered handle with missing permission blocks editing
-behind Reconnect file or Start blank; corrupt or unavailable files are never replaced silently. If
-the APIs are unavailable, Open uses a JSON file input, Save downloads `org-tools-state.json`, the
-working copy lasts only for the tab, and autosave UI is not rendered.
-
-Downloading still produces `org-tools-state.json`, and importing changes only the current working
-copy until Save. Locale remains the independent `org-tools-locale` browser preference and is not
-part of `OrgToolsState`. The public state interface deliberately has no version fields and is
-unchanged by project persistence; database schema versioning is private to the local runtime.
+`pnpm pages:build` creates the ignored `pages-out` static application. `pnpm pages:check` requires
+the `/org-tools` base path and rejects server chunks, SQLite symbols, database configuration, and
+state API references. Publication is a separate guarded maintainer action.

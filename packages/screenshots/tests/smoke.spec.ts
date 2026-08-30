@@ -1,14 +1,15 @@
 import { readFile } from "node:fs/promises";
 
+import type { OrgToolsState } from "@org-tools/types";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import {
   expectLocalRequestsOnly,
-  openBlankWorkspace,
+  openBlankState,
   openImportDialog,
   productTabs,
-  replaceWithSyntheticWorkspace,
-  syntheticWorkspacePath,
+  replaceWithSyntheticState,
+  syntheticStatePath,
 } from "./helpers.js";
 
 async function expectNoHorizontalRule(locator: Locator) {
@@ -222,7 +223,7 @@ async function expectSidebarActions(page: Page) {
   );
 
   expect(groupStyle).toEqual({ borderWidth: "0px", columnGap: "4px", flexDirection: "column" });
-  expect(buttonStyles).toHaveLength(5);
+  expect(buttonStyles).toHaveLength(4);
   expect(new Set(buttonStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(buttonStyles.map(({ height }) => height))).toEqual(new Set([40]));
   expect(new Set(buttonStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
@@ -263,7 +264,7 @@ async function expectSidebarActions(page: Page) {
           return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
         }),
       ),
-    ).toEqual(Array.from({ length: 5 }, () => 0));
+    ).toEqual(Array.from({ length: 4 }, () => 0));
   }
 }
 
@@ -369,13 +370,13 @@ async function expectContainedBy(parent: Locator, child: Locator) {
   );
 }
 
-test("opens a blank workspace with all product surfaces", async ({ page }) => {
+test("opens a blank state with all product surfaces", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
+  await openBlankState(page);
 
   await expect(page.locator('[data-demo-id="app-header"]')).toHaveCSS("border-bottom-width", "0px");
   await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveCSS("border-right-width", "0px");
@@ -474,10 +475,10 @@ test("opens a blank workspace with all product surfaces", async ({ page }) => {
 
 test("keeps interaction cues accessible with reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await openBlankWorkspace(page);
+  await openBlankState(page);
 
   const tab = page.locator('[data-demo-id="tab-units"]');
-  const action = page.locator('[data-demo-id="save-workspace"]');
+  const action = page.locator('[data-demo-id="export-state"]');
   await tab.focus();
 
   const reducedMotionStyle = await tab.evaluate((element) => {
@@ -501,13 +502,13 @@ test("keeps interaction cues accessible with reduced motion", async ({ page }) =
 
 test("contains the collapsible sidebar at narrow and desktop widths", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await openBlankWorkspace(page);
+  await openBlankState(page);
 
   const header = page.locator('[data-demo-id="app-header"]');
   const sidebar = page.locator('[data-demo-id="app-sidebar"]');
   const sidebarToggle = page.locator('[data-demo-id="sidebar-toggle"]');
   const importLabel = page.locator('[data-demo-id="import-action"] [data-sidebar-label=""]');
-  const exportLabel = page.locator('[data-demo-id="save-workspace"] [data-sidebar-label=""]');
+  const exportLabel = page.locator('[data-demo-id="export-state"] [data-sidebar-label=""]');
 
   await expectSidebarNavigation(page, 64);
   await expectSidebarActions(page);
@@ -516,7 +517,7 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
   await expect(exportLabel).toBeHidden();
   await expect(sidebarToggle).toBeHidden();
   await expect(page.locator('[data-demo-id="import-action"]')).toHaveAccessibleName("Import");
-  await expect(page.locator('[data-demo-id="save-workspace"]')).toHaveAccessibleName("Export");
+  await expect(page.locator('[data-demo-id="export-state"]')).toHaveAccessibleName("Export state");
   expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -665,7 +666,7 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
 
 test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await openBlankWorkspace(page);
+  await openBlankState(page);
 
   const shell = page.locator('[data-demo-id="app-shell"]');
   const header = page.locator('[data-demo-id="app-header"]');
@@ -694,7 +695,7 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
   await expectTransparentBackground(page.locator('[data-demo-id="top-level-empty-state"]'));
 
-  await replaceWithSyntheticWorkspace(page);
+  await replaceWithSyntheticState(page);
   await page.locator('[data-demo-id="tab-org-editor"]').click();
   const editorCanvas = page.locator('[data-demo-id="org-editor-canvas"]');
   const editorCanvasBox = await editorCanvas.boundingBox();
@@ -747,6 +748,7 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
 
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
   const darkShellBackground = await getBackgroundColor(shell);
   const darkInteractionTokens = await shell.evaluate((element) => {
     const style = window.getComputedStyle(element);
@@ -773,9 +775,9 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   );
 });
 
-test("imports only complete workspaces through a compact confirmation", async ({ page }) => {
+test("imports only complete states through a compact confirmation", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
+  await openBlankState(page);
 
   await expect(page.locator('[data-demo-id="import-file-input"]')).toHaveAttribute(
     "accept",
@@ -784,21 +786,19 @@ test("imports only complete workspaces through a compact confirmation", async ({
   const canceledChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await (await canceledChooserPromise).setFiles([]);
-  await expect(page.getByRole("dialog", { name: "Import project" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Import state" })).toHaveCount(0);
 
-  const dialog = await openImportDialog(page, syntheticWorkspacePath);
+  const dialog = await openImportDialog(page, syntheticStatePath);
   await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-header"]'));
   await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-footer"]'));
   await expect(dialog.getByRole("tab")).toHaveCount(0);
   await expect(dialog.getByRole("radio")).toHaveCount(0);
-  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
+  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
     "4 Employees",
   );
-  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
-    "2 Units",
-  );
-  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText("1 View");
-  await expect(dialog.getByRole("button", { name: "Replace project" })).toBeEnabled();
+  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("2 Units");
+  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("1 View");
+  await expect(dialog.getByRole("button", { name: "Replace state" })).toBeEnabled();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const invalidDialog = await openImportDialog(page, {
@@ -807,13 +807,13 @@ test("imports only complete workspaces through a compact confirmation", async ({
     name: "ordinary.json",
   });
   await expect(
-    invalidDialog.getByText("Only a complete Org Tools project can be imported.", {
+    invalidDialog.getByText("Only a complete Org Tools state can be imported.", {
       exact: true,
     }),
   ).toBeVisible();
-  await expect(invalidDialog.getByRole("button", { name: "Replace project" })).toBeDisabled();
-  await invalidDialog.locator('input[type="file"]').setInputFiles(syntheticWorkspacePath);
-  await expect(invalidDialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
+  await expect(invalidDialog.getByRole("button", { name: "Replace state" })).toBeDisabled();
+  await invalidDialog.locator('input[type="file"]').setInputFiles(syntheticStatePath);
+  await expect(invalidDialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
     "4 Employees",
   );
   await invalidDialog.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -821,44 +821,34 @@ test("imports only complete workspaces through a compact confirmation", async ({
   await assertLocalRequests();
 });
 
-test("atomically imports, directly exports, saves, and reloads a workspace", async ({ page }) => {
+test("atomically imports, directly exports, automatically writes, and reloads state", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  const projectUrl = page.url();
-  const saveButton = page.locator('[data-demo-id="project-save"]');
-  const cleanSaveBounds = await saveButton.boundingBox();
+  await openBlankState(page);
+  const rootUrl = page.url();
+  await expect(page.locator('[data-demo-id="project-save"]')).toHaveCount(0);
 
-  const importDialog = await openImportDialog(page, syntheticWorkspacePath);
-  await importDialog.getByRole("button", { name: "Replace project", exact: true }).click();
+  const importDialog = await openImportDialog(page, syntheticStatePath);
+  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await expect(importDialog).toBeHidden();
-  await expect(page).toHaveURL(projectUrl);
+  await expect(page).toHaveURL(rootUrl);
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
-  expect(await saveButton.boundingBox()).toEqual(cleanSaveBounds);
+  await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
 
   const exportPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByRole("button", { name: "Export state", exact: true }).click();
   const exported = await exportPromise;
   expect(exported.suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("dialog", { name: "Export project" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Export state" })).toHaveCount(0);
   const exportedPath = await exported.path();
-  const exportedState = JSON.parse(await readFile(exportedPath ?? "", "utf8")) as {
-    content: string;
-    employees: unknown[];
-    kind: string;
-  };
-  expect(exportedState).toMatchObject({ content: "workspace", kind: "org-tools-state" });
-  expect(exportedState.employees).toHaveLength(4);
+  const exportedState = JSON.parse(await readFile(exportedPath ?? "", "utf8")) as OrgToolsState;
+  expect(Object.keys(exportedState).sort()).toEqual(["organization", "ui"]);
+  expect(exportedState.organization.employees).toHaveLength(4);
 
-  await saveButton.click();
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Saved");
-  expect(await saveButton.boundingBox()).toEqual(cleanSaveBounds);
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("", {
-    timeout: 3_000,
-  });
+  await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("");
   await assertLocalRequests();
 });
 
@@ -866,7 +856,7 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
   page,
 }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
+  await openBlankState(page);
 
   const rejectedFiles = [
     {
@@ -874,7 +864,7 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
       file: { buffer: Buffer.from("{"), mimeType: "application/json", name: "broken.json" },
     },
     {
-      error: "Only a complete Org Tools project can be imported.",
+      error: "Only a complete Org Tools state can be imported.",
       file: {
         buffer: Buffer.from(JSON.stringify({ content: "employees", kind: "org-tools-state" })),
         mimeType: "application/json",
@@ -882,7 +872,7 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
       },
     },
     {
-      error: "Only a complete Org Tools project can be imported.",
+      error: "Only a complete Org Tools state can be imported.",
       file: {
         buffer: Buffer.from(JSON.stringify({ employees: [{ name: "Ordinary row" }] })),
         mimeType: "application/json",
@@ -902,18 +892,18 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
   for (const rejected of rejectedFiles) {
     const dialog = await openImportDialog(page, rejected.file);
     await expect(dialog.getByText(rejected.error, { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Replace project" })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Replace state" })).toBeDisabled();
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
   }
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("");
+  await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
   await assertLocalRequests();
 });
 
 test("keeps CSV as a Download output while Import accepts JSON only", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
 
   await expect(page.locator('[data-demo-id="import-file-input"]')).toHaveAttribute(
     "accept",
@@ -937,7 +927,7 @@ test("keeps CSV as a Download output while Import accepts JSON only", async ({ p
 
 test("creates, crops, re-crops, pastes, and removes a local Employee avatar", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
+  await openBlankState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await page.getByRole("button", { name: "Create Employee", exact: true }).click();
   const employeeDialog = page.getByRole("dialog", { name: "Create Employee" });
@@ -1014,10 +1004,10 @@ test("creates, crops, re-crops, pastes, and removes a local Employee avatar", as
   await assertLocalRequests();
 });
 
-test("atomically opens a complete synthetic workspace", async ({ page }) => {
+test("atomically opens a complete synthetic state", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
 
   await expect(page.getByText("Platform", { exact: true }).first()).toBeVisible();
   await page.getByRole("tab", { name: "Units", exact: true }).click();
@@ -1049,8 +1039,8 @@ test("atomically opens a complete synthetic workspace", async ({ page }) => {
 
 test("shows reactive total and filtered Employee counts", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
 
   await expectNoHorizontalRule(page.locator('[data-demo-id="employees-header"]'));
@@ -1155,8 +1145,8 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
 
 test("renders tonal content-sized Analytics groups with working drill-down", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
 
   const analyticsHeader = page.locator('[data-demo-id="analytics-header"]');
@@ -1218,6 +1208,7 @@ test("renders tonal content-sized Analytics groups with working drill-down", asy
   await expect(duplicates).toHaveCSS("height", "148px");
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
   expect(await getBackgroundColor(positions.locator("thead"))).toBe(
     await getBackgroundColor(positions),
   );
@@ -1226,8 +1217,8 @@ test("renders tonal content-sized Analytics groups with working drill-down", asy
 
 test("renders surfaced Org Editor controls and reveals search to the right", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
 
   const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
@@ -1394,14 +1385,12 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
 
 test("caps long Analytics groups at eight virtualized rows", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  const state = JSON.parse(await readFile(syntheticWorkspacePath, "utf8")) as {
-    employees: Array<Record<string, unknown>>;
-  };
-  const template = state.employees[0];
+  await openBlankState(page);
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const template = state.organization.employees[0];
   if (!template) throw new Error("Synthetic Employee template is unavailable.");
   for (let index = 1; index <= 12; index += 1) {
-    state.employees.push({
+    state.organization.employees.push({
       ...template,
       avatarBase64Url: null,
       birthday: null,
@@ -1419,9 +1408,9 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
     mimeType: "application/json",
     name: "large-analytics-state.json",
   });
-  await dialog.getByRole("button", { name: "Replace project", exact: true }).click();
+  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
-  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
+  await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
 
   const firstNames = page.locator('[data-demo-id="analytics-first-names"]');
@@ -1441,8 +1430,8 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
 
 test("renders safe profile links, birthdays, and dated tag events", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   const profileLink = page.getByRole("link", { name: "Avery Stone", exact: true }).first();
@@ -1502,8 +1491,8 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
 test("keeps Calendar navigation in the header and fits July at 1280 by 720", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Calendar", exact: true }).click();
 
   const navigation = page.locator('[data-demo-id="calendar-header-navigation"]');
@@ -1586,8 +1575,8 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
 
 test("edits and clears a dated tag from quick and full Employee editors", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
 
   await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
@@ -1647,8 +1636,8 @@ test("edits and clears a dated tag from quick and full Employee editors", async 
 
 test("adds a tag and applies one date through the bulk Org Editor menu", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankWorkspace(page);
-  await replaceWithSyntheticWorkspace(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
 
   const productUnit = page.locator(
     '[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]',
