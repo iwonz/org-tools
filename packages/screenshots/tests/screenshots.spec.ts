@@ -1,10 +1,11 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import sharp from "sharp";
 
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
+import { expect, test } from "./browser-test.js";
 import {
   openBlankState,
   openImportDialog,

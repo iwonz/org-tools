@@ -490,7 +490,6 @@ export class OrgStore {
       this.organizationEmployees,
       editor.createState(),
     );
-    editor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
     return result.structure;
   }
 

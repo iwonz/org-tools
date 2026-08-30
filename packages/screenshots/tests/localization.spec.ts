@@ -1,10 +1,11 @@
 import { readFile } from "node:fs/promises";
 
 import type { OrgToolsState } from "@org-tools/types";
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import enMessages from "../../../apps/ui/messages/en.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
+import { expect, test } from "./browser-test.js";
 import {
   expectLocalRequestsOnly,
   type ImportFilePayload,

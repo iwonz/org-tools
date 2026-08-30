@@ -2,7 +2,7 @@
 
 The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 38 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
 
-The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
+The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
 
 ## Import
 
@@ -333,5 +333,6 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
+- Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
 - Regenerate immediately; all 38 PNGs must retain identical hashes. Material differences require review and a deliberate update.

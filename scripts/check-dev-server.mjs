@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { createBrowserDiagnostics } from "../packages/screenshots/browser-diagnostics.mjs";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const launcherEntry = join(repositoryRoot, "scripts", "start-development.mjs");
@@ -16,6 +18,13 @@ const { chromium } = requireFromScreenshots("@playwright/test");
 const startupTimeoutMs = 90_000;
 const pollIntervalMs = 250;
 const maximumLogBytes = 64 * 1024;
+const fixturePath = join(
+  repositoryRoot,
+  "packages",
+  "screenshots",
+  "fixtures",
+  "synthetic-state.json",
+);
 
 function delay(milliseconds) {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
@@ -107,6 +116,41 @@ async function probe(origin, child) {
 }
 
 async function probeBrowser(origin) {
+  const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
+  const mainView = fixture.organization.views.find((view) => view.kind === "main");
+  const mainViewUi = fixture.ui.views.find((view) => view.viewId === mainView?.id);
+  if (!mainView || !mainViewUi) throw new Error("The development fixture has no Main View.");
+  const customViewId = "88888888-8888-4888-8888-888888888888";
+  fixture.organization.views.push({
+    createdAt: mainView.createdAt,
+    document: {
+      employeeOverrides: [],
+      employees: [],
+      layoutMode: mainView.document.layoutMode,
+      units: [],
+    },
+    id: customViewId,
+    kind: "custom",
+    name: "Console audit",
+    updatedAt: mainView.updatedAt,
+  });
+  fixture.ui.activeTab = "orgEditor";
+  fixture.ui.activeViewId = customViewId;
+  fixture.ui.download.sourceViewId = customViewId;
+  fixture.ui.views.push({
+    selectedItems: [],
+    viewId: customViewId,
+    viewport: { ...mainViewUi.viewport },
+  });
+  const seedResponse = await fetch(`${origin}/api/state`, {
+    body: JSON.stringify({ scope: "all", state: fixture }),
+    headers: { "Content-Type": "application/json", Origin: origin },
+    method: "PUT",
+  });
+  if (!seedResponse.ok) {
+    throw new Error(`Could not seed the development diagnostic state (${seedResponse.status}).`);
+  }
+
   const browser = await chromium.launch({
     headless: true,
     args: ["--disable-gpu", "--disable-lcd-text", "--font-render-hinting=none"],
@@ -114,11 +158,12 @@ async function probeBrowser(origin) {
   try {
     const context = await browser.newContext({ locale: "en-US", timezoneId: "UTC" });
     const page = await context.newPage();
-    const externalRequests = [];
-    const pageErrors = [];
-    page.on("pageerror", (error) => {
-      pageErrors.push(error.message);
+    const diagnostics = createBrowserDiagnostics({
+      runtime: "development",
+      scenario: "inactive View data download",
     });
+    diagnostics.attach(page);
+    const externalRequests = [];
     page.on("request", (request) => {
       const url = new URL(request.url());
       if (
@@ -145,12 +190,18 @@ async function probeBrowser(origin) {
       state: "visible",
       timeout: startupTimeoutMs,
     });
+    await page.getByRole("combobox", { name: "Active View" }).click();
+    await page.getByRole("option", { name: "Main", exact: true }).click();
+    await page.getByRole("tab", { name: "Download", exact: true }).click();
+    await page.getByRole("tabpanel", { name: "Download", exact: true }).waitFor({
+      state: "visible",
+      timeout: startupTimeoutMs,
+    });
+    await page.waitForTimeout(100);
     if (externalRequests.length > 0) {
       throw new Error(`Development browser made an external request: ${externalRequests[0]}`);
     }
-    if (pageErrors.length > 0) {
-      throw new Error(`Development browser raised an uncaught error: ${pageErrors[0]}`);
-    }
+    diagnostics.assertClean();
   } finally {
     await browser.close();
   }

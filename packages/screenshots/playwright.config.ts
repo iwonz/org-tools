@@ -12,6 +12,7 @@ const databasePath =
   process.env.ORG_TOOLS_DB_PATH ?? join(tmpdir(), `org-tools-playwright-${process.pid}.sqlite3`);
 
 export default defineConfig({
+  metadata: { runtime: "server-production" },
   testDir: "./tests",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),

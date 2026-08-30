@@ -42,13 +42,15 @@ Keep the README concise and link to the detailed documents.
 ## Commands
 
 - `pnpm dev` starts the local development UI.
-- `pnpm dev:check` starts and probes an isolated development server in Chromium, then stops it.
+- `pnpm dev:check` starts and probes an isolated development server in Chromium, fails on runtime
+  browser diagnostics, then stops it.
 - `pnpm lint` performs non-mutating Biome checks.
 - `pnpm format` applies formatting explicitly.
 - `pnpm typecheck` checks all TypeScript workspaces.
 - `pnpm test:unit` runs unit tests.
 - `pnpm build` creates the production Next.js server application.
-- `pnpm test:browser` runs browser smoke tests against the production build.
+- `pnpm test:browser` runs browser smoke tests against both production runtimes. Every owned page
+  fails on unexpected console warnings/errors, page errors, and failed application resources.
 - `pnpm screenshots:generate` regenerates the PNG gallery.
 - `pnpm pages:build` builds the ignored browser-only GitHub Pages application.
 - `pnpm pages:dev` starts the browser-only application locally.

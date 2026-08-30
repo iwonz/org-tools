@@ -1,10 +1,9 @@
 import { readFile } from "node:fs/promises";
 
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "./browser-test.js";
 import { localeStorageKey, syntheticStatePath } from "./helpers.js";
 
-const useEnglish = () => window.localStorage.setItem(localeStorageKey, "en");
+const useEnglish = (key: string) => window.localStorage.setItem(key, "en");
 
 async function importSyntheticState(page: import("@playwright/test").Page) {
   const chooserPromise = page.waitForEvent("filechooser");
@@ -33,7 +32,7 @@ test("runs the complete state editor at the repository base path without APIs or
     }
     if (url.pathname.includes("/api/")) apiRequests.push(request.url());
   });
-  await page.addInitScript(useEnglish);
+  await page.addInitScript(useEnglish, localeStorageKey);
   await page.goto("./", { waitUntil: "domcontentloaded" });
 
   await expect(page).toHaveURL(/\/org-tools\/$/u);
@@ -81,7 +80,7 @@ test("hands state to another live tab and forgets it after the final tab closes"
   page,
   context,
 }) => {
-  await page.addInitScript(useEnglish);
+  await page.addInitScript(useEnglish, localeStorageKey);
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await importSyntheticState(page);
 

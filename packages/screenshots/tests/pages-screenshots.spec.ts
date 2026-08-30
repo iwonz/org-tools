@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "./browser-test.js";
 import { localeStorageKey, syntheticStatePath } from "./helpers.js";
 
 test("keeps the screenshot source scenarios available in the static runtime", async ({ page }) => {

@@ -1,5 +1,5 @@
 import type { OrgToolsState } from "@org-tools/types";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-test.js";
 
 import {
   expectLocalRequestsOnly,

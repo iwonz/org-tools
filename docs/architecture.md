@@ -7,7 +7,8 @@ Org Tools has two deliveries over the same React, MobX, and strict `OrgToolsStat
 - `apps/pages` is a static Next.js export at `/org-tools`. It imports browser-safe UI only and keeps
   organization state in the memory of currently open tabs.
 - `packages/types` defines the state, Employee, Unit, View, editor, and output contracts.
-- `packages/screenshots` contains production browser checks and the deterministic gallery.
+- `packages/screenshots` contains production browser checks, the shared strict browser-diagnostic
+  collector, and the deterministic gallery.
 
 ## State contract
 

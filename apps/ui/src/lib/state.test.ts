@@ -101,6 +101,23 @@ describe("OrgToolsState", () => {
     expect(restored.createOrgToolsState()).toEqual(state);
   });
 
+  test("derives an inactive View structure without mutating its editor during render reads", () => {
+    const { store } = populatedStore();
+    const mainViewId = store.mainOrgViewId;
+    const customViewId = store.createOrgView("Scenario", "main");
+    store.selectOrgView(mainViewId);
+    const customEditor = store.orgViews.editorByViewId.get(customViewId);
+    if (!customEditor) throw new Error("Expected the custom View editor.");
+    const unitsBefore = customEditor.units;
+    const organizationSequenceBefore = store.organizationChangeSequence;
+
+    const structure = store.getOrgViewStructure(customViewId);
+
+    expect(structure?.roots).toHaveLength(1);
+    expect(customEditor.units).toBe(unitsBefore);
+    expect(store.organizationChangeSequence).toBe(organizationSequenceBefore);
+  });
+
   test("rejects obsolete version fields and string-tag state without migration", () => {
     const { store } = populatedStore();
     const legacy = structuredClone(store.createOrgToolsState()) as unknown as Record<

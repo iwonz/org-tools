@@ -8,6 +8,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   forbidOnly: Boolean(process.env.CI),
   fullyParallel: false,
+  metadata: { runtime: "pages-production" },
   outputDir: "../../test-results/pages",
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
   reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "line",
