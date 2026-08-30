@@ -5,9 +5,16 @@
 The repository's GitHub Pages URL is the functional browser-only workspace at `/org-tools/`. It can
 open, import, edit, analyze, save, and export organization data without a backend. Run
 `pnpm pages:dev` for that static-export variant. Run `pnpm dev` and open
-`http://127.0.0.1:3000` for durable multi-project SQLite storage. `pnpm dev:check` starts the real
-server entry point against a temporary database, verifies routing and the project API, and shuts
-down.
+`http://127.0.0.1:3000` for durable multi-project SQLite storage. The command uses webpack
+explicitly so its first browser load follows the same compiler family as production, and excludes
+the reserved `.org-tools` runtime and `.playwright-cli` diagnostic directories from file watching
+so local runtime writes do not trigger Fast Refresh. Root navigation uses a pre-render server
+redirect to the current project's stable URL. Wait for the `Development workspace ready` line: the
+launcher prints it after warming the root route, current project, and local project API.
+`pnpm dev:check` starts that entry point against an isolated database in the ignored runtime boundary,
+verifies routing, the interactive shell, Editor canvas, and project API in Chromium, and shuts down
+every owned process. If Chromium is not installed locally, run
+`pnpm --filter @org-tools/screenshots exec playwright install chromium` once.
 
 org-tools opens the last selected project at `/projects/<uuid>`. A new database starts with a blank
 `New project`, Main View, and Editor selected. A dark 64 px compact sidebar contains the six product

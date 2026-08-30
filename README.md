@@ -51,8 +51,14 @@ More: [Usage](docs/usage.md) · [Privacy](docs/privacy.md) · [Contributing](CON
 
 ## Development and Pages
 
-`pnpm dev:check` starts the real development server with an isolated temporary database, verifies
-project routing and API startup, and stops it. `pnpm pages:dev` starts the browser-only variant;
+`pnpm dev` uses the explicit webpack development compiler for parity with the production server and
+ignores `.org-tools` runtime plus `.playwright-cli` diagnostic writes so local tooling cannot
+trigger Fast Refresh. Open the URL printed by `Development workspace ready`; the launcher emits it
+after the initial project route and API are compiled.
+`pnpm dev:check` starts it with an isolated temporary database, verifies the root-to-project route,
+interactive UI, and API in Chromium, then stops it. Install the browser once with
+`pnpm --filter @org-tools/screenshots exec playwright install chromium` if needed.
+`pnpm pages:dev` starts the browser-only variant;
 `pnpm pages:build` exports it to ignored `pages-out`, and `pnpm pages:check` verifies the `/org-tools`
 base path and absence of backend code. An authenticated maintainer can publish the already merged,
 clean, synchronized `main` with `pnpm pages:publish`.

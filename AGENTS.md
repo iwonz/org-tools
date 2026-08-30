@@ -41,7 +41,7 @@ Keep the README concise and link to the detailed documents.
 ## Commands
 
 - `pnpm dev` starts the local development UI.
-- `pnpm dev:check` starts and functionally probes an isolated development server, then stops it.
+- `pnpm dev:check` starts and probes an isolated development server in Chromium, then stops it.
 - `pnpm lint` performs non-mutating Biome checks.
 - `pnpm format` applies formatting explicitly.
 - `pnpm typecheck` checks all TypeScript workspaces.

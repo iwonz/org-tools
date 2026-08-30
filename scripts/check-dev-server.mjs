@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const applicationRoot = join(repositoryRoot, "apps", "ui");
-const nextEntry = join(applicationRoot, "node_modules", "next", "dist", "bin", "next");
+const launcherEntry = join(repositoryRoot, "scripts", "start-development.mjs");
+const requireFromScreenshots = createRequire(
+  join(repositoryRoot, "packages", "screenshots", "package.json"),
+);
+const { chromium } = requireFromScreenshots("@playwright/test");
 const startupTimeoutMs = 90_000;
 const pollIntervalMs = 250;
 const maximumLogBytes = 64 * 1024;
@@ -126,23 +129,73 @@ async function probe(origin, child) {
   throw new Error(`Development server probe timed out: ${lastError.message}`);
 }
 
+async function probeBrowser(origin, projectPath) {
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--disable-gpu", "--disable-lcd-text", "--font-render-hinting=none"],
+  });
+  try {
+    const context = await browser.newContext({ locale: "en-US", timezoneId: "UTC" });
+    const page = await context.newPage();
+    const externalRequests = [];
+    const pageErrors = [];
+    page.on("pageerror", (error) => {
+      pageErrors.push(error.message);
+    });
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.hostname !== "127.0.0.1" &&
+        url.hostname !== "localhost"
+      ) {
+        externalRequests.push(url.href);
+      }
+    });
+
+    const response = await page.goto(origin, {
+      timeout: startupTimeoutMs,
+      waitUntil: "domcontentloaded",
+    });
+    if (!response?.ok()) {
+      throw new Error(`Root browser navigation failed (HTTP ${response?.status() ?? "unknown"}).`);
+    }
+    await page.waitForURL(new URL(projectPath, origin).href, { timeout: startupTimeoutMs });
+    await page.locator('[data-demo-id="app-shell"]').waitFor({
+      state: "visible",
+      timeout: startupTimeoutMs,
+    });
+    await page.locator('[data-demo-id="org-editor-canvas"]').waitFor({
+      state: "visible",
+      timeout: startupTimeoutMs,
+    });
+    if (externalRequests.length > 0) {
+      throw new Error(`Development browser made an external request: ${externalRequests[0]}`);
+    }
+    if (pageErrors.length > 0) {
+      throw new Error(`Development browser raised an uncaught error: ${pageErrors[0]}`);
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
 const port = await reserveLoopbackPort();
-const temporaryDirectory = await mkdtemp(join(tmpdir(), "org-tools-dev-check-"));
+const runtimeDirectory = join(repositoryRoot, ".org-tools");
+await mkdir(runtimeDirectory, { recursive: true });
+const temporaryDirectory = await mkdtemp(join(runtimeDirectory, "dev-check-"));
 const origin = `http://127.0.0.1:${port}`;
 let logs = "";
-const child = spawn(
-  process.execPath,
-  [nextEntry, "dev", "--hostname", "127.0.0.1", "--port", String(port)],
-  {
-    cwd: applicationRoot,
-    env: {
-      ...process.env,
-      NEXT_TELEMETRY_DISABLED: "1",
-      ORG_TOOLS_DB_PATH: join(temporaryDirectory, "org-tools.sqlite3"),
-    },
-    stdio: ["ignore", "pipe", "pipe"],
+const child = spawn(process.execPath, [launcherEntry], {
+  cwd: repositoryRoot,
+  env: {
+    ...process.env,
+    NEXT_TELEMETRY_DISABLED: "1",
+    ORG_TOOLS_DB_PATH: join(temporaryDirectory, "org-tools.sqlite3"),
+    PORT: String(port),
   },
-);
+  stdio: ["ignore", "pipe", "pipe"],
+});
 
 child.stdout.on("data", (chunk) => {
   logs = appendLog(logs, chunk);
@@ -153,6 +206,7 @@ child.stderr.on("data", (chunk) => {
 
 try {
   const result = await probe(origin, child);
+  await probeBrowser(origin, result.projectPath);
   console.log(`Development server check passed (${origin}${result.projectPath}).`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

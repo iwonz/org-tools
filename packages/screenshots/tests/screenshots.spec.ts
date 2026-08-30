@@ -38,6 +38,12 @@ function screenshotPath(id: string): string {
 }
 
 async function capture(page: Page, id: string) {
+  if (id !== "project-autosave") {
+    const saveStatus = page.locator('[data-demo-id="project-save-status"]');
+    if (["Unsaved", "Saved"].includes((await saveStatus.textContent()) ?? "")) {
+      await expect(saveStatus).toHaveText("");
+    }
+  }
   await stabilizeForScreenshot(page);
   const screenshot = await page.screenshot({ animations: "disabled" });
   const path = screenshotPath(id);

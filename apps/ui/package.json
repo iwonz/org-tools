@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
+    "dev": "node ../../scripts/start-development.mjs",
     "build": "next build --webpack",
     "lint": "biome check src next.config.ts postcss.config.mjs components.json package.json tsconfig.json",
     "start": "next start --hostname 127.0.0.1",

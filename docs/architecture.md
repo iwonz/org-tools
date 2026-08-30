@@ -25,10 +25,22 @@ The local production build is a Next.js server build in `apps/ui/.next`; `pnpm s
 unoptimized local images. It provides the full client product but deliberately omits multi-project
 SQLite persistence and server mutation handlers.
 
-`pnpm dev:check` verifies the same development entry point independently: it reserves a loopback
-port, creates a system-temporary SQLite database, checks root project resolution, the stable project
-page, and the project list API, then terminates the child and removes the temporary directory. This
-is a functional startup probe rather than a replacement runtime.
+`pnpm dev` selects webpack explicitly, matching the supported production compiler instead of relying
+on the Next.js development default. Its watcher excludes the reserved `.org-tools` and
+`.playwright-cli` path segments, so database, journal, runtime-configuration, snapshot, and browser
+log writes cannot invalidate application modules or interrupt root navigation. The bounded launcher
+warms the root route, current project, and project API before presenting the workspace URL, avoiding
+a first-browser hydration race with Next's on-demand route compilation. It forwards termination to
+the owned server and never requests a non-loopback URL. A root-only Node.js Proxy resolves the
+current project through a
+short-lived SQLite connection and issues the stable redirect before rendering; database failures
+fall through to the existing localized recovery page. `pnpm dev:check` verifies that boundary
+independently: it reserves a
+loopback port, creates a unique database below the ignored runtime directory, checks root project
+resolution and the project list API, then uses the existing Playwright Chromium installation to
+require the stable project URL, application shell, and Editor canvas. It closes the browser,
+terminates the server child, and removes its temporary runtime child on every outcome. This is a
+functional startup probe rather than a replacement runtime.
 
 GitHub Pages receives the browser-only Next.js export in ignored `pages-out`, plus `.nojekyll`.
 `pnpm pages:check` requires application HTML, local CSS and JavaScript with the `/org-tools` base
