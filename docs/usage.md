@@ -1,5 +1,13 @@
 # Usage
 
+## Public showcase and local development
+
+The repository's GitHub Pages URL is a static visual catalog, not a hosted workspace. It displays all
+46 deterministic synthetic scenarios and provides local-run links, but it cannot open, import,
+save, edit, or export organization data. Run `pnpm dev` and open `http://127.0.0.1:3000` for the
+functional product. `pnpm dev:check` is the bounded diagnostic command: it starts the real dev entry
+point against a temporary database, verifies routing and the project API, and shuts down.
+
 org-tools opens the last selected project at `/projects/<uuid>`. A new database starts with a blank
 `New project`, Main View, and Editor selected. A dark 64 px compact sidebar contains the six product
 destinations followed by the project switcher, **Import**, **Export**, language, and theme controls.

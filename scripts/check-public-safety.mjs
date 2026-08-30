@@ -5,6 +5,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { pagesOutput, validatePagesOutput } from "./pages.mjs";
+
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const productionBuild = join(repositoryRoot, "apps", "ui", ".next");
 const productionOutputs = [join(productionBuild, "static"), join(productionBuild, "server", "app")];
@@ -317,6 +319,10 @@ async function main() {
     .catch(() => false);
 
   await validateScreenshotDemo(violations);
+  const pageViolations = await validatePagesOutput().catch((error) => [
+    error instanceof Error ? error.message : String(error),
+  ]);
+  for (const rule of pageViolations) violations.push({ path: "pages-out", rule });
 
   if (!outputExists) {
     violations.push({
@@ -335,6 +341,12 @@ async function main() {
         for (const path of await walk(output)) absolutePaths.add(resolve(path));
       }
     }
+  }
+  const pagesOutputExists = await stat(pagesOutput)
+    .then((entry) => entry.isDirectory())
+    .catch(() => false);
+  if (pagesOutputExists) {
+    for (const path of await walk(pagesOutput)) absolutePaths.add(resolve(path));
   }
 
   for (const absolutePath of [...absolutePaths].sort()) {

@@ -39,6 +39,7 @@ Keep the README concise and link to the detailed documents.
 ## Commands
 
 - `pnpm dev` starts the local development UI.
+- `pnpm dev:check` starts and functionally probes an isolated development server, then stops it.
 - `pnpm lint` performs non-mutating Biome checks.
 - `pnpm format` applies formatting explicitly.
 - `pnpm typecheck` checks all TypeScript workspaces.
@@ -46,13 +47,18 @@ Keep the README concise and link to the detailed documents.
 - `pnpm build` creates the production Next.js server application.
 - `pnpm test:browser` runs browser smoke tests against the production build.
 - `pnpm screenshots:generate` regenerates the PNG gallery.
+- `pnpm pages:build` builds the ignored static GitHub Pages showcase.
+- `pnpm pages:check` validates the generated Pages artifact.
+- `pnpm pages:publish` publishes Pages from clean synchronized `main`; use it only when authorized.
 - `pnpm spec:validate` validates all OpenSpec changes and capability specs strictly.
 - `pnpm spec -- <command>` runs any other OpenSpec command with telemetry disabled.
-- `pnpm public:check` scans the worktree and an existing production build for publication hazards.
+- `pnpm public:check` scans the worktree, production build, and Pages output for publication hazards.
 
-Run `pnpm build` before `pnpm public:check`. Never commit `.org-tools/config.json`, SQLite database
-files, `apps/ui/next-env.d.ts`, build output, browser reports, caches, or generated performance
-fixtures.
+Run `pnpm build` and `pnpm pages:build` before `pnpm public:check`. Never commit
+`.org-tools/config.json`, SQLite database files, `apps/ui/next-env.d.ts`, build or Pages output,
+browser reports, caches, or generated performance fixtures. GitHub Pages is documentation only; it
+must never contain a functional organization editor, organization data, forms, telemetry, remote
+assets, or project API calls.
 
 ## Delivery
 
@@ -67,11 +73,11 @@ commit, or branch is still active or unmerged.
    required project documentation before implementation.
 3. Implement the complete task list on that branch. Keep behavior, tests, documentation,
    screenshots, capability deltas, and checked task status in the same change.
-4. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build`,
-   `pnpm test:browser`, `pnpm screenshots:generate`, `pnpm public:check`,
-   `pnpm spec:validate`, and `git diff --check`. Inspect every generated PNG and regenerate the
-   gallery a second time to compare deterministic hashes. Preserve the performance target of 20,000
-   Employees and 4,000 Units.
+4. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm dev:check`,
+   `pnpm build`, `pnpm test:browser`, `pnpm screenshots:generate`, `pnpm pages:build`,
+   `pnpm pages:check`, `pnpm public:check`, `pnpm spec:validate`, and `git diff --check`. Inspect
+   every generated PNG and regenerate the gallery a second time to compare deterministic hashes.
+   Preserve the performance target of 20,000 Employees and 4,000 Units.
 5. Synchronize delta specs into canonical specs, archive the completed OpenSpec change according to
    the repository workflow, validate strictly again, and require `pnpm spec -- list --json` to show
    no active changes.

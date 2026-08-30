@@ -23,6 +23,18 @@ The production build is a Next.js server build in `apps/ui/.next`. `pnpm start` 
 `127.0.0.1`; arbitrary static hosting is intentionally unsupported because a browser cannot write a
 real SQLite file and a static export cannot provide mutation handlers.
 
+`pnpm dev:check` verifies the same development entry point independently: it reserves a loopback
+port, creates a system-temporary SQLite database, checks root project resolution, the stable project
+page, and the project list API, then terminates the child and removes the temporary directory. This
+is a functional startup probe rather than a replacement runtime.
+
+GitHub Pages receives a separate generated presentation artifact in ignored `pages-out`. The
+generator consumes `docs/screenshot-demo.json`, copies exactly its 46 synthetic PNGs, and writes one
+static HTML page with inline CSS and no JavaScript or remote resources. It does not compile, export,
+or emulate the Next.js application. A manually dispatched Actions workflow builds and validates the
+artifact, uploads it through the GitHub Pages artifact action, and deploys it to the `github-pages`
+environment.
+
 The application uses `/projects/<uuid>` as its stable project route. `/` resolves the last opened
 project, creating `New project` when the database is empty, and redirects to that stable URL. A
 client locale provider statically imports the English and

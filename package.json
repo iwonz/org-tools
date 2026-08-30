@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/iwonz/org-tools.git"
   },
-  "homepage": "https://github.com/iwonz/org-tools#readme",
+  "homepage": "https://iwonz.github.io/org-tools/",
   "bugs": {
     "url": "https://github.com/iwonz/org-tools/issues"
   },
@@ -18,10 +18,14 @@
     "build": "pnpm --filter @org-tools/ui build",
     "build:ui": "pnpm --filter @org-tools/ui build",
     "dev": "pnpm --filter @org-tools/ui dev",
+    "dev:check": "node scripts/check-dev-server.mjs",
     "dev:ui": "pnpm --filter @org-tools/ui dev",
     "format": "biome format --write .",
     "fixture:performance": "node scripts/generate-performance-fixture.mjs",
     "lint": "biome check .",
+    "pages:build": "node scripts/build-pages.mjs",
+    "pages:check": "node scripts/check-pages.mjs",
+    "pages:publish": "node scripts/publish-pages.mjs",
     "public:check": "node scripts/check-public-safety.mjs",
     "screenshots:generate": "pnpm build && pnpm --filter @org-tools/screenshots generate",
     "spec": "node scripts/run-openspec.mjs",
@@ -41,12 +45,5 @@
     "@types/node": "^25.9.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
-  },
-  "pnpm": {
-    "overrides": {
-      "@radix-ui/react-dismissable-layer": "1.1.19",
-      "@radix-ui/react-focus-guards": "1.1.6",
-      "@radix-ui/react-focus-scope": "1.1.15"
-    }
   }
 }

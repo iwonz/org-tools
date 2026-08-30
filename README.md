@@ -2,6 +2,9 @@
 
 `org-tools` is a private local organization editor with durable SQLite project workspaces.
 
+[Open the public product showcase](https://iwonz.github.io/org-tools/) — documentation and 46
+synthetic screenshots only; functional workspaces run locally.
+
 - Build Units, manage Employees, and arrange them on a visual canvas.
 - Search the organization, explore analytics, and track birthdays and dated tags.
 - Import JSON and export workspace files, tables, templates, or a canvas PNG.
@@ -45,3 +48,14 @@ an older `org-tools-state.json` once into the first project, then use **Save** f
 
 More: [Usage](docs/usage.md) · [Privacy](docs/privacy.md) · [Contributing](CONTRIBUTING.md) ·
 [License](LICENSE)
+
+## Development and Pages
+
+`pnpm dev:check` starts the real development server with an isolated temporary database, verifies
+project routing and API startup, and stops it. `pnpm pages:build` creates the ignored static showcase
+in `pages-out`; `pnpm pages:check` validates it. An authenticated maintainer can publish the already
+merged, clean, synchronized `main` with `pnpm pages:publish`.
+
+GitHub Pages cannot host the working application: project writes require the loopback Next.js server
+and local SQLite file. The Pages artifact has no editor, forms, telemetry, remote assets, or
+organization-data path.

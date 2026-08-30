@@ -11,6 +11,11 @@ the system temporary directory. Every workflow creates its own obviously synthet
 default locale and color scheme are English and light; the language and theme frames intentionally
 display Russian and dark mode respectively. The complete manifest contains exactly 46 PNGs.
 
+The GitHub Pages showcase consumes this same manifest and all 46 PNGs. `pnpm pages:build` regenerates
+the ignored presentation artifact, and `pnpm pages:check` requires exact manifest parity. Pages adds
+no alternative captures or application runtime, so changing a visible capability still begins by
+updating this catalog and its deterministic Playwright frame.
+
 ## Core workflow gallery
 
 | Import | Workspace Export |

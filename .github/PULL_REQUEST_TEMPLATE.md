@@ -14,7 +14,9 @@ Describe the user-visible result and link the OpenSpec change.
 - [ ] `pnpm lint`
 - [ ] `pnpm typecheck`
 - [ ] `pnpm test:unit`
+- [ ] `pnpm dev:check`
 - [ ] `pnpm build`
+- [ ] `pnpm pages:build && pnpm pages:check`
 - [ ] `pnpm spec:validate`
 - [ ] `pnpm public:check`
 - [ ] `pnpm test:browser`

@@ -39,6 +39,9 @@ jobs:
       - name: Install Chromium
         run: pnpm --filter @org-tools/screenshots exec playwright install --with-deps chromium
 
+      - name: Check development startup
+        run: pnpm dev:check
+
       - name: Lint
         run: pnpm lint
 
@@ -59,6 +62,12 @@ jobs:
 
       - name: Generate screenshot gallery
         run: pnpm --filter @org-tools/screenshots generate
+
+      - name: Build GitHub Pages showcase
+        run: pnpm pages:build
+
+      - name: Validate GitHub Pages showcase
+        run: pnpm pages:check
 
       - name: Check publication safety
         run: pnpm public:check

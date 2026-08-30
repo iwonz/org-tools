@@ -1,3 +1,16 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+overrides:
+  "@radix-ui/react-dismissable-layer": "1.1.19"
+  "@radix-ui/react-focus-guards": "1.1.6"
+  "@radix-ui/react-focus-scope": "1.1.15"
+
+allowBuilds:
+  "@fission-ai/openspec": true
+  "@parcel/watcher": true
+  "@swc/core": true
+  sharp: true
+
+strictDepBuilds: true

@@ -12,6 +12,7 @@ coverage/
 playwright-report/
 test-results/
 .playwright-cli/
+pages-out/
 
 # Generated local files
 apps/ui/next-env.d.ts

@@ -39,9 +39,12 @@ pnpm format
 pnpm lint
 pnpm typecheck
 pnpm test:unit
+pnpm dev:check
 pnpm build
 pnpm test:browser
 pnpm screenshots:generate
+pnpm pages:build
+pnpm pages:check
 pnpm public:check
 pnpm spec:validate
 git diff --check
@@ -63,3 +66,8 @@ Delivery is complete only when `HEAD`, local `main`, and `origin/main` agree, th
 no change-branch commit remains unique, and OpenSpec has no active changes. Do not delete unknown or
 unmerged work. If publication was explicitly forbidden or an external service blocks it, preserve
 the safest clean local state and report the exact remaining integration.
+
+The GitHub Pages site is a generated static showcase, not the SQLite application. It contains only
+reviewed English copy and synthetic gallery PNGs. After the change is merged and pushed, an
+authorized maintainer may run `pnpm pages:publish` from clean synchronized `main`; the command
+configures the Actions publishing source and manually dispatches the least-privilege Pages workflow.
