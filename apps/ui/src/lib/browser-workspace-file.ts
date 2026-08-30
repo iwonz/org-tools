@@ -23,7 +23,7 @@ export type BrowserWorkspaceFileHandle = {
 
 export class BrowserWorkspaceFileConflictError extends Error {
   constructor() {
-    super("The workspace file changed outside Org Tools.");
+    super("The project file changed outside Org Tools.");
     this.name = "BrowserWorkspaceFileConflictError";
   }
 }
@@ -42,7 +42,7 @@ export const parseBrowserWorkspaceFile = async (
   file: Pick<File, "name" | "size" | "text">,
 ): Promise<OrgToolsState> => {
   if (file.size > MAX_WORKSPACE_IMPORT_BYTES) {
-    throw new Error("Workspace file exceeds the 25 MiB limit.");
+    throw new Error("Project file exceeds the 25 MiB limit.");
   }
   return parseOrgToolsState(JSON.parse(await file.text()) as unknown);
 };
@@ -104,7 +104,7 @@ const pickerOptions = {
   types: [
     {
       accept: { "application/json": [".json"] },
-      description: "Org Tools workspace",
+      description: "Org Tools project",
     },
   ],
 };

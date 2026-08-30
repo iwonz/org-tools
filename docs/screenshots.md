@@ -89,13 +89,13 @@ Shows Load saved version, explicit overwrite, and Cancel after a stale revision 
 
 Shows the shared default-off autosave option inside the revisioned project switcher.
 
-### Browser file workspace
+### Browser file project
 
-#### Browser workspace file menu
+#### Browser project file menu
 
-[![Browser workspace file menu](screenshots/feature-browser-file-menu.png)](screenshots/feature-browser-file-menu.png)
+[![Browser project file menu](screenshots/feature-browser-file-menu.png)](screenshots/feature-browser-file-menu.png)
 
-Shows New, Open workspace, Save As, bound filename, and the shared autosave option.
+Shows New project, Open project, Save As, bound filename, and the shared autosave option.
 
 #### Browser file autosave
 
@@ -103,9 +103,9 @@ Shows New, Open workspace, Save As, bound filename, and the shared autosave opti
 
 Shows an explicitly bound file, enabled autosave, and stable Saved status after a local write.
 
-#### Reconnect a workspace file
+#### Reconnect a project file
 
-[![Reconnect a workspace file](screenshots/feature-browser-reconnect.png)](screenshots/feature-browser-reconnect.png)
+[![Reconnect a project file](screenshots/feature-browser-reconnect.png)](screenshots/feature-browser-reconnect.png)
 
 Shows permission recovery using only the remembered file handle, without loading a snapshot first.
 
@@ -113,7 +113,7 @@ Shows permission recovery using only the remembered file handle, without loading
 
 [![Browser download fallback](screenshots/feature-browser-fallback.png)](screenshots/feature-browser-fallback.png)
 
-Shows standard workspace-file input/download behavior with unavailable autosave UI omitted.
+Shows standard project-file input/download behavior with unavailable autosave UI omitted.
 
 ### Import and workspace Export
 

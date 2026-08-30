@@ -61,18 +61,18 @@ test("runs the complete browser workspace at the repository base path without AP
   const importChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await (await importChooserPromise).setFiles(syntheticWorkspacePath);
-  const importDialog = page.getByRole("dialog", { name: "Import workspace" });
+  const importDialog = page.getByRole("dialog", { name: "Import project" });
   await expect(importDialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
     "4 Employees",
   );
-  await importDialog.getByRole("button", { name: "Replace workspace", exact: true }).click();
+  await importDialog.getByRole("button", { name: "Replace project", exact: true }).click();
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
 
   const workspaceExportPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const workspaceExport = await workspaceExportPromise;
   expect(workspaceExport.suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("dialog", { name: "Export workspace" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Export project" })).toHaveCount(0);
 
   await page
     .locator('fieldset[aria-label="Canvas Unit Platform"]')
@@ -107,7 +107,7 @@ test("runs the complete browser workspace at the repository base path without AP
   await page.keyboard.press("Escape");
 
   await page.locator('[data-demo-id="browser-file-switcher"]').click();
-  await expect(page.getByText("Workspace file", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Project file", { exact: true })).toHaveCount(0);
   const downloadPromise = page.waitForEvent("download");
   await page.locator('[data-demo-id="browser-workspace-save-as"]').click();
   const download = await downloadPromise;
@@ -160,8 +160,8 @@ test("saves through a real browser file handle and reconnects it after reload", 
   const importChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await (await importChooserPromise).setFiles(syntheticWorkspacePath);
-  const importDialog = page.getByRole("dialog", { name: "Import workspace" });
-  await importDialog.getByRole("button", { name: "Replace workspace", exact: true }).click();
+  const importDialog = page.getByRole("dialog", { name: "Import project" });
+  await importDialog.getByRole("button", { name: "Replace project", exact: true }).click();
   await expect(page.locator('[data-demo-id="browser-file-switcher"]')).toContainText(
     "pages-workspace.json",
   );

@@ -101,10 +101,10 @@ one trailing 1000 ms debounce and the same revisioned Save operation. Only one w
 edits made during that write schedule the next save. Manual Save remains available and immediate.
 A conflict or error pauses autosave without clearing dirty state.
 
-## Browser file workspace
+## Browser file project
 
-The Pages sidebar replaces project management with one file menu: **New workspace**, **Open
-workspace**, **Save As**, the current filename, and, when File System Access is available,
+The Pages sidebar replaces project management with one file menu: **New project**, **Open
+project**, **Save As**, the current filename, and, when File System Access is available,
 **Autosave**. Open, Save, Import, and Export use only the complete strict `content: "workspace"`
 contract. Import marks the browser working copy Unsaved, while Export reads all current changes.
 
@@ -159,7 +159,7 @@ control geometry.
 The Main View is canonical. A custom View can begin as a copy of Main or empty, then keep its own
 document, local Employees, global Employee overrides, canvas layout, viewport, and command history.
 
-## Import and export a workspace
+## Import and export a project
 
 Choose **Export** to validate the current live snapshot and immediately download
 `org-tools-state.json`. Export has no configuration dialog and no in-app success banner. It always
@@ -168,8 +168,8 @@ to the SQLite project or bound browser file.
 
 Choose **Import** to open the native JSON chooser. A compact confirmation then shows the selected
 filename, size, and Employee, Unit, and View counts. Files are limited to 25 MiB and must be a strict
-complete workspace. **Choose another file** retries in the same dialog, **Cancel** leaves the current
-working copy untouched, and destructive **Replace workspace** installs the validated detached
+complete project. **Choose another file** retries in the same dialog, **Cancel** leaves the current
+project untouched, and destructive **Replace project** installs the validated detached
 candidate atomically.
 
 Former `teams`, `employees`, and `teamsEmployees` projections, arbitrary JSON, and malformed

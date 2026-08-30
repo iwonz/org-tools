@@ -1,11 +1,11 @@
 {
   "name": "org-tools",
   "version": "0.1.0",
-  "description": "A private-by-design organization editor with local file and SQLite workspaces.",
+  "description": "A private-by-design organization editor with local-file and SQLite projects.",
   "type": "module",
   "private": true,
   "license": "MIT",
-  "packageManager": "pnpm@10.33.2",
+  "packageManager": "pnpm@11.24.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iwonz/org-tools.git"

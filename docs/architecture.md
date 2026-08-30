@@ -75,7 +75,7 @@ workspace Import ──validate + atomic replacement─┘          │
 
 The shell consumes a discriminated persistence controller. The SQLite controller exposes project
 CRUD, stable URLs, revision conflicts, bounded UI saves, and project Save. The browser controller
-exposes New, Open workspace, Save, Save As, file conflicts, and fallback download. Browser entry
+exposes New project, Open project, Save, Save As, file conflicts, and fallback download. Browser entry
 code imports only the latter; shared product components depend on the controller interface rather
 than on project routes.
 

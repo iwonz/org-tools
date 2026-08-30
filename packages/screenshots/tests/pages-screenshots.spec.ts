@@ -97,7 +97,7 @@ test("captures the native browser file lifecycle", async ({ page }) => {
   await capture(page, "browser-autosave");
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Reconnect workspace file" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Reconnect project file" })).toBeVisible();
   await capture(page, "browser-reconnect");
 });
 

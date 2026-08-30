@@ -25,17 +25,17 @@ UUIDs, references, Live dependency graphs, tag dates, required Employee gender v
 avatars, URLs, and UI references are validated strictly. Files with the former `teams`,
 `employees`, or `teamsEmployees` scopes, arbitrary JSON, unknown fields, dangling references,
 invalid values, or malformed JSON are rejected. Rejection never falls through to a mapping workflow
-and never changes the current workspace.
+and never changes the current project.
 
 ## Import
 
 Import accepts a JSON file up to 25 MiB. After the native chooser closes, a compact confirmation
-shows the filename, size, and Employee, Unit, and View counts. **Replace workspace** atomically
+shows the filename, size, and Employee, Unit, and View counts. **Replace project** atomically
 installs the complete validated candidate, including its theme and workspace UI state. **Choose
 another file** retries in the same dialog; **Cancel** leaves the current state untouched.
 
-Import replaces only the current working copy. It does not change a SQLite project ID, name, or
-revision, and it does not bind or replace the browser workspace file handle. The imported
+Import replaces only the current project. It does not change a SQLite project ID, name, or
+revision, and it does not bind or replace the browser project file handle. The imported
 organization becomes dirty and is made durable only by the next project or file Save.
 
 ## Export
@@ -45,8 +45,8 @@ organization becomes dirty and is made durable only by the next project or file 
 that have not yet been saved to the current SQLite project or browser file.
 
 The separate **Download** module remains available for purpose-built CSV, JSON, text-template, and
-PNG outputs. Those outputs are reporting artifacts, not workspace files and cannot be imported as a
-workspace.
+PNG outputs. Those outputs are reporting artifacts, not project files and cannot be imported as a
+project.
 
 ## Current-schema policy
 

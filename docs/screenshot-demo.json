@@ -3,16 +3,16 @@
     "id": "import",
     "module": "import",
     "featured": true,
-    "title": "Workspace import confirmation",
+    "title": "Project import confirmation",
     "file": "demo-import.png",
-    "description": "Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current working copy.",
-    "capabilities": ["Strict workspace validation", "Summary counts", "Atomic replacement"]
+    "description": "Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current project.",
+    "capabilities": ["Strict project validation", "Summary counts", "Atomic replacement"]
   },
   {
     "id": "import-invalid-workspace",
     "module": "import",
     "featured": false,
-    "title": "Invalid workspace recovery",
+    "title": "Invalid project recovery",
     "file": "feature-import-invalid-workspace.png",
     "description": "Reject partial, arbitrary, or malformed JSON without changing data and offer an immediate file re-selection action.",
     "capabilities": ["Strict rejection", "No mutation", "Choose another file"]
@@ -21,10 +21,10 @@
     "id": "export",
     "module": "export",
     "featured": true,
-    "title": "Direct workspace Export",
+    "title": "Direct project Export",
     "file": "demo-export.png",
-    "description": "Download the complete current workspace in one click, including changes that have not yet been saved to the bound project or file.",
-    "capabilities": ["One-click JSON", "Complete workspace", "Includes unsaved changes"]
+    "description": "Download the complete current project in one click, including changes that have not yet been saved to the bound project or file.",
+    "capabilities": ["One-click JSON", "Complete project", "Includes unsaved changes"]
   },
   {
     "id": "theme",
@@ -466,10 +466,10 @@
     "id": "browser-file-menu",
     "module": "browser",
     "featured": false,
-    "title": "Browser workspace file menu",
+    "title": "Browser project file menu",
     "file": "feature-browser-file-menu.png",
-    "description": "Manage one browser workspace through New, Open workspace, Save As, and the bound filename.",
-    "capabilities": ["New workspace", "Open workspace", "Save As", "Bound filename"]
+    "description": "Manage one browser project through New project, Open project, Save As, and the bound filename.",
+    "capabilities": ["New project", "Open project", "Save As", "Bound filename"]
   },
   {
     "id": "browser-autosave",
@@ -489,7 +489,7 @@
     "id": "browser-reconnect",
     "module": "browser",
     "featured": false,
-    "title": "Reconnect a workspace file",
+    "title": "Reconnect a project file",
     "file": "feature-browser-reconnect.png",
     "description": "Restore only the remembered file handle and require permission before organization data is loaded.",
     "capabilities": ["Handle-only metadata", "Permission recovery", "Reconnect file", "Start blank"]
@@ -500,7 +500,7 @@
     "featured": false,
     "title": "Browser download fallback",
     "file": "feature-browser-fallback.png",
-    "description": "Use standard workspace-file input and download when native File System Access is unavailable.",
+    "description": "Use standard project-file input and download when native File System Access is unavailable.",
     "capabilities": [
       "JSON file input",
       "Download Save",

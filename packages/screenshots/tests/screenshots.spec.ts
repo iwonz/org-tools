@@ -216,10 +216,9 @@ test("captures valid and invalid workspace imports", async ({ page }) => {
     "4 Employees",
   );
   await expect(
-    dialog.getByText(
-      "Replacing imports all workspace data and interface state over the current working copy.",
-      { exact: true },
-    ),
+    dialog.getByText("Importing replaces all data and interface state in the current project.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await capture(page, "import");
 
@@ -230,7 +229,7 @@ test("captures valid and invalid workspace imports", async ({ page }) => {
     name: "invalid-workspace.json",
   });
   await expect(
-    dialog.getByText("Only a complete Org Tools workspace can be imported.", {
+    dialog.getByText("Only a complete Org Tools project can be imported.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -247,7 +246,7 @@ test("captures direct workspace export", async ({ page }) => {
   const downloadPromise = page.waitForEvent("download");
   await action.click();
   expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("dialog", { name: "Export workspace" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Export project" })).toHaveCount(0);
 });
 
 test("captures both themes and both language states", async ({ page }) => {

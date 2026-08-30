@@ -784,7 +784,7 @@ test("imports only complete workspaces through a compact confirmation", async ({
   const canceledChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await (await canceledChooserPromise).setFiles([]);
-  await expect(page.getByRole("dialog", { name: "Import workspace" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Import project" })).toHaveCount(0);
 
   const dialog = await openImportDialog(page, syntheticWorkspacePath);
   await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-header"]'));
@@ -798,7 +798,7 @@ test("imports only complete workspaces through a compact confirmation", async ({
     "2 Units",
   );
   await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText("1 View");
-  await expect(dialog.getByRole("button", { name: "Replace workspace" })).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "Replace project" })).toBeEnabled();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const invalidDialog = await openImportDialog(page, {
@@ -807,11 +807,11 @@ test("imports only complete workspaces through a compact confirmation", async ({
     name: "ordinary.json",
   });
   await expect(
-    invalidDialog.getByText("Only a complete Org Tools workspace can be imported.", {
+    invalidDialog.getByText("Only a complete Org Tools project can be imported.", {
       exact: true,
     }),
   ).toBeVisible();
-  await expect(invalidDialog.getByRole("button", { name: "Replace workspace" })).toBeDisabled();
+  await expect(invalidDialog.getByRole("button", { name: "Replace project" })).toBeDisabled();
   await invalidDialog.locator('input[type="file"]').setInputFiles(syntheticWorkspacePath);
   await expect(invalidDialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
     "4 Employees",
@@ -829,7 +829,7 @@ test("atomically imports, directly exports, saves, and reloads a workspace", asy
   const cleanSaveBounds = await saveButton.boundingBox();
 
   const importDialog = await openImportDialog(page, syntheticWorkspacePath);
-  await importDialog.getByRole("button", { name: "Replace workspace", exact: true }).click();
+  await importDialog.getByRole("button", { name: "Replace project", exact: true }).click();
   await expect(importDialog).toBeHidden();
   await expect(page).toHaveURL(projectUrl);
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
@@ -840,7 +840,7 @@ test("atomically imports, directly exports, saves, and reloads a workspace", asy
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const exported = await exportPromise;
   expect(exported.suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("dialog", { name: "Export workspace" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Export project" })).toHaveCount(0);
   const exportedPath = await exported.path();
   const exportedState = JSON.parse(await readFile(exportedPath ?? "", "utf8")) as {
     content: string;
@@ -874,7 +874,7 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
       file: { buffer: Buffer.from("{"), mimeType: "application/json", name: "broken.json" },
     },
     {
-      error: "Only a complete Org Tools workspace can be imported.",
+      error: "Only a complete Org Tools project can be imported.",
       file: {
         buffer: Buffer.from(JSON.stringify({ content: "employees", kind: "org-tools-state" })),
         mimeType: "application/json",
@@ -882,7 +882,7 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
       },
     },
     {
-      error: "Only a complete Org Tools workspace can be imported.",
+      error: "Only a complete Org Tools project can be imported.",
       file: {
         buffer: Buffer.from(JSON.stringify({ employees: [{ name: "Ordinary row" }] })),
         mimeType: "application/json",
@@ -902,7 +902,7 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
   for (const rejected of rejectedFiles) {
     const dialog = await openImportDialog(page, rejected.file);
     await expect(dialog.getByText(rejected.error, { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Replace workspace" })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "Replace project" })).toBeDisabled();
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
   }
@@ -1419,7 +1419,7 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
     mimeType: "application/json",
     name: "large-analytics-state.json",
   });
-  await dialog.getByRole("button", { name: "Replace workspace", exact: true }).click();
+  await dialog.getByRole("button", { name: "Replace project", exact: true }).click();
   await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
   await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();

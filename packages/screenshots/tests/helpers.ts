@@ -83,7 +83,7 @@ export async function replaceWithSyntheticWorkspace(page: Page): Promise<void> {
   await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
     "4 Employees",
   );
-  await dialog.getByRole("button", { name: "Replace workspace", exact: true }).click();
+  await dialog.getByRole("button", { name: "Replace project", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
@@ -94,7 +94,7 @@ export async function openImportDialog(page: Page, file: ImportFilePayload | str
   await page.getByRole("button", { name: "Import", exact: true }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(file);
-  const dialog = page.getByRole("dialog", { name: "Import workspace" });
+  const dialog = page.getByRole("dialog", { name: "Import project" });
   await expect(dialog).toBeVisible();
   return dialog;
 }

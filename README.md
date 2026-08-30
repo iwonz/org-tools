@@ -33,7 +33,7 @@ open panel, and deterministic generation rule.
 
 ## Run locally
 
-The local multi-project runtime requires Node.js 22.13 or newer and pnpm 10.33.2.
+The local multi-project runtime requires Node.js 22.13 or newer and pnpm 11.24.0.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -63,7 +63,7 @@ interactive UI, and API in Chromium, then stops it. Install the browser once wit
 base path and absence of backend code. An authenticated maintainer can publish the already merged,
 clean, synchronized `main` with `pnpm pages:publish`.
 
-On Chromium browsers, **Open workspace**, **Save**, **Save As**, and optional autosave use the File
-System Access API. Other browsers use a standard workspace-file upload and download; their workspace lasts only
+On Chromium browsers, **Open project**, **Save**, **Save As**, and optional autosave use the File
+System Access API. Other browsers use a standard project-file upload and download; their project lasts only
 for the current tab and autosave is unavailable. The public state contract is identical in both
 modes. See [Usage](docs/usage.md) for the complete workflow and compatibility details.
