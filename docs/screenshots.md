@@ -9,7 +9,7 @@ Playwright captures the production Next.js server in Chromium at 1440 by 1000, U
 clock, reduced motion, disabled animations, loaded local fonts, and an isolated SQLite database in
 the system temporary directory. Every workflow creates its own obviously synthetic project. The
 default locale and color scheme are English and light; the language and theme frames intentionally
-display Russian and dark mode respectively. The complete manifest contains exactly 51 PNGs.
+display Russian and dark mode respectively. The complete manifest contains exactly 48 PNGs.
 
 Five supporting frames cover persistence surfaces: SQLite autosave plus the browser file menu,
 browser autosave, reconnect recovery, and the unsupported-browser fallback. The latter four are
@@ -20,7 +20,7 @@ server. `pnpm screenshots:generate` runs both suites and requires exact manifest
 
 | Import | Workspace Export |
 | :---: | :---: |
-| [![Recognized workspace import](screenshots/demo-import.png)](screenshots/demo-import.png) | [![Content-scoped workspace export](screenshots/demo-export.png)](screenshots/demo-export.png) |
+| [![Workspace import confirmation](screenshots/demo-import.png)](screenshots/demo-import.png) | [![Direct workspace export](screenshots/demo-export.png)](screenshots/demo-export.png) |
 | Theme | Language |
 | [![Dark theme menu](screenshots/demo-theme.png)](screenshots/demo-theme.png) | [![Russian language menu](screenshots/demo-language.png)](screenshots/demo-language.png) |
 | Teams | Employees |
@@ -34,8 +34,8 @@ server. `pnpm screenshots:generate` runs both suites and requires exact manifest
 
 | Scenario | Required visible state |
 | --- | --- |
-| Import | A recognized workspace, scoped content choices, append or replace operation, and structured preview. |
-| Workspace Export | Local workspace formats and the content included by each scope. |
+| Import | A strict workspace with filename, size, summary counts, warning, and replacement action. |
+| Workspace Export | The expanded-sidebar direct action with no format dialog or success banner. |
 | Theme | The populated dark Editor, expanded sidebar, and open theme menu. |
 | Language | The populated Russian Editor, expanded sidebar, and open language menu. |
 | Teams | A selected Unit in a populated hierarchy with its Employee roster and actions. |
@@ -113,33 +113,15 @@ Shows permission recovery using only the remembered file handle, without loading
 
 [![Browser download fallback](screenshots/feature-browser-fallback.png)](screenshots/feature-browser-fallback.png)
 
-Shows ordinary JSON input/download behavior and the explicit unavailable-autosave explanation.
+Shows standard workspace-file input/download behavior with unavailable autosave UI omitted.
 
 ### Import and workspace Export
 
-#### Full workspace replacement
+#### Invalid workspace recovery
 
-[![Full workspace replacement](screenshots/feature-import-full-replacement.png)](screenshots/feature-import-full-replacement.png)
+[![Invalid workspace recovery](screenshots/feature-import-invalid-workspace.png)](screenshots/feature-import-invalid-workspace.png)
 
-Shows the full-workspace scope, destructive warning, and atomic replacement action.
-
-#### Ordinary JSON field mapping
-
-[![Ordinary JSON field mapping](screenshots/feature-import-json-mapping.png)](screenshots/feature-import-json-mapping.png)
-
-Shows arbitrary JSON mapping, nested fields, tag delimiter, gender mapping, and target selection.
-
-#### Mapped Employee preview
-
-[![Mapped Employee preview](screenshots/feature-import-json-preview.png)](screenshots/feature-import-json-preview.png)
-
-Shows normalized rows, identity status, validation counts, and append-only Employee import.
-
-#### Teams and Employees Export scope
-
-[![Teams and Employees Export scope](screenshots/feature-export-partial-scope.png)](screenshots/feature-export-partial-scope.png)
-
-Shows the organization projection that preserves assignments and bosses without View or UI state.
+Shows strict rejection without mutation plus the immediate **Choose another file** recovery action.
 
 ### Theme and language
 
@@ -346,7 +328,7 @@ switcher geometry, stable links, explicit Save, UI persistence, dirty navigation
 cross-origin rejection, and
 blank startup, populated workflows, English and Russian copy, light and dark themes, expanded and
 compact responsive sidebar geometry, keyboard and focus behavior, hover and pressed geometry,
-adaptive Editor snapping, Analytics and Calendar layout, Import validation and mapping, local avatar
-handling, workspace projections, Download formats, actual browser downloads, and same-origin-only
+adaptive Editor snapping, Analytics and Calendar layout, strict workspace Import, local avatar
+handling, direct workspace Export, Download formats, actual browser downloads, and same-origin-only
 requests. The Pages suite verifies the `/org-tools/` entry, file and fallback persistence,
 autosave/reconnect, all product tabs, JSON download, and the absence of API or external requests.

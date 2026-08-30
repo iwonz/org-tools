@@ -25,15 +25,16 @@ import { ImportDialog } from "@/components/import-dialog";
 import { LanguageToggle } from "@/components/language-toggle";
 import { OrgStructureEditorTab } from "@/components/org-structure-editor-tab";
 import { ProjectSwitcher } from "@/components/project-switcher";
-import { SaveDialog } from "@/components/save-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitsTab } from "@/components/units-tab";
+import { useSaveFeedback } from "@/components/use-save-feedback";
 import { useWorkspacePersistence } from "@/components/workspace-persistence-context";
-import { describeError, type UiMessageDescriptor, uiMessage } from "@/i18n/messages";
-import { type UiTextKey, useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
+import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
+import { type UiTextKey, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { cn } from "@/lib/utils";
+import { downloadWorkspace } from "@/lib/workspace-transfer";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type ProductTabValue = "analytics" | "calendar" | "employees" | "export" | "orgEditor" | "units";
@@ -71,20 +72,18 @@ function SidebarTooltip({ children, collapsed }: { children: ReactNode; collapse
 export const OrgToolsWorkspace = observer(() => {
   const store = useOrgStore();
   const t = useUiText();
-  const countText = useCountText();
   const messageText = useMessageText();
   const workspace = useWorkspacePersistence();
   const { setTheme } = useTheme();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [saveState, setSaveState] = useState<ReturnType<typeof store.createOrgToolsState> | null>(
-    null,
-  );
-  const [notice, setNotice] = useState<
-    UiMessageDescriptor | { duplicateCount: number; kind: "import"; newCount: number } | null
-  >(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const saveFeedback = useSaveFeedback({
+    changeSequence: store.organizationChangeSequence,
+    dirty: workspace.dirty,
+    saveStatus: workspace.saveStatus,
+  });
 
   const activeNavigationItem =
     PRODUCT_NAVIGATION_ITEMS.find((item) => item.value === store.activeTab) ??
@@ -99,12 +98,11 @@ export const OrgToolsWorkspace = observer(() => {
     sidebarCollapsed ? "lg:max-w-0 lg:opacity-0" : "lg:max-w-[10rem] lg:opacity-100",
   );
 
-  const openSaveDialog = () => {
+  const exportWorkspace = () => {
     setError(null);
     try {
-      setSaveState(store.createOrgToolsState());
+      downloadWorkspace(store.createOrgToolsState());
     } catch (saveError) {
-      setNotice(null);
       setError(describeError(saveError));
     }
   };
@@ -251,7 +249,7 @@ export const OrgToolsWorkspace = observer(() => {
                 aria-label={t("Workspace Export")}
                 className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
                 data-demo-id="save-workspace"
-                onClick={openSaveDialog}
+                onClick={exportWorkspace}
                 title={t("Workspace Export")}
                 type="button"
                 variant="ghost"
@@ -293,22 +291,25 @@ export const OrgToolsWorkspace = observer(() => {
               <h1 className="truncate text-base font-semibold" data-demo-id="app-title">
                 {t(activeNavigationItem.label)}
               </h1>
-              <div className="ml-auto flex shrink-0 items-center gap-2">
+              <div className="relative ml-auto flex shrink-0 items-center">
                 <span
                   className={cn(
-                    "w-24 text-right text-xs font-medium text-muted-foreground",
-                    workspace.saveStatus === "failed" && "text-destructive",
+                    "pointer-events-none absolute right-[calc(100%+0.75rem)] whitespace-nowrap text-right text-xs font-medium text-muted-foreground",
+                    saveFeedback === "failed" && "text-destructive",
                   )}
                   data-demo-id="project-save-status"
+                  aria-live="polite"
                   role="status"
                 >
-                  {workspace.saveStatus === "saving"
+                  {saveFeedback === "saving"
                     ? t("Saving…")
-                    : workspace.saveStatus === "failed"
+                    : saveFeedback === "failed"
                       ? t("Save failed")
-                      : workspace.dirty
+                      : saveFeedback === "unsaved"
                         ? t("Unsaved")
-                        : t("Saved")}
+                        : saveFeedback === "saved"
+                          ? t("Saved")
+                          : null}
                 </span>
                 <Button
                   className="h-9 min-w-20"
@@ -328,20 +329,6 @@ export const OrgToolsWorkspace = observer(() => {
                 role="alert"
               >
                 {messageText(error)}
-              </div>
-            )}
-            {notice && (
-              <div
-                className="shrink-0 bg-accent/45 px-4 py-2.5 text-sm text-foreground"
-                data-demo-id="app-notice"
-                role="status"
-              >
-                {"kind" in notice && notice.kind === "import"
-                  ? countText("importSummary", {
-                      duplicateCount: notice.duplicateCount,
-                      newCount: notice.newCount,
-                    })
-                  : messageText(notice as UiMessageDescriptor)}
               </div>
             )}
             <TabsContent
@@ -399,58 +386,17 @@ export const OrgToolsWorkspace = observer(() => {
         </div>
       )}
       <ImportDialog
-        existingEmployees={store.workspaceEmployees.map(({ email, id, username }) => ({
-          email,
-          id,
-          username,
-        }))}
-        onCommitEmployees={(drafts, summary) => {
-          const result = store.importEmployees(drafts);
+        onCommit={(candidate) => {
+          store.loadOrgToolsState(candidate.state, candidate.fileName, candidate.fileSizeBytes);
+          setTheme(candidate.state.ui.theme);
           setError(null);
-          setNotice({
-            duplicateCount: summary.duplicateRowCount,
-            kind: "import",
-            newCount: result.newEmployeeCount,
-          });
-        }}
-        onCommitMapped={(document) => {
-          store.importMapped(document);
-          setError(null);
-          setNotice(uiMessage("Import merged into Main."));
-        }}
-        onCommitState={(candidate, content, operation) => {
-          store.importState(
-            candidate.state,
-            content,
-            operation,
-            candidate.fileName,
-            candidate.fileSizeBytes,
-          );
-          if (operation === "replace") setTheme(store.theme);
-          setError(null);
-          setNotice(operation === "append" ? uiMessage("Import merged into Main.") : null);
+          setImportFile(null);
         }}
         initialFile={importFile}
         onOpenChange={(open) => {
           if (!open) setImportFile(null);
         }}
-        onValidateMapped={(document) => {
-          store.previewMappedImport(document);
-        }}
-        onValidateState={(candidate, content, operation) => {
-          store.previewStateImport(candidate.state, content, operation);
-        }}
         open={importFile !== null}
-      />
-      <SaveDialog
-        onDownloaded={() => {
-          setError(null);
-        }}
-        onOpenChange={(open) => {
-          if (!open) setSaveState(null);
-        }}
-        open={saveState !== null}
-        state={saveState}
       />
     </>
   );

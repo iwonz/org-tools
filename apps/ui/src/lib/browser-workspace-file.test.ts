@@ -47,7 +47,7 @@ describe("browser workspace file lifecycle", () => {
       parseBrowserWorkspaceFile(
         new File([JSON.stringify({ ...state, content: "employees" })], "employees.json"),
       ),
-    ).rejects.toThrow("full workspace");
+    ).rejects.toThrow("invalid top-level structure");
     await expect(parseBrowserWorkspaceFile(new File(["{"], "broken.json"))).rejects.toThrow();
   });
 

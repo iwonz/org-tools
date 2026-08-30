@@ -75,10 +75,10 @@ export function BrowserFileSwitcher({
           side="right"
           sideOffset={10}
         >
-          <div className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("Workspace file")}
-          </div>
-          <p className="truncate px-3 pb-3 text-sm font-semibold" title={workspace.displayName}>
+          <p
+            className="truncate px-3 pb-3 pt-3 text-sm font-semibold"
+            title={workspace.displayName}
+          >
             {workspace.displayName}
           </p>
           <div className="grid gap-1 px-2 pb-2">
@@ -119,26 +119,20 @@ export function BrowserFileSwitcher({
               {t("Save As")}
             </Button>
           </div>
-          <label
-            className={cn(
-              "flex items-center gap-2.5 bg-muted/45 px-3 pb-2 pt-3 text-sm font-medium",
-              workspace.autosaveSupported ? "cursor-pointer" : "cursor-not-allowed opacity-60",
-            )}
-            htmlFor="browser-workspace-autosave"
-          >
-            <Checkbox
-              checked={workspace.autosaveEnabled}
-              data-demo-id="autosave-checkbox"
-              disabled={!workspace.autosaveSupported}
-              id="browser-workspace-autosave"
-              onCheckedChange={(checked) => void workspace.setAutosaveEnabled(checked === true)}
-            />
-            <span>{t("Autosave")}</span>
-          </label>
-          {!workspace.autosaveSupported && (
-            <p className="bg-muted/45 px-3 pb-3 text-xs leading-5 text-muted-foreground">
-              {t("Autosave requires File System Access.")}
-            </p>
+          {workspace.fileAccessSupported && (
+            <label
+              className="flex cursor-pointer items-center gap-2.5 bg-muted/45 px-3 pb-3 pt-3 text-sm font-medium"
+              htmlFor="browser-workspace-autosave"
+            >
+              <Checkbox
+                checked={workspace.autosaveEnabled}
+                data-demo-id="autosave-checkbox"
+                disabled={!workspace.autosaveSupported}
+                id="browser-workspace-autosave"
+                onCheckedChange={(checked) => void workspace.setAutosaveEnabled(checked === true)}
+              />
+              <span>{t("Autosave")}</span>
+            </label>
           )}
         </PopoverContent>
       </Popover>

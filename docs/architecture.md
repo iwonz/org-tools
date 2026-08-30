@@ -3,8 +3,8 @@
 org-tools has two delivery modes over the same in-memory MobX product and strict unversioned
 `OrgToolsState`. The local Next.js server binds to `127.0.0.1` and persists multiple projects in one
 SQLite database through a same-origin API. The browser-only Next.js static export manages one local
-JSON file or a tab-lifetime workspace without a backend. Import and Export retain the same scoped
-Teams, Employees, Teams + Employees, or Full workspace contract in both modes.
+JSON file or a tab-lifetime workspace without a backend. Import and Export use the same complete
+`content: "workspace"` contract in both modes.
 
 ## Workspace layout
 
@@ -16,7 +16,6 @@ Teams, Employees, Teams + Employees, or Full workspace contract in both modes.
 - `packages/screenshots` contains production-build browser smoke tests and deterministic PNG
   capture.
 - `openspec` contains active changes and canonical capability specifications.
-- `examples` contains small, explicitly synthetic JSON imports.
 
 The `pnpm spec -- ...` wrapper is the repository entry point for OpenSpec and disables its
 development-only anonymous telemetry.
@@ -54,12 +53,12 @@ not added to MobX workspace state, exported files, or browser storage.
 ## State flow
 
 ```text
-SQLite state_json ──strict read + UI overlay─────────────┐
-selected JSON file ──strict full-workspace read──────────┤
-scoped state JSON ──strict projection + append/replace───┼──> in-memory stores ──> UI and local export
-ordinary JSON ──nested mapping and atomic append─────────┘          │
-                                                                    ├──Save──> SQLite
-                                                                    └──Save──> selected file/download
+SQLite state_json ──strict read + UI overlay──────┐
+selected JSON file ──strict workspace read────────┼──> in-memory stores ──> UI and local output
+workspace Import ──validate + atomic replacement─┘          │
+                                                             ├──Save──> SQLite
+                                                             ├──Save──> selected file/download
+                                                             └──Export──> workspace JSON download
 ```
 
 The shell consumes a discriminated persistence controller. The SQLite controller exposes project
@@ -85,29 +84,18 @@ ephemeral fallback. The connection is opened lazily and reused across developmen
 same-origin API. Every response is `Cache-Control: no-store`. Mutations accept only JSON and require
 a matching loopback Origin and Host. The runtime does not enable CORS.
 
-`OrgToolsState` is the sole current transfer format. Its `content` discriminator declares Teams,
-Employees, Teams + Employees, or Full workspace. A parser verifies the declared scope, exact
-structure, UUID identifiers, Employee tag records and dates, references, URLs, avatar bounds, and
-the required normalized Employee gender enum before graph invariants and any mutation. Partial
-states contain one canonical Main View and UI shell;
-Full workspace can contain every View and UI field. Obsolete and scope-mismatched shapes are
-rejected without migration.
+`OrgToolsState` is the sole current transfer format. Its `content` discriminator is the literal
+`"workspace"`. The parser verifies the exact structure, UUID identifiers, Employee tag records and
+dates, references, URLs, avatar bounds, required normalized Employee gender enum, UI references, and
+graph invariants before any mutation. Former partial scopes and arbitrary JSON are rejected without
+migration or fallback.
 
-`ImportSessionStore` keeps the selected state projection and operation or the ordinary file
-collection, mappings, preview, and errors transiently. Preview plans retain normalized Employees,
-ordered Team hierarchy, manual assignment references, and separate Live role references. The dialog
-flattens that graph into dynamically measured virtual rows without duplicating Employee records.
-Recognized state append resolves Employee identity, remaps UUIDs and references, translates imported
-layout into a free Main area, and retains custom Views and UI. Partial replace installs a clean
-projection; Full workspace always replaces.
-
-Ordinary JSON maps recursive children and inline Employee arrays. These sources create manual Teams
-only and always append. Conflicting keys, ambiguous identities, and multiple bosses block the
-detached complete candidate. The production state parser validates every candidate before one store
-mutation.
-
-The workspace Export dialog snapshots complete state once and runs all four choices through pure state
-projection serializers. Every result is parsed through the production state parser before download.
+Workspace Import keeps only the selected `File`, validated detached candidate, summary counts, and
+owned error transiently. Confirming performs one complete store replacement, including theme and UI
+state, without changing the persistence controller's project identity or browser file handle.
+Workspace Export creates and validates the current live snapshot once and immediately downloads it;
+there is no projection serializer or export dialog. The data Download session remains an independent
+reporting pipeline for CSV, JSON, templates, and PNG.
 
 Employee tags use one normalized runtime record with a label and nullable `YYYY-MM-DD` date. Search
 documents, Live rules, and option identity project only labels. Shared derived indexes group exact
@@ -142,8 +130,8 @@ object URLs and the original source are not retained.
 - The Views store owns custom View documents and their independent editor stores.
 - Each editor store owns document commands, canvas selection, layout, viewport, and undo/redo.
 - The data-download session owns transient source selection and output settings.
-- The import session owns transient file parsing, projection choice, operation, mappings, and previews.
-- The workspace Export dialog owns a transient complete-state snapshot and selected download shape.
+- The workspace Import dialog owns one transient file, complete validated candidate, and summary.
+- The workspace Export action validates and downloads one complete live-state snapshot.
 - The locale provider owns the independent `en` or `ru` UI preference and updates document metadata.
 
 Derived indexes resolve IDs into display models and search documents. Components receive resolved
@@ -169,7 +157,7 @@ compares `lastModified` and size with the last known fingerprint. An external ch
 file, Overwrite file, Save As, or Cancel. A remembered handle with missing permission blocks editing
 behind Reconnect file or Start blank; corrupt or unavailable files are never replaced silently. If
 the APIs are unavailable, Open uses a JSON file input, Save downloads `org-tools-state.json`, the
-working copy lasts only for the tab, and autosave is disabled.
+working copy lasts only for the tab, and autosave UI is not rendered.
 
 Downloading still produces `org-tools-state.json`, and importing changes only the current working
 copy until Save. Locale remains the independent `org-tools-locale` browser preference and is not

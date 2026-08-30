@@ -42,7 +42,9 @@ replacing or writing state.
 ### Requirement: File System Access is progressive and recoverable
 The browser runtime SHALL use user-activated File System Access pickers when both required methods
 are available, SHALL persist only the last successful file handle in IndexedDB, and SHALL use memory
-plus standard input/download behavior otherwise.
+plus standard input/download behavior otherwise. When the API is unavailable, the interface SHALL
+omit the Autosave control and every explanatory File System Access label while retaining functional
+New, Open, Save, and Save As fallbacks.
 
 #### Scenario: Save bound file
 - **WHEN** a supported browser saves a valid workspace to a bound writable handle
@@ -56,8 +58,9 @@ plus standard input/download behavior otherwise.
 
 #### Scenario: Unsupported browser fallback
 - **WHEN** File System Access pickers are unavailable
-- **THEN** Open uses a normal JSON input, Save downloads `org-tools-state.json`, Autosave is disabled,
-  and the workspace otherwise remains fully functional in the current tab
+- **THEN** Open uses a normal JSON input, Save and Save As download `org-tools-state.json`, the
+  Autosave row and support explanation are absent, and the workspace remains fully functional in
+  the current tab
 
 #### Scenario: Reconnect remembered file
 - **WHEN** a remembered handle requires permission after reload

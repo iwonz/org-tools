@@ -1,7 +1,7 @@
 import type { OrgToolsState } from "@org-tools/types";
 
 import { downloadJson, parseOrgToolsState } from "@/lib/org-file";
-import { MAX_EMPLOYEE_IMPORT_FILE_BYTES } from "@/stores/import-session-store";
+import { MAX_WORKSPACE_IMPORT_BYTES } from "@/lib/workspace-transfer";
 
 export type BrowserFileFingerprint = {
   lastModified: number;
@@ -41,14 +41,10 @@ export const browserFileFingerprintsEqual = (
 export const parseBrowserWorkspaceFile = async (
   file: Pick<File, "name" | "size" | "text">,
 ): Promise<OrgToolsState> => {
-  if (file.size > MAX_EMPLOYEE_IMPORT_FILE_BYTES) {
+  if (file.size > MAX_WORKSPACE_IMPORT_BYTES) {
     throw new Error("Workspace file exceeds the 25 MiB limit.");
   }
-  const parsed = parseOrgToolsState(JSON.parse(await file.text()) as unknown);
-  if (parsed.content !== "workspace") {
-    throw new Error("Open workspace requires a full workspace state.");
-  }
-  return parsed;
+  return parseOrgToolsState(JSON.parse(await file.text()) as unknown);
 };
 
 export const readBrowserWorkspaceHandle = async (handle: BrowserWorkspaceFileHandle) => {
@@ -71,7 +67,6 @@ export const writeBrowserWorkspaceHandle = async ({
   state: OrgToolsState;
 }) => {
   const parsed = parseOrgToolsState(structuredClone(state));
-  if (parsed.content !== "workspace") throw new Error("Only a full workspace can be saved.");
   const current = browserFileFingerprint(await handle.getFile());
   if (
     !force &&
@@ -88,7 +83,6 @@ export const writeBrowserWorkspaceHandle = async ({
 
 export const downloadBrowserWorkspace = (state: OrgToolsState) => {
   const parsed = parseOrgToolsState(structuredClone(state));
-  if (parsed.content !== "workspace") throw new Error("Only a full workspace can be saved.");
   downloadJson(parsed, "org-tools-state.json");
 };
 

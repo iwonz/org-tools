@@ -16,7 +16,7 @@ canvas arrangement can render all nodes simultaneously.
 
 ## Rendering
 
-Employee lists, Unit-aware pickers, long filter options, and import previews must remain virtualized.
+Employee lists, Unit-aware pickers, and long filter options must remain virtualized.
 Use stable item keys and remeasure rows when section composition or filters change. Components must
 receive resolved data and contexts through props rather than observing the whole organization store.
 Employee list rows use a zero-gap virtualizer layout; their measured heights remain content-driven.
@@ -52,13 +52,11 @@ not require content measurement or clip the checkbox and date action.
 
 ## Import and export
 
-Parsing and preview keep bounded samples for display while retaining enough normalized row and graph
-state for an atomic commit. JSON hierarchy and inline Employee relations normalize once before
-preview. Structured preview plans keep Employees in one keyed collection, flatten Team, assignment,
-and Live-role rows once per projection or collapse change, and dynamically measure only virtualized
-rows inside a bounded viewport.
-Large synthetic fixtures are generated in a temporary directory and are never committed. Complete
-state parsing validates references in indexed passes instead of repeated full collection scans.
+Import reads at most 25 MiB, validates one detached complete workspace, and derives only three
+summary counts before an atomic replacement. It does not build mapping indexes, partial projections,
+or preview graphs. Complete-state parsing validates references in indexed passes instead of repeated
+full collection scans. Export serializes one validated live snapshot only after the explicit action.
+Large synthetic fixtures are generated in a temporary directory and are never committed.
 
 Download derives only the selected sources and Employees. Canvas PNG generation reuses current layout
 and locally available embedded avatar data, with no network fetch.
@@ -89,7 +87,7 @@ the temporary source URL rather than retaining both original and cropped images.
 
 Performance-sensitive changes should record dataset size, browser, build mode, and measured
 interaction. At minimum, exercise search, filters, Unit navigation, View switching, canvas selection,
-mapped import preview, and export against the maintained target dataset. Treat visible blocking,
+complete workspace Import, and Export against the maintained target dataset. Treat visible blocking,
 unbounded memory duplication, or per-row network work as regressions.
 
 Generate the maintained dataset outside the repository with `pnpm fixture:performance`. The command

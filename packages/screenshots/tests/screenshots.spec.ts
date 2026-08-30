@@ -10,7 +10,6 @@ import {
   openImportDialog,
   replaceWithSyntheticWorkspace,
   stabilizeForScreenshot,
-  syntheticEmployeesJsonPath,
   syntheticWorkspacePath,
 } from "./helpers.js";
 
@@ -162,6 +161,12 @@ test("captures persistent project management", async ({ page }) => {
     "aria-checked",
     "true",
   );
+  await page.keyboard.press("Escape");
+  await replaceWithSyntheticWorkspace(page);
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Saved", {
+    timeout: 5_000,
+  });
+  popover = await openProjectSwitcher(page);
   await capture(page, "project-autosave");
 
   await popover.getByRole("button", { name: "Create project", exact: true }).click();
@@ -198,50 +203,45 @@ test("captures project revision conflict resolution", async ({ page, context }) 
   await secondPage.close();
 });
 
-test("captures recognized and ordinary import workflows", async ({ page }) => {
+test("captures valid and invalid workspace imports", async ({ page }) => {
   await openBlankWorkspace(page);
   let dialog = await openImportDialog(page, syntheticWorkspacePath);
-  await expect(dialog.getByText("Workspace state detected", { exact: true })).toBeVisible();
-  await dialog.getByRole("radio", { name: "Teams + Employees", exact: true }).check();
-  await expect(dialog.getByText("Import mode", { exact: true })).toBeVisible();
-  await expect(dialog.locator('[data-demo-id="structured-preview-employee-card"]')).toHaveCount(4);
+  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
+    "4 Employees",
+  );
+  await expect(
+    dialog.getByText(
+      "Replacing imports all workspace data and interface state over the current working copy.",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await capture(page, "import");
 
   await page.keyboard.press("Escape");
-  dialog = await openImportDialog(page, syntheticWorkspacePath);
-  await expect(dialog.getByRole("radio", { name: "Full workspace", exact: true })).toBeChecked();
+  dialog = await openImportDialog(page, {
+    buffer: Buffer.from('[{"name":"Unsupported row"}]'),
+    mimeType: "application/json",
+    name: "invalid-workspace.json",
+  });
   await expect(
-    dialog.getByText("Full workspace import replaces all current data and interface state.", {
+    dialog.getByText("Only a complete Org Tools workspace can be imported.", {
       exact: true,
     }),
   ).toBeVisible();
-  await capture(page, "import-full-replacement");
-
-  await page.keyboard.press("Escape");
-  dialog = await openImportDialog(page, syntheticEmployeesJsonPath);
-  await expect(dialog.getByText("Field mapping", { exact: true })).toBeVisible();
-  await expect(dialog.getByText("2 new", { exact: true })).toBeVisible();
-  const body = dialog.locator('[data-slot="dialog-body"]');
-  await body.evaluate((element) => {
-    element.scrollTop = 90;
-  });
-  await capture(page, "import-json-mapping");
-  await body.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect(dialog.getByText("Normalized preview", { exact: true })).toBeVisible();
-  await expect(dialog.locator('[data-demo-id="ordinary-import-preview-row"]')).toHaveCount(2);
-  await capture(page, "import-json-preview");
+  await expect(dialog.getByText("Choose another file", { exact: true })).toBeVisible();
+  await capture(page, "import-invalid-workspace");
 });
 
-test("captures every workspace export scope", async ({ page }) => {
+test("captures direct workspace export", async ({ page }) => {
   await openSyntheticWorkspace(page);
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Export workspace" });
-  await expect(dialog).toBeVisible();
+  await page.locator('[data-demo-id="sidebar-toggle"]').click();
+  const action = page.getByRole("button", { name: "Export", exact: true });
+  await action.hover();
   await capture(page, "export");
-  await dialog.locator('input[value="teamsEmployees"]').check();
-  await capture(page, "export-partial-scope");
+  const downloadPromise = page.waitForEvent("download");
+  await action.click();
+  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
+  await expect(page.getByRole("dialog", { name: "Export workspace" })).toHaveCount(0);
 });
 
 test("captures both themes and both language states", async ({ page }) => {
@@ -260,6 +260,9 @@ test("captures both themes and both language states", async ({ page }) => {
   await capture(page, "theme");
 
   await page.getByRole("option", { name: "Light", exact: true }).click();
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("", {
+    timeout: 5_000,
+  });
   await page.locator('[data-demo-id="language-toggle"]').click();
   await capture(page, "language-english-menu");
 

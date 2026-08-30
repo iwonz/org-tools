@@ -55,23 +55,6 @@ export const useRuntimeUiText = () => {
     (message: string) => {
       if (isUiTextKey(message)) return t(message);
 
-      const scalarMatch = /^(.*) must be a scalar value\.$/u.exec(message);
-      const scalarField = scalarMatch?.[1];
-      if (scalarField && isUiTextKey(scalarField)) {
-        return t("{field} must be a scalar value.", { field: t(scalarField) });
-      }
-
-      const duplicateIdentityMatch =
-        /^(Username|Email) "(.*)" appears in multiple import rows\.$/u.exec(message);
-      const identity = duplicateIdentityMatch?.[1];
-      const value = duplicateIdentityMatch?.[2];
-      if (identity && value && isUiTextKey(identity)) {
-        return t('{identity} "{value}" appears in multiple import rows.', {
-          identity: t(identity),
-          value,
-        });
-      }
-
       return t("An unexpected error occurred.");
     },
     [t],

@@ -5,11 +5,9 @@ import type { WorkspaceEmployee } from "./workspace.js";
 export type UiTheme = "light" | "dark" | "system";
 export type UiActiveTab = "units" | "employees" | "orgEditor" | "export" | "analytics" | "calendar";
 
-export type OrgToolsStateContent = "teams" | "employees" | "teamsEmployees" | "workspace";
-
 export type OrgToolsState = {
   kind: "org-tools-state";
-  content: OrgToolsStateContent;
+  content: "workspace";
   activeViewId: string;
   employees: WorkspaceEmployee[];
   views: OrgView[];

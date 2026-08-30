@@ -1,17 +1,15 @@
-# Import formats
+# Workspace transfer format
 
-The application accepts one strict state contract plus ordinary JSON mapping. Every file is
-limited to 25 MiB, processed only in the current browser page, previewed before commit, and applied
-through a detached candidate.
+Org Tools transfers organization state through one strict full-workspace JSON contract. Import and
+Export run locally in the browser; the selected file and its contents are never sent to a server or
+third party.
 
-## Scoped Org Tools state
+## Public state contract
 
 ```ts
-type OrgToolsStateContent = "teams" | "employees" | "teamsEmployees" | "workspace";
-
 type OrgToolsState = {
   kind: "org-tools-state";
-  content: OrgToolsStateContent;
+  content: "workspace";
   activeViewId: string;
   employees: WorkspaceEmployee[];
   views: OrgView[];
@@ -19,49 +17,38 @@ type OrgToolsState = {
 };
 ```
 
-The contract has exact fields and no format or schema version. UUIDs, references, Live dependency
-graphs, tag dates, required Employee gender values, avatars, URLs, and `content` invariants are
-strictly validated. JSON that claims
-`kind: "org-tools-state"` but fails validation is rejected and never falls through to ordinary
-mapping.
+The object has exact top-level fields and intentionally has no format or schema version. It contains
+the complete Employee catalog, Main and custom Views, Unit hierarchy, assignments, Live rules,
+editor documents, layouts, viewports, and workspace UI state.
 
-- `teams` contains one Main View with hierarchy, order, coordinates, layout, viewport, and Live
-  filters. Employees, assignments, bosses, positions, overrides, and custom Views are absent.
-- `employees` contains the complete global Employee catalog and one empty Main View.
-- `teamsEmployees` contains the complete catalog and complete Main View, including manual roles and
-  Live overrides, but no custom Views.
-- `workspace` contains the complete workspace with Main and custom Views plus UI state.
+UUIDs, references, Live dependency graphs, tag dates, required Employee gender values, embedded
+avatars, URLs, and UI references are validated strictly. Files with the former `teams`,
+`employees`, or `teamsEmployees` scopes, arbitrary JSON, unknown fields, dangling references,
+invalid values, or malformed JSON are rejected. Rejection never falls through to a mapping workflow
+and never changes the current workspace.
 
-The workspace Export dialog downloads those values as `org-tools-teams.json`, `org-tools-employees.json`,
-`org-tools-teams-employees.json`, and `org-tools-state.json`.
+## Import
 
-When importing, a state exposes only projections carried by its `content`. Partial projections offer
-Append, the safe default, or Replace all current. Append reuses one unambiguous Employee identity by
-username then email without overwrite, generates new UUIDs, remaps references, appends roots, and
-translates the source layout into a free Main area while preserving current custom Views and UI.
-Partial replace deletes all current organization data and installs a clean selected projection. The
-Import mode section presents Append and Replace as separate choice cards, with replacement styled as
-destructive. Full workspace always replaces and displays a dedicated destructive warning.
+Import accepts a JSON file up to 25 MiB. After the native chooser closes, a compact confirmation
+shows the filename, size, and Employee, Unit, and View counts. **Replace workspace** atomically
+installs the complete validated candidate, including its theme and workspace UI state. **Choose
+another file** retries in the same dialog; **Cancel** leaves the current state untouched.
 
-## Ordinary JSON
+Import replaces only the current working copy. It does not change a SQLite project ID, name, or
+revision, and it does not bind or replace the browser workspace file handle. The imported
+organization becomes dirty and is made durable only by the next project or file Save.
 
-Ordinary JSON can be mapped as Teams, Employees, or Teams + Employees. Select the root object
-collection, then map source fields. A Team collection can map recursive `children`; combined import
-can also map an inline `employees` array. The same field mapping applies at every nested level.
+## Export
 
-Generic Teams are manual. Live filters and Live roles are accepted only in a recognized scoped
-state. Employee tags from ordinary mapping are undated. Gender can be mapped from bounded English
-aliases into `male`, `female`, or `unspecified`; an empty or unmapped value becomes
-`unspecified`, while an unsupported mapped value blocks the detached candidate.
+**Export** validates the complete live snapshot and immediately downloads
+`org-tools-state.json`. There is no format dialog or success banner. The snapshot includes changes
+that have not yet been saved to the current SQLite project or browser file.
 
-## Validation and current-schema policy
+The separate **Download** module remains available for purpose-built CSV, JSON, text-template, and
+PNG outputs. Those outputs are reporting artifacts, not workspace files and cannot be imported as a
+workspace.
 
-Preview renders the ordered Team tree, nested manual assignment cards, separate Live role cards,
-Employees without direct manual assignments, new/reused identity state, counts, and errors through a
-bounded virtualized viewport. Employee-only state renders its complete catalog without an empty-Team
-placeholder.
-Ordinary mapping always appends. Cancellation or any parsing, mapping, identity, graph, reference, or
-candidate error leaves the current workspace unchanged.
+## Current-schema policy
 
 Public Org Tools files intentionally contain no format or schema version. When the public state
 schema changes, the repository replaces the former type, reader, fixtures, documentation, and tests

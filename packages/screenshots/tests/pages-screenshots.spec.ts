@@ -71,6 +71,9 @@ test("captures the native browser file lifecycle", async ({ page }) => {
   await page.locator('[data-demo-id="browser-file-switcher"]').click();
   const filePopover = page.locator('[data-demo-id="browser-file-popover"]');
   await expect(filePopover).toBeVisible();
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("", {
+    timeout: 5_000,
+  });
   await capture(page, "browser-file-menu");
 
   await page.keyboard.press("Escape");
@@ -112,8 +115,6 @@ test("captures the browser download fallback", async ({ page }) => {
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
   await page.locator('[data-demo-id="browser-file-switcher"]').click();
-  await expect(
-    page.getByText("Autosave requires File System Access.", { exact: true }),
-  ).toBeVisible();
+  await expect(page.locator('[data-demo-id="autosave-checkbox"]')).toHaveCount(0);
   await capture(page, "browser-fallback");
 });

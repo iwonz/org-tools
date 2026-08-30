@@ -3,70 +3,28 @@
     "id": "import",
     "module": "import",
     "featured": true,
-    "title": "Recognized workspace import",
+    "title": "Workspace import confirmation",
     "file": "demo-import.png",
-    "description": "Choose scoped state content, append or replace mode, and review the structured Team and Employee preview.",
-    "capabilities": [
-      "State recognition",
-      "Scoped content",
-      "Append or replace",
-      "Structured preview"
-    ]
+    "description": "Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current working copy.",
+    "capabilities": ["Strict workspace validation", "Summary counts", "Atomic replacement"]
   },
   {
-    "id": "import-full-replacement",
+    "id": "import-invalid-workspace",
     "module": "import",
     "featured": false,
-    "title": "Full workspace replacement",
-    "file": "feature-import-full-replacement.png",
-    "description": "Review the destructive full-workspace warning before atomically replacing Views, layout, viewport, and UI state.",
-    "capabilities": ["Full workspace", "Destructive warning", "Atomic replacement"]
-  },
-  {
-    "id": "import-json-mapping",
-    "module": "import",
-    "featured": false,
-    "title": "Ordinary JSON field mapping",
-    "file": "feature-import-json-mapping.png",
-    "description": "Map arbitrary JSON Employee fields, nested values, tags, and gender without a separate import format.",
-    "capabilities": [
-      "Ordinary JSON",
-      "Field mapping",
-      "Nested fields",
-      "Tag delimiter",
-      "Gender mapping"
-    ]
-  },
-  {
-    "id": "import-json-preview",
-    "module": "import",
-    "featured": false,
-    "title": "Mapped Employee preview",
-    "file": "feature-import-json-preview.png",
-    "description": "Validate mapped rows, identities, and import status before appending synthetic Employees.",
-    "capabilities": ["Mapped preview", "Identity status", "Validation", "Append-only import"]
+    "title": "Invalid workspace recovery",
+    "file": "feature-import-invalid-workspace.png",
+    "description": "Reject partial, arbitrary, or malformed JSON without changing data and offer an immediate file re-selection action.",
+    "capabilities": ["Strict rejection", "No mutation", "Choose another file"]
   },
   {
     "id": "export",
     "module": "export",
     "featured": true,
-    "title": "Workspace Export scopes",
+    "title": "Direct workspace Export",
     "file": "demo-export.png",
-    "description": "Choose Teams, Employees, Teams + Employees, or Full workspace as a local JSON download.",
-    "capabilities": ["Four content scopes", "Local JSON download", "Scope counts"]
-  },
-  {
-    "id": "export-partial-scope",
-    "module": "export",
-    "featured": false,
-    "title": "Teams + Employees export",
-    "file": "feature-export-partial-scope.png",
-    "description": "Select the combined organization projection without custom Views or transient workspace UI state.",
-    "capabilities": [
-      "Teams + Employees projection",
-      "Assignments and bosses",
-      "Partial workspace export"
-    ]
+    "description": "Download the complete current workspace in one click, including changes that have not yet been saved to the bound project or file.",
+    "capabilities": ["One-click JSON", "Complete workspace", "Includes unsaved changes"]
   },
   {
     "id": "theme",
@@ -542,7 +500,7 @@
     "featured": false,
     "title": "Browser download fallback",
     "file": "feature-browser-fallback.png",
-    "description": "Use ordinary JSON file input and download when native File System Access is unavailable.",
+    "description": "Use standard workspace-file input and download when native File System Access is unavailable.",
     "capabilities": [
       "JSON file input",
       "Download Save",

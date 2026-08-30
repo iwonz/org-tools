@@ -12,7 +12,6 @@ import type {
   OrgEditorState,
   OrgEditorUnit,
   OrgToolsState,
-  OrgToolsStateContent,
   OrgView,
   UiActiveTab,
   UiTheme,
@@ -80,8 +79,6 @@ const isActiveTab = (value: unknown): value is UiActiveTab =>
   value === "export" ||
   value === "analytics" ||
   value === "calendar";
-const isStateContent = (value: unknown): value is OrgToolsStateContent =>
-  value === "teams" || value === "employees" || value === "teamsEmployees" || value === "workspace";
 const isLayoutMode = (value: unknown): value is OrgEditorLayoutMode =>
   value === "leftRight" || value === "topDown";
 
@@ -571,52 +568,6 @@ const validateStateGraph = (state: OrgToolsState): void => {
   assertUniqueIds(state.ui.expandedUnitIds, "Expanded Unit IDs must be unique.");
 };
 
-const isCanonicalPartialUi = (state: OrgToolsState): boolean =>
-  state.ui.activeTab === "orgEditor" &&
-  state.ui.expandedUnitIds.length === 0 &&
-  state.ui.selectedUnitId === null &&
-  state.ui.theme === "system";
-
-const validateStateContent = (state: OrgToolsState): void => {
-  if (state.content === "workspace") return;
-  if (state.views.length !== 1 || state.views[0]?.kind !== "main") {
-    throw new Error("Partial workspace state must contain exactly one Main View.");
-  }
-  const main = state.views[0];
-  if (state.activeViewId !== main.id || !isCanonicalPartialUi(state)) {
-    throw new Error("Partial workspace state has a non-canonical UI shell.");
-  }
-  if (
-    main.state.employees.length > 0 ||
-    main.state.employeeOverrides.length > 0 ||
-    main.state.selectedItems.length > 0
-  ) {
-    throw new Error("Partial workspace state contains unsupported View-local data.");
-  }
-
-  if (state.content === "employees") {
-    if (main.state.units.length > 0) {
-      throw new Error("Employees state must contain an empty Main View.");
-    }
-    return;
-  }
-
-  if (state.content === "teams") {
-    if (state.employees.length > 0) {
-      throw new Error("Teams state cannot contain Employees.");
-    }
-    for (const unit of main.state.units) {
-      if (
-        unit.employeeIds.length > 0 ||
-        unit.employeePositions.length > 0 ||
-        unit.bossEmployeeId !== null
-      ) {
-        throw new Error("Teams state cannot contain Employee assignments or roles.");
-      }
-    }
-  }
-};
-
 export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (!isRecord(input)) throw new Error("Workspace state must be a JSON object.");
   const value = input;
@@ -625,7 +576,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   }
   if (
     !hasExactKeys(value, ["activeViewId", "content", "employees", "kind", "ui", "views"]) ||
-    !isStateContent(value.content) ||
+    value.content !== "workspace" ||
     !isUuid(value.activeViewId) ||
     !Array.isArray(value.employees) ||
     !Array.isArray(value.views)
@@ -668,7 +619,6 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
     views: views as OrgView[],
   };
   validateStateGraph(state);
-  validateStateContent(state);
   return state;
 };
 

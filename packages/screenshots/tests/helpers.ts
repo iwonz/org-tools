@@ -11,10 +11,6 @@ export type ImportFilePayload = {
 export const syntheticWorkspacePath = fileURLToPath(
   new URL("../fixtures/synthetic-workspace.json", import.meta.url),
 );
-export const syntheticEmployeesJsonPath = fileURLToPath(
-  new URL("../../../examples/employees.json", import.meta.url),
-);
-
 export const productTabs = [
   "Units",
   "Employees",
@@ -84,8 +80,10 @@ export async function openBlankWorkspace(page: Page): Promise<void> {
 
 export async function replaceWithSyntheticWorkspace(page: Page): Promise<void> {
   const dialog = await openImportDialog(page, syntheticWorkspacePath);
-  await expect(dialog.getByText("Workspace state detected", { exact: true })).toBeVisible();
-  await dialog.getByRole("button", { name: "Replace all current", exact: true }).click();
+  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText(
+    "4 Employees",
+  );
+  await dialog.getByRole("button", { name: "Replace workspace", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
@@ -96,7 +94,7 @@ export async function openImportDialog(page: Page, file: ImportFilePayload | str
   await page.getByRole("button", { name: "Import", exact: true }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(file);
-  const dialog = page.getByRole("dialog", { name: "Import" });
+  const dialog = page.getByRole("dialog", { name: "Import workspace" });
   await expect(dialog).toBeVisible();
   return dialog;
 }

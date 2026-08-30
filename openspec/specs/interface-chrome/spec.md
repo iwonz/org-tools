@@ -57,11 +57,11 @@ Product destinations SHALL retain their accessible Radix tab behavior and order 
 sidebar. The sidebar SHALL initialize in compact mode, SHALL remain transient rather than persisted,
 and SHALL also own persistence selection, language, theme, Import, and workspace Export. SQLite mode
 SHALL render the project switcher; browser mode SHALL render an equivalent single-file workspace
-control. The content header SHALL contain only current workflow context and explicit Save status and
-action. Expanded mode SHALL show an icon and visible label for each destination or action; compact
-mode SHALL show only icons while preserving accessible names and hover tooltips. The active
-destination SHALL use stronger foreground and a tonal surface, pointer hover
-SHALL use a low-opacity tonal wash, pressed state SHALL remain visually responsive, and keyboard
+control. The content header SHALL contain only current workflow context, transient Save feedback,
+and the Save action. Expanded mode SHALL show an icon and visible label for each destination or
+action; compact mode SHALL show only icons while preserving accessible names and hover tooltips. The
+active destination SHALL use stronger foreground and a tonal surface, pointer hover SHALL use a
+low-opacity tonal wash, pressed state SHALL remain visually responsive, and keyboard
 focus SHALL remain explicitly visible without layout shift or a pointer-state border. Compact rows
 SHALL center their icons within the rail with equal inline space. The desktop collapse control SHALL
 use the same 48 px width, 40 px height, 14 px horizontal padding, 20 px icon size, and fixed icon axis
@@ -103,13 +103,13 @@ modes.
 
 #### Scenario: Browser persistence control
 - **WHEN** the static Pages runtime renders the sidebar persistence item
-- **THEN** filename, New, Open, Save As, and the shared Autosave checkbox replace project-only
-  controls with the same geometry and accessible behavior
+- **THEN** filename, New, Open, and Save As use the same geometry and accessible behavior without a
+  visible file-menu title, while Autosave appears only when File System Access is supported
 
 #### Scenario: Explicit Save feedback
-- **WHEN** organization data is clean, dirty, saving, saved, failed, paused, or unbound
-- **THEN** the header communicates the state without resizing the workflow title or adding a border,
-  decorative shadow, or saturated accent
+- **WHEN** organization data changes, saves, succeeds, or fails
+- **THEN** the header communicates the transient state in a live region anchored beside Save without
+  resizing the workflow title or moving the action
 
 #### Scenario: Stable sidebar menus and collapse control
 - **WHEN** the collapse control renders or receives pointer interaction in either sidebar mode
@@ -133,12 +133,33 @@ modes.
   horizontal overflow
 
 ### Requirement: Autosave is explicit and consistent
-The SQLite project popover and browser file popover SHALL expose the same accessible Autosave
-checkbox, SHALL default it to off, and SHALL keep manual Save available regardless of the choice.
+The SQLite project popover and supported browser file popover SHALL expose the same accessible
+Autosave checkbox, SHALL default it to off, and SHALL keep manual Save available regardless of the
+choice. An unsupported browser SHALL render neither the checkbox nor explanatory File System Access
+copy.
 
 #### Scenario: Toggle Autosave
-- **WHEN** the user changes the checkbox
+- **WHEN** the user changes an available checkbox
 - **THEN** only the bounded preference changes immediately and the control does not shift or resize
+
+#### Scenario: Autosave unavailable
+- **WHEN** File System Access is unavailable in the browser runtime
+- **THEN** no disabled Autosave row or support label appears
+
+### Requirement: Save feedback is transient and stable
+The shell SHALL render no status on initial clean load, SHALL show Unsaved for 2000 ms after an
+organization mutation, SHALL show Saving for the complete write, SHALL show Saved for 2000 ms only
+after a successful write, and SHALL keep Save failed visible until another mutation or save attempt.
+The status SHALL be announced politely and SHALL NOT move the right-anchored Save action.
+
+#### Scenario: Successful Save sequence
+- **WHEN** dirty organization data saves successfully
+- **THEN** Unsaved yields to Saving, Saved remains visible for 2000 ms, and the status then disappears
+
+#### Scenario: Save failure sequence
+- **WHEN** a Save fails
+- **THEN** the failure remains visible while dirty state and the enabled Save action are preserved
+  until another mutation or attempt replaces it
 
 ### Requirement: Product workflows use purposeful grouping
 Teams, Employees, Analytics, Calendar, and Download SHALL render their primary task content
@@ -207,9 +228,8 @@ popover, tooltip, and drag overlay layers MAY use at most one restrained separat
 ### Requirement: Repeated content remains scan-friendly and performant
 Repeated content SHALL use alignment, compact spacing, subtle row separation where useful, and
 interaction feedback instead of floating row tiles across Employee lists, Analytics tables,
-filters, tag pickers, mappings, event lists, and import previews. Existing virtualization, stable
-keys, content-driven measurement, wrapped tag visibility, and bounded scrolling SHALL remain
-unchanged.
+filters, tag pickers, and event lists. Existing virtualization, stable keys, content-driven
+measurement, wrapped tag visibility, and bounded scrolling SHALL remain unchanged.
 
 #### Scenario: Contiguous Employee list
 - **WHEN** multiple Employees render in a virtualized list
@@ -230,20 +250,21 @@ unchanged.
 Dialog and alert-dialog outer surfaces SHALL remain distinct from the shell through radius and
 overlay, with at most one restrained separation shadow and no decorative outline. Headers,
 scrollable bodies, and footers SHALL use consistent spacing and restrained tonal separation when it
-keeps actions or context visible. Popovers and selectable or destructive choices SHALL retain
-semantic boundaries, localized copy, accessible titles, close behavior, and focus management.
+keeps actions or context visible. Every non-modal Popover, Select, theme/language menu, tag/search
+menu, and Editor context menu SHALL use one permanent neutral container hairline and at most one
+restrained shadow; its items and pointer states SHALL remain borderless. Floating surfaces SHALL
+retain localized copy, accessible names, close behavior, and focus management.
 
-#### Scenario: Long dialog
-- **WHEN** Import, Export, or Employee content scrolls inside a constrained dialog
-- **THEN** the title and actions remain readable and reachable while the scrollable body retains the
-  full existing workflow
+#### Scenario: Workspace Import dialog
+- **WHEN** a valid or invalid workspace file is selected at a 390 px viewport
+- **THEN** its compact summary or owned error and actions remain readable without horizontal overflow
 
 #### Scenario: Destructive alert
 - **WHEN** a destructive confirmation opens
 - **THEN** overlay, warning copy, destructive action, and cancellation remain explicit in both
   themes
 
-#### Scenario: Narrow dialog
-- **WHEN** the Import dialog renders at a 390 px viewport
-- **THEN** selectable operation cards and actions remain inside the dialog without page-level
-  horizontal overflow
+#### Scenario: Dropdown separation
+- **WHEN** any non-modal floating menu opens over a same-tone page in either theme
+- **THEN** one stable neutral outline distinguishes the container without adding an item border,
+  hover border, geometry shift, or additional elevation

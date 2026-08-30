@@ -8,7 +8,7 @@ with local JSON Open/Save and no backend.
 
 - Build Units, manage Employees, and arrange them on a visual canvas.
 - Search the organization, explore analytics, and track birthdays and dated tags.
-- Import JSON and export workspace files, tables, templates, or a canvas PNG.
+- Import and export complete workspace JSON, or download tables, templates, and canvas PNGs.
 - Keep organization data in an explicitly selected local file or in the loopback-only SQLite
   runtime—there is no account, telemetry, remote service, or background synchronization.
 
@@ -18,7 +18,7 @@ Click a preview to open the full-size image.
 
 | Import | Workspace Export |
 | :---: | :---: |
-| [![Recognized workspace import](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Content-scoped workspace export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
+| [![Workspace import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct workspace export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
 | Theme | Language |
 | [![Dark theme menu](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) | [![Russian language menu](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) |
 | Teams | Employees |
@@ -58,6 +58,6 @@ base path and absence of backend code. An authenticated maintainer can publish t
 clean, synchronized `main` with `pnpm pages:publish`.
 
 On Chromium browsers, **Open workspace**, **Save**, **Save As**, and optional autosave use the File
-System Access API. Other browsers use ordinary JSON upload and download; their workspace lasts only
+System Access API. Other browsers use a standard workspace-file upload and download; their workspace lasts only
 for the current tab and autosave is unavailable. The public state contract is identical in both
 modes. See [Usage](docs/usage.md) for the complete workflow and compatibility details.

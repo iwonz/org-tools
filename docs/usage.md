@@ -23,8 +23,11 @@ stationary. The toggle icon keeps stable contrast. Narrow automatic compact mode
 header row. Sidebar mode is transient UI state and is never written to the workspace or browser
 storage.
 
-The content header contains the current workflow icon and title plus a stable-width Save status and
-button. Active navigation uses a calm
+The content header contains the current workflow icon and title plus the Save button. Save feedback
+is anchored immediately to its left without reserving visible copy: **Unsaved** appears for two
+seconds after an organization edit, **Saving…** remains for the write, **Saved** appears for two
+seconds after success, and a failure remains until the next edit or save attempt. Feedback uses an
+`aria-live` region and never moves the button or title. Active navigation uses a calm
 tonal surface and stronger foreground; hover changes tone without introducing a border, outline,
 inset hairline, elevation shadow, or layout shift. Press changes tone without scaling, rotating,
 translating, or resizing content. Keyboard focus remains explicit, and reduced-motion removes the
@@ -94,9 +97,9 @@ A conflict or error pauses autosave without clearing dirty state.
 ## Browser file workspace
 
 The Pages sidebar replaces project management with one file menu: **New workspace**, **Open
-workspace**, **Save As**, the current filename, and **Autosave**. Open and Save require a complete,
-strict `content: "workspace"` file; the normal Import action still accepts scoped states and
-ordinary JSON. Import marks the browser working copy Unsaved, while Export reads all current changes.
+workspace**, **Save As**, the current filename, and, when File System Access is available,
+**Autosave**. Open, Save, Import, and Export use only the complete strict `content: "workspace"`
+contract. Import marks the browser working copy Unsaved, while Export reads all current changes.
 
 On browsers with File System Access, Open binds the selected JSON file. Save and
 `Ctrl+S`/`Cmd+S` write that handle; the first Save opens Save As. A successful write completes
@@ -111,8 +114,9 @@ An external edit stops autosave and offers **Load file**, **Overwrite file**, **
 keeps the native unsaved-change warning.
 
 On browsers without File System Access, Open uses a normal JSON chooser and Save downloads
-`org-tools-state.json`. The workspace exists only until the tab reloads, and Autosave is disabled
-with an explanation. Theme, locale, and the autosave boolean are the only local-storage metadata;
+`org-tools-state.json`. The workspace exists only until the tab reloads. Autosave controls and
+technical compatibility explanations are omitted because that capability is unavailable. Theme,
+locale, and the autosave boolean are the only local-storage metadata;
 the organization snapshot never enters browser storage.
 
 ## Product tabs
@@ -150,70 +154,26 @@ document, local Employees, global Employee overrides, canvas layout, viewport, a
 
 ## Import and export a workspace
 
-Choose **Export** to select one of four local JSON downloads. The dialog is ordered **Teams**,
-**Employees**, **Teams + Employees**, and **Full workspace**, and defaults to the full workspace on
-every opening. Empty partial choices are disabled. Export reads the current working copy, including
-changes that have not yet been saved to SQLite.
+Choose **Export** to validate the current live snapshot and immediately download
+`org-tools-state.json`. Export has no configuration dialog and no in-app success banner. It always
+contains the complete `content: "workspace"` state, including changes that have not yet been saved
+to the SQLite project or bound browser file.
 
-- Teams downloads `org-tools-teams.json` with the Main hierarchy and Live rules but no Employee
-  assignments.
-- Employees downloads `org-tools-employees.json` with the complete global catalog and no Teams.
-- Teams + Employees downloads `org-tools-teams-employees.json` with Main hierarchy, manual
-  assignments, bosses, Live filters, Live bosses, and Live position overrides.
-- Full workspace downloads `org-tools-state.json`, the complete current workspace with Views,
-  layout, viewport, and UI state.
+Choose **Import** to open the native JSON chooser. A compact confirmation then shows the selected
+filename, size, and Employee, Unit, and View counts. Files are limited to 25 MiB and must be a strict
+complete workspace. **Choose another file** retries in the same dialog, **Cancel** leaves the current
+working copy untouched, and destructive **Replace workspace** installs the validated detached
+candidate atomically.
 
-Successful file downloads rely on the browser's download UI and do not add an in-app success label.
-Clipboard copies keep their explicit confirmation, and download or validation errors remain visible.
+Former `teams`, `employees`, and `teamsEmployees` projections, arbitrary JSON, and malformed
+documents are rejected without fallback or mutation. Import applies the file's theme and workspace
+UI state but does not change the current SQLite project identity, name, or revision and does not
+rebind the browser file handle. It marks organization data Unsaved; the next project or file Save
+makes the imported snapshot durable.
 
-Choose **Import** to open the native JSON file chooser. After a file is selected, the dialog
-recognizes `content` and
-offers only data available in the file. Teams + Employees offers the first three choices; Full
-workspace offers all four. Partial choices default to **Append** and also allow **Replace all
-current**. Append remaps UUID references, reuses unambiguous Employees without overwrite, appends
-roots to Main, moves the imported layout into free canvas space, and preserves custom Views and UI.
-Partial replace clears the current organization and installs only the selected projection. The two
-operations appear in a separate Import mode section, with replacement styled as destructive. Full
-workspace always replaces and shows a separate destructive warning.
-
-Import affects only the current project and marks its organization working copy Unsaved. Save after
-the import to make it durable. To move from the former file-only workflow, import the old
-`org-tools-state.json` once into the first project and Save it.
-
-A successful replacement closes without leaving a global filename banner. Append keeps its
-localized merge summary, and failed operations continue to show their owned error without changing
-the workspace.
-
-Every operation builds and strictly validates a detached complete candidate. Canceling or any
-unknown field, scope mismatch, unsafe value, invalid date, identity conflict, dangling reference, or
-Live cycle leaves the current workspace unchanged.
-
-## Import ordinary JSON
-
-Any JSON file that does not claim `kind: "org-tools-state"` opens a mapping workflow. Choose
-**Teams**, **Employees**, or **Teams + Employees**; ordinary mapping always appends and creates
-manual Teams.
-
-1. For JSON with multiple object arrays, choose the root collection. Map Team fields, recursive
-   `children`, inline `employees`, and applicable Employee fields, including optional Gender.
-2. For combined JSON, map the inline `employees` array plus optional `employeeKey`, `position`, and
-   `isBoss` fields.
-3. If tags arrive in text, choose the delimiter. JSON tag arrays remain arrays and produce undated
-   tag assignments.
-4. Review the virtualized Team tree, nested Teams, Employee cards, positions, bosses, new/reused
-   identity state, assignments, invalid rows, conflicts, and source examples before confirming.
-
-Recognized Employees-only state displays the complete imported catalog as read-only cards. Teams +
-Employees places manual assignment cards inside each Team and lists Employees without a direct
-manual assignment separately. Live boss and position overrides appear as Live roles; calculated Live
-membership is evaluated only after import.
-
-Repeated keys are rejected. Ambiguous Employees and multiple bosses block the complete append. Live
-filters are available only through a recognized scoped state. See
-[Import formats](import-formats.md) for the exact rules.
-
-The files in [`examples/`](../examples/) demonstrate arbitrary Employee headers and nested fields
-using only synthetic values.
+The separate **Download** module continues to produce CSV, JSON, text-template, and PNG reporting
+artifacts. These purpose-built outputs are not workspace transfer files and cannot be imported as a
+workspace. See [Workspace transfer format](import-formats.md) for the exact contract.
 
 ## Employee data
 
@@ -229,8 +189,8 @@ The Employee form and quick tag menu hide date controls behind a calendar action
 selected Employees that have the label. Quick tag options remain 44 px high with centered checkbox,
 label, and date actions. Every Employee surface and PNG image shows all tags on
 wrapped rows without `+N` counters. PNG tags use the same neutral rounded treatment and localized
-`label · date` content as Employee cards, with compact row spacing. Ordinary JSON mapping creates
-undated tags; scoped state files carry dated tags.
+`label · date` content as Employee cards, with compact row spacing. Full workspace files preserve
+both dated and undated tags.
 
 Profile and email links open only when activated. Choose an avatar from a PNG, JPEG, or WebP file,
 use the explicit clipboard action, or paste an image while the Employee form is focused. The crop

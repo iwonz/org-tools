@@ -3,7 +3,6 @@ import type {
   EmployeeId,
   EmployeeTag,
   OrgToolsState,
-  OrgToolsStateContent,
   UiActiveTab,
   UiOrgStructure,
   UiTheme,
@@ -25,15 +24,6 @@ import {
 } from "@/lib/employee-unit-contexts";
 import { createBlankOrgToolsState, parseOrgToolsState } from "@/lib/org-file";
 import type { ProjectUiState } from "@/lib/project-workspace";
-import {
-  buildMappedImportCandidate,
-  buildStateImportCandidate,
-  type MappedImportDocument,
-  planMappedImport,
-  planStateImport,
-  type StateImportOperation,
-  type StructuredImportPlan,
-} from "@/lib/structured-import";
 import type {
   ExportEmployeeFieldKey,
   ExportFieldDropPlacement,
@@ -93,8 +83,6 @@ const cancelAnalyticsIdleCallback = (handle: AnalyticsIdleHandle) => {
   window.clearTimeout(handle.id);
 };
 
-const normalizeIdentity = (value: string | null) =>
-  value?.trim().toLocaleLowerCase("en-US") || null;
 const areTagsEqual = (firstTags: readonly EmployeeTag[], secondTags: readonly EmployeeTag[]) =>
   firstTags.length === secondTags.length &&
   firstTags.every((tag, index) => {
@@ -849,98 +837,6 @@ export class OrgStore {
     this.exportSession.purgeEmployee(employeeId);
     this.rebuildMainModel();
     this.rebuildActiveViewModel();
-  }
-
-  importEmployees(fieldsList: readonly EditableEmployeeFields[]): {
-    employeeIds: EmployeeId[];
-    newEmployeeCount: number;
-  } {
-    if (fieldsList.length === 0) return { employeeIds: [], newEmployeeCount: 0 };
-
-    const normalizedFields = fieldsList.map(normalizeEditableEmployeeFields);
-    const existingIdentityKeys = new Set(
-      this.workspaceEmployees.flatMap((employee) => {
-        const username = normalizeIdentity(employee.username);
-        if (username) return [`username:${username}`];
-        const email = normalizeIdentity(employee.email);
-        return email ? [`email:${email}`] : [];
-      }),
-    );
-    const incomingIdentityKeys = new Set<string>();
-    for (const fields of normalizedFields) {
-      if (!fields.firstName && !fields.lastName && !fields.username && !fields.email) {
-        throw new Error("Each imported Employee must have a name, username, or email.");
-      }
-      const username = normalizeIdentity(fields.username);
-      const email = username ? null : normalizeIdentity(fields.email);
-      const identityKey = username ? `username:${username}` : email ? `email:${email}` : null;
-      if (!identityKey) continue;
-      if (existingIdentityKeys.has(identityKey) || incomingIdentityKeys.has(identityKey)) {
-        throw new Error("Employee import contains an identity that is no longer unique.");
-      }
-      incomingIdentityKeys.add(identityKey);
-    }
-
-    const now = new Date().toISOString();
-    const employees = normalizedFields.map<WorkspaceEmployee>((fields) => ({
-      ...fields,
-      createdAt: now,
-      id: createWorkspaceEmployeeId(),
-      updatedAt: now,
-    }));
-    const nextEmployees = [...this.workspaceEmployees, ...employees];
-    buildWorkspaceOrgStructureWithResolution(nextEmployees, this.mainOrgEditor.createState());
-
-    this.workspaceEmployees = nextEmployees;
-    this.rebuildMainModel();
-    this.rebuildActiveViewModel();
-    return {
-      employeeIds: employees.map((employee) => employee.id),
-      newEmployeeCount: employees.length,
-    };
-  }
-
-  importState(
-    source: OrgToolsState,
-    content: OrgToolsStateContent,
-    operation: StateImportOperation,
-    sourceFileName: string | null = this.sourceFileName,
-    sourceFileSizeBytes: number | null = this.sourceFileSizeBytes,
-  ): StructuredImportPlan | null {
-    const plan =
-      content === "workspace" ? null : planStateImport(source, content, this.workspaceEmployees);
-    const candidate = buildStateImportCandidate(
-      this.createOrgToolsState(),
-      source,
-      content,
-      operation,
-    );
-    this.applyOrgToolsState(candidate, sourceFileName, sourceFileSizeBytes);
-    return plan;
-  }
-
-  previewStateImport(
-    source: OrgToolsState,
-    content: OrgToolsStateContent,
-    operation: StateImportOperation,
-  ): StructuredImportPlan | null {
-    const plan =
-      content === "workspace" ? null : planStateImport(source, content, this.workspaceEmployees);
-    buildStateImportCandidate(this.createOrgToolsState(), source, content, operation);
-    return plan;
-  }
-
-  importMapped(document: MappedImportDocument): StructuredImportPlan {
-    const plan = planMappedImport(document, this.workspaceEmployees);
-    const candidate = buildMappedImportCandidate(this.createOrgToolsState(), document);
-    this.applyOrgToolsState(candidate, this.sourceFileName, this.sourceFileSizeBytes);
-    return plan;
-  }
-
-  previewMappedImport(document: MappedImportDocument): StructuredImportPlan {
-    const plan = planMappedImport(document, this.workspaceEmployees);
-    buildMappedImportCandidate(this.createOrgToolsState(), document);
-    return plan;
   }
 
   createOrgToolsState(): OrgToolsState {

@@ -260,18 +260,6 @@ async function validateScreenshotDemo(violations) {
       rule: "exactly one screenshot per primary workflow must be featured",
     });
   }
-  if (
-    primaryScreenshotModules.some(
-      (module) =>
-        !validScenarios.some((scenario) => scenario.module === module && !scenario.featured),
-    )
-  ) {
-    violations.push({
-      path: "docs/screenshot-demo.json",
-      rule: "every primary workflow must include at least one supporting screenshot",
-    });
-  }
-
   const actualFiles = (await readdir(screenshotsDirectory))
     .filter((file) => file.endsWith(".png"))
     .sort();

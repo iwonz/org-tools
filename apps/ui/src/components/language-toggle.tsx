@@ -58,7 +58,7 @@ export function LanguageToggle({
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           align="end"
-          className="relative z-50 min-w-40 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
+          className="relative z-50 min-w-40 overflow-hidden rounded-lg border border-border/80 bg-popover p-1 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
           data-demo-id="language-menu"
           position="popper"
           side="right"

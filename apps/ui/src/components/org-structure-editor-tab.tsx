@@ -407,7 +407,7 @@ const getOrgEditorConnectionPath = ({
 function OrgEditorFloatingMenu({ children, point }: { children: ReactNode; point: ScreenPoint }) {
   return (
     <div
-      className="fixed z-50 grid min-w-60 gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
+      className="fixed z-50 grid min-w-60 gap-1 rounded-md border border-border/80 bg-popover p-1 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
       data-org-editor-context-menu
       onContextMenu={(event) => event.preventDefault()}
       onPointerDown={(event) => event.stopPropagation()}
@@ -622,7 +622,7 @@ function OrgEditorEmployeeTagSubmenu({
       {open && (
         <div
           className={cn(
-            "absolute z-[70] rounded-md border bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]",
+            "absolute z-[70] rounded-md border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]",
             placement.side === "right" ? "left-[calc(100%+0.25rem)]" : "right-[calc(100%+0.25rem)]",
           )}
           data-demo-id="org-editor-employee-tags-submenu"
@@ -837,7 +837,7 @@ function OrgEditorSearchControl({
       </div>
       {open && (
         <div
-          className="absolute right-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
+          className="absolute right-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
           data-demo-id="org-editor-search-results"
         >
           {!hasQuery ? (

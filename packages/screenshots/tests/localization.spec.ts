@@ -7,7 +7,6 @@ import {
   expectLocalRequestsOnly,
   type ImportFilePayload,
   localeStorageKey,
-  syntheticEmployeesJsonPath,
   syntheticWorkspacePath,
 } from "./helpers.js";
 
@@ -42,7 +41,7 @@ const chooseImportFile = async (
   await page.getByRole("button", { name: messages.Ui.Import, exact: true }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(file);
-  const dialog = page.getByRole("dialog", { name: messages.Ui.Import });
+  const dialog = page.getByRole("dialog", { name: messages.Ui["Import workspace"] });
   await expect(dialog).toBeVisible();
   return dialog;
 };
@@ -152,15 +151,12 @@ test("switches the interface in place and persists the choice", async ({ page },
     path: testInfo.outputPath("russian-shell.png"),
   });
 
+  const workspaceDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: ruMessages.Ui["Workspace Export"], exact: true }).click();
-  const saveDialog = page.getByRole("dialog", { name: ruMessages.Ui["Export workspace"] });
-  await expect(saveDialog).toBeVisible();
-  await page.screenshot({
-    animations: "disabled",
-    fullPage: true,
-    path: testInfo.outputPath("russian-save-formats.png"),
-  });
-  await saveDialog.getByRole("button", { name: ruMessages.Ui.Cancel, exact: true }).click();
+  expect((await workspaceDownloadPromise).suggestedFilename()).toBe("org-tools-state.json");
+  await expect(page.getByRole("dialog", { name: ruMessages.Ui["Export workspace"] })).toHaveCount(
+    0,
+  );
 
   await page.getByRole("tab", { name: ruMessages.Ui.Employees, exact: true }).click();
   await page.getByRole("button", { name: ruMessages.Ui["Create Employee"], exact: true }).click();
@@ -202,23 +198,15 @@ test("switches the interface in place and persists the choice", async ({ page },
   });
   const dialog = await chooseImportFile(page, ruMessages, syntheticWorkspacePath);
   await expect(dialog.getByRole("tab")).toHaveCount(0);
+  await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText("4");
   await expect(
-    dialog.getByText(ruMessages.Ui["Workspace state detected"], { exact: true }),
+    dialog.getByText(
+      ruMessages.Ui[
+        "Replacing imports all workspace data and interface state over the current working copy."
+      ],
+      { exact: true },
+    ),
   ).toBeVisible();
-  await expect(
-    dialog.getByRole("radiogroup", { name: ruMessages.Ui["State content"] }),
-  ).toContainText(ruMessages.Ui["Full workspace"]);
-  await dialog
-    .getByRole("radio", { name: ruMessages.Ui["Teams + Employees"], exact: true })
-    .check();
-  await expect(dialog.getByText(ruMessages.Ui["Import mode"], { exact: true })).toBeVisible();
-  await expect(dialog.locator('[data-demo-id="state-operation-append"]')).toContainText(
-    ruMessages.Ui.Append,
-  );
-  await expect(dialog.locator('[data-demo-id="state-operation-replace"]')).toContainText(
-    ruMessages.Ui["Replace all current"],
-  );
-  await expect(dialog.locator('[data-demo-id="structured-preview-employee-card"]')).toHaveCount(4);
   await page.screenshot({
     animations: "disabled",
     fullPage: true,
@@ -256,31 +244,20 @@ for (const [locale, messages] of [
     await seedLocale(page, locale);
     await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
 
-    await page.getByRole("button", { name: messages.Ui["Workspace Export"], exact: true }).click();
-    const saveDialog = page.getByRole("dialog", { name: messages.Ui["Export workspace"] });
-    await expect(saveDialog).toBeVisible();
-    const saveChoiceLabels = saveDialog.locator('input[name="save-format"]').locator("..");
-    for (const [index, choice] of [
-      messages.Ui.Teams,
-      messages.Ui.Employees,
-      messages.Ui["Teams + Employees"],
-      messages.Ui["Full workspace"],
-    ].entries()) {
-      await expect(saveChoiceLabels.nth(index)).toContainText(choice);
-    }
     const downloadPromise = page.waitForEvent("download");
-    await saveDialog.getByRole("button", { name: messages.Ui.Download, exact: true }).click();
+    await page.getByRole("button", { name: messages.Ui["Workspace Export"], exact: true }).click();
     expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
-    await expect(page.locator('[data-demo-id="project-save-status"]')).toBeVisible();
-
-    let dialog = await chooseImportFile(page, messages, syntheticEmployeesJsonPath);
-    await expect(dialog.getByText(messages.Ui["Field mapping"], { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("radiogroup", { name: messages.Ui["Import as"] })).toContainText(
-      messages.Ui["Teams + Employees"],
+    await expect(page.getByRole("dialog", { name: messages.Ui["Export workspace"] })).toHaveCount(
+      0,
     );
-    await dialog.getByRole("button", { name: /2/u }).click();
+
+    let dialog = await chooseImportFile(page, messages, syntheticWorkspacePath);
+    await expect(dialog.locator('[data-demo-id="workspace-import-summary"]')).toContainText("4");
+    await dialog
+      .getByRole("button", { name: messages.Ui["Replace workspace"], exact: true })
+      .click();
     await expect(dialog).toBeHidden();
-    await page.getByRole("tab", { name: messages.Ui.Employees, exact: true }).click();
+    await page.locator('[data-demo-id="tab-employees"]').click();
     await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
     await page.locator('[data-demo-id="employee-create-button"]').click();
     const employeeDialog = page.getByRole("dialog", { name: messages.Ui["Create Employee"] });
@@ -314,26 +291,24 @@ for (const [locale, messages] of [
       name: "invalid.json",
     });
     await expect(
-      dialog.getByText(messages.Ui["JSON could not be parsed."], { exact: true }),
+      dialog.getByText(messages.Ui["Could not read or parse the selected file."], { exact: true }),
     ).toBeVisible();
     await dialog.getByRole("button", { name: messages.Ui.Cancel, exact: true }).click();
 
-    dialog = await chooseImportFile(page, messages, syntheticWorkspacePath);
+    dialog = await chooseImportFile(page, messages, {
+      buffer: Buffer.from(JSON.stringify({ content: "employees", kind: "org-tools-state" })),
+      mimeType: "application/json",
+      name: "partial.json",
+    });
     await expect(
-      dialog.getByText(messages.Ui["Workspace state detected"], { exact: true }),
+      dialog.getByText(messages.Ui["Only a complete Org Tools workspace can be imported."], {
+        exact: true,
+      }),
     ).toBeVisible();
-    await expect(
-      dialog.getByText(
-        messages.Ui["Full workspace import replaces all current data and interface state."],
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await dialog
-      .getByRole("button", { name: messages.Ui["Replace all current"], exact: true })
-      .click();
+    await dialog.getByRole("button", { name: messages.Ui.Cancel, exact: true }).click();
     await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
     await expect(page.locator('[data-demo-id="project-save-status"]')).toBeVisible();
-    await page.getByRole("tab", { name: messages.Ui.Employees, exact: true }).click();
+    await page.locator('[data-demo-id="tab-employees"]').click();
     await expect(page.locator('[data-demo-id="employees-total-count"]')).toContainText("4");
     await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
     await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("Avery");
