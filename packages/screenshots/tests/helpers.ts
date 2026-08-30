@@ -25,6 +25,26 @@ export const productTabs = [
 ] as const;
 
 export const localeStorageKey = "org-tools-locale";
+let projectSequence = 0;
+
+export async function createIsolatedProject(page: Page): Promise<string> {
+  const port = process.env.ORG_TOOLS_PORT ?? "4173";
+  const origin = process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    projectSequence += 1;
+    const response = await page.request.post("/api/projects", {
+      data: { name: `Org Tools demo ${projectSequence}` },
+      headers: { Origin: origin },
+    });
+    if (response.ok()) {
+      const project = (await response.json()) as { id: string };
+      return `/projects/${project.id}`;
+    }
+    const body = (await response.json()) as { error?: { code?: string } };
+    if (body.error?.code !== "duplicate_name") throw new Error(JSON.stringify(body));
+  }
+  throw new Error("Could not allocate an isolated test project.");
+}
 
 export async function expectLocalRequestsOnly(page: Page): Promise<() => Promise<void>> {
   const externalRequests: string[] = [];
@@ -55,7 +75,7 @@ export async function openBlankWorkspace(page: Page): Promise<void> {
     key: localeStorageKey,
     locale: "en",
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -67,7 +87,7 @@ export async function replaceWithSyntheticWorkspace(page: Page): Promise<void> {
   await expect(dialog.getByText("Workspace state detected", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Replace all current", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
 }
 

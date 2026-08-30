@@ -11,7 +11,7 @@ import type {
   UnitId,
   WorkspaceEmployee,
 } from "@org-tools/types";
-import { makeAutoObservable, observable } from "mobx";
+import { makeAutoObservable, observable, reaction } from "mobx";
 
 import { type AnalyticsResult, buildAnalytics } from "@/lib/analytics";
 import { buildWorkspaceOrgStructureWithResolution } from "@/lib/build-workspace-org-structure";
@@ -24,6 +24,7 @@ import {
   type EmployeeUnitMembership,
 } from "@/lib/employee-unit-contexts";
 import { createBlankOrgToolsState, parseOrgToolsState } from "@/lib/org-file";
+import type { ProjectUiState } from "@/lib/project-workspace";
 import {
   buildMappedImportCandidate,
   buildStateImportCandidate,
@@ -123,6 +124,8 @@ export class OrgStore {
   sourceFileName: string | null = null;
   sourceFileSizeBytes: number | null = null;
   isApplyingState = false;
+  organizationChangeSequence = 0;
+  uiChangeSequence = 0;
 
   constructor() {
     makeAutoObservable(
@@ -146,6 +149,45 @@ export class OrgStore {
       { autoBind: true },
     );
     this.createBlankWorkspace();
+    reaction(
+      () => this.organizationObservation,
+      () => {
+        if (!this.isApplyingState) this.organizationChangeSequence += 1;
+      },
+    );
+    reaction(
+      () => this.uiObservation,
+      () => {
+        if (!this.isApplyingState) this.uiChangeSequence += 1;
+      },
+    );
+  }
+
+  private get organizationObservation() {
+    return [
+      this.workspaceEmployees,
+      this.orgViews.viewRecords,
+      ...this.orgViews.views.flatMap((view) => {
+        const editor = this.orgViews.editorByViewId.get(view.id);
+        return editor
+          ? [editor.employeeOverrides, editor.employees, editor.layoutMode, editor.units]
+          : [];
+      }),
+    ];
+  }
+
+  private get uiObservation() {
+    return [
+      this.activeTab,
+      this.expandedUnitIds,
+      this.orgViews.activeViewId,
+      this.selectedUnitId,
+      this.theme,
+      ...this.orgViews.views.flatMap((view) => {
+        const editor = this.orgViews.editorByViewId.get(view.id);
+        return editor ? [editor.selectedItems, editor.viewport] : [];
+      }),
+    ];
   }
 
   get units() {
@@ -229,7 +271,7 @@ export class OrgStore {
 
   loadOrgToolsState(
     state: OrgToolsState,
-    sourceFileName: string,
+    sourceFileName: string | null,
     sourceFileSizeBytes: number | null,
   ): void {
     this.applyOrgToolsState(parseOrgToolsState(state), sourceFileName, sourceFileSizeBytes);
@@ -290,6 +332,10 @@ export class OrgStore {
       this.scheduleAnalyticsPrecompute();
     } finally {
       this.isApplyingState = previousIsApplyingState;
+    }
+    if (!previousIsApplyingState) {
+      this.organizationChangeSequence += 1;
+      this.uiChangeSequence += 1;
     }
   }
 
@@ -919,5 +965,34 @@ export class OrgStore {
       },
       views,
     });
+  }
+
+  createProjectUiState(): ProjectUiState {
+    return {
+      activeViewId: this.activeOrgViewId,
+      ui: {
+        activeTab: this.activeTab,
+        expandedUnitIds: [...this.expandedUnitIds],
+        selectedUnitId: this.selectedUnitId,
+        theme: this.theme,
+      },
+      views: this.orgViews.views.flatMap((view) => {
+        const editor = this.orgViews.editorByViewId.get(view.id);
+        return editor
+          ? [
+              {
+                selectedItems: editor.selectedItems.map((item) => ({ ...item })),
+                viewId: view.id,
+                viewport: { ...editor.viewport },
+              },
+            ]
+          : [];
+      }),
+    };
+  }
+
+  resetProjectChangeTracking(): void {
+    this.organizationChangeSequence = 0;
+    this.uiChangeSequence = 0;
   }
 }

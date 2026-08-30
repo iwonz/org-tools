@@ -5,12 +5,13 @@
   "private": true,
   "scripts": {
     "generate": "playwright test tests/screenshots.spec.ts --project=chromium",
-    "smoke": "playwright test tests/smoke.spec.ts tests/localization.spec.ts --project=chromium",
+    "smoke": "playwright test tests/smoke.spec.ts tests/localization.spec.ts tests/projects.spec.ts --project=chromium",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "^25.9.1",
+    "sharp": "^0.34.5",
     "typescript": "^6.0.3"
   }
 }

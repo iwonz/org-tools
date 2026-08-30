@@ -22,6 +22,7 @@ const employees = Array.from({ length: employeeCount }, (_, index) => {
     createdAt: timestamp,
     email: `employee${serial}@example.test`,
     firstName: "Employee",
+    gender: "unspecified",
     id: employeeId(index),
     lastName: serial,
     phone: null,

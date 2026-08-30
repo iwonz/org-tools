@@ -6,7 +6,8 @@ import { extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const productionOutput = join(repositoryRoot, "apps", "ui", "out");
+const productionBuild = join(repositoryRoot, "apps", "ui", ".next");
+const productionOutputs = [join(productionBuild, "static"), join(productionBuild, "server", "app")];
 const scannerPath = "scripts/check-public-safety.mjs";
 const screenshotManifestPath = join(repositoryRoot, "docs", "screenshot-demo.json");
 const screenshotsDirectory = join(repositoryRoot, "docs", "screenshots");
@@ -22,6 +23,7 @@ const primaryScreenshotModules = [
   "calendar",
   "download",
 ];
+const supportingScreenshotModules = ["projects"];
 
 const blockedPathSegments = new Set([
   ".cache",
@@ -71,6 +73,7 @@ const contentRules = [
   {
     name: "absolute user home path",
     pattern: new RegExp(joined("(?:/", "Users|/home)/[^/\\s]+/|", "[A-Z]:\\\\Users\\\\"), "u"),
+    skipProductionServerScripts: true,
   },
   {
     allowedPaths: new Set(["apps/ui/messages/ru.json"]),
@@ -235,10 +238,15 @@ async function validateScreenshotDemo(violations) {
       rule: "manifest filenames must be unique demo or feature PNGs",
     });
   }
-  if (modules.some((module) => !primaryScreenshotModules.includes(module))) {
+  if (
+    modules.some(
+      (module) =>
+        !primaryScreenshotModules.includes(module) && !supportingScreenshotModules.includes(module),
+    )
+  ) {
     violations.push({
       path: "docs/screenshot-demo.json",
-      rule: "every screenshot module must be a primary workflow",
+      rule: "every screenshot module must be a primary or approved supporting workflow",
     });
   }
   if (
@@ -304,28 +312,36 @@ async function validateScreenshotDemo(violations) {
 async function main() {
   const violations = [];
   const worktreePaths = repositoryFiles();
-  const outputExists = await stat(productionOutput)
-    .then((entry) => entry.isDirectory())
+  const outputExists = await stat(join(productionBuild, "BUILD_ID"))
+    .then((entry) => entry.isFile())
     .catch(() => false);
 
   await validateScreenshotDemo(violations);
 
   if (!outputExists) {
     violations.push({
-      path: "apps/ui/out",
+      path: "apps/ui/.next/BUILD_ID",
       rule: "production output is missing; run pnpm build before this check",
     });
   }
 
   const absolutePaths = new Set(worktreePaths.map((path) => resolve(repositoryRoot, path)));
   if (outputExists) {
-    for (const path of await walk(productionOutput)) absolutePaths.add(resolve(path));
+    for (const output of productionOutputs) {
+      const exists = await stat(output)
+        .then((entry) => entry.isDirectory())
+        .catch(() => false);
+      if (exists) {
+        for (const path of await walk(output)) absolutePaths.add(resolve(path));
+      }
+    }
   }
 
   for (const absolutePath of [...absolutePaths].sort()) {
     const path = normalizedRelativePath(absolutePath);
     const pathSegments = path.split("/");
-    const isProductionFile = path.startsWith("apps/ui/out/");
+    const isProductionFile =
+      path.startsWith("apps/ui/.next/static/") || path.startsWith("apps/ui/.next/server/app/");
 
     if (!isProductionFile) {
       const blockedSegment = pathSegments.find((segment) => blockedPathSegments.has(segment));
@@ -338,6 +354,14 @@ async function main() {
     }
 
     const extension = extname(path).toLowerCase();
+    if (!isProductionFile && [".db", ".sqlite", ".sqlite3"].includes(extension)) {
+      violations.push({ path, rule: "local database files must never be published" });
+      continue;
+    }
+    if (path === ".org-tools/config.json") {
+      violations.push({ path, rule: "local runtime config must never be published" });
+      continue;
+    }
     if (blockedMediaExtensions.has(extension)) {
       violations.push({ path, rule: `forbidden audio or video artifact: ${extension}` });
     }
@@ -355,6 +379,7 @@ async function main() {
       allowedPaths = new Set(),
       name,
       pattern,
+      skipProductionServerScripts = false,
       skipProductionScripts = false,
     } of contentRules) {
       if (allowedPaths.has(path)) continue;
@@ -362,6 +387,13 @@ async function main() {
       if (
         isProductionFile &&
         skipProductionScripts &&
+        (extension === ".js" || extension === ".map")
+      ) {
+        continue;
+      }
+      if (
+        skipProductionServerScripts &&
+        path.startsWith("apps/ui/.next/server/app/") &&
         (extension === ".js" || extension === ".map")
       ) {
         continue;

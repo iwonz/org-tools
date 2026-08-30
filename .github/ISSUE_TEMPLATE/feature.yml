@@ -21,7 +21,7 @@ body:
     id: data-boundary
     attributes:
       label: Data boundary
-      description: Does the proposal keep all organization data in the browser?
+      description: Does the proposal keep all organization data within the browser and loopback same-origin runtime?
       options:
         - Yes
         - Unsure; privacy design is needed

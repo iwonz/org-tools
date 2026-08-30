@@ -1,7 +1,8 @@
-import { mkdir, readdir, readFile, unlink } from "node:fs/promises";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { expect, type Page, test } from "@playwright/test";
+import sharp from "sharp";
 
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import {
@@ -27,6 +28,7 @@ const screenshotsDirectory = fileURLToPath(new URL("../../../docs/screenshots", 
 const manifestPath = fileURLToPath(new URL("../../../docs/screenshot-demo.json", import.meta.url));
 const screenshotManifest = JSON.parse(await readFile(manifestPath, "utf8")) as ScreenshotScenario[];
 const scenariosById = new Map(screenshotManifest.map((scenario) => [scenario.id, scenario]));
+const rasterNoisePixelBudget = 32;
 
 test.setTimeout(60_000);
 
@@ -38,7 +40,64 @@ function screenshotPath(id: string): string {
 
 async function capture(page: Page, id: string) {
   await stabilizeForScreenshot(page);
-  await page.screenshot({ animations: "disabled", fullPage: true, path: screenshotPath(id) });
+  const screenshot = await page.screenshot({ animations: "disabled" });
+  const path = screenshotPath(id);
+  try {
+    const existing = await readFile(path);
+    const [existingPixels, candidatePixels] = await Promise.all([
+      sharp(existing)
+        .flatten({ background: "#ffffff" })
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true }),
+      sharp(screenshot)
+        .flatten({ background: "#ffffff" })
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true }),
+    ]);
+    if (
+      existingPixels.info.width === candidatePixels.info.width &&
+      existingPixels.info.height === candidatePixels.info.height &&
+      existingPixels.info.channels === candidatePixels.info.channels
+    ) {
+      let changedPixels = 0;
+      let rasterNoiseOnly = true;
+      for (
+        let offset = 0;
+        offset < existingPixels.data.length;
+        offset += existingPixels.info.channels
+      ) {
+        let pixelChanged = false;
+        for (let channel = 0; channel < existingPixels.info.channels; channel += 1) {
+          const existingChannel = existingPixels.data[offset + channel];
+          const candidateChannel = candidatePixels.data[offset + channel];
+          if (existingChannel === undefined || candidateChannel === undefined) {
+            rasterNoiseOnly = false;
+            break;
+          }
+          const delta = Math.abs(existingChannel - candidateChannel);
+          if (delta > 2) {
+            rasterNoiseOnly = false;
+            break;
+          }
+          pixelChanged ||= delta > 0;
+        }
+        if (!rasterNoiseOnly) break;
+        if (pixelChanged) {
+          changedPixels += 1;
+          if (changedPixels > rasterNoisePixelBudget) {
+            rasterNoiseOnly = false;
+            break;
+          }
+        }
+      }
+      if (rasterNoiseOnly) return;
+    }
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  await writeFile(path, screenshot);
 }
 
 async function openSyntheticWorkspace(page: Page) {
@@ -62,10 +121,18 @@ async function openEditorExport(page: Page) {
   return dialog;
 }
 
+async function openProjectSwitcher(page: Page) {
+  await page.locator('[data-demo-id="project-switcher"]').click();
+  const popover = page.locator('[data-demo-id="project-switcher-popover"]');
+  await expect(popover).toBeVisible();
+  return popover;
+}
+
 test.beforeAll(async () => {
   await mkdir(screenshotsDirectory, { recursive: true });
+  const expectedFiles = new Set(screenshotManifest.map((scenario) => scenario.file));
   for (const entry of await readdir(screenshotsDirectory, { withFileTypes: true })) {
-    if (entry.isFile() && entry.name.endsWith(".png")) {
+    if (entry.isFile() && entry.name.endsWith(".png") && !expectedFiles.has(entry.name)) {
       await unlink(`${screenshotsDirectory}/${entry.name}`);
     }
   }
@@ -76,6 +143,52 @@ test.afterAll(async () => {
     .filter((file) => file.endsWith(".png"))
     .sort();
   expect(generatedFiles).toEqual(screenshotManifest.map((scenario) => scenario.file).sort());
+});
+
+test("captures persistent project management", async ({ page }) => {
+  await openBlankWorkspace(page);
+  await page.locator('[data-demo-id="sidebar-toggle"]').click();
+  let popover = await openProjectSwitcher(page);
+  await popover.getByRole("button", { name: "Copy project link", exact: true }).click();
+  await expect(page.locator('[data-demo-id="project-link-copied"]')).toBeVisible();
+  popover = await openProjectSwitcher(page);
+  await capture(page, "project-switcher-link");
+  await expect(page.locator('[data-demo-id="project-link-copied"]')).toBeHidden({
+    timeout: 10_000,
+  });
+
+  await popover.getByRole("button", { name: "Create project", exact: true }).click();
+  let dialog = page.getByRole("dialog", { name: "Create project" });
+  await dialog.getByLabel("Project name", { exact: true }).fill("Annual planning");
+  await capture(page, "project-create");
+  await page.keyboard.press("Escape");
+
+  popover = await openProjectSwitcher(page);
+  await popover.getByRole("button", { name: "Rename project", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Rename project" });
+  await dialog.getByLabel("Project name", { exact: true }).fill("Organization roadmap");
+  await capture(page, "project-rename");
+  await page.keyboard.press("Escape");
+
+  popover = await openProjectSwitcher(page);
+  await popover.getByRole("button", { name: "Delete project", exact: true }).click();
+  await expect(page.getByRole("alertdialog", { name: "Delete project?" })).toBeVisible();
+  await capture(page, "project-delete");
+});
+
+test("captures project revision conflict resolution", async ({ page, context }) => {
+  await openBlankWorkspace(page);
+  const route = new URL(page.url()).pathname;
+  const secondPage = await context.newPage();
+  await secondPage.goto(route, { waitUntil: "domcontentloaded" });
+  await replaceWithSyntheticWorkspace(page);
+  await page.locator('[data-demo-id="project-save"]').click();
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Saved");
+  await replaceWithSyntheticWorkspace(secondPage);
+  await secondPage.locator('[data-demo-id="project-save"]').click();
+  await expect(secondPage.getByRole("alertdialog", { name: "Conflict" })).toBeVisible();
+  await capture(secondPage, "project-revision-conflict");
+  await secondPage.close();
 });
 
 test("captures recognized and ordinary import workflows", async ({ page }) => {
@@ -370,8 +483,5 @@ test("captures source selection and every data Download format", async ({ page }
   });
   await settings.getByRole("tab", { name: "Template", exact: true }).click();
   await expect(settings.locator('[data-demo-id="export-inline-preview"]')).toBeVisible();
-  await settingsBody.evaluate((element) => {
-    element.scrollTop = 8;
-  });
   await capture(page, "download");
 });

@@ -1,6 +1,10 @@
 node_modules/
 .pnpm-store/
 
+# Local Org Tools runtime state
+.org-tools/*
+!.org-tools/config.example.json
+
 # Build and test output
 apps/ui/.next/
 apps/ui/out/

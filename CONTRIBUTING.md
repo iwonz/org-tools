@@ -1,11 +1,11 @@
 # Contributing
 
-Thank you for improving org-tools. Contributions must preserve its browser-only privacy boundary,
-synthetic public data, English public artifacts, and accessible component conventions.
+Thank you for improving org-tools. Contributions must preserve its browser-and-loopback privacy
+boundary, synthetic public data, English public artifacts, and accessible component conventions.
 
 ## Prepare a change
 
-1. Install Node.js 20 or newer and the pnpm version declared in `package.json`.
+1. Install Node.js 22.13 or newer and the pnpm version declared in `package.json`.
 2. Run `pnpm install --frozen-lockfile`.
 3. Fetch `origin`, switch to `main`, update it without rewriting history, and verify that the
    worktree is clean, local `main` matches `origin/main`, and no unrelated OpenSpec change is active.
@@ -22,7 +22,8 @@ disables the CLI's anonymous telemetry for this repository.
 
 - Keep each change focused and update user or architecture documentation with the code.
 - Reuse shared Employee and Unit components, derived indexes, and store operations.
-- Keep organizational state in memory and perform import/export entirely in the browser.
+- Persist organizational state only through the prepared-statement SQLite repository behind the
+  loopback same-origin API. Keep Import and Export entirely local.
 - Use synthetic fixtures with reserved domains and phone ranges. Do not submit real names, contact
   details, local filesystem paths, access tokens, or exported organization data.
 - Avoid adding dependencies unless they materially reduce complexity. Explain new runtime

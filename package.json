@@ -1,7 +1,7 @@
 {
   "name": "org-tools",
   "version": "0.1.0",
-  "description": "A private-by-design organization editor that runs entirely in the browser.",
+  "description": "A private-by-design local organization editor with SQLite project workspaces.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -33,7 +33,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/screenshots typecheck"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",

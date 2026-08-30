@@ -5,10 +5,11 @@ the complete visual capability catalog. Its contract lives in `docs/screenshot-d
 module ownership, featured status, description, and capability coverage for every frame. Generation
 and publication checks fail when the manifest, files, README links, or this guide diverge.
 
-Playwright captures the static production build in Chromium at 1440 by 1000, UTC, with a fixed
-clock, reduced motion, disabled animations, and loaded local fonts. Every workflow uses the same
-obviously synthetic workspace. The default locale and color scheme are English and light; the
-language and theme frames intentionally display Russian and dark mode respectively.
+Playwright captures the production Next.js server in Chromium at 1440 by 1000, UTC, with a fixed
+clock, reduced motion, disabled animations, loaded local fonts, and an isolated SQLite database in
+the system temporary directory. Every workflow creates its own obviously synthetic project. The
+default locale and color scheme are English and light; the language and theme frames intentionally
+display Russian and dark mode respectively. The complete manifest contains exactly 46 PNGs.
 
 ## Core workflow gallery
 
@@ -44,6 +45,38 @@ language and theme frames intentionally display Russian and dark mode respective
 The overview frames above establish each primary module. The supporting frames below deliberately
 open secondary panels, dialogs, menus, and lower content so the full user-visible feature set can be
 understood without running the application.
+
+### Project workspaces
+
+#### Project switcher and stable link
+
+[![Project switcher and stable link](screenshots/feature-project-switcher-link.png)](screenshots/feature-project-switcher-link.png)
+
+Shows the sidebar-footer project list, current selection, management actions, and stable-link copy.
+
+#### Create a project
+
+[![Create a project](screenshots/feature-project-create.png)](screenshots/feature-project-create.png)
+
+Shows required normalized project naming in the compact creation dialog.
+
+#### Rename a project
+
+[![Rename a project](screenshots/feature-project-rename.png)](screenshots/feature-project-rename.png)
+
+Shows project rename while the stable project UUID and saved workspace remain unchanged.
+
+#### Delete a project
+
+[![Delete a project](screenshots/feature-project-delete.png)](screenshots/feature-project-delete.png)
+
+Shows explicit destructive confirmation and remaining or final-project recovery.
+
+#### Revision conflict
+
+[![Revision conflict](screenshots/feature-project-revision-conflict.png)](screenshots/feature-project-revision-conflict.png)
+
+Shows Load saved version, explicit overwrite, and Cancel after a stale revision Save.
 
 ### Import and workspace Export
 
@@ -265,11 +298,15 @@ or an external image.
 Regenerate immediately and compare every image. Dimensions, visible content, and geometry must be
 identical. Treat raw PNG hashes as diagnostics rather than the sole pass criterion because the
 platform rasterizer can vary a handful of antialiasing pixels even with a pinned browser; any change
-beyond that tiny edge-only tolerance requires review. The generator removes only PNG files directly
-inside the dedicated screenshot directory, writes the manifest set, and fails if any expected file
-is missing or stale file remains.
+beyond that tiny edge-only tolerance requires review. The generator preserves an expected PNG only
+when a fresh frame differs by at most two RGB steps across no more than 32 pixels, replaces every
+materially changed frame, removes unexpected PNGs directly inside the dedicated screenshot
+directory, and fails if any expected file is missing or a stale file remains.
 
-`pnpm test:browser` runs the non-visual smoke suite against the same production server. It verifies
+`pnpm test:browser` runs the non-visual smoke suite against the same production server and an
+isolated temporary SQLite database. It verifies project redirect, CRUD, compact and expanded
+switcher geometry, stable links, explicit Save, UI persistence, dirty navigation, conflicts,
+cross-origin rejection, and
 blank startup, populated workflows, English and Russian copy, light and dark themes, expanded and
 compact responsive sidebar geometry, keyboard and focus behavior, hover and pressed geometry,
 adaptive Editor snapping, Analytics and Calendar layout, Import validation and mapping, local avatar

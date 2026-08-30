@@ -223,7 +223,7 @@ async function expectSidebarActions(page: Page) {
   );
 
   expect(groupStyle).toEqual({ borderWidth: "0px", columnGap: "4px", flexDirection: "column" });
-  expect(buttonStyles).toHaveLength(4);
+  expect(buttonStyles).toHaveLength(5);
   expect(new Set(buttonStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(buttonStyles.map(({ height }) => height))).toEqual(new Set([40]));
   expect(new Set(buttonStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
@@ -264,7 +264,7 @@ async function expectSidebarActions(page: Page) {
           return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
         }),
       ),
-    ).toEqual(Array.from({ length: 4 }, () => 0));
+    ).toEqual(Array.from({ length: 5 }, () => 0));
   }
 }
 
@@ -839,7 +839,7 @@ test("selects and appends Employees from a recognized workspace state", async ({
     dialog.getByRole("radiogroup", { name: "Import operation" }).getByRole("radio").first(),
   ).toBeChecked();
   await dialog.getByRole("button", { name: "Append", exact: true }).click();
-  const importNotice = page.getByRole("status");
+  const importNotice = page.locator('[data-demo-id="app-notice"]');
   await expect(importNotice).toHaveText("Import merged into Main.");
   await expect(importNotice).toHaveCSS("border-top-width", "0px");
   await expect(importNotice).toHaveCSS("border-bottom-width", "0px");
@@ -1077,7 +1077,7 @@ test("exports a blank workspace as the public state format", async ({ page }) =>
   await dialog.getByRole("button", { name: "Download", exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
 
   await assertLocalRequests();
 });
@@ -1647,7 +1647,8 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
     name: "large-analytics-state.json",
   });
   await dialog.getByRole("button", { name: "Replace all current", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Unsaved");
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
 
   const firstNames = page.locator('[data-demo-id="analytics-first-names"]');

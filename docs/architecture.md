@@ -1,15 +1,15 @@
 # Architecture
 
-org-tools is a static Next.js application backed by an in-memory MobX workspace. It has no server
-runtime or database. Files are the persistence boundary: a complete workspace is opened from and
-saved to strict unversioned JSON. The same state envelope carries scoped Teams, Employees, Teams +
-Employees, or Full workspace content. Ordinary JSON can append mapped manual Teams,
-Employees, hierarchy, and assignments.
+org-tools is a local Next.js server application backed by an in-memory MobX working copy and one
+SQLite database. The server binds to `127.0.0.1`, serves the UI, and exposes a same-origin project
+API. Each durable project keeps one strict unversioned `OrgToolsState` snapshot; JSON Import and
+Export remain the transfer and backup boundary for the current project. The same public state
+envelope still carries scoped Teams, Employees, Teams + Employees, or Full workspace content.
 
 ## Workspace layout
 
-- `apps/ui` contains the static application, React components, stores, parsers, exporters, and UI
-  tests.
+- `apps/ui` contains the Next.js runtime, local API, SQLite repository, React components, stores,
+  parsers, exporters, and UI tests.
 - `packages/types` defines the public state, Employee, Unit, View, and editor contracts.
 - `packages/screenshots` contains production-build browser smoke tests and deterministic PNG
   capture.
@@ -19,28 +19,49 @@ Employees, hierarchy, and assignments.
 The `pnpm spec -- ...` wrapper is the repository entry point for OpenSpec and disables its
 development-only anonymous telemetry.
 
-The production build is exported to `apps/ui/out`. It consists only of static HTML, CSS, JavaScript,
-fonts, and images that can be hosted on any static file server.
+The production build is a Next.js server build in `apps/ui/.next`. `pnpm start` binds it to
+`127.0.0.1`; arbitrary static hosting is intentionally unsupported because a browser cannot write a
+real SQLite file and a static export cannot provide mutation handlers.
 
-The application has one route, `/`. A client locale provider statically imports the English and
+The application uses `/projects/<uuid>` as its stable project route. `/` resolves the last opened
+project, creating `New project` when the database is empty, and redirects to that stable URL. A
+client locale provider statically imports the English and
 Russian catalogs, deterministically encodes reserved periods in sentence-style UI IDs, and passes
 the active namespace-safe catalog to `NextIntlClientProvider`. The typed UI wrapper applies the same
-encoding during lookup. There are no locale URL segments, middleware, request configuration, server
-negotiation, or catalog fetches. Before the browser locale is resolved, the application renders a
-neutral text-free surface so the fallback language cannot flash.
+encoding during lookup. There are no locale URL segments or catalog fetches.
 
 The single-route shell owns a dark collapsible sidebar and a context-only workflow header. The
-sidebar keeps the existing Radix product-tab state and order, co-locates language, theme, Import,
-and workspace Export actions, and switches between a 240 px labelled panel and a 64 px icon rail.
+sidebar keeps the existing Radix product-tab state and order, co-locates the project switcher,
+language, theme, Import, and workspace Export actions, and switches between a 240 px labelled panel
+and a 64 px icon rail.
 Narrow layouts use the icon rail through responsive CSS. Collapse state is component-local and is
 not added to MobX workspace state, exported files, or browser storage.
 
 ## State flow
 
 ```text
-scoped state JSON ──strict projection + append/replace──┐
-ordinary JSON ──nested mapping and atomic append────────┼──> in-memory stores ──> UI and local export
+SQLite state_json ──strict read + UI overlay─────────────┐
+scoped state JSON ──strict projection + append/replace───┼──> in-memory stores ──> UI and local export
+ordinary JSON ──nested mapping and atomic append─────────┘          │
+                                                                    └──explicit Save──> SQLite
 ```
+
+SQLite schema v1 stores multiple projects in `projects`, the last opened project in the singleton
+`app_state` row, and its internal schema version in `PRAGMA user_version`. `state_json` is a complete
+validated workspace snapshot. `ui_json` is a bounded overlay containing the active tab and View,
+theme, selected and expanded Units, and per-View viewport and selection. Dangling UI references are
+discarded when a project opens. The repository uses prepared statements, `foreign_keys=ON`, rollback
+journal mode, `synchronous=FULL`, a busy timeout, and atomic transactions. It deliberately avoids
+WAL so a stopped, idle runtime has one durable database file.
+
+The path resolves in strict precedence order: `ORG_TOOLS_DB_PATH`,
+`.org-tools/config.json`, then `.org-tools/org-tools.sqlite3`. Relative paths resolve from the
+repository root. Invalid configuration or an inaccessible path is a blocking error; there is no
+ephemeral fallback. The connection is opened lazily and reused across development hot reloads.
+
+`GET /api/projects`, project CRUD, revisioned state Save, and last-write-wins UI Save form the local
+same-origin API. Every response is `Cache-Control: no-store`. Mutations accept only JSON and require
+a matching loopback Origin and Host. The runtime does not enable CORS.
 
 `OrgToolsState` is the sole current transfer format. Its `content` discriminator declares Teams,
 Employees, Teams + Employees, or Full workspace. A parser verifies the declared scope, exact
@@ -108,10 +129,13 @@ data through props and shared list components instead of rebuilding indexes duri
 
 ## Persistence and current-schema policy
 
-Workspace state remains in page memory. Opening a valid complete state replaces it atomically;
-downloading produces `org-tools-state.json`. UI preferences may be derived from the current session,
-but organizational content is not written to browser storage. Theme and locale are the only local
-preferences; locale uses the `org-tools-locale` local-storage key and is not part of
-`OrgToolsState`. Opening a workspace therefore cannot change the language. The public state
-interface deliberately has no version fields: a schema change replaces the previous type, reader,
-fixtures, documentation, and tests instead of adding a compatibility or migration layer.
+The active project is edited as an in-memory working copy. Organization mutations make it dirty and
+are serialized only by explicit **Save** or `Ctrl+S`/`Cmd+S`; a successful transaction increments
+`state_revision`. A stale revision produces a conflict instead of overwriting either version. Theme,
+tab, active View, viewport, and selection never make organization data dirty and update only the
+bounded UI overlay after 300 ms. Organizational content is never written to browser storage.
+
+Downloading still produces `org-tools-state.json`, and importing changes only the current working
+copy until Save. Locale remains the independent `org-tools-locale` browser preference and is not
+part of `OrgToolsState`. The public state interface deliberately has no version fields and is
+unchanged by project persistence; database schema versioning is private to the local runtime.

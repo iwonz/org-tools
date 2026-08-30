@@ -464,7 +464,7 @@ export const ImportDialog = observer(
             <DialogTitle>{t("Import")}</DialogTitle>
             <DialogDescription>
               {t(
-                "Import an Org Tools state or map ordinary JSON data. Files stay in this browser.",
+                "Import an Org Tools state or map ordinary JSON data. Files are read locally and are never sent to external services.",
               )}
             </DialogDescription>
           </DialogHeader>

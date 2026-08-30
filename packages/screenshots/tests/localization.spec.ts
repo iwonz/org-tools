@@ -3,6 +3,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import enMessages from "../../../apps/ui/messages/en.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import {
+  createIsolatedProject,
   expectLocalRequestsOnly,
   type ImportFilePayload,
   localeStorageKey,
@@ -66,7 +67,7 @@ const readSelectValueLayout = async (value: Locator) =>
 test("detects Russian from browser preferences on first use", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await setBrowserLanguages(page, ["de-DE", "ru-RU", "en-US"]);
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
   await expect(page.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
@@ -82,7 +83,7 @@ test("detects Russian from browser preferences on first use", async ({ page }) =
 
 test("falls back to English for an unsupported browser locale", async ({ page }) => {
   await setBrowserLanguages(page, ["de-DE", "fr-FR"]);
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("tab", { name: enMessages.Ui.Editor, exact: true })).toBeVisible();
@@ -96,7 +97,7 @@ test("switches the interface in place and persists the choice", async ({ page },
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
 
   const languageToggle = page.locator('[data-demo-id="language-toggle"]');
   const themeToggle = page.locator('[data-demo-id="theme-toggle"]');
@@ -253,7 +254,7 @@ for (const [locale, messages] of [
   }, testInfo) => {
     const assertLocalRequests = await expectLocalRequestsOnly(page);
     await seedLocale(page, locale);
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto(await createIsolatedProject(page), { waitUntil: "domcontentloaded" });
 
     await page.getByRole("button", { name: messages.Ui["Workspace Export"], exact: true }).click();
     const saveDialog = page.getByRole("dialog", { name: messages.Ui["Export workspace"] });
@@ -270,7 +271,7 @@ for (const [locale, messages] of [
     const downloadPromise = page.waitForEvent("download");
     await saveDialog.getByRole("button", { name: messages.Ui.Download, exact: true }).click();
     expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
-    await expect(page.getByRole("status")).toHaveCount(0);
+    await expect(page.locator('[data-demo-id="project-save-status"]')).toBeVisible();
 
     let dialog = await chooseImportFile(page, messages, syntheticEmployeesJsonPath);
     await expect(dialog.getByText(messages.Ui["Field mapping"], { exact: true })).toBeVisible();
@@ -330,7 +331,8 @@ for (const [locale, messages] of [
     await dialog
       .getByRole("button", { name: messages.Ui["Replace all current"], exact: true })
       .click();
-    await expect(page.getByRole("status")).toHaveCount(0);
+    await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
+    await expect(page.locator('[data-demo-id="project-save-status"]')).toBeVisible();
     await page.getByRole("tab", { name: messages.Ui.Employees, exact: true }).click();
     await expect(page.locator('[data-demo-id="employees-total-count"]')).toContainText("4");
     await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);

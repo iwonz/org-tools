@@ -23,6 +23,11 @@ import { ExportTab } from "@/components/export-tab";
 import { ImportDialog } from "@/components/import-dialog";
 import { LanguageToggle } from "@/components/language-toggle";
 import { OrgStructureEditorTab } from "@/components/org-structure-editor-tab";
+import { ProjectSwitcher } from "@/components/project-switcher";
+import {
+  ProjectWorkspaceController,
+  useProjectWorkspace,
+} from "@/components/project-workspace-controller";
 import { SaveDialog } from "@/components/save-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -70,6 +75,7 @@ const LoadedApp = observer(() => {
   const t = useUiText();
   const countText = useCountText();
   const messageText = useMessageText();
+  const projectWorkspace = useProjectWorkspace();
   const { setTheme } = useTheme();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -190,6 +196,15 @@ const LoadedApp = observer(() => {
               </TabsList>
             </nav>
             <div className="flex shrink-0 flex-col gap-1 p-2 pb-3" data-demo-id="sidebar-actions">
+              <div className="group relative mb-1">
+                <ProjectSwitcher
+                  labelClassName={sidebarLabelClassName}
+                  triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
+                />
+                <SidebarTooltip collapsed={sidebarCollapsed}>
+                  {projectWorkspace.project.name}
+                </SidebarTooltip>
+              </div>
               <input
                 accept=".json,application/json"
                 aria-hidden="true"
@@ -273,6 +288,33 @@ const LoadedApp = observer(() => {
               <h1 className="truncate text-base font-semibold" data-demo-id="app-title">
                 {t(activeNavigationItem.label)}
               </h1>
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <span
+                  className={cn(
+                    "w-24 text-right text-xs font-medium text-muted-foreground",
+                    projectWorkspace.saveStatus === "failed" && "text-destructive",
+                  )}
+                  data-demo-id="project-save-status"
+                  role="status"
+                >
+                  {projectWorkspace.saveStatus === "saving"
+                    ? t("Saving…")
+                    : projectWorkspace.saveStatus === "failed"
+                      ? t("Save failed")
+                      : projectWorkspace.dirty
+                        ? t("Unsaved")
+                        : t("Saved")}
+                </span>
+                <Button
+                  className="h-9 min-w-20"
+                  data-demo-id="project-save"
+                  disabled={!projectWorkspace.dirty || projectWorkspace.saveStatus === "saving"}
+                  onClick={() => void projectWorkspace.save()}
+                  type="button"
+                >
+                  {t("Save")}
+                </Button>
+              </div>
             </header>
             {error && (
               <div
@@ -342,6 +384,15 @@ const LoadedApp = observer(() => {
           </section>
         </Tabs>
       </main>
+      {projectWorkspace.notice === "link-copied" && (
+        <div
+          className="fixed bottom-5 right-5 z-[80] rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
+          data-demo-id="project-link-copied"
+          role="status"
+        >
+          {t("Project link copied.")}
+        </div>
+      )}
       <ImportDialog
         existingEmployees={store.workspaceEmployees.map(({ email, id, username }) => ({
           email,
@@ -400,10 +451,18 @@ const LoadedApp = observer(() => {
   );
 });
 
-export function OrgToolsApp() {
+function ProjectApp({ projectId }: { projectId: string }) {
+  return (
+    <ProjectWorkspaceController projectId={projectId}>
+      <LoadedApp />
+    </ProjectWorkspaceController>
+  );
+}
+
+export function OrgToolsApp({ projectId }: { projectId: string }) {
   return (
     <OrgStoreProvider>
-      <LoadedApp />
+      <ProjectApp projectId={projectId} />
     </OrgStoreProvider>
   );
 }

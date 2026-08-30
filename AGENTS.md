@@ -8,12 +8,13 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
 
 ## Product invariants
 
-- The application is browser-only. Organization data, imported rows, searches, analytics, and
-  exports must never be sent to a server or third party.
+- The application is local-only. Organization data may travel only between the browser and the
+  loopback same-origin Org Tools runtime; it must never be sent to a third party or remote service.
 - Do not add telemetry, analytics SDKs, remote logging, remote synchronization, or background
   requests.
-- Do not persist organization data in browser storage. State enters through explicit file open or
-  import and leaves through explicit download, copy, or image export.
+- Persist organization projects only in the configured local SQLite database. Do not persist
+  organization data in cookies, IndexedDB, session storage, or local storage. Import and Export
+  remain explicit transfer and backup boundaries for the current project.
 - Employee avatars are bounded embedded PNG, JPEG, or WebP data URLs. Never fetch remote avatars.
 - Profile and email navigation must require an explicit user action and use referrer protections.
 - Source comments, fixtures, tests, specifications, and documentation are English. Cyrillic product
@@ -42,15 +43,16 @@ Keep the README concise and link to the detailed documents.
 - `pnpm format` applies formatting explicitly.
 - `pnpm typecheck` checks all TypeScript workspaces.
 - `pnpm test:unit` runs unit tests.
-- `pnpm build` creates the static production application.
+- `pnpm build` creates the production Next.js server application.
 - `pnpm test:browser` runs browser smoke tests against the production build.
 - `pnpm screenshots:generate` regenerates the PNG gallery.
 - `pnpm spec:validate` validates all OpenSpec changes and capability specs strictly.
 - `pnpm spec -- <command>` runs any other OpenSpec command with telemetry disabled.
 - `pnpm public:check` scans the worktree and an existing production build for publication hazards.
 
-Run `pnpm build` before `pnpm public:check`. Never commit `apps/ui/next-env.d.ts`, build output,
-browser reports, caches, or generated performance fixtures.
+Run `pnpm build` before `pnpm public:check`. Never commit `.org-tools/config.json`, SQLite database
+files, `apps/ui/next-env.d.ts`, build output, browser reports, caches, or generated performance
+fixtures.
 
 ## Delivery
 

@@ -1,8 +1,9 @@
 # Usage
 
-org-tools opens directly in a blank Main View with Editor selected. A dark 64 px compact sidebar
-contains the six product destinations followed by **Import**, **Export**, language, and theme
-controls. Its desktop toggle expands the panel to 240 px; narrow layouts keep the compact rail.
+org-tools opens the last selected project at `/projects/<uuid>`. A new database starts with a blank
+`New project`, Main View, and Editor selected. A dark 64 px compact sidebar contains the six product
+destinations followed by the project switcher, **Import**, **Export**, language, and theme controls.
+Its desktop toggle expands the panel to 240 px; narrow layouts keep the compact rail.
 Compact items hide their visible labels while keeping localized accessible names, native titles,
 and pointer tooltips; every icon is centered with equal inline space. There is no decorative Org
 Tools glyph or visible product title. The collapse control is a left-aligned 48 px by 40 px compact
@@ -13,13 +14,15 @@ stationary. The toggle icon keeps stable contrast. Narrow automatic compact mode
 header row. Sidebar mode is transient UI state and is never written to the workspace or browser
 storage.
 
-The content header contains only the current workflow icon and title. Active navigation uses a calm
+The content header contains the current workflow icon and title plus a stable-width Save status and
+button. Active navigation uses a calm
 tonal surface and stronger foreground; hover changes tone without introducing a border, outline,
 inset hairline, elevation shadow, or layout shift. Press changes tone without scaling, rotating,
 translating, or resizing content. Keyboard focus remains explicit, and reduced-motion removes the
 sidebar width and label animation. Ordinary controls, selected choices, cards, shell chrome, and
 Editor toolbars do not use decorative shadows; true overlays use only restrained separation depth.
-Nested tabs follow the same borderless tonal state language. The application does not autosave.
+Nested tabs follow the same borderless tonal state language. Organization data never autosaves;
+bounded project UI state saves separately after 300 ms.
 Empty product tabs show one focused next action and omit controls that cannot yet do useful work.
 
 Ordinary product workflows remain full-bleed below the header: there is no decorative outer panel,
@@ -52,6 +55,26 @@ selection change only tone and foreground contrast.
 
 The Russian interface uses localized Team terminology for Unit and Live Unit. English machine keys,
 persisted types, and export fields remain unchanged.
+
+## Project workspaces and Save
+
+Open the project switcher in the sidebar footer to select a project or use **Create project**,
+**Rename project**, **Copy project link**, and **Delete project**. Names are required, limited to 100
+trimmed characters, and unique after Unicode normalization and case folding. A project keeps its UUID
+and stable link when renamed. Deleting the current project opens a remaining project; deleting the
+final project immediately creates a new blank one.
+
+Employee, Team, View, Live rule, assignment, and editor-document changes make the current project
+**Unsaved**. Use header **Save** or `Ctrl+S`/`Cmd+S`; Saving, Saved, and Save failed use a fixed status
+area without moving the header. Switching project or following an internal project action while
+dirty offers **Save**, **Discard**, and **Cancel**. Closing or reloading the page also invokes the
+browser's unsaved-change protection.
+
+Theme, product tab, active View, selected or expanded Units, and each View's viewport and selection
+do not activate Save. They are stored as a small project UI projection. If another tab saves first,
+the conflict dialog offers **Load saved version**, **Overwrite saved version**, or **Cancel**; no
+version is silently lost. An unavailable or corrupt project stays blocked and offers only safe retry,
+switch, or delete recovery.
 
 ## Product tabs
 
@@ -90,7 +113,8 @@ document, local Employees, global Employee overrides, canvas layout, viewport, a
 
 Choose **Export** to select one of four local JSON downloads. The dialog is ordered **Teams**,
 **Employees**, **Teams + Employees**, and **Full workspace**, and defaults to the full workspace on
-every opening. Empty partial choices are disabled.
+every opening. Empty partial choices are disabled. Export reads the current working copy, including
+changes that have not yet been saved to SQLite.
 
 - Teams downloads `org-tools-teams.json` with the Main hierarchy and Live rules but no Employee
   assignments.
@@ -112,6 +136,10 @@ roots to Main, moves the imported layout into free canvas space, and preserves c
 Partial replace clears the current organization and installs only the selected projection. The two
 operations appear in a separate Import mode section, with replacement styled as destructive. Full
 workspace always replaces and shows a separate destructive warning.
+
+Import affects only the current project and marks its organization working copy Unsaved. Save after
+the import to make it durable. To move from the former file-only workflow, import the old
+`org-tools-state.json` once into the first project and Save it.
 
 A successful replacement closes without leaving a global filename banner. Append keeps its
 localized merge summary, and failed operations continue to show their owned error without changing

@@ -12,11 +12,14 @@ fix and disclosure timeline with the reporter.
 
 ## Security boundary
 
-org-tools is a static browser application. It intentionally has no server-side persistence,
-authentication, telemetry, or remote organization-data API. The principal risks are unsafe local
-file parsing, executable or oversized embedded values, accidental external requests, formula-like
-spreadsheet output, and publication of non-synthetic fixtures.
+org-tools is a local Next.js application with SQLite persistence. Its runtime binds only to
+`127.0.0.1`, exposes only a same-origin project API, and has no authentication, telemetry, remote
+synchronization, or remote organization-data API. The principal risks are unsafe local file
+parsing, cross-origin local mutations, executable or oversized embedded values, accidental external
+requests, formula-like spreadsheet output, and publication of a local database or non-synthetic
+fixtures.
 
 Security fixes must preserve strict state validation, bounded file and avatar handling, explicit
-external navigation, output escaping, and same-origin-only background traffic. See
+external navigation, prepared SQL, loopback Host and Origin checks, output escaping, and
+same-origin-only background traffic. See
 [Privacy](docs/privacy.md) for the maintained data-flow boundary.

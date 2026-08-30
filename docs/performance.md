@@ -63,6 +63,19 @@ state parsing validates references in indexed passes instead of repeated full co
 Download derives only the selected sources and Employees. Canvas PNG generation reuses current layout
 and locally available embedded avatar data, with no network fetch.
 
+## Project persistence
+
+Organization change tracking observes store collection references and editor document references;
+it does not stringify the workspace after each edit. The full 20,000-Employee and 4,000-Unit
+snapshot is created, strictly validated, and serialized only when the user invokes Save. The Save
+request contains one snapshot and SQLite replaces one `state_json` value in an atomic transaction.
+
+UI persistence is a separate 300 ms debounced path. Its bounded projection contains scalar shell
+state plus viewport and selection for each View; it never walks or serializes the Employee catalog,
+Unit graph, Live rules, or editor documents. Revision conflicts do not retry or repeatedly serialize
+in the background. Project lists exclude state JSON, so opening the switcher remains proportional to
+the number of projects rather than organization size.
+
 Avatar input is bounded before interactive editing: 25 MiB compressed, 40 megapixels decoded, and a
 4096-pixel longest-side preview. Confirmation renders only one 512-by-512 WebP canvas and releases
 the temporary source URL rather than retaining both original and cropped images.

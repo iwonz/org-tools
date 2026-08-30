@@ -1,23 +1,30 @@
 # Privacy and data safety
 
-org-tools is designed for sensitive organization planning without a server-side data path.
+org-tools is designed for sensitive organization planning with a strictly local data path.
 
 ## Data boundary
 
-Organization state, imported rows, search terms, analytics, previews, and exports are processed in
-the current browser page. The application does not provide telemetry, remote logging, accounts,
-upload APIs, background synchronization, or a server database. Browser smoke tests fail when a core
-workflow makes a request outside the local application origin.
+Organization state may travel only between the current browser page and the Org Tools runtime on the
+same loopback origin. The local runtime persists projects in SQLite; it does not provide telemetry,
+remote logging, accounts, remote upload APIs, background synchronization, or network database
+access. Browser smoke tests fail when a core workflow makes a request outside the local application
+origin.
 
-State and import preview rows are held in memory. They enter only when the user explicitly selects a file and leave only when
-the user explicitly downloads, copies, or exports content. Closing or reloading the page discards
-unsaved organization changes. Organizational data is not stored in cookies, IndexedDB, session
-storage, or local storage.
+The active working copy and import previews are held in browser memory. Explicit Save sends one
+validated complete snapshot to the loopback runtime, where SQLite commits it atomically. Closing or
+reloading the page discards unsaved organization changes. Organizational data is not stored in
+cookies, IndexedDB, session storage, or local storage. Import and Export operate only on the current
+project and remain explicit migration and backup actions.
 
-Local storage is used only for bounded, non-sensitive UI preferences: the theme and the `en` or
-`ru` locale identifier under `org-tools-locale`. Locale access is best-effort, and a browser that
-blocks local storage continues in memory. The locale is never added to a workspace file, and opening
-a workspace never changes it.
+Local storage is used only for the non-sensitive `en` or `ru` locale identifier under
+`org-tools-locale`. Project theme and other project UI state use the bounded SQLite `ui_json`
+projection and never contain organization records. The locale is never added to a workspace or
+project, and opening a project never changes it.
+
+The default runtime directory `.org-tools/` is ignored by Git. A custom database path is allowed,
+but database files and `.org-tools/config.json` must never be committed. Stop the server before
+copying the SQLite file: rollback-journal mode keeps the durable idle store to one database file,
+while copying a live database can produce an inconsistent backup.
 
 ## File validation
 
@@ -37,8 +44,9 @@ a workspace never changes it.
 - Spreadsheet-oriented exports neutralize formula-leading values where appropriate.
 
 Employee tag dates and their Calendar indexes remain organization data. Editing, filtering,
-grouping, virtualized event dialogs, workspace Export, import, and data download all operate inside the current page and
-do not add reminders, background work, or browser persistence.
+grouping, virtualized event dialogs, workspace Export, import, and data download operate in the
+browser working copy; only explicit project Save crosses into the loopback runtime. None adds
+reminders, remote work, or browser persistence.
 
 ## Links and avatars
 
@@ -65,6 +73,6 @@ non-portable paths, unexpected non-English source text, unsafe remote media, obs
 tooling, unsupported media artifacts, caches, and generated declarations. The only source-path
 exception for Cyrillic is the reviewed Russian catalog at `apps/ui/messages/ru.json`.
 
-OpenSpec is a development-only dependency and is not included in the static application. Repository
+OpenSpec is a development-only dependency and is not included in the production application. Repository
 commands invoke it through `pnpm spec -- ...`, which sets its documented telemetry opt-out
 environment variables.

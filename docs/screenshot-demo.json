@@ -440,5 +440,54 @@
     "file": "feature-download-json-preview.png",
     "description": "Inspect the lower field list and formatted JSON structure before copying or downloading the local file.",
     "capabilities": ["Remaining fields", "Formatted JSON", "Copy", "Local download"]
+  },
+  {
+    "id": "project-switcher-link",
+    "module": "projects",
+    "featured": false,
+    "title": "Project switcher and stable link",
+    "file": "feature-project-switcher-link.png",
+    "description": "Switch durable projects from the sidebar footer and copy the stable deep link of the current project.",
+    "capabilities": ["Project list", "Current selection", "Stable deep link", "Compact sidebar"]
+  },
+  {
+    "id": "project-create",
+    "module": "projects",
+    "featured": false,
+    "title": "Create a project",
+    "file": "feature-project-create.png",
+    "description": "Create a named empty project without leaving the current product shell.",
+    "capabilities": ["Project creation", "Required name", "Unique name", "Compact dialog"]
+  },
+  {
+    "id": "project-rename",
+    "module": "projects",
+    "featured": false,
+    "title": "Rename a project",
+    "file": "feature-project-rename.png",
+    "description": "Rename the current project while preserving its UUID link and saved organization state.",
+    "capabilities": ["Project rename", "Stable UUID", "Unique normalized name"]
+  },
+  {
+    "id": "project-delete",
+    "module": "projects",
+    "featured": false,
+    "title": "Delete a project",
+    "file": "feature-project-delete.png",
+    "description": "Confirm destructive project deletion before opening a remaining or automatically recreated project.",
+    "capabilities": [
+      "Deletion confirmation",
+      "Remaining project recovery",
+      "Final-project recovery"
+    ]
+  },
+  {
+    "id": "project-revision-conflict",
+    "module": "projects",
+    "featured": false,
+    "title": "Resolve a revision conflict",
+    "file": "feature-project-revision-conflict.png",
+    "description": "Choose whether to load the saved project, explicitly overwrite it, or keep local unsaved work.",
+    "capabilities": ["Optimistic revision", "Load saved version", "Explicit overwrite", "Cancel"]
   }
 ]

@@ -1,11 +1,12 @@
 # org-tools
 
-`org-tools` is a private organization editor that runs entirely in the browser.
+`org-tools` is a private local organization editor with durable SQLite project workspaces.
 
 - Build Units, manage Employees, and arrange them on a visual canvas.
 - Search the organization, explore analytics, and track birthdays and dated tags.
 - Import JSON and export workspace files, tables, templates, or a canvas PNG.
-- Keep organization data in page memory—there is no account, server database, or telemetry.
+- Keep organization data on this computer through a loopback-only Next.js runtime—there is no
+  account, remote service, telemetry, or background synchronization.
 
 ## Screenshots
 
@@ -28,14 +29,19 @@ open panel, and deterministic generation rule.
 
 ## Run locally
 
-Requires Node.js 20 or newer and pnpm 10.33.2.
+Requires Node.js 22.13 or newer and pnpm 10.33.2. Arbitrary static hosting is no longer supported
+because project writes require the local Next.js runtime.
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The default database is
+`.org-tools/org-tools.sqlite3`; override it with `ORG_TOOLS_DB_PATH` or copy
+`.org-tools/config.example.json` to `.org-tools/config.json` and set `databasePath`. Relative paths
+resolve from the repository root. Stop Org Tools before copying the SQLite file as a backup. Import
+an older `org-tools-state.json` once into the first project, then use **Save** for durable changes.
 
 More: [Usage](docs/usage.md) · [Privacy](docs/privacy.md) · [Contributing](CONTRIBUTING.md) ·
 [License](LICENSE)
