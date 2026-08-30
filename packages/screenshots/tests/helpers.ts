@@ -28,7 +28,7 @@ export const localeStorageKey = "org-tools-locale";
 let projectSequence = 0;
 
 export async function createIsolatedProject(page: Page): Promise<string> {
-  const port = process.env.ORG_TOOLS_PORT ?? "4173";
+  const port = process.env.ORG_TOOLS_PORT ?? "4273";
   const origin = process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     projectSequence += 1;

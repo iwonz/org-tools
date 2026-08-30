@@ -25,7 +25,7 @@ const primaryScreenshotModules = [
   "calendar",
   "download",
 ];
-const supportingScreenshotModules = ["projects"];
+const supportingScreenshotModules = ["browser", "projects"];
 
 const blockedPathSegments = new Set([
   ".cache",
@@ -331,7 +331,14 @@ async function main() {
     });
   }
 
-  const absolutePaths = new Set(worktreePaths.map((path) => resolve(repositoryRoot, path)));
+  const absolutePaths = new Set();
+  for (const path of worktreePaths) {
+    const absolutePath = resolve(repositoryRoot, path);
+    const exists = await stat(absolutePath)
+      .then((entry) => entry.isFile())
+      .catch(() => false);
+    if (exists) absolutePaths.add(absolutePath);
+  }
   if (outputExists) {
     for (const output of productionOutputs) {
       const exists = await stat(output)
@@ -353,7 +360,9 @@ async function main() {
     const path = normalizedRelativePath(absolutePath);
     const pathSegments = path.split("/");
     const isProductionFile =
-      path.startsWith("apps/ui/.next/static/") || path.startsWith("apps/ui/.next/server/app/");
+      path.startsWith("apps/ui/.next/static/") ||
+      path.startsWith("apps/ui/.next/server/app/") ||
+      path.startsWith("pages-out/");
 
     if (!isProductionFile) {
       const blockedSegment = pathSegments.find((segment) => blockedPathSegments.has(segment));
@@ -380,7 +389,7 @@ async function main() {
     if (extension === ".tsbuildinfo") {
       violations.push({ path, rule: "generated TypeScript build cache must not be published" });
     }
-    if (path.endsWith("apps/ui/next-env.d.ts")) {
+    if (path.endsWith("apps/ui/next-env.d.ts") || path.endsWith("apps/pages/next-env.d.ts")) {
       violations.push({ path, rule: "generated Next.js type declaration must not be published" });
     }
     if (binaryExtensions.has(extension) || path === scannerPath) continue;

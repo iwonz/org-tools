@@ -157,6 +157,13 @@ test("captures persistent project management", async ({ page }) => {
     timeout: 10_000,
   });
 
+  await popover.getByText("Autosave", { exact: true }).click();
+  await expect(popover.locator('[data-demo-id="autosave-checkbox"]')).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await capture(page, "project-autosave");
+
   await popover.getByRole("button", { name: "Create project", exact: true }).click();
   let dialog = page.getByRole("dialog", { name: "Create project" });
   await dialog.getByLabel("Project name", { exact: true }).fill("Annual planning");

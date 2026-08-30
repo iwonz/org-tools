@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
-const port = Number(process.env.ORG_TOOLS_PORT ?? "4173");
+const port = Number(process.env.ORG_TOOLS_PORT ?? "4273");
 const configuredBaseUrl = process.env.ORG_TOOLS_BASE_URL;
 const baseURL = configuredBaseUrl ?? `http://127.0.0.1:${port}`;
 const databasePath =

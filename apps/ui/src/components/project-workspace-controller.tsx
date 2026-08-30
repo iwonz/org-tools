@@ -2,16 +2,7 @@
 
 import { observer } from "mobx-react-lite";
 import { useTheme } from "next-themes";
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HiOutlineCircleStack } from "react-icons/hi2";
 
 import {
@@ -25,7 +16,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useAutosavePreference } from "@/components/use-autosave-preference";
+import {
+  type SqliteWorkspacePersistence,
+  WorkspacePersistenceContext,
+  type WorkspaceSaveStatus,
+} from "@/components/workspace-persistence-context";
 import { useUiText } from "@/i18n/use-ui-text";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/autosave-preference";
 import { copyTextToClipboard } from "@/lib/org-file";
 import {
   applyProjectUiState,
@@ -35,26 +33,10 @@ import {
   type ProjectListResponse,
   type ProjectSummary,
 } from "@/lib/project-workspace";
+import { runSingleFlightSave } from "@/lib/single-flight-save";
 import { useOrgStore } from "@/stores/org-store-context";
 
-export type ProjectSaveStatus = "failed" | "idle" | "saved" | "saving";
-
 type PendingNavigation = { id: string; kind: "project" } | { kind: "create"; name: string };
-
-type ProjectWorkspaceContextValue = {
-  copyProjectLink: () => Promise<void>;
-  createProject: (name: string) => Promise<void>;
-  deleteProject: () => Promise<void>;
-  dirty: boolean;
-  notice: "link-copied" | null;
-  project: ProjectDocument;
-  projects: ProjectSummary[];
-  refreshProjects: () => Promise<void>;
-  renameProject: (name: string) => Promise<void>;
-  save: () => Promise<boolean>;
-  saveStatus: ProjectSaveStatus;
-  switchProject: (id: string) => void;
-};
 
 class ProjectClientError extends Error {
   readonly code: ProjectApiErrorCode;
@@ -79,14 +61,6 @@ const projectRequest = async <T,>(path: string, init?: RequestInit): Promise<T> 
   const value = (await response.json()) as T | ProjectApiError;
   if (!response.ok) throw new ProjectClientError((value as ProjectApiError).error);
   return value as T;
-};
-
-const ProjectWorkspaceContext = createContext<ProjectWorkspaceContextValue | null>(null);
-
-export const useProjectWorkspace = () => {
-  const context = useContext(ProjectWorkspaceContext);
-  if (!context) throw new Error("ProjectWorkspaceController is missing.");
-  return context;
 };
 
 function WorkspaceLoading() {
@@ -163,10 +137,11 @@ export const ProjectWorkspaceController = observer(
     const store = useOrgStore();
     const { setTheme } = useTheme();
     const t = useUiText();
+    const [autosaveEnabled, persistAutosave] = useAutosavePreference();
     const [project, setProject] = useState<ProjectDocument | null>(null);
     const [projects, setProjects] = useState<ProjectSummary[]>([]);
     const [savedOrganizationSequence, setSavedOrganizationSequence] = useState(0);
-    const [saveStatus, setSaveStatus] = useState<ProjectSaveStatus>("idle");
+    const [saveStatus, setSaveStatus] = useState<WorkspaceSaveStatus>("idle");
     const [errorCode, setErrorCode] = useState<ProjectApiErrorCode | null>(null);
     const [conflictRevision, setConflictRevision] = useState<number | null>(null);
     const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
@@ -174,6 +149,7 @@ export const ProjectWorkspaceController = observer(
     const lastSavedUiSequence = useRef(0);
     const loadingToken = useRef(0);
     const allowUnload = useRef(false);
+    const savePromise = useRef<Promise<boolean> | null>(null);
     const setThemeRef = useRef(setTheme);
     setThemeRef.current = setTheme;
     const dirty =
@@ -226,46 +202,51 @@ export const ProjectWorkspaceController = observer(
     const saveAtRevision = useCallback(
       async (expectedRevision: number): Promise<boolean> => {
         if (!project) return false;
-        const sequence = store.organizationChangeSequence;
-        setSaveStatus("saving");
-        try {
-          const saved = await projectRequest<ProjectDocument>(`/api/projects/${project.id}/state`, {
-            body: JSON.stringify({
-              expectedRevision,
-              state: store.createOrgToolsState(),
-            }),
-            method: "PUT",
-          });
-          setProject((current) =>
-            current
-              ? {
-                  ...current,
-                  stateRevision: saved.stateRevision,
-                  updatedAt: saved.updatedAt,
-                }
-              : current,
-          );
-          setProjects((current) =>
-            current.map((item) =>
-              item.id === saved.id
+        return runSingleFlightSave(savePromise, async () => {
+          const sequence = store.organizationChangeSequence;
+          setSaveStatus("saving");
+          try {
+            const saved = await projectRequest<ProjectDocument>(
+              `/api/projects/${project.id}/state`,
+              {
+                body: JSON.stringify({
+                  expectedRevision,
+                  state: store.createOrgToolsState(),
+                }),
+                method: "PUT",
+              },
+            );
+            setProject((current) =>
+              current
                 ? {
-                    ...item,
+                    ...current,
                     stateRevision: saved.stateRevision,
                     updatedAt: saved.updatedAt,
                   }
-                : item,
-            ),
-          );
-          setSavedOrganizationSequence(sequence);
-          setSaveStatus("saved");
-          return true;
-        } catch (error) {
-          if (error instanceof ProjectClientError && error.code === "revision_conflict") {
-            setConflictRevision(error.currentRevision ?? null);
+                : current,
+            );
+            setProjects((current) =>
+              current.map((item) =>
+                item.id === saved.id
+                  ? {
+                      ...item,
+                      stateRevision: saved.stateRevision,
+                      updatedAt: saved.updatedAt,
+                    }
+                  : item,
+              ),
+            );
+            setSavedOrganizationSequence(sequence);
+            setSaveStatus("saved");
+            return true;
+          } catch (error) {
+            if (error instanceof ProjectClientError && error.code === "revision_conflict") {
+              setConflictRevision(error.currentRevision ?? null);
+            }
+            setSaveStatus("failed");
+            return false;
           }
-          setSaveStatus("failed");
-          return false;
-        }
+        });
       },
       [project, store],
     );
@@ -300,6 +281,28 @@ export const ProjectWorkspaceController = observer(
       },
       [dirty, executeNavigation, project?.id],
     );
+
+    // biome-ignore lint/correctness/useExhaustiveDependencies: the sequence restarts the trailing debounce for every organization mutation.
+    useEffect(() => {
+      if (
+        !autosaveEnabled ||
+        !dirty ||
+        saveStatus === "saving" ||
+        saveStatus === "failed" ||
+        conflictRevision !== null
+      ) {
+        return;
+      }
+      const timeout = window.setTimeout(() => void save(), AUTOSAVE_DEBOUNCE_MS);
+      return () => window.clearTimeout(timeout);
+    }, [
+      autosaveEnabled,
+      conflictRevision,
+      dirty,
+      save,
+      saveStatus,
+      store.organizationChangeSequence,
+    ]);
 
     useEffect(() => {
       if (!dirty) return;
@@ -341,10 +344,12 @@ export const ProjectWorkspaceController = observer(
       return () => window.clearTimeout(timeout);
     }, [project, store, store.uiChangeSequence]);
 
-    const context = useMemo<ProjectWorkspaceContextValue | null>(
+    const context = useMemo<SqliteWorkspacePersistence | null>(
       () =>
         project
           ? {
+              autosaveEnabled,
+              autosaveSupported: true,
               copyProjectLink: async () => {
                 await copyTextToClipboard(`${window.location.origin}/projects/${project.id}`);
                 setNotice("link-copied");
@@ -360,6 +365,8 @@ export const ProjectWorkspaceController = observer(
                 window.location.assign(`/projects/${result.nextProject.id}`);
               },
               dirty,
+              displayName: project.name,
+              mode: "sqlite",
               notice,
               project,
               projects,
@@ -376,12 +383,27 @@ export const ProjectWorkspaceController = observer(
               },
               save,
               saveStatus,
+              setAutosaveEnabled: async (enabled) => {
+                if (enabled && saveStatus === "failed") setSaveStatus("idle");
+                persistAutosave(enabled);
+              },
               switchProject: (id) => {
                 void requestNavigation({ id, kind: "project" });
               },
             }
           : null,
-      [dirty, notice, project, projects, refreshProjects, requestNavigation, save, saveStatus],
+      [
+        autosaveEnabled,
+        dirty,
+        notice,
+        persistAutosave,
+        project,
+        projects,
+        refreshProjects,
+        requestNavigation,
+        save,
+        saveStatus,
+      ],
     );
 
     if (errorCode) {
@@ -413,7 +435,7 @@ export const ProjectWorkspaceController = observer(
     if (!project || !context) return <WorkspaceLoading />;
 
     return (
-      <ProjectWorkspaceContext.Provider value={context}>
+      <WorkspacePersistenceContext.Provider value={context}>
         {children}
         <AlertDialog
           onOpenChange={(open) => {
@@ -507,7 +529,7 @@ export const ProjectWorkspaceController = observer(
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </ProjectWorkspaceContext.Provider>
+      </WorkspacePersistenceContext.Provider>
     );
   },
 );

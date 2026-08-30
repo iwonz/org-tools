@@ -1,7 +1,7 @@
 {
   "Metadata": {
     "title": "Org Tools",
-    "description": "Конфиденциальный редактор оргструктуры с локальными проектами в SQLite."
+    "description": "Конфиденциальный редактор оргструктуры с локальными файлами и проектами SQLite."
   },
   "Counts": {
     "units": "{count, plural, one {# команда} few {# команды} many {# команд} other {# команды}}",
@@ -26,6 +26,26 @@
   },
   "Ui": {
     "A project with this name already exists.": "Проект с таким названием уже существует.",
+    "Allow access to continue with {name}.": "Разрешите доступ, чтобы продолжить работу с файлом {name}.",
+    "Autosave": "Автосохранение",
+    "Autosave requires File System Access.": "Автосохранение требует поддержки File System Access.",
+    "File conflict": "Конфликт файла",
+    "Load file": "Загрузить файл",
+    "New workspace": "Новое рабочее пространство",
+    "Open workspace": "Открыть рабочее пространство",
+    "Overwrite file": "Перезаписать файл",
+    "Reading workspace…": "Читаем рабочее пространство…",
+    "Reconnect file": "Подключить файл",
+    "Reconnect workspace file": "Подключите файл рабочего пространства",
+    "Save As": "Сохранить как",
+    "Save changes before leaving this workspace?": "Сохранить изменения перед выходом из рабочего пространства?",
+    "Start blank": "Начать с пустого",
+    "The workspace file changed outside Org Tools.": "Файл рабочего пространства был изменён вне Org Tools.",
+    "The workspace file could not be opened.": "Не удалось открыть файл рабочего пространства.",
+    "The workspace file could not be saved.": "Не удалось сохранить файл рабочего пространства.",
+    "Untitled workspace": "Рабочее пространство без названия",
+    "Workspace file": "Файл рабочего пространства",
+    "Workspace file unavailable": "Файл рабочего пространства недоступен",
     "Actions": "Действия",
     "Active View": "Активное представление",
     "Add": "Добавить",

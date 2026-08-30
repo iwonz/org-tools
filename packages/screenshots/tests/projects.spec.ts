@@ -8,7 +8,7 @@ import {
 } from "./helpers.js";
 
 const configuredOrigin = () => {
-  const port = process.env.ORG_TOOLS_PORT ?? "4173";
+  const port = process.env.ORG_TOOLS_PORT ?? "4273";
   return process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
 };
 
@@ -112,6 +112,35 @@ test("saves organization data explicitly and UI state independently", async ({ p
     "aria-selected",
     "true",
   );
+});
+
+test("keeps autosave off by default and supports debounce plus manual flush", async ({ page }) => {
+  await openBlankWorkspace(page);
+  let popover = await openProjectSwitcher(page);
+  await expect(popover.locator('[data-demo-id="autosave-checkbox"]')).toHaveAttribute(
+    "aria-checked",
+    "false",
+  );
+  await page.keyboard.press("Escape");
+
+  await replaceWithSyntheticWorkspace(page);
+  popover = await openProjectSwitcher(page);
+  await popover.getByText("Autosave", { exact: true }).click();
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Saved", {
+    timeout: 5_000,
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
+  popover = await openProjectSwitcher(page);
+  await expect(popover.locator('[data-demo-id="autosave-checkbox"]')).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+
+  await replaceWithSyntheticWorkspace(page);
+  await page.locator('[data-demo-id="project-save"]').click();
+  await expect(page.locator('[data-demo-id="project-save-status"]')).toHaveText("Saved");
 });
 
 test("offers Save, Discard, or Cancel before switching a dirty project", async ({ page }) => {

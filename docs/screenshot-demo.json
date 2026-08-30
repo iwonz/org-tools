@@ -489,5 +489,65 @@
     "file": "feature-project-revision-conflict.png",
     "description": "Choose whether to load the saved project, explicitly overwrite it, or keep local unsaved work.",
     "capabilities": ["Optimistic revision", "Load saved version", "Explicit overwrite", "Cancel"]
+  },
+  {
+    "id": "project-autosave",
+    "module": "projects",
+    "featured": false,
+    "title": "SQLite project autosave",
+    "file": "feature-project-autosave.png",
+    "description": "Enable the shared default-off autosave preference for the current revisioned SQLite project.",
+    "capabilities": [
+      "Default-off autosave",
+      "Revisioned Save",
+      "Manual Save remains available",
+      "Shared preference"
+    ]
+  },
+  {
+    "id": "browser-file-menu",
+    "module": "browser",
+    "featured": false,
+    "title": "Browser workspace file menu",
+    "file": "feature-browser-file-menu.png",
+    "description": "Manage one browser workspace through New, Open workspace, Save As, and the bound filename.",
+    "capabilities": ["New workspace", "Open workspace", "Save As", "Bound filename"]
+  },
+  {
+    "id": "browser-autosave",
+    "module": "browser",
+    "featured": false,
+    "title": "Browser file autosave",
+    "file": "feature-browser-autosave.png",
+    "description": "Persist organization edits to the explicitly selected file after the shared trailing debounce.",
+    "capabilities": [
+      "Explicit opt-in",
+      "One-second debounce",
+      "Single-flight writes",
+      "Visible Save status"
+    ]
+  },
+  {
+    "id": "browser-reconnect",
+    "module": "browser",
+    "featured": false,
+    "title": "Reconnect a workspace file",
+    "file": "feature-browser-reconnect.png",
+    "description": "Restore only the remembered file handle and require permission before organization data is loaded.",
+    "capabilities": ["Handle-only metadata", "Permission recovery", "Reconnect file", "Start blank"]
+  },
+  {
+    "id": "browser-fallback",
+    "module": "browser",
+    "featured": false,
+    "title": "Browser download fallback",
+    "file": "feature-browser-fallback.png",
+    "description": "Use ordinary JSON file input and download when native File System Access is unavailable.",
+    "capabilities": [
+      "JSON file input",
+      "Download Save",
+      "Tab-lifetime workspace",
+      "Autosave unavailable"
+    ]
   }
 ]

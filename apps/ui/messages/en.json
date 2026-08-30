@@ -1,7 +1,7 @@
 {
   "Metadata": {
     "title": "Org Tools",
-    "description": "A private-by-design organization editor with local SQLite project workspaces."
+    "description": "A private-by-design organization editor with local file and SQLite workspaces."
   },
   "Counts": {
     "units": "{count, plural, one {# Unit} other {# Units}}",
@@ -26,6 +26,26 @@
   },
   "Ui": {
     "A project with this name already exists.": "A project with this name already exists.",
+    "Allow access to continue with {name}.": "Allow access to continue with {name}.",
+    "Autosave": "Autosave",
+    "Autosave requires File System Access.": "Autosave requires File System Access.",
+    "File conflict": "File conflict",
+    "Load file": "Load file",
+    "New workspace": "New workspace",
+    "Open workspace": "Open workspace",
+    "Overwrite file": "Overwrite file",
+    "Reading workspace…": "Reading workspace…",
+    "Reconnect file": "Reconnect file",
+    "Reconnect workspace file": "Reconnect workspace file",
+    "Save As": "Save As",
+    "Save changes before leaving this workspace?": "Save changes before leaving this workspace?",
+    "Start blank": "Start blank",
+    "The workspace file changed outside Org Tools.": "The workspace file changed outside Org Tools.",
+    "The workspace file could not be opened.": "The workspace file could not be opened.",
+    "The workspace file could not be saved.": "The workspace file could not be saved.",
+    "Untitled workspace": "Untitled workspace",
+    "Workspace file": "Workspace file",
+    "Workspace file unavailable": "Workspace file unavailable",
     "Actions": "Actions",
     "Active View": "Active View",
     "Add": "Add",

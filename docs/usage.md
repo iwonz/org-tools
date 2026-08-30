@@ -1,12 +1,13 @@
 # Usage
 
-## Public showcase and local development
+## Browser workspace and local development
 
-The repository's GitHub Pages URL is a static visual catalog, not a hosted workspace. It displays all
-46 deterministic synthetic scenarios and provides local-run links, but it cannot open, import,
-save, edit, or export organization data. Run `pnpm dev` and open `http://127.0.0.1:3000` for the
-functional product. `pnpm dev:check` is the bounded diagnostic command: it starts the real dev entry
-point against a temporary database, verifies routing and the project API, and shuts down.
+The repository's GitHub Pages URL is the functional browser-only workspace at `/org-tools/`. It can
+open, import, edit, analyze, save, and export organization data without a backend. Run
+`pnpm pages:dev` for that static-export variant. Run `pnpm dev` and open
+`http://127.0.0.1:3000` for durable multi-project SQLite storage. `pnpm dev:check` starts the real
+server entry point against a temporary database, verifies routing and the project API, and shuts
+down.
 
 org-tools opens the last selected project at `/projects/<uuid>`. A new database starts with a blank
 `New project`, Main View, and Editor selected. A dark 64 px compact sidebar contains the six product
@@ -29,8 +30,9 @@ inset hairline, elevation shadow, or layout shift. Press changes tone without sc
 translating, or resizing content. Keyboard focus remains explicit, and reduced-motion removes the
 sidebar width and label animation. Ordinary controls, selected choices, cards, shell chrome, and
 Editor toolbars do not use decorative shadows; true overlays use only restrained separation depth.
-Nested tabs follow the same borderless tonal state language. Organization data never autosaves;
-bounded project UI state saves separately after 300 ms.
+Nested tabs follow the same borderless tonal state language. Organization data autosaves only when
+the shared default-off option is explicitly enabled; bounded SQLite project UI state continues to
+save separately after 300 ms.
 Empty product tabs show one focused next action and omit controls that cannot yet do useful work.
 
 Ordinary product workflows remain full-bleed below the header: there is no decorative outer panel,
@@ -83,6 +85,35 @@ do not activate Save. They are stored as a small project UI projection. If anoth
 the conflict dialog offers **Load saved version**, **Overwrite saved version**, or **Cancel**; no
 version is silently lost. An unavailable or corrupt project stays blocked and offers only safe retry,
 switch, or delete recovery.
+
+The project popover also contains **Autosave**, off by default. When enabled, organization edits use
+one trailing 1000 ms debounce and the same revisioned Save operation. Only one write runs at once;
+edits made during that write schedule the next save. Manual Save remains available and immediate.
+A conflict or error pauses autosave without clearing dirty state.
+
+## Browser file workspace
+
+The Pages sidebar replaces project management with one file menu: **New workspace**, **Open
+workspace**, **Save As**, the current filename, and **Autosave**. Open and Save require a complete,
+strict `content: "workspace"` file; the normal Import action still accepts scoped states and
+ordinary JSON. Import marks the browser working copy Unsaved, while Export reads all current changes.
+
+On browsers with File System Access, Open binds the selected JSON file. Save and
+`Ctrl+S`/`Cmd+S` write that handle; the first Save opens Save As. A successful write completes
+createWritable, write, and close before the UI reports Saved. The application remembers only the
+file handle in IndexedDB. On a later visit it opens automatically if permission remains granted;
+otherwise editing is blocked behind **Reconnect file** or **Start blank**. A corrupt or unavailable
+file is never replaced silently.
+
+Before writing, Org Tools compares file size and last-modified time with the last known fingerprint.
+An external edit stops autosave and offers **Load file**, **Overwrite file**, **Save As**, or
+**Cancel**. New and Open while dirty use **Save**, **Discard**, and **Cancel**, and closing the tab
+keeps the native unsaved-change warning.
+
+On browsers without File System Access, Open uses a normal JSON chooser and Save downloads
+`org-tools-state.json`. The workspace exists only until the tab reloads, and Autosave is disabled
+with an explanation. Theme, locale, and the autosave boolean are the only local-storage metadata;
+the organization snapshot never enters browser storage.
 
 ## Product tabs
 

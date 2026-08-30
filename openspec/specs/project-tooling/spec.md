@@ -151,19 +151,23 @@ stable routing, rendered output, and the project list API, and always terminates
 - **THEN** the command terminates the child, removes temporary state, prints bounded diagnostic
   output, and exits unsuccessfully
 
-### Requirement: Repository validation includes the static showcase
-The repository SHALL keep package-manager configuration in its supported workspace location and
-SHALL build and inspect the ignored Pages artifact in continuous and pre-publication validation.
+### Requirement: Repository validation includes the static browser application
+The repository SHALL provide development, static build, inspection, browser-test, and guarded
+publication commands for the ignored GitHub Pages application artifact.
 
-#### Scenario: Supported package-manager configuration
-- **WHEN** repository commands run with the pinned pnpm version
-- **THEN** dependency overrides are applied from workspace configuration without obsolete-field
-  warnings
+#### Scenario: Build Pages application
+- **WHEN** `pnpm pages:build` runs
+- **THEN** it replaces `pages-out` with the static `/org-tools/` application and `.nojekyll` without
+  changing tracked files
 
-#### Scenario: Continuous showcase validation
-- **WHEN** CI validates a clean checkout
-- **THEN** it runs the development probe, builds the Pages artifact, and applies publication-safety
-  checks before reporting success
+#### Scenario: Validate Pages application
+- **WHEN** Pages and publication checks inspect the artifact
+- **THEN** they reject server modules, project API references, dynamic project routes, secrets, local
+  paths, organization fixtures, missing static assets, and an incorrect base path
+
+#### Scenario: Continuous browser validation
+- **WHEN** CI runs on a clean checkout
+- **THEN** it builds and tests the SQLite server and static browser runtimes before publication
 
 ### Requirement: Public automation uses supported action runtimes
 Repository CI and Pages publication workflows SHALL use maintained official action major versions

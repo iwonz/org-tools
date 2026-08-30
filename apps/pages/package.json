@@ -1,0 +1,37 @@
+{
+  "name": "@org-tools/pages",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "next build --webpack",
+    "dev": "next dev --hostname 127.0.0.1",
+    "lint": "biome check app next.config.ts postcss.config.mjs package.json tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/manrope": "^5.2.8",
+    "@fontsource/montserrat": "^5.2.8",
+    "@fontsource/noto-sans": "^5.2.10",
+    "@fontsource/nunito-sans": "^5.2.7",
+    "@fontsource/open-sans": "^5.2.7",
+    "@fontsource/pt-sans": "^5.2.8",
+    "@fontsource/roboto": "^5.2.10",
+    "@fontsource/source-sans-3": "^5.2.9",
+    "@org-tools/types": "workspace:*",
+    "next": "^16.2.6",
+    "next-intl": "^4.13.4",
+    "next-themes": "^0.4.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.0"
+  }
+}

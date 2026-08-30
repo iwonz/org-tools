@@ -1,15 +1,16 @@
 # org-tools
 
-`org-tools` is a private local organization editor with durable SQLite project workspaces.
+`org-tools` is a private organization editor that runs either as a browser file workspace or as a
+local multi-project SQLite application.
 
-[Open the public product showcase](https://iwonz.github.io/org-tools/) — documentation and 46
-synthetic screenshots only; functional workspaces run locally.
+[Open Org Tools in the browser](https://iwonz.github.io/org-tools/) — the complete browser-only app,
+with local JSON Open/Save and no backend.
 
 - Build Units, manage Employees, and arrange them on a visual canvas.
 - Search the organization, explore analytics, and track birthdays and dated tags.
 - Import JSON and export workspace files, tables, templates, or a canvas PNG.
-- Keep organization data on this computer through a loopback-only Next.js runtime—there is no
-  account, remote service, telemetry, or background synchronization.
+- Keep organization data in an explicitly selected local file or in the loopback-only SQLite
+  runtime—there is no account, telemetry, remote service, or background synchronization.
 
 ## Screenshots
 
@@ -32,8 +33,7 @@ open panel, and deterministic generation rule.
 
 ## Run locally
 
-Requires Node.js 22.13 or newer and pnpm 10.33.2. Arbitrary static hosting is no longer supported
-because project writes require the local Next.js runtime.
+The local multi-project runtime requires Node.js 22.13 or newer and pnpm 10.33.2.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -52,10 +52,12 @@ More: [Usage](docs/usage.md) · [Privacy](docs/privacy.md) · [Contributing](CON
 ## Development and Pages
 
 `pnpm dev:check` starts the real development server with an isolated temporary database, verifies
-project routing and API startup, and stops it. `pnpm pages:build` creates the ignored static showcase
-in `pages-out`; `pnpm pages:check` validates it. An authenticated maintainer can publish the already
-merged, clean, synchronized `main` with `pnpm pages:publish`.
+project routing and API startup, and stops it. `pnpm pages:dev` starts the browser-only variant;
+`pnpm pages:build` exports it to ignored `pages-out`, and `pnpm pages:check` verifies the `/org-tools`
+base path and absence of backend code. An authenticated maintainer can publish the already merged,
+clean, synchronized `main` with `pnpm pages:publish`.
 
-GitHub Pages cannot host the working application: project writes require the loopback Next.js server
-and local SQLite file. The Pages artifact has no editor, forms, telemetry, remote assets, or
-organization-data path.
+On Chromium browsers, **Open workspace**, **Save**, **Save As**, and optional autosave use the File
+System Access API. Other browsers use ordinary JSON upload and download; their workspace lasts only
+for the current tab and autosave is unavailable. The public state contract is identical in both
+modes. See [Usage](docs/usage.md) for the complete workflow and compatibility details.

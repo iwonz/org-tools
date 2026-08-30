@@ -67,14 +67,19 @@ and locally available embedded avatar data, with no network fetch.
 
 Organization change tracking observes store collection references and editor document references;
 it does not stringify the workspace after each edit. The full 20,000-Employee and 4,000-Unit
-snapshot is created, strictly validated, and serialized only when the user invokes Save. The Save
-request contains one snapshot and SQLite replaces one `state_json` value in an atomic transaction.
+snapshot is created, strictly validated, and serialized only for manual Save or one explicitly
+enabled trailing autosave. UI-only changes never schedule that work. The 1000 ms debounce coalesces
+organization mutations, allows only one snapshot write at a time, and schedules at most one next
+write when edits arrive during an active Save. SQLite receives one snapshot and replaces one
+`state_json` value in an atomic transaction; browser mode writes the same snapshot only to the bound
+file handle.
 
 UI persistence is a separate 300 ms debounced path. Its bounded projection contains scalar shell
 state plus viewport and selection for each View; it never walks or serializes the Employee catalog,
 Unit graph, Live rules, or editor documents. Revision conflicts do not retry or repeatedly serialize
-in the background. Project lists exclude state JSON, so opening the switcher remains proportional to
-the number of projects rather than organization size.
+in a retry loop. Project lists exclude state JSON, so opening the switcher remains proportional to
+the number of projects rather than organization size. Browser IndexedDB work reads or writes only a
+file handle and never traverses the organization graph.
 
 Avatar input is bounded before interactive editing: 25 MiB compressed, 40 megapixels decoded, and a
 4096-pixel longest-side preview. Confirmation renders only one 512-by-512 WebP canvas and releases

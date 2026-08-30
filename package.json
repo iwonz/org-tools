@@ -1,7 +1,7 @@
 {
   "name": "org-tools",
   "version": "0.1.0",
-  "description": "A private-by-design local organization editor with SQLite project workspaces.",
+  "description": "A private-by-design organization editor with local file and SQLite workspaces.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -25,16 +25,18 @@
     "lint": "biome check .",
     "pages:build": "node scripts/build-pages.mjs",
     "pages:check": "node scripts/check-pages.mjs",
+    "pages:dev": "pnpm --filter @org-tools/pages dev",
     "pages:publish": "node scripts/publish-pages.mjs",
+    "pages:start": "node scripts/serve-pages.mjs",
     "public:check": "node scripts/check-public-safety.mjs",
-    "screenshots:generate": "pnpm build && pnpm --filter @org-tools/screenshots generate",
+    "screenshots:generate": "pnpm pages:build && pnpm --filter @org-tools/screenshots generate:pages && pnpm build && pnpm --filter @org-tools/screenshots generate",
     "spec": "node scripts/run-openspec.mjs",
     "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
     "start": "pnpm --filter @org-tools/ui start",
     "test": "pnpm test:unit",
-    "test:browser": "pnpm build && pnpm --filter @org-tools/screenshots smoke",
+    "test:browser": "pnpm build && pnpm pages:build && pnpm --filter @org-tools/screenshots smoke && pnpm --filter @org-tools/screenshots pages:smoke",
     "test:unit": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/screenshots typecheck"
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/pages typecheck && pnpm --filter @org-tools/screenshots typecheck"
   },
   "engines": {
     "node": ">=22.13"
@@ -43,6 +45,7 @@
     "@biomejs/biome": "^2.4.16",
     "@fission-ai/openspec": "1.5.0",
     "@types/node": "^25.9.1",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }

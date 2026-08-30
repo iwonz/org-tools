@@ -57,16 +57,22 @@ jobs:
       - name: Build production application
         run: pnpm build
 
-      - name: Browser smoke tests
-        run: pnpm --filter @org-tools/screenshots smoke
-
-      - name: Generate screenshot gallery
-        run: pnpm --filter @org-tools/screenshots generate
-
-      - name: Build GitHub Pages showcase
+      - name: Build GitHub Pages application
         run: pnpm pages:build
 
-      - name: Validate GitHub Pages showcase
+      - name: SQLite browser smoke tests
+        run: pnpm --filter @org-tools/screenshots smoke
+
+      - name: Pages browser smoke tests
+        run: pnpm --filter @org-tools/screenshots pages:smoke
+
+      - name: Generate Pages screenshots
+        run: pnpm --filter @org-tools/screenshots generate:pages
+
+      - name: Generate SQLite screenshots
+        run: pnpm --filter @org-tools/screenshots generate
+
+      - name: Validate GitHub Pages application
         run: pnpm pages:check
 
       - name: Check publication safety

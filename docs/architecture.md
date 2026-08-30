@@ -1,15 +1,17 @@
 # Architecture
 
-org-tools is a local Next.js server application backed by an in-memory MobX working copy and one
-SQLite database. The server binds to `127.0.0.1`, serves the UI, and exposes a same-origin project
-API. Each durable project keeps one strict unversioned `OrgToolsState` snapshot; JSON Import and
-Export remain the transfer and backup boundary for the current project. The same public state
-envelope still carries scoped Teams, Employees, Teams + Employees, or Full workspace content.
+org-tools has two delivery modes over the same in-memory MobX product and strict unversioned
+`OrgToolsState`. The local Next.js server binds to `127.0.0.1` and persists multiple projects in one
+SQLite database through a same-origin API. The browser-only Next.js static export manages one local
+JSON file or a tab-lifetime workspace without a backend. Import and Export retain the same scoped
+Teams, Employees, Teams + Employees, or Full workspace contract in both modes.
 
 ## Workspace layout
 
 - `apps/ui` contains the Next.js runtime, local API, SQLite repository, React components, stores,
   parsers, exporters, and UI tests.
+- `apps/pages` contains the static-export app tree and configuration. It reuses browser-safe
+  components and stores from `apps/ui` but never imports the server repository or API routes.
 - `packages/types` defines the public state, Employee, Unit, View, and editor contracts.
 - `packages/screenshots` contains production-build browser smoke tests and deterministic PNG
   capture.
@@ -19,21 +21,21 @@ envelope still carries scoped Teams, Employees, Teams + Employees, or Full works
 The `pnpm spec -- ...` wrapper is the repository entry point for OpenSpec and disables its
 development-only anonymous telemetry.
 
-The production build is a Next.js server build in `apps/ui/.next`. `pnpm start` binds it to
-`127.0.0.1`; arbitrary static hosting is intentionally unsupported because a browser cannot write a
-real SQLite file and a static export cannot provide mutation handlers.
+The local production build is a Next.js server build in `apps/ui/.next`; `pnpm start` binds it to
+`127.0.0.1`. The separate `apps/pages` build uses `output: "export"`, `basePath: "/org-tools"`, and
+unoptimized local images. It provides the full client product but deliberately omits multi-project
+SQLite persistence and server mutation handlers.
 
 `pnpm dev:check` verifies the same development entry point independently: it reserves a loopback
 port, creates a system-temporary SQLite database, checks root project resolution, the stable project
 page, and the project list API, then terminates the child and removes the temporary directory. This
 is a functional startup probe rather than a replacement runtime.
 
-GitHub Pages receives a separate generated presentation artifact in ignored `pages-out`. The
-generator consumes `docs/screenshot-demo.json`, copies exactly its 46 synthetic PNGs, and writes one
-static HTML page with inline CSS and no JavaScript or remote resources. It does not compile, export,
-or emulate the Next.js application. A manually dispatched Actions workflow builds and validates the
-artifact, uploads it through the GitHub Pages artifact action, and deploys it to the `github-pages`
-environment.
+GitHub Pages receives the browser-only Next.js export in ignored `pages-out`, plus `.nojekyll`.
+`pnpm pages:check` requires application HTML, local CSS and JavaScript with the `/org-tools` base
+path, and rejects SQLite symbols, project API routes, server chunks, and database configuration. A
+manually dispatched Actions workflow builds and validates that artifact, uploads it through the
+official Pages artifact action, and deploys it to the `github-pages` environment.
 
 The application uses `/projects/<uuid>` as its stable project route. `/` resolves the last opened
 project, creating `New project` when the database is empty, and redirects to that stable URL. A
@@ -53,10 +55,18 @@ not added to MobX workspace state, exported files, or browser storage.
 
 ```text
 SQLite state_json ──strict read + UI overlay─────────────┐
+selected JSON file ──strict full-workspace read──────────┤
 scoped state JSON ──strict projection + append/replace───┼──> in-memory stores ──> UI and local export
 ordinary JSON ──nested mapping and atomic append─────────┘          │
-                                                                    └──explicit Save──> SQLite
+                                                                    ├──Save──> SQLite
+                                                                    └──Save──> selected file/download
 ```
+
+The shell consumes a discriminated persistence controller. The SQLite controller exposes project
+CRUD, stable URLs, revision conflicts, bounded UI saves, and project Save. The browser controller
+exposes New, Open workspace, Save, Save As, file conflicts, and fallback download. Browser entry
+code imports only the latter; shared product components depend on the controller interface rather
+than on project routes.
 
 SQLite schema v1 stores multiple projects in `projects`, the last opened project in the singleton
 `app_state` row, and its internal schema version in `PRAGMA user_version`. `state_json` is a complete
@@ -141,11 +151,25 @@ data through props and shared list components instead of rebuilding indexes duri
 
 ## Persistence and current-schema policy
 
-The active project is edited as an in-memory working copy. Organization mutations make it dirty and
-are serialized only by explicit **Save** or `Ctrl+S`/`Cmd+S`; a successful transaction increments
-`state_revision`. A stale revision produces a conflict instead of overwriting either version. Theme,
-tab, active View, viewport, and selection never make organization data dirty and update only the
-bounded UI overlay after 300 ms. Organizational content is never written to browser storage.
+The active project or file is edited as an in-memory working copy. Organization mutations make it
+dirty. Explicit **Save** and `Ctrl+S`/`Cmd+S` always remain available. Optional autosave is off by
+default and uses one 1000 ms trailing debounce with one write in flight; changes made during a write
+schedule the next save. SQLite Save increments `state_revision`, while browser Save writes and
+closes the bound file before reporting success. Both modes pause autosave on error or conflict.
+
+Theme, tab, active View, viewport, and selection never make organization data dirty. SQLite stores
+that bounded UI overlay after 300 ms. Browser mode does not persist it as organization data.
+IndexedDB `org-tools-browser` stores only `active-file-handle`; local storage stores only theme,
+locale, and the `org-tools-autosave-enabled` boolean. No organization snapshot enters browser
+storage.
+
+The browser controller uses File System Access only after a direct action and checks both picker
+functions at runtime. Open accepts only a strict `content: "workspace"` file. Before each write it
+compares `lastModified` and size with the last known fingerprint. An external change offers Load
+file, Overwrite file, Save As, or Cancel. A remembered handle with missing permission blocks editing
+behind Reconnect file or Start blank; corrupt or unavailable files are never replaced silently. If
+the APIs are unavailable, Open uses a JSON file input, Save downloads `org-tools-state.json`, the
+working copy lasts only for the tab, and autosave is disabled.
 
 Downloading still produces `org-tools-state.json`, and importing changes only the current working
 copy until Save. Locale remains the independent `org-tools-locale` browser preference and is not

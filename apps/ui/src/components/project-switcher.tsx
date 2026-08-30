@@ -9,7 +9,6 @@ import {
   HiOutlinePlus,
   HiOutlineTrash,
 } from "react-icons/hi2";
-import { useProjectWorkspace } from "@/components/project-workspace-controller";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogBody,
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useProjectWorkspace } from "@/components/workspace-persistence-context";
 import { useUiText } from "@/i18n/use-ui-text";
 import { PROJECT_NAME_MAX_LENGTH } from "@/lib/project-workspace";
 import { cn } from "@/lib/utils";
@@ -187,6 +188,18 @@ export function ProjectSwitcher({
               <HiOutlineTrash />
             </Button>
           </div>
+          <label
+            className="flex cursor-pointer items-center gap-2.5 bg-muted/45 px-3 pb-3 pt-1 text-sm font-medium"
+            htmlFor="project-autosave"
+          >
+            <Checkbox
+              checked={workspace.autosaveEnabled}
+              data-demo-id="autosave-checkbox"
+              id="project-autosave"
+              onCheckedChange={(checked) => void workspace.setAutosaveEnabled(checked === true)}
+            />
+            <span>{t("Autosave")}</span>
+          </label>
         </PopoverContent>
       </Popover>
 

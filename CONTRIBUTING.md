@@ -23,7 +23,8 @@ disables the CLI's anonymous telemetry for this repository.
 - Keep each change focused and update user or architecture documentation with the code.
 - Reuse shared Employee and Unit components, derived indexes, and store operations.
 - Persist organizational state only through the prepared-statement SQLite repository behind the
-  loopback same-origin API. Keep Import and Export entirely local.
+  loopback same-origin API or an explicit local workspace file in the browser-only runtime. Keep
+  Import, Export, and browser-file operations entirely local.
 - Use synthetic fixtures with reserved domains and phone ranges. Do not submit real names, contact
   details, local filesystem paths, access tokens, or exported organization data.
 - Avoid adding dependencies unless they materially reduce complexity. Explain new runtime
@@ -67,7 +68,8 @@ no change-branch commit remains unique, and OpenSpec has no active changes. Do n
 unmerged work. If publication was explicitly forbidden or an external service blocks it, preserve
 the safest clean local state and report the exact remaining integration.
 
-The GitHub Pages site is a generated static showcase, not the SQLite application. It contains only
-reviewed English copy and synthetic gallery PNGs. After the change is merged and pushed, an
-authorized maintainer may run `pnpm pages:publish` from clean synchronized `main`; the command
-configures the Actions publishing source and manually dispatches the least-privilege Pages workflow.
+The GitHub Pages site is the functional browser-only application. Its static artifact contains no
+SQLite backend or project API; workspace data stays in memory and explicit local files or downloads.
+After the change is merged and pushed, an authorized maintainer may run `pnpm pages:publish` from
+clean synchronized `main`; the command configures the Actions publishing source and manually
+dispatches the least-privilege Pages workflow.

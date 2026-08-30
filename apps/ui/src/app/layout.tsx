@@ -28,7 +28,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Org Tools",
-  description: "A private-by-design organization editor with local SQLite project workspaces.",
+  description: "A private-by-design organization editor with local file and SQLite workspaces.",
   icons: {
     icon: "/favicon.svg",
   },

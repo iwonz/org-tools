@@ -1,6 +1,6 @@
 # Screenshots
 
-The public demo has two levels. The README keeps a concise ten-frame module overview; this guide is
+The repository screenshot demo has two levels. The README keeps a concise ten-frame module overview; this guide is
 the complete visual capability catalog. Its contract lives in `docs/screenshot-demo.json`, including
 module ownership, featured status, description, and capability coverage for every frame. Generation
 and publication checks fail when the manifest, files, README links, or this guide diverge.
@@ -9,12 +9,12 @@ Playwright captures the production Next.js server in Chromium at 1440 by 1000, U
 clock, reduced motion, disabled animations, loaded local fonts, and an isolated SQLite database in
 the system temporary directory. Every workflow creates its own obviously synthetic project. The
 default locale and color scheme are English and light; the language and theme frames intentionally
-display Russian and dark mode respectively. The complete manifest contains exactly 46 PNGs.
+display Russian and dark mode respectively. The complete manifest contains exactly 51 PNGs.
 
-The GitHub Pages showcase consumes this same manifest and all 46 PNGs. `pnpm pages:build` regenerates
-the ignored presentation artifact, and `pnpm pages:check` requires exact manifest parity. Pages adds
-no alternative captures or application runtime, so changing a visible capability still begins by
-updating this catalog and its deterministic Playwright frame.
+Five supporting frames cover persistence surfaces: SQLite autosave plus the browser file menu,
+browser autosave, reconnect recovery, and the unsupported-browser fallback. The latter four are
+captured from the static Pages production build; all other frames use the local SQLite production
+server. `pnpm screenshots:generate` runs both suites and requires exact manifest/file parity.
 
 ## Core workflow gallery
 
@@ -82,6 +82,38 @@ Shows explicit destructive confirmation and remaining or final-project recovery.
 [![Revision conflict](screenshots/feature-project-revision-conflict.png)](screenshots/feature-project-revision-conflict.png)
 
 Shows Load saved version, explicit overwrite, and Cancel after a stale revision Save.
+
+#### SQLite project autosave
+
+[![SQLite project autosave](screenshots/feature-project-autosave.png)](screenshots/feature-project-autosave.png)
+
+Shows the shared default-off autosave option inside the revisioned project switcher.
+
+### Browser file workspace
+
+#### Browser workspace file menu
+
+[![Browser workspace file menu](screenshots/feature-browser-file-menu.png)](screenshots/feature-browser-file-menu.png)
+
+Shows New, Open workspace, Save As, bound filename, and the shared autosave option.
+
+#### Browser file autosave
+
+[![Browser file autosave](screenshots/feature-browser-autosave.png)](screenshots/feature-browser-autosave.png)
+
+Shows an explicitly bound file, enabled autosave, and stable Saved status after a local write.
+
+#### Reconnect a workspace file
+
+[![Reconnect a workspace file](screenshots/feature-browser-reconnect.png)](screenshots/feature-browser-reconnect.png)
+
+Shows permission recovery using only the remembered file handle, without loading a snapshot first.
+
+#### Browser download fallback
+
+[![Browser download fallback](screenshots/feature-browser-fallback.png)](screenshots/feature-browser-fallback.png)
+
+Shows ordinary JSON input/download behavior and the explicit unavailable-autosave explanation.
 
 ### Import and workspace Export
 
@@ -308,12 +340,13 @@ when a fresh frame differs by at most two RGB steps across no more than 32 pixel
 materially changed frame, removes unexpected PNGs directly inside the dedicated screenshot
 directory, and fails if any expected file is missing or a stale file remains.
 
-`pnpm test:browser` runs the non-visual smoke suite against the same production server and an
-isolated temporary SQLite database. It verifies project redirect, CRUD, compact and expanded
+`pnpm test:browser` runs non-visual smoke suites against both production modes. The SQLite suite uses
+an isolated temporary database and verifies project redirect, CRUD, compact and expanded
 switcher geometry, stable links, explicit Save, UI persistence, dirty navigation, conflicts,
 cross-origin rejection, and
 blank startup, populated workflows, English and Russian copy, light and dark themes, expanded and
 compact responsive sidebar geometry, keyboard and focus behavior, hover and pressed geometry,
 adaptive Editor snapping, Analytics and Calendar layout, Import validation and mapping, local avatar
 handling, workspace projections, Download formats, actual browser downloads, and same-origin-only
-requests.
+requests. The Pages suite verifies the `/org-tools/` entry, file and fallback persistence,
+autosave/reconnect, all product tabs, JSON download, and the absence of API or external requests.

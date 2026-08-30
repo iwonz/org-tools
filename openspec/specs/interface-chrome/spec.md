@@ -55,11 +55,12 @@ change the surrounding application chrome.
 ### Requirement: Navigation states are explicit and responsive
 Product destinations SHALL retain their accessible Radix tab behavior and order inside a vertical
 sidebar. The sidebar SHALL initialize in compact mode, SHALL remain transient rather than persisted,
-and SHALL also own project selection, language, theme, Import, and workspace Export. The content
-header SHALL contain only current workflow context and explicit project Save status and action.
-Expanded mode SHALL show an icon and visible label for each destination or action; compact mode SHALL
-show only icons while preserving accessible names and hover tooltips. The active destination SHALL
-use stronger foreground and a tonal surface, pointer hover
+and SHALL also own persistence selection, language, theme, Import, and workspace Export. SQLite mode
+SHALL render the project switcher; browser mode SHALL render an equivalent single-file workspace
+control. The content header SHALL contain only current workflow context and explicit Save status and
+action. Expanded mode SHALL show an icon and visible label for each destination or action; compact
+mode SHALL show only icons while preserving accessible names and hover tooltips. The active
+destination SHALL use stronger foreground and a tonal surface, pointer hover
 SHALL use a low-opacity tonal wash, pressed state SHALL remain visually responsive, and keyboard
 focus SHALL remain explicitly visible without layout shift or a pointer-state border. Compact rows
 SHALL center their icons within the rail with equal inline space. The desktop collapse control SHALL
@@ -67,14 +68,14 @@ use the same 48 px width, 40 px height, 14 px horizontal padding, 20 px icon siz
 as a product navigation item in compact mode, in both expanded and compact sidebar modes. It SHALL
 keep its icon distinguishable from its background in every interaction state and SHALL NOT span the
 expanded sidebar width. The shell SHALL NOT render a decorative Org Tools glyph or a visible Org
-Tools title. Project, theme, and language menu items SHALL NOT translate or otherwise shift their
-content when highlighted, focused, selected, or pressed. Collapsing or expanding SHALL animate only
-the sidebar's right edge and clipped label visibility; navigation and action icons SHALL keep one
-horizontal coordinate, and neither icons nor the toggle SHALL discretely jump between alignment
+Tools title. Persistence, theme, and language menu items SHALL NOT translate or otherwise shift
+their content when highlighted, focused, selected, or pressed. Collapsing or expanding SHALL animate
+only the sidebar's right edge and clipped label visibility; navigation and action icons SHALL keep
+one horizontal coordinate, and neither icons nor the toggle SHALL discretely jump between alignment
 modes.
 
 #### Scenario: Initial desktop sidebar
-- **WHEN** a project first renders at a desktop width
+- **WHEN** either runtime first renders at a desktop width
 - **THEN** the sidebar is a 64 px compact icon rail
 - **AND** the transient sidebar mode has not been written to project data or browser storage
 
@@ -95,13 +96,18 @@ modes.
 - **AND** compact icons expose localized accessible names and pointer tooltips
 - **AND** every compact icon is visually centered with equal left and right row space
 
-#### Scenario: Project switcher
-- **WHEN** the project control renders in either sidebar mode or opens its menu
-- **THEN** it uses the same icon axis, padding, tone, focus, and stable menu-row geometry as the
-  surrounding sidebar while exposing project selection and management accessibly
+#### Scenario: SQLite persistence control
+- **WHEN** the local server runtime renders the sidebar persistence item
+- **THEN** project selection, management, and the shared Autosave checkbox remain available with the
+  same icon axis, padding, tone, focus, and stable menu-row geometry as the surrounding sidebar
+
+#### Scenario: Browser persistence control
+- **WHEN** the static Pages runtime renders the sidebar persistence item
+- **THEN** filename, New, Open, Save As, and the shared Autosave checkbox replace project-only
+  controls with the same geometry and accessible behavior
 
 #### Scenario: Explicit Save feedback
-- **WHEN** organization data is clean, dirty, saving, saved, or failed
+- **WHEN** organization data is clean, dirty, saving, saved, failed, paused, or unbound
 - **THEN** the header communicates the state without resizing the workflow title or adding a border,
   decorative shadow, or saturated accent
 
@@ -110,8 +116,8 @@ modes.
 - **THEN** its width and horizontal padding equal those of a product navigation item in compact mode
 - **AND** its icon remains visible on the same horizontal icon axis as product navigation without
   rendering an Org Tools title
-- **AND** project, theme, and language menu-item content keeps the same position before, during, and
-  after interaction
+- **AND** persistence, theme, and language menu-item content keeps the same position before, during,
+  and after interaction
 
 #### Scenario: Continuous sidebar collapse
 - **WHEN** a desktop user collapses or expands the sidebar without reduced motion
@@ -121,10 +127,18 @@ modes.
   throughout the transition
 
 #### Scenario: Responsive shell containment
-- **WHEN** the application renders at 390, 1024, or 1280 px wide
-- **THEN** the sidebar, project control, Save action, and global actions remain reachable, narrow
+- **WHEN** either runtime renders at 390, 1024, or 1280 px wide
+- **THEN** the sidebar persistence control, Save action, and global actions remain reachable, narrow
   layouts preserve an icon-only rail, the content workspace keeps usable width, and the page has no
   horizontal overflow
+
+### Requirement: Autosave is explicit and consistent
+The SQLite project popover and browser file popover SHALL expose the same accessible Autosave
+checkbox, SHALL default it to off, and SHALL keep manual Save available regardless of the choice.
+
+#### Scenario: Toggle Autosave
+- **WHEN** the user changes the checkbox
+- **THEN** only the bounded preference changes immediately and the control does not shift or resize
 
 ### Requirement: Product workflows use purposeful grouping
 Teams, Employees, Analytics, Calendar, and Download SHALL render their primary task content
