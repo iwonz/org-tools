@@ -49,10 +49,12 @@ control.
 - **Employees** manages profiles, gender, birthday, embedded avatar, tags, contact fields, and Unit
   assignments with compound filters.
 - **Editor** manages Main and custom Views on an adaptive snapped grid, including search, history,
-  layout, bulk commands, templates, and PNG output.
+  layout, bulk commands, templates, and PNG output. Unit cards keep an opaque readable tonal surface
+  on hover.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
-  actions.
+  actions. Day and tag dialogs omit Birthday, Dated tags, or Past sections when that section has no
+  events, without reserving empty rows or columns.
 - **Data Download** selects Units or Employees and produces CSV, JSON, templates, and PNG output.
 
 ## Import and Export

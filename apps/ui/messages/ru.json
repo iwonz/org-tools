@@ -239,7 +239,6 @@
     "No Units found": "Команды не найдены",
     "No Units yet": "Команд пока нет",
     "No birth months found": "Месяцы рождения не найдены",
-    "No birthdays": "Нет дней рождения",
     "No birthdays found": "Дни рождения не найдены",
     "No duplicate full names": "Нет повторяющихся полных имён",
     "No first names found": "Имена не найдены",
@@ -443,7 +442,6 @@
     "Mixed dates": "Разные даты",
     "No calendar events yet": "Событий календаря пока нет",
     "No current or upcoming events": "Нет текущих или будущих событий",
-    "No past events": "Нет прошедших событий",
     "Past": "Прошедшие"
   }
 }

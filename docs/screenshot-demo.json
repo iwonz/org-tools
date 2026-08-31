@@ -327,8 +327,14 @@
     "featured": false,
     "title": "Calendar day details",
     "file": "feature-calendar-day-details.png",
-    "description": "Open any date to inspect birthday and dated-tag Employees with tag, edit, and delete actions.",
-    "capabilities": ["Interactive dates", "Birthday rows", "Dated-tag rows", "Employee actions"]
+    "description": "Open any date to inspect only its populated birthday and dated-tag sections with Employee actions.",
+    "capabilities": [
+      "Interactive dates",
+      "Conditional sections",
+      "Birthday rows",
+      "Dated-tag rows",
+      "Employee actions"
+    ]
   },
   {
     "id": "calendar-tag-events",
@@ -336,8 +342,14 @@
     "featured": false,
     "title": "Dated-tag event history",
     "file": "feature-calendar-tag-events.png",
-    "description": "Open a tag from the bounded cloud to inspect current, future, and past Employee events.",
-    "capabilities": ["Tag cloud", "Past events", "Current and future events", "Virtualized dialog"]
+    "description": "Open a tag from the bounded cloud to inspect current and future events plus past events when present.",
+    "capabilities": [
+      "Tag cloud",
+      "Conditional history",
+      "Past events",
+      "Current and future events",
+      "Virtualized dialog"
+    ]
   },
   {
     "id": "download",

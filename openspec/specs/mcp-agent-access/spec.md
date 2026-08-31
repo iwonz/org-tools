@@ -23,8 +23,9 @@ supporting no GET, legacy SSE, tunnel, remote bind, or static Pages transport.
 - **THEN** the request is rejected before protocol arguments or organization state are processed
 
 #### Scenario: Static runtime
-- **WHEN** the GitHub Pages application is built or used
-- **THEN** it contains no MCP route, control, token, server SDK, SQLite dependency, or MCP network call
+- **WHEN** the GitHub Pages application is built or used in either locale, theme, or sidebar state
+- **THEN** it contains and renders no MCP route, control, accessible action, dialog, token, server
+  SDK, SQLite dependency, or MCP network call
 
 ### Requirement: MCP credentials have an explicit lifecycle
 The first Enable action SHALL generate a persistent token containing 256 random bits after the

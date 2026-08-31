@@ -53,18 +53,37 @@ sorting, searching, identity, and Live filtering based only on the label.
 - **THEN** the Employee matches exactly as an undated assignment of the same label would
 
 ### Requirement: Calendar day dialogs omit absent dated-tag content
-The application SHALL render the dated-tag section of a Calendar day dialog only when the selected
-day has at least one dated-tag event. Omitting the section SHALL NOT hide birthdays or reserve an
-empty dated-tag column.
+The application SHALL render Birthday and Dated tags sections of a Calendar day dialog only when
+the selected day has at least one corresponding event. Omitting either section SHALL NOT hide the
+other section or reserve an empty column.
 
 #### Scenario: Birthday-only day
 - **WHEN** a user opens a Calendar day that has birthdays and no dated-tag events
 - **THEN** the dialog shows the birthdays section across the available body width
 - **AND** no dated-tag heading, empty message, or empty second column is rendered
 
-#### Scenario: Day with dated tags
-- **WHEN** a user opens a Calendar day that has at least one dated-tag event
-- **THEN** the dialog shows the dated-tag section and every event for that day
+#### Scenario: Dated-tag-only day
+- **WHEN** a user opens a Calendar day that has dated-tag events and no birthdays
+- **THEN** the dialog shows the dated-tag section across the available body width
+- **AND** no Birthday heading, empty message, or empty first column is rendered
+
+#### Scenario: Day with birthdays and dated tags
+- **WHEN** a user opens a Calendar day that has birthdays and dated-tag events
+- **THEN** the dialog shows both populated sections and every event for that day
+
+### Requirement: Calendar tag dialogs omit absent event periods
+The application SHALL render the Past section of a dated-tag dialog only when the selected tag has
+at least one past event. Omitting Past SHALL give the Current and upcoming section the available
+dialog body and SHALL NOT render an empty-state message for the absent period.
+
+#### Scenario: Tag without past events
+- **WHEN** a user opens a dated-tag dialog whose events are all current or future
+- **THEN** Current and upcoming uses the available body
+- **AND** no Past heading, no-past-events message, or empty second row is rendered
+
+#### Scenario: Tag with past events
+- **WHEN** a user opens a dated-tag dialog that contains at least one past event
+- **THEN** the populated Past section appears separately in descending date order
 
 ### Requirement: Quick Employee tag options remain compact
 The quick Employee tag picker SHALL use compact virtualized rows that fit the checkbox, tag label,

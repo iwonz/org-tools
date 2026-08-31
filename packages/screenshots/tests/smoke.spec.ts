@@ -26,6 +26,23 @@ async function getBackgroundColor(locator: Locator) {
   return locator.evaluate((element) => window.getComputedStyle(element).backgroundColor);
 }
 
+async function getBackgroundPresentation(locator: Locator) {
+  return locator.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    const background = style.backgroundColor;
+    const slashAlpha = /\/\s*([\d.]+)(%)?\s*\)$/.exec(background);
+    const commaAlpha = /rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/.exec(background);
+    const alpha = slashAlpha
+      ? Number(slashAlpha[1]) / (slashAlpha[2] ? 100 : 1)
+      : commaAlpha
+        ? Number(commaAlpha[1])
+        : background === "rgba(0, 0, 0, 0)"
+          ? 0
+          : 1;
+    return { alpha, background, opacity: style.opacity };
+  });
+}
+
 async function expectTransparentBackground(locator: Locator) {
   expect(await getBackgroundColor(locator)).toBe("rgba(0, 0, 0, 0)");
 }
@@ -1288,23 +1305,19 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
 
   const editorCommand = page.locator('[data-demo-id="org-editor-align-button"]');
   await expectStableHoverGeometry(editorCommand);
-  const editorCommandHover = await editorCommand.evaluate((element) => {
-    const style = window.getComputedStyle(element);
-    const background = style.backgroundColor;
-    const slashAlpha = /\/\s*([\d.]+)(%)?\s*\)$/.exec(background);
-    const commaAlpha = /rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/.exec(background);
-    const alpha = slashAlpha
-      ? Number(slashAlpha[1]) / (slashAlpha[2] ? 100 : 1)
-      : commaAlpha
-        ? Number(commaAlpha[1])
-        : background === "rgba(0, 0, 0, 0)"
-          ? 0
-          : 1;
-    return { alpha, background, opacity: style.opacity };
-  });
+  const editorCommandHover = await getBackgroundPresentation(editorCommand);
   expect(editorCommandHover.background).not.toBe("rgba(0, 0, 0, 0)");
   expect(editorCommandHover.alpha).toBe(1);
   expect(editorCommandHover.opacity).toBe("1");
+
+  const editorUnit = page.locator(
+    '[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]',
+  );
+  await expectStableHoverGeometry(editorUnit);
+  const lightUnitHover = await getBackgroundPresentation(editorUnit);
+  expect(lightUnitHover.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(lightUnitHover.alpha).toBe(1);
+  expect(lightUnitHover.opacity).toBe("1");
 
   const zoomOutButton = viewportActions.getByRole("button").first();
   for (let index = 0; index < 5; index += 1) await zoomOutButton.click();
@@ -1381,6 +1394,11 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   const darkTopBackground = await getBackgroundColor(topActions);
   expect(darkTopBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(viewportActions)).toBe(darkTopBackground);
+  await expectStableHoverGeometry(editorUnit);
+  const darkUnitHover = await getBackgroundPresentation(editorUnit);
+  expect(darkUnitHover.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(darkUnitHover.alpha).toBe(1);
+  expect(darkUnitHover.opacity).toBe("1");
   await assertLocalRequests();
 });
 
@@ -1470,14 +1488,33 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
     .click();
   await birthdayDialog.getByRole("button", { name: "Delete", exact: true }).click();
   await page.locator('[data-demo-id="calendar-confirm-delete-employee"]').click();
-  await expect(birthdayDialog).toContainText("No birthdays");
+  await expect(birthdayDialog.locator('[data-demo-id="calendar-birthdays-section"]')).toHaveCount(
+    0,
+  );
+  await expect(birthdayDialog.getByText("Birthdays", { exact: true })).toHaveCount(0);
   await expect(birthdayDialog.getByText("Dated tags", { exact: true })).toHaveCount(0);
   await birthdayDialog.getByRole("button", { name: "Close" }).click();
   await page.locator('[data-calendar-date="2026-07-10"]').click();
   const datedTagDayDialog = page.getByRole("dialog", { name: /July 10, 2026/ });
   await expect(datedTagDayDialog.getByText("Dated tags", { exact: true })).toBeVisible();
   await expect(datedTagDayDialog).toContainText("Morgan Park");
+  await expect(
+    datedTagDayDialog.locator('[data-demo-id="calendar-birthdays-section"]'),
+  ).toHaveCount(0);
+  await expect(datedTagDayDialog.getByText("Birthdays", { exact: true })).toHaveCount(0);
   await datedTagDayDialog.getByRole("button", { name: "Close" }).click();
+  await page
+    .locator('[data-demo-id="dated-tag-cloud"]')
+    .getByRole("button", { name: /Remote/ })
+    .click();
+  const futureTagDialog = page.getByRole("dialog", { name: "Remote" });
+  await expect(futureTagDialog).toContainText("Avery Stone");
+  await expect(
+    futureTagDialog.locator('[data-demo-id="calendar-past-events-section"]'),
+  ).toHaveCount(0);
+  await expect(futureTagDialog.getByText("Past", { exact: true })).toHaveCount(0);
+  await expect(futureTagDialog.getByText("No past events", { exact: true })).toHaveCount(0);
+  await futureTagDialog.getByRole("button", { name: "Close" }).click();
   await page
     .locator('[data-demo-id="dated-tag-cloud"]')
     .getByRole("button", { name: /Operations/ })
@@ -1485,6 +1522,7 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   const tagDialog = page.getByRole("dialog", { name: "Operations" });
   await expect(tagDialog).toContainText("Morgan Park");
   await expect(tagDialog).toContainText("Past");
+  await expect(tagDialog.locator('[data-demo-id="calendar-past-events-section"]')).toBeVisible();
 
   await assertLocalRequests();
 });

@@ -1,10 +1,11 @@
 # Local MCP
 
 The SQLite runtime includes an optional Model Context Protocol server at `http://127.0.0.1:3000/mcp`.
-It is disabled by default and is intentionally absent from GitHub Pages. Open **MCP** in the
-sidebar footer, review the full-access warning, and select **Enable MCP** to create a local bearer
-token. The sidebar icon becomes green while enabled. The dialog can mask, reveal, copy, or rotate
-that token, generates a complete agent setup prompt, and shows recent applied activity.
+It is disabled by default and is intentionally absent from GitHub Pages: the static application has
+no MCP control, accessible action, dialog, route, token, or request. In the local server, open
+**MCP** in the sidebar footer, review the full-access warning, and select **Enable MCP** to create a
+local bearer token. The sidebar icon becomes green while enabled. The dialog can mask, reveal, copy,
+or rotate that token, generates a complete agent setup prompt, and shows recent applied activity.
 
 The endpoint is stateless Streamable HTTP. It accepts authenticated `POST` requests only from a
 loopback Host, accepts no Origin or a matching loopback Origin, provides no CORS response, and has no

@@ -388,15 +388,22 @@ export const CalendarTab = observer(() => {
           <DialogBody
             className={cn(
               "grid min-h-0 flex-1 gap-4 overflow-auto",
-              dialogDay && dialogDay.events.length > 0 && "md:grid-cols-2",
+              dialogDay &&
+                dialogDay.birthdayEmployees.length > 0 &&
+                dialogDay.events.length > 0 &&
+                "md:grid-cols-2",
             )}
+            data-demo-id="calendar-day-dialog-body"
           >
-            <section className="flex min-h-0 flex-col gap-2">
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <HiOutlineUserGroup />
-                {t("Birthdays")}
-              </h3>
-              {dialogDay && dialogDay.birthdayEmployees.length > 0 ? (
+            {dialogDay && dialogDay.birthdayEmployees.length > 0 && (
+              <section
+                className="flex min-h-0 flex-col gap-2"
+                data-demo-id="calendar-birthdays-section"
+              >
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <HiOutlineUserGroup />
+                  {t("Birthdays")}
+                </h3>
                 <EmployeeCardList
                   actions={(employee) => (
                     <EmployeeCardActions
@@ -415,12 +422,13 @@ export const CalendarTab = observer(() => {
                   resetKey={`calendar:${dialogDay.key}:birthdays`}
                   unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
                 />
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("No birthdays")}</p>
-              )}
-            </section>
+              </section>
+            )}
             {dialogDay && dialogDay.events.length > 0 && (
-              <section className="grid content-start gap-2">
+              <section
+                className="grid content-start gap-2"
+                data-demo-id="calendar-dated-tags-section"
+              >
                 <h3 className="flex items-center gap-2 text-sm font-semibold">
                   <HiOutlineTag />
                   {t("Dated tags")}
@@ -507,8 +515,17 @@ export const CalendarTab = observer(() => {
               {dialogTag ? countText("datedTagEvents", { count: dialogTag.events.length }) : null}
             </DialogDescription>
           </DialogHeader>
-          <DialogBody className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 overflow-hidden">
-            <section className="flex min-h-0 flex-col gap-2">
+          <DialogBody
+            className={cn(
+              "grid min-h-0 flex-1 gap-4 overflow-hidden",
+              pastEvents.length > 0 && "grid-rows-[minmax(0,1fr)_minmax(0,1fr)]",
+            )}
+            data-demo-id="calendar-tag-dialog-body"
+          >
+            <section
+              className="flex min-h-0 flex-col gap-2"
+              data-demo-id="calendar-upcoming-events-section"
+            >
               <h3 className="text-sm font-semibold">{t("Current and upcoming")}</h3>
               {upcomingEvents.length > 0 ? (
                 <TagEventSection events={upcomingEvents} />
@@ -518,14 +535,15 @@ export const CalendarTab = observer(() => {
                 </p>
               )}
             </section>
-            <section className="flex min-h-0 flex-col gap-2">
-              <h3 className="text-sm font-semibold">{t("Past")}</h3>
-              {pastEvents.length > 0 ? (
+            {pastEvents.length > 0 && (
+              <section
+                className="flex min-h-0 flex-col gap-2"
+                data-demo-id="calendar-past-events-section"
+              >
+                <h3 className="text-sm font-semibold">{t("Past")}</h3>
                 <TagEventSection events={pastEvents} />
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("No past events")}</p>
-              )}
-            </section>
+              </section>
+            )}
           </DialogBody>
         </DialogContent>
       </Dialog>

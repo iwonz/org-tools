@@ -266,17 +266,17 @@ Capabilities: Monthly navigation, Birthdays, Dated tags, Today state, Tag cloud.
 
 [![Calendar day details](screenshots/feature-calendar-day-details.png)](screenshots/feature-calendar-day-details.png)
 
-Open any date to inspect birthday and dated-tag Employees with tag, edit, and delete actions.
+Open any date to inspect only its populated birthday and dated-tag sections with Employee actions.
 
-Capabilities: Interactive dates, Birthday rows, Dated-tag rows, Employee actions.
+Capabilities: Interactive dates, Conditional sections, Birthday rows, Dated-tag rows, Employee actions.
 
 ### Dated-tag event history
 
 [![Dated-tag event history](screenshots/feature-calendar-tag-events.png)](screenshots/feature-calendar-tag-events.png)
 
-Open a tag from the bounded cloud to inspect current, future, and past Employee events.
+Open a tag from the bounded cloud to inspect current and future events plus past events when present.
 
-Capabilities: Tag cloud, Past events, Current and future events, Virtualized dialog.
+Capabilities: Tag cloud, Conditional history, Past events, Current and future events, Virtualized dialog.
 
 ## Download
 
@@ -379,6 +379,7 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
 - Confirm MCP frames contain only the synthetic token, the enabled icon is green, and setup shows the installable-skill prompt rather than a standalone configuration block.
+- Confirm every Pages frame and sidebar state contains no MCP action, dialog, endpoint request, or server-only marker.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
 - Regenerate immediately; all 43 PNGs must retain identical hashes. Material differences require review and a deliberate update.

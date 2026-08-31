@@ -120,7 +120,8 @@ history, collaborative cursors, or remote synchronization.
 - Data Download remains a separate reporting pipeline for CSV, JSON, templates, and PNG.
 
 The server sidebar adds **MCP** after state Export; its icon is green only while enabled. The static
-sidebar omits that slot. Both retain identical compact/expanded geometry. The MCP modal contains
+sidebar has no MCP slot, accessible action, dialog, endpoint request, or imported MCP control. Both
+retain identical compact/expanded geometry. The MCP modal contains
 Setup and Activity; Setup builds one English agent prompt with the selected-client skill install,
 current local endpoint and token, exact client configuration, reload step, and read-only connection
 check. The prompt exists only in component memory and the clipboard.

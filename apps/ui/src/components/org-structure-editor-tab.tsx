@@ -1052,7 +1052,7 @@ function OrgEditorNode({
       aria-label={t("Canvas Unit {name}", { name: getOrgEditorUnitDisplayName(unit) })}
       className={cn(
         "group absolute flex min-w-0 select-none flex-col rounded-lg border bg-card p-0 text-card-foreground transition-colors",
-        selected ? "border-signal bg-accent/30" : "border-border hover:bg-accent/20",
+        selected ? "border-signal bg-accent/30" : "border-border hover:bg-accent",
         isConnectionDropTarget && "border-signal bg-accent/45 ring-2 ring-signal/25",
         isEmployeeDropTarget && "border-signal bg-accent/45 ring-2 ring-signal/25",
       )}

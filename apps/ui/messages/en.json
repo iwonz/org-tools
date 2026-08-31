@@ -239,7 +239,6 @@
     "No Units found": "No Units found",
     "No Units yet": "No Units yet",
     "No birth months found": "No birth months found",
-    "No birthdays": "No birthdays",
     "No birthdays found": "No birthdays found",
     "No duplicate full names": "No duplicate full names",
     "No first names found": "No first names found",
@@ -443,7 +442,6 @@
     "Mixed dates": "Mixed dates",
     "No calendar events yet": "No calendar events yet",
     "No current or upcoming events": "No current or upcoming events",
-    "No past events": "No past events",
     "Past": "Past"
   }
 }
