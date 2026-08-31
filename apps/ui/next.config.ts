@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
+const distDir = process.env.ORG_TOOLS_NEXT_DIST_DIR?.trim() || ".next";
+
 const nextConfig = {
+  distDir,
   images: {
     unoptimized: true,
   },

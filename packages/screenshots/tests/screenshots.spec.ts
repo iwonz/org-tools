@@ -246,16 +246,33 @@ test("captures MCP consent, credentials, setup, activity, and selective-undo con
     headers: { Origin: origin },
   });
   expect(disabled.ok()).toBe(true);
-  await page.getByRole("button", { name: "Agent access", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "MCP agent access" });
+  await page.getByRole("button", { name: "MCP", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "MCP" });
   await expect(dialog.getByText("MCP is disabled", { exact: true })).toBeVisible();
   await capture(page, "mcp-disabled-consent");
 
   await dialog.getByRole("button", { name: "Enable MCP", exact: true }).click();
   await expect(dialog.locator('[data-demo-id="mcp-token"]')).toContainText("ot_mcp_");
+  const configuration = dialog.locator('[data-demo-id="mcp-configuration"]');
+  await expect(configuration).toContainText(/Bearer ot_mcp_[A-Za-z0-9_-]{43}/u);
+  await configuration.locator("code").evaluate((element) => {
+    element.textContent =
+      element.textContent?.replace(
+        /ot_mcp_[A-Za-z0-9_-]{43}/gu,
+        "ot_mcp_synthetic_screenshot_token",
+      ) ?? null;
+  });
   await capture(page, "mcp-enabled-credentials");
   await dialog.getByRole("button", { name: "Pi", exact: true }).click();
   await expect(dialog.getByText("pi-codemcp", { exact: false })).toBeVisible();
+  await expect(configuration).toContainText(/Bearer ot_mcp_[A-Za-z0-9_-]{43}/u);
+  await configuration.locator("code").evaluate((element) => {
+    element.textContent =
+      element.textContent?.replace(
+        /ot_mcp_[A-Za-z0-9_-]{43}/gu,
+        "ot_mcp_synthetic_screenshot_token",
+      ) ?? null;
+  });
   await capture(page, "mcp-client-setup");
 
   await dialog.getByRole("button", { name: "Reveal", exact: true }).click();
@@ -290,7 +307,7 @@ test("captures MCP consent, credentials, setup, activity, and selective-undo con
   });
   await dialog.getByRole("tab", { name: "Activity", exact: true }).click();
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "Agent access", exact: true }).click();
+  await page.getByRole("button", { name: "MCP", exact: true }).click();
   await dialog.getByRole("tab", { name: "Activity", exact: true }).click();
   await expect(
     dialog.getByText("Prepare a product organization scenario", { exact: true }),
@@ -313,7 +330,7 @@ test("captures MCP consent, credentials, setup, activity, and selective-undo con
   });
   expect(localWrite.ok()).toBe(true);
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "Agent access", exact: true }).click();
+  await page.getByRole("button", { name: "MCP", exact: true }).click();
   await dialog.getByRole("tab", { name: "Activity", exact: true }).click();
   await dialog.getByRole("button", { name: "Undo", exact: true }).first().click();
   const undoDialog = page.getByRole("alertdialog", { name: "Undo this agent change?" });

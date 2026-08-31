@@ -33,6 +33,11 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUiText } from "@/i18n/use-ui-text";
+import {
+  buildMcpClientConfiguration,
+  MCP_CLIENTS,
+  type McpClientName,
+} from "@/lib/mcp-client-configuration";
 import { copyTextToClipboard } from "@/lib/org-file";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -59,8 +64,7 @@ type McpControlState = {
   settings: McpSettings;
 };
 
-type ClientName = "Claude Code" | "Codex" | "Cursor" | "Hermes" | "OpenClaw" | "OpenCode" | "Pi";
-type McpTab = "activity" | "examples" | "setup";
+type McpTab = "activity" | "setup";
 
 type McpConflict = {
   entityId: string;
@@ -74,16 +78,6 @@ type McpUiError = {
   kind: "load" | "undo" | "update";
 };
 
-const CLIENTS: ClientName[] = [
-  "Codex",
-  "Claude Code",
-  "Cursor",
-  "OpenClaw",
-  "Hermes",
-  "Pi",
-  "OpenCode",
-];
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -94,44 +88,6 @@ const parseControlState = (value: unknown): McpControlState => {
   return value as McpControlState;
 };
 
-const buildClientConfiguration = (client: ClientName, endpoint: string): string => {
-  if (client === "Codex") {
-    return `[mcp_servers.org_tools]\nurl = "${endpoint}"\nbearer_token_env_var = "ORG_TOOLS_MCP_TOKEN"`;
-  }
-  if (client === "OpenCode") {
-    return JSON.stringify(
-      {
-        mcp: {
-          "org-tools": {
-            enabled: true,
-            headers: { Authorization: "Bearer {env:ORG_TOOLS_MCP_TOKEN}" },
-            type: "remote",
-            url: endpoint,
-          },
-        },
-      },
-      null,
-      2,
-    );
-  }
-  if (client === "Pi") {
-    return `pi-codemcp\nname: org-tools\ntransport: streamable-http\nurl: ${endpoint}\nAuthorization: Bearer \${ORG_TOOLS_MCP_TOKEN}`;
-  }
-  return JSON.stringify(
-    {
-      mcpServers: {
-        "org-tools": {
-          headers: { Authorization: "Bearer $" + "{ORG_TOOLS_MCP_TOKEN}" },
-          type: "http",
-          url: endpoint,
-        },
-      },
-    },
-    null,
-    2,
-  );
-};
-
 export function McpControl() {
   const store = useOrgStore();
   const t = useUiText();
@@ -139,7 +95,7 @@ export function McpControl() {
   const [controlState, setControlState] = useState<McpControlState | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [tokenVisible, setTokenVisible] = useState(false);
-  const [client, setClient] = useState<ClientName>("Codex");
+  const [client, setClient] = useState<McpClientName>("Codex");
   const [activeTab, setActiveTab] = useState<McpTab>("setup");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<McpUiError | null>(null);
@@ -157,20 +113,41 @@ export function McpControl() {
     sidebarCollapsed ? "lg:max-w-0 lg:opacity-0" : "lg:max-w-[10rem] lg:opacity-100",
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (includeToken = false) => {
     setError(null);
     try {
       const response = await fetch("/api/mcp", { cache: "no-store" });
       if (!response.ok) throw new Error("request_failed");
-      setControlState(parseControlState(await response.json()));
+      const nextControlState = parseControlState(await response.json());
+      let nextToken: string | null = null;
+      if (includeToken && nextControlState.settings.enabled) {
+        const tokenResponse = await fetch("/api/mcp", {
+          body: JSON.stringify({ action: "reveal" }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        if (!tokenResponse.ok) throw new Error("request_failed");
+        const value = (await tokenResponse.json()) as Record<string, unknown>;
+        if (typeof value.token !== "string") throw new Error("invalid_response");
+        nextToken = value.token;
+      }
+      setControlState(nextControlState);
+      if (includeToken || !nextControlState.settings.enabled) {
+        setToken(nextToken);
+        setTokenVisible(false);
+      }
     } catch {
       setError({ kind: "load" });
     }
   }, []);
 
   useEffect(() => {
-    if (!open) return;
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!open) return;
+    void load(true);
   }, [load, open]);
 
   useEffect(() => {
@@ -200,9 +177,9 @@ export function McpControl() {
         setControlState((current) =>
           current ? { ...current, settings: settings as McpSettings } : current,
         );
-        if (action === "rotate") {
+        if (action === "enable" || action === "rotate") {
           if (typeof value.token !== "string") throw new Error("invalid_response");
-          setToken(null);
+          setToken(value.token);
           setTokenVisible(false);
         }
         if (action === "disable") {
@@ -250,7 +227,7 @@ export function McpControl() {
         return;
       }
       setUndoChange(null);
-      await load();
+      await load(true);
     } catch {
       setError({ kind: "undo" });
     } finally {
@@ -259,23 +236,26 @@ export function McpControl() {
   };
 
   const displayToken = tokenVisible ? token : (controlState?.settings.maskedToken ?? null);
-  const configuration = buildClientConfiguration(client, endpoint);
+  const configuration = token ? buildMcpClientConfiguration(client, endpoint, token) : null;
 
   return (
     <>
       <Dialog onOpenChange={setOpen} open={open}>
         <DialogTrigger asChild>
           <Button
-            aria-label={t("Agent access")}
+            aria-label={t("MCP")}
             className="group relative h-10 w-full justify-start gap-3 rounded-md bg-transparent px-3.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-active focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal/70 focus-visible:ring-offset-0 data-[state=open]:bg-sidebar-active data-[state=open]:text-sidebar-foreground"
             data-demo-id="mcp-control"
-            title={t("Agent access")}
+            data-mcp-enabled={controlState?.settings.enabled ? "true" : "false"}
+            title={t("MCP")}
             type="button"
             variant="ghost"
           >
-            <HiOutlineBolt className="!size-5 shrink-0" />
+            <HiOutlineBolt
+              className={cn("!size-5 shrink-0", controlState?.settings.enabled && "text-success")}
+            />
             <span className={sidebarLabelClassName} data-sidebar-label="">
-              {t("Agent access")}
+              {t("MCP")}
             </span>
             <span
               className={cn(
@@ -284,7 +264,7 @@ export function McpControl() {
               )}
               role="tooltip"
             >
-              {t("Agent access")}
+              {t("MCP")}
             </span>
           </Button>
         </DialogTrigger>
@@ -292,20 +272,13 @@ export function McpControl() {
           className={cn(
             "max-h-[calc(100dvh-2rem)] max-w-3xl",
             controlState?.settings.enabled && activeTab === "setup"
-              ? "h-[min(48rem,calc(100dvh-2rem))]"
+              ? "h-[min(40rem,calc(100dvh-2rem))]"
               : "h-auto",
           )}
           data-demo-id="mcp-dialog"
         >
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <DialogTitle>{t("MCP agent access")}</DialogTitle>
-              {controlState?.settings.enabled && (
-                <span className="rounded-sm bg-success/12 px-2 py-1 text-xs font-semibold text-success">
-                  {t("Enabled")}
-                </span>
-              )}
-            </div>
+            <DialogTitle>{t("MCP")}</DialogTitle>
             <DialogDescription>
               {t("Allow local agents to read and change all organization data through MCP.")}
             </DialogDescription>
@@ -330,7 +303,7 @@ export function McpControl() {
                         : "MCP settings could not be updated.",
                   )}
                 </span>
-                <Button onClick={() => void load()} size="sm" type="button" variant="secondary">
+                <Button onClick={() => void load(open)} size="sm" type="button" variant="secondary">
                   {t("Retry")}
                 </Button>
               </div>
@@ -370,11 +343,6 @@ export function McpControl() {
                       "An enabled local MCP client can read and modify Employees, Units, and Views.",
                     )}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t(
-                      "Org Tools sends data only to the local MCP client. The chosen agent may send it to its model provider.",
-                    )}
-                  </p>
                 </div>
                 <Button disabled={busy} onClick={() => void mutate("enable")} type="button">
                   {t("Enable MCP")}
@@ -390,7 +358,6 @@ export function McpControl() {
                 <div className="flex items-center justify-between gap-3">
                   <TabsList>
                     <TabsTrigger value="setup">{t("Setup")}</TabsTrigger>
-                    <TabsTrigger value="examples">{t("Examples")}</TabsTrigger>
                     <TabsTrigger value="activity">{t("Activity")}</TabsTrigger>
                   </TabsList>
                   <Button
@@ -450,7 +417,6 @@ export function McpControl() {
                             onClick={() => {
                               if (tokenVisible) {
                                 setTokenVisible(false);
-                                setToken(null);
                               } else {
                                 void mutate("reveal");
                               }
@@ -477,7 +443,7 @@ export function McpControl() {
                         <div className="text-sm font-semibold">{t("Client setup")}</div>
                         <fieldset className="flex flex-wrap gap-1.5">
                           <legend className="sr-only">{t("Client")}</legend>
-                          {CLIENTS.map((name) => (
+                          {MCP_CLIENTS.map((name) => (
                             <Button
                               className="h-8"
                               key={name}
@@ -490,47 +456,16 @@ export function McpControl() {
                             </Button>
                           ))}
                         </fieldset>
-                        <p className="text-sm text-muted-foreground">
-                          {t("Set this environment variable before starting the client:")}
-                        </p>
-                        <pre className="overflow-x-auto rounded-md bg-muted/70 p-3 text-xs">
-                          <code>
-                            export ORG_TOOLS_MCP_TOKEN=&apos;
-                            {tokenVisible && token ? token : "<token>"}&apos;
-                          </code>
-                        </pre>
                         <div className="text-sm font-semibold">{t("Configuration")}</div>
-                        <pre className="overflow-x-auto rounded-md bg-muted/70 p-3 text-xs">
-                          <code>{configuration}</code>
+                        <pre
+                          className="overflow-x-auto rounded-md bg-muted/70 p-3 text-xs"
+                          data-demo-id="mcp-configuration"
+                        >
+                          <code>{configuration ?? t("Loading MCP settings…")}</code>
                         </pre>
-                      </section>
-                      <section className="rounded-md bg-warning/10 p-3">
-                        <div className="text-sm font-semibold">{t("Agent provider notice")}</div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {t(
-                            "Org Tools sends data only to the local MCP client. The chosen agent may send it to its model provider.",
-                          )}
-                        </p>
                       </section>
                     </div>
                   </ScrollArea>
-                </TabsContent>
-                <TabsContent className="pt-4" value="examples">
-                  <div className="space-y-3" data-demo-id="mcp-examples">
-                    <div className="text-sm font-semibold">{t("Example requests")}</div>
-                    {[
-                      t("Analyze team composition"),
-                      t("Plan a reorganization in a new View"),
-                      t("Undo the last agent change"),
-                    ].map((example) => (
-                      <div className="rounded-md bg-muted/55 px-3 py-2.5 text-sm" key={example}>
-                        {example}
-                      </div>
-                    ))}
-                    <p className="text-sm text-muted-foreground">
-                      {t("Use Preview before Apply and report the exact server summary.")}
-                    </p>
-                  </div>
                 </TabsContent>
                 <TabsContent className="min-h-0 pt-4" value="activity">
                   <ScrollArea className="h-full pr-3">

@@ -336,23 +336,23 @@ These server-only supporting frames are absent from the browser-only Pages runti
 
 [![MCP access consent](screenshots/feature-mcp-disabled-consent.png)](screenshots/feature-mcp-disabled-consent.png)
 
-Review the local full-access boundary before enabling agent access.
+Review the local full-access boundary before enabling MCP.
 
-Capabilities: Disabled by default, Explicit consent, Provider disclosure.
+Capabilities: Disabled by default, Explicit consent, Full access.
 
 ### MCP credentials
 
 [![MCP credentials](screenshots/feature-mcp-enabled-credentials.png)](screenshots/feature-mcp-enabled-credentials.png)
 
-Reveal or copy the loopback endpoint and revocable local access token.
+Use the loopback endpoint, masked token controls, and green enabled sidebar signal.
 
-Capabilities: Loopback endpoint, Masked token, Copy, Rotation.
+Capabilities: Loopback endpoint, Masked token, Enabled signal, Rotation.
 
 ### MCP client setup
 
 [![MCP client setup](screenshots/feature-mcp-client-setup.png)](screenshots/feature-mcp-client-setup.png)
 
-Configure a supported local agent with bundled offline instructions.
+Use a ready-to-paste local configuration containing the current token.
 
 Capabilities: Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, OpenCode.
 

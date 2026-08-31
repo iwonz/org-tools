@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createBrowserDiagnostics } from "../packages/screenshots/browser-diagnostics.mjs";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const applicationRoot = join(repositoryRoot, "apps", "ui");
 const launcherEntry = join(repositoryRoot, "scripts", "start-development.mjs");
 const requireFromScreenshots = createRequire(
   join(repositoryRoot, "packages", "screenshots", "package.json"),
@@ -217,9 +218,7 @@ async function probeBrowser(origin) {
 }
 
 const port = await reserveLoopbackPort();
-const runtimeDirectory = join(repositoryRoot, ".org-tools");
-await mkdir(runtimeDirectory, { recursive: true });
-const temporaryDirectory = await mkdtemp(join(runtimeDirectory, "dev-check-"));
+const temporaryDirectory = await mkdtemp(join(applicationRoot, ".next-dev-check-"));
 const origin = `http://127.0.0.1:${port}`;
 let logs = "";
 const child = spawn(process.execPath, [launcherEntry], {
@@ -228,6 +227,7 @@ const child = spawn(process.execPath, [launcherEntry], {
     ...process.env,
     NEXT_TELEMETRY_DISABLED: "1",
     ORG_TOOLS_DB_PATH: join(temporaryDirectory, "org-tools.sqlite3"),
+    ORG_TOOLS_NEXT_DIST_DIR: relative(applicationRoot, join(temporaryDirectory, "next")),
     PORT: String(port),
   },
   stdio: ["ignore", "pipe", "pipe"],

@@ -1,9 +1,10 @@
-# Local MCP agent access
+# Local MCP
 
 The SQLite runtime includes an optional Model Context Protocol server at `http://127.0.0.1:3000/mcp`.
-It is disabled by default and is intentionally absent from GitHub Pages. Open **Agent access** in the
+It is disabled by default and is intentionally absent from GitHub Pages. Open **MCP** in the
 sidebar footer, review the full-access warning, and select **Enable MCP** to create a local bearer
-token. The dialog can mask, reveal, copy, or rotate that token and shows recent applied activity.
+token. The sidebar icon becomes green while enabled. The dialog can mask, reveal, copy, or rotate
+that token, generates complete client configuration, and shows recent applied activity.
 
 The endpoint is stateless Streamable HTTP. It accepts authenticated `POST` requests only from a
 loopback Host, accepts no Origin or a matching loopback Origin, provides no CORS response, and has no
@@ -13,59 +14,17 @@ preview.
 
 ## Connect a client
 
-Set the token in the environment before starting the selected client:
+Open the **Setup** tab and select Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, or OpenCode. The
+displayed configuration already contains the current token in its static `Authorization` header;
+there is no separate environment-variable step. Codex receives a `config.toml` entry using the
+supported `http_headers` map, Claude Code and Cursor receive `.mcp.json`, Pi receives a
+`pi-codemcp` entry, and the remaining clients receive their local HTTP configuration shape.
 
-```sh
-export ORG_TOOLS_MCP_TOKEN='ot_mcp_...'
-```
-
-For Codex, add this to user `~/.codex/config.toml` or trusted project `.codex/config.toml`:
-
-```toml
-[mcp_servers.org_tools]
-url = "http://127.0.0.1:3000/mcp"
-bearer_token_env_var = "ORG_TOOLS_MCP_TOKEN"
-```
-
-Claude Code and Cursor can use an HTTP entry in `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "org-tools": {
-      "type": "http",
-      "url": "http://127.0.0.1:3000/mcp",
-      "headers": {
-        "Authorization": "Bearer ${ORG_TOOLS_MCP_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-OpenClaw and Hermes use the same Streamable HTTP URL and `Authorization: Bearer
-${ORG_TOOLS_MCP_TOKEN}` header in their local MCP server settings. Pi connects through
-`pi-codemcp`; configure an `org-tools` Streamable HTTP server with that URL and header. OpenCode can
-use:
-
-```json
-{
-  "mcp": {
-    "org-tools": {
-      "type": "remote",
-      "url": "http://127.0.0.1:3000/mcp",
-      "enabled": true,
-      "headers": {
-        "Authorization": "Bearer {env:ORG_TOOLS_MCP_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-The in-product dialog keeps these client templates bundled and offline. ChatGPT web, Grok, Claude
-web, and the generic remote Claude connector are not listed because Org Tools does not expose a
-public endpoint or tunnel.
+These configurations are generated locally only while the dialog is open. Rotate replaces the
+token, immediately invalidates prior configurations, and regenerates the displayed snippet. The
+templates are bundled and never loaded from the network. ChatGPT web, Grok, Claude web, and the
+generic remote Claude connector are not listed because Org Tools does not expose a public endpoint
+or tunnel.
 
 ## Agent workflow
 
@@ -96,8 +55,9 @@ entire Undo when a later edit overlaps, returning the exact conflicting entity, 
 
 ## Trust boundary and recovery
 
-The token grants complete local read/write access to Employees, Units, Main, and custom Views. Keep
-it out of shell history, screenshots, commits, and logs. Org Tools sends data only to the local MCP
+The token grants complete local read/write access to Employees, Units, Main, and custom Views. The
+generated configuration contains that secret; keep it out of screenshots, commits, and logs. Org
+Tools sends data only to the local MCP
 client, but that agent can send the data to its configured model provider. Choose a client and model
 provider whose data handling is appropriate for the organization.
 

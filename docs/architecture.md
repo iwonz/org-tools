@@ -44,13 +44,13 @@ arbitrary JSON are rejected.
 `Cache-Control: no-store`. Mutations require JSON, a loopback Host, and a matching same-origin
 Origin. CORS is not enabled.
 
-SQLite schema v2 contains one strict `application_state` row with `organization_json`, `ui_json`,
-revision, and timestamps. It adds singleton `mcp_settings`, expiring `mcp_previews`, and bounded
-`mcp_changes`. Exact v1 singleton databases migrate in place without changing state or revision.
-The repository uses prepared statements, immediate transactions,
-rollback journal mode, `foreign_keys=ON`, `synchronous=FULL`, and a busy timeout. An exact obsolete
-`projects` plus `app_state` schema is destructively replaced on first open without data migration;
-unknown schemas and corrupt current rows are blocked rather than silently reset.
+SQLite has one strict current shape: one `application_state` row with `organization_json`, `ui_json`,
+revision, and timestamps, plus singleton `mcp_settings`, expiring `mcp_previews`, and bounded
+`mcp_changes`. The repository uses prepared statements, immediate transactions, rollback journal
+mode, `foreign_keys=ON`, `synchronous=FULL`, and a busy timeout. An empty database receives exactly
+that shape. Startup otherwise accepts only its exact managed tables and columns; obsolete,
+incomplete, unknown, and corrupt databases are blocked without mutation. There is no schema marker,
+migration, compatibility reader, or automatic reset.
 
 The database path resolves in this order:
 
@@ -117,9 +117,10 @@ history, collaborative cursors, or remote synchronization.
 - Import owns one transient `File` and validated candidate. Export performs a direct download.
 - Data Download remains a separate reporting pipeline for CSV, JSON, templates, and PNG.
 
-The server sidebar adds **Agent access** after state Export; the static sidebar omits that slot. Both
-retain identical compact/expanded geometry. The header contains only the active section icon and
-title. Floating non-modal surfaces use
+The server sidebar adds **MCP** after state Export; its icon is green only while enabled. The static
+sidebar omits that slot. Both retain identical compact/expanded geometry. The MCP modal contains
+Setup and Activity; Setup builds ready-to-paste client configuration with the current local token.
+The header contains only the active section icon and title. Floating non-modal surfaces use
 one neutral border and restrained shadow; hover and active states change tone without changing
 geometry.
 

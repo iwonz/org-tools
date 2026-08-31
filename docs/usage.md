@@ -13,20 +13,20 @@ short bounded delay. There is no Save action or state switcher.
 
 The compact sidebar contains Units, Employees, Editor, Analytics, Calendar, Data Download, Import,
 state Export, language, and theme. Its desktop control expands the 64 px icon rail to a 240 px label
-panel without moving icon centers. The local server additionally places **Agent access** after state
+panel without moving icon centers. The local server additionally places **MCP** after state
 Export; Pages does not show it. The header contains only the current section icon and title.
 
-## Local agent access
+## Local MCP
 
-Open **Agent access** in the local server sidebar to enable or disable MCP, reveal or copy the
-loopback endpoint and token, rotate credentials, inspect bundled setup for supported local clients,
-see examples, and review applied activity. Enabling grants complete access to Employees, Units, Main,
-and custom Views. The dialog explains that a local client can pass data to its model provider.
+Open **MCP** in the local server sidebar to enable or disable access, reveal or copy the loopback
+endpoint and token, rotate credentials, use bundled ready-to-paste configuration for supported local
+clients, and review applied activity. The icon is green while MCP is enabled. Enabling grants
+complete access to Employees, Units, Main, and custom Views.
 
 Agent changes always use Preview → Apply. Apply writes automatically like a user action and updates
 open browser tabs. Independent simultaneous fields merge; overlapping fields require **Keep local**,
 **Use MCP**, or **Cancel**. Activity **Undo** is confirmed and succeeds only when later edits do not
-overlap the values being restored. See [Local MCP agent access](mcp.md) for tools and client setup.
+overlap the values being restored. See [Local MCP](mcp.md) for tools and client setup.
 
 ## Language and appearance
 

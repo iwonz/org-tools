@@ -39,34 +39,32 @@ describe("singleton state repository", () => {
     reopened.close();
   });
 
-  it("replaces the obsolete project schema without migrating its rows", () => {
+  it("rejects a former project schema without changing it", () => {
     const databasePath = temporaryDatabasePath();
     const database = new DatabaseSync(databasePath);
     database.exec(`
       CREATE TABLE projects (id TEXT PRIMARY KEY);
       CREATE TABLE app_state (last_project_id TEXT);
-      PRAGMA user_version = 1;
+      INSERT INTO projects (id) VALUES ('preserve-me');
     `);
     database.close();
 
-    const repository = new StateRepository(databasePath);
-    expect(repository.read().state.organization.employees).toEqual([]);
+    expect(() => new StateRepository(databasePath)).toThrowError(
+      expect.objectContaining({ code: "database_unavailable" }),
+    );
+    const unchanged = new DatabaseSync(databasePath);
     expect(
-      repository
-        .unsafeStatementForTests(
+      unchanged
+        .prepare(
           "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
         )
         .all(),
-    ).toEqual([
-      { name: "application_state" },
-      { name: "mcp_changes" },
-      { name: "mcp_previews" },
-      { name: "mcp_settings" },
-    ]);
-    repository.close();
+    ).toEqual([{ name: "app_state" }, { name: "projects" }]);
+    expect(unchanged.prepare("SELECT id FROM projects").get()).toEqual({ id: "preserve-me" });
+    unchanged.close();
   });
 
-  it("migrates the singleton schema from version 1 without changing state", () => {
+  it("rejects a pre-MCP singleton schema without changing it", () => {
     const databasePath = temporaryDatabasePath();
     const state = createBlankOrgToolsState("dark", "ru");
     const database = new DatabaseSync(databasePath);
@@ -79,7 +77,6 @@ describe("singleton state repository", () => {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       ) STRICT;
-      PRAGMA user_version = 1;
     `);
     database
       .prepare(
@@ -95,18 +92,44 @@ describe("singleton state repository", () => {
       );
     database.close();
 
-    const repository = new StateRepository(databasePath);
-    expect(repository.read()).toEqual({ revision: 7, state });
-    expect(repository.unsafeStatementForTests("PRAGMA user_version").get()).toEqual({
-      user_version: 2,
+    expect(() => new StateRepository(databasePath)).toThrowError(
+      expect.objectContaining({ code: "database_unavailable" }),
+    );
+    const unchanged = new DatabaseSync(databasePath);
+    expect(
+      unchanged.prepare("SELECT revision, organization_json FROM application_state").get(),
+    ).toEqual({
+      organization_json: JSON.stringify(state.organization),
+      revision: 7,
     });
     expect(
-      repository.unsafeStatementForTests("SELECT enabled, token FROM mcp_settings").get(),
-    ).toEqual({
-      enabled: 0,
-      token: null,
+      unchanged
+        .prepare(
+          "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+        )
+        .all(),
+    ).toEqual([{ name: "application_state" }]);
+    unchanged.close();
+  });
+
+  it("rejects an incomplete current-looking schema without changing it", () => {
+    const databasePath = temporaryDatabasePath();
+    const database = new DatabaseSync(databasePath);
+    database.exec(`
+      CREATE TABLE application_state (id INTEGER PRIMARY KEY, marker TEXT);
+      CREATE TABLE mcp_settings (id INTEGER PRIMARY KEY, marker TEXT);
+      INSERT INTO application_state (id, marker) VALUES (1, 'preserve-me');
+    `);
+    database.close();
+
+    expect(() => new StateRepository(databasePath)).toThrowError(
+      expect.objectContaining({ code: "database_unavailable" }),
+    );
+    const unchanged = new DatabaseSync(databasePath);
+    expect(unchanged.prepare("SELECT marker FROM application_state WHERE id = 1").get()).toEqual({
+      marker: "preserve-me",
     });
-    repository.close();
+    unchanged.close();
   });
 
   it("writes bounded UI independently and preserves organization data", () => {
@@ -144,7 +167,7 @@ describe("singleton state repository", () => {
   it("rejects unknown schemas", () => {
     const databasePath = temporaryDatabasePath();
     const database = new DatabaseSync(databasePath);
-    database.exec("CREATE TABLE unexpected (id INTEGER PRIMARY KEY); PRAGMA user_version = 9;");
+    database.exec("CREATE TABLE unexpected (id INTEGER PRIMARY KEY);");
     database.close();
 
     expect(() => new StateRepository(databasePath)).toThrowError(

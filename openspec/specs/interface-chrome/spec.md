@@ -54,11 +54,12 @@ without a project or file persistence control. Server mode SHALL additionally sh
 after Export and before language and theme; Pages SHALL omit it completely. Expanded mode SHALL show
 icons and visible labels; compact mode SHALL show only icons with localized accessible names and
 tooltips. The active destination, hover, press, and keyboard focus SHALL remain tonal, borderless,
-shadowless, and geometry-stable. The desktop collapse control and every compact sidebar action SHALL
-keep the same 48 px width, 40 px height, 14 px horizontal padding, 20 px icon size, and icon axis.
-The shell SHALL render no decorative product glyph, visible product title, Save control, Autosave
-control, or persistence status. Sidebar collapse and all other durable navigation context SHALL be
-represented in the current state.
+shadowless, and geometry-stable. The enabled MCP icon SHALL use semantic green without changing its
+container geometry; its disabled icon SHALL use the standard sidebar foreground. The desktop
+collapse control and every compact sidebar action SHALL keep the same 48 px width, 40 px height,
+14 px horizontal padding, 20 px icon size, and icon axis. The shell SHALL render no decorative
+product glyph, visible product title, Save control, Autosave control, or persistence status. Sidebar
+collapse and all other durable navigation context SHALL be represented in the current state.
 
 #### Scenario: Initial blank sidebar
 - **WHEN** a new blank state renders at desktop width
@@ -70,7 +71,7 @@ represented in the current state.
 
 #### Scenario: Server MCP action
 - **WHEN** the SQLite runtime renders the sidebar
-- **THEN** MCP appears after Export and before language and theme with the same geometry in compact and expanded modes
+- **THEN** MCP appears after Export and before language and theme with the same geometry in compact and expanded modes and a green icon only while enabled
 
 #### Scenario: Pages actions
 - **WHEN** Pages renders the sidebar
@@ -193,15 +194,16 @@ retain localized copy, accessible names, close behavior, and focus management.
   shift, or additional elevation
 
 ### Requirement: MCP management is a focused floating workflow
-The MCP modal SHALL use the shared dialog hierarchy and provide compact status and consent,
-credentials, setup, examples, and activity sections without exposing credentials behind the modal
-or shifting sidebar geometry. Long client snippets and activity lists SHALL scroll within bounded
-regions while primary Enable, Disable, Rotate, and Undo decisions remain explicit.
+The MCP modal SHALL use the shared dialog hierarchy and provide compact consent, credentials, client
+setup, and activity without exposing credentials behind the modal or shifting sidebar geometry.
+Long ready-to-paste client snippets and activity lists SHALL scroll within bounded regions while
+primary Enable, Disable, Rotate, and Undo decisions remain explicit. It SHALL not duplicate enabled
+status in a badge and SHALL not render an Examples tab or provider-notice section.
 
 #### Scenario: Compact consent modal
 - **WHEN** disabled MCP management opens at a narrow viewport
-- **THEN** the full-access warning, privacy boundary, cancellation, and Enable action remain readable without page overflow
+- **THEN** the full-access warning, cancellation, and Enable action remain readable without page overflow
 
 #### Scenario: Enabled management modal
 - **WHEN** enabled MCP management opens in either theme
-- **THEN** endpoint, masked credentials, setup navigation, examples, and activity remain visually separated with restrained boundaries and shadows
+- **THEN** endpoint, masked credentials, ready-to-paste client setup, and activity remain visually separated with restrained boundaries and shadows

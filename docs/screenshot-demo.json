@@ -405,8 +405,8 @@
     "featured": false,
     "title": "MCP access consent",
     "file": "feature-mcp-disabled-consent.png",
-    "description": "Review the local full-access boundary before enabling agent access.",
-    "capabilities": ["Disabled by default", "Explicit consent", "Provider disclosure"]
+    "description": "Review the local full-access boundary before enabling MCP.",
+    "capabilities": ["Disabled by default", "Explicit consent", "Full access"]
   },
   {
     "id": "mcp-enabled-credentials",
@@ -414,8 +414,8 @@
     "featured": false,
     "title": "MCP credentials",
     "file": "feature-mcp-enabled-credentials.png",
-    "description": "Reveal or copy the loopback endpoint and revocable local access token.",
-    "capabilities": ["Loopback endpoint", "Masked token", "Copy", "Rotation"]
+    "description": "Use the loopback endpoint, masked token controls, and green enabled sidebar signal.",
+    "capabilities": ["Loopback endpoint", "Masked token", "Enabled signal", "Rotation"]
   },
   {
     "id": "mcp-client-setup",
@@ -423,7 +423,7 @@
     "featured": false,
     "title": "MCP client setup",
     "file": "feature-mcp-client-setup.png",
-    "description": "Configure a supported local agent with bundled offline instructions.",
+    "description": "Use a ready-to-paste local configuration containing the current token.",
     "capabilities": ["Codex", "Claude Code", "Cursor", "OpenClaw", "Hermes", "Pi", "OpenCode"]
   },
   {

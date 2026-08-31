@@ -30,7 +30,10 @@ export const POST = async (request: Request): Promise<Response> => {
       return jsonResponse({ error: { code: "invalid_input" } }, { status: 400 });
     }
     const repository = getMcpRepository();
-    if (value.action === "enable") return jsonResponse({ settings: repository.setEnabled(true) });
+    if (value.action === "enable") {
+      const settings = repository.setEnabled(true);
+      return jsonResponse({ settings, token: repository.revealToken() });
+    }
     if (value.action === "disable") return jsonResponse({ settings: repository.setEnabled(false) });
     if (value.action === "reveal") return jsonResponse({ token: repository.revealToken() });
     if (value.action === "rotate") return jsonResponse(repository.rotateToken());

@@ -70,17 +70,25 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await disableMcp(request);
   await openBlankState(page);
-  await page.getByRole("button", { name: "Agent access", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "MCP agent access" });
+  const mcpButton = page.locator('[data-demo-id="mcp-control"]');
+  await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "false");
+  await page.getByRole("button", { name: "MCP", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "MCP" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("MCP is disabled", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Enable MCP", exact: true }).click();
-  await expect(dialog.getByText("Enabled", { exact: true })).toBeVisible();
+  await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
+  await expect(mcpButton.locator("svg")).toHaveClass(/text-success/u);
+  await expect(dialog.getByText("Enabled", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("tab", { name: "Examples", exact: true })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Reveal", exact: true }).click();
   const tokenLocator = dialog.locator('[data-demo-id="mcp-token"]');
   await expect(tokenLocator).toHaveText(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
   const token = (await tokenLocator.textContent())?.trim();
   expect(token).toMatch(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
+  await expect(dialog.locator('[data-demo-id="mcp-configuration"]')).toContainText(
+    `Authorization = "Bearer ${token}"`,
+  );
 
   const initialized = await rpc(request, token ?? "", 1, "initialize", {
     capabilities: {},
@@ -138,7 +146,7 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(page.getByText("Rowan Lee", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Agent access", exact: true }).click();
+  await page.getByRole("button", { name: "MCP", exact: true }).click();
   await dialog.getByRole("tab", { name: "Activity", exact: true }).click();
   await expect(
     dialog.getByText("Add a synthetic Employee from the browser protocol test", { exact: true }),
@@ -150,7 +158,7 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByText("Rowan Lee", { exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Agent access", exact: true }).click();
+  await page.getByRole("button", { name: "MCP", exact: true }).click();
   await dialog.getByRole("tab", { name: "Setup", exact: true }).click();
   await dialog.getByRole("button", { name: "Rotate token", exact: true }).click();
   const rotateDialog = page.getByRole("alertdialog", { name: "Rotate access token?" });
@@ -173,15 +181,16 @@ test("localizes the MCP consent and credentials in Russian", async ({ page, requ
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: ruMessages.Ui.Dark, exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/u);
-  await page.getByRole("button", { name: ruMessages.Ui["Agent access"], exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: ruMessages.Ui["MCP agent access"] });
+  const mcpButton = page.locator('[data-demo-id="mcp-control"]');
+  await page.getByRole("button", { name: ruMessages.Ui.MCP, exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: ruMessages.Ui.MCP });
   await expect(dialog.getByText(ruMessages.Ui["MCP is disabled"], { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: ruMessages.Ui["Enable MCP"], exact: true }).click();
-  await expect(dialog.getByText(ruMessages.Ui.Enabled, { exact: true })).toBeVisible();
+  await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
   await expect(dialog.getByRole("tab", { name: ruMessages.Ui.Setup, exact: true })).toBeVisible();
   await expect(dialog.locator('[data-demo-id="mcp-endpoint"]')).toContainText("/mcp");
-  await dialog.getByRole("tab", { name: ruMessages.Ui.Examples, exact: true }).click();
-  await expect(dialog.getByText(ruMessages.Ui["Example requests"], { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("tab")).toHaveCount(2);
+  await expect(dialog.locator('[data-demo-id="mcp-configuration"]')).toContainText("Authorization");
   await dialog.getByRole("tab", { name: ruMessages.Ui.Activity, exact: true }).click();
   await expect(dialog.locator('[data-demo-id="mcp-activity"]')).toBeVisible();
 });

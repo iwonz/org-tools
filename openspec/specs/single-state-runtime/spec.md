@@ -57,21 +57,26 @@ corrupt current database with memory state.
 
 ### Requirement: SQLite uses a singleton current schema
 SQLite SHALL keep exactly one application-state row with separate validated organization and UI
-JSON, one monotonic revision, and timestamps. Schema v2 SHALL additionally keep singleton MCP
-settings, short-lived MCP previews, and a bounded MCP activity journal outside application state.
-The repository SHALL use prepared statements, transactions, rollback journal mode, foreign-key
-enforcement, full synchronous writes, and a busy timeout. It SHALL migrate the exact current v1
-singleton schema to v2 without changing state bytes or revision, destructively replace only the
-recognized obsolete `projects` and `app_state` schema without reading its data, and reject unknown
-or corrupt current schemas.
+JSON, one monotonic revision, and timestamps. The exact current managed schema SHALL additionally
+keep singleton MCP settings, short-lived MCP previews, and a bounded MCP activity journal outside
+application state. The repository SHALL use prepared statements, transactions, rollback journal
+mode, foreign-key enforcement, full synchronous writes, and a busy timeout. Startup SHALL create the
+current schema only when the database has no managed tables, reopen only the exact current table and
+column shape, and reject every obsolete, incomplete, unknown, or corrupt shape without mutating it.
+The runtime MUST NOT read, write, or branch on a schema-version marker and MUST NOT contain schema
+migrations, compatibility readers, or automatic resets.
 
-#### Scenario: Current v1 migration
-- **WHEN** startup opens an exact valid v1 singleton database
-- **THEN** MCP tables and schema version 2 are committed while the state JSON, revision, and timestamps remain unchanged
+#### Scenario: Empty database
+- **WHEN** startup opens a database with no managed tables
+- **THEN** the exact current singleton state and MCP tables are created without a schema-version marker
 
-#### Scenario: Obsolete multi-project database
-- **WHEN** startup detects the exact former project-table schema
-- **THEN** those managed tables are dropped and one blank current singleton state plus disabled MCP settings is created without migration
+#### Scenario: Exact current database
+- **WHEN** startup opens the exact current table and column shape with a valid singleton row
+- **THEN** the existing state, revision, MCP settings, previews, and activity remain available without migration
+
+#### Scenario: Obsolete or incomplete database
+- **WHEN** startup opens a former project layout, a pre-MCP singleton layout, or any other incomplete managed shape
+- **THEN** startup fails visibly and every existing table and row remains unchanged
 
 #### Scenario: Unknown schema
 - **WHEN** a configured database contains an unrecognized table shape

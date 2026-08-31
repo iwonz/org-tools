@@ -8,8 +8,6 @@ import type { StateApiErrorCode, StateDocument, StatePutRequest } from "@/lib/st
 import { resolveStateRuntimeConfig } from "@/server/state-config";
 import { emitStateRevision, type StateRevisionSource } from "@/server/state-events";
 
-const SCHEMA_VERSION = 2;
-const LEGACY_SINGLETON_SCHEMA_VERSION = 1;
 const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
 
 type StateRow = {
@@ -131,11 +129,14 @@ export class StateRepository {
 
   constructor(databasePath: string) {
     this.databasePath = databasePath;
+    let database: DatabaseSync | undefined;
     try {
       if (databasePath !== ":memory:") mkdirSync(dirname(databasePath), { recursive: true });
-      this.database = new DatabaseSync(databasePath);
+      database = new DatabaseSync(databasePath);
+      this.database = database;
       this.initialize();
     } catch (error) {
+      database?.close();
       if (error instanceof StateRepositoryError) throw error;
       throw new StateRepositoryError(
         "database_unavailable",
@@ -203,7 +204,6 @@ export class StateRepository {
         created_at TEXT NOT NULL
       ) STRICT;
       CREATE INDEX mcp_changes_created_index ON mcp_changes(created_at DESC);
-      PRAGMA user_version = ${SCHEMA_VERSION};
     `);
     this.database
       .prepare(
@@ -249,31 +249,9 @@ export class StateRepository {
       this.transaction(() => this.createSchema());
       return;
     }
-    if (tables.join("\0") === ["app_state", "projects"].join("\0")) {
-      this.transaction(() => {
-        this.database.exec("DROP TABLE app_state; DROP TABLE projects; PRAGMA user_version = 0;");
-        this.createSchema();
-      });
-      return;
-    }
-    const versionRow = this.database.prepare("PRAGMA user_version").get() as
-      | { user_version: number | bigint }
-      | undefined;
-    const version = toNumber(versionRow?.user_version ?? 0);
-    if (
-      tables.length === 1 &&
-      tables[0] === "application_state" &&
-      version === LEGACY_SINGLETON_SCHEMA_VERSION &&
-      hasExactStateColumns(this.database)
-    ) {
-      this.read();
-      this.transaction(() => this.createMcpSchema());
-      return;
-    }
     if (
       tables.join("\0") !==
         ["application_state", "mcp_changes", "mcp_previews", "mcp_settings"].join("\0") ||
-      version !== SCHEMA_VERSION ||
       !hasExactStateColumns(this.database) ||
       !hasExactMcpColumns(this.database)
     ) {

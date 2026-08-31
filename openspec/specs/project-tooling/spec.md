@@ -220,9 +220,10 @@ runners without deprecation annotations.
 ### Requirement: MCP protocol and isolation have dedicated validation
 The repository SHALL provide `pnpm mcp:check` as an isolated raw-protocol smoke test for disabled,
 authentication, discovery, bounded read, Preview, Apply, idempotency, activity, and undo behavior.
-Unit and browser validation SHALL additionally cover schema migration, token lifecycle, complete
-typed CRUD, expiry, staleness, selective undo conflicts, revision reconciliation, localization,
-live UI updates, and absence of unexpected diagnostics or external requests.
+Unit and browser validation SHALL additionally cover strict rejection of every non-current database
+shape without mutation, token lifecycle, complete typed CRUD, expiry, staleness, selective undo
+conflicts, revision reconciliation, localization, live UI updates, ready client configuration, and
+absence of unexpected diagnostics or external requests.
 
 #### Scenario: Isolated protocol smoke
 - **WHEN** `pnpm mcp:check` runs against a temporary database through the actual route handler
@@ -240,17 +241,18 @@ live UI updates, and absence of unexpected diagnostics or external requests.
 The repository SHALL document MCP setup, trust boundaries, supported local clients, tools,
 Preview -> Apply, activity, undo, revision reconciliation, and recovery in `docs/mcp.md` and the
 existing architecture, privacy, performance, usage, screenshot, contributor, and README surfaces.
-The deterministic gallery SHALL contain exactly 43 PNGs: the existing 38 product scenarios plus
-disabled consent, enabled credentials, client setup, applied activity, and selective-undo conflict.
-The README SHALL retain exactly ten featured product frames.
+Client setup SHALL be ready to paste with the current token and no separate environment step. The
+deterministic gallery SHALL contain exactly 43 PNGs: the existing 38 product scenarios plus disabled
+consent, enabled credentials, client setup, applied activity, and selective-undo conflict. The README
+SHALL retain exactly ten featured product frames, and generated frames MUST NOT contain a real token.
 
 #### Scenario: MCP documentation
-- **WHEN** a local user follows one supported client setup
-- **THEN** bundled instructions use the loopback endpoint and environment-backed token where supported without requiring a remote tunnel or fetched documentation
+- **WHEN** a local user selects one supported client in the MCP Setup tab
+- **THEN** bundled instructions contain the loopback endpoint and current token without requiring an environment step, remote tunnel, or fetched documentation
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
-- **THEN** it deterministically replaces exactly 43 declared PNGs and the five MCP frames originate only from server mode
+- **THEN** it deterministically replaces exactly 43 declared PNGs and the five MCP frames originate only from server mode without a real credential
 
 #### Scenario: Featured README
 - **WHEN** a visitor opens README

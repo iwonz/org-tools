@@ -40,9 +40,10 @@ database is `.org-tools/org-tools.sqlite3`. Override it with `ORG_TOOLS_DB_PATH`
 before copying the SQLite file.
 
 The local SQLite runtime also provides disabled-by-default MCP access for local coding agents. Use
-**Agent access** in the sidebar footer to enable it, obtain or rotate the bearer token, inspect
-applied activity, and perform selective Undo. MCP is never included in the GitHub Pages runtime. See
-[Local MCP agent access](docs/mcp.md) for supported clients and the Preview → Apply contract.
+**MCP** in the sidebar footer to enable it, use ready client configuration with the current token,
+rotate credentials, inspect applied activity, and perform selective Undo. MCP is never included in
+the GitHub Pages runtime. See [Local MCP](docs/mcp.md) for supported clients and the Preview → Apply
+contract.
 
 Use `pnpm pages:dev` for the in-memory static runtime. `pnpm pages:build` exports it to ignored
 `pages-out`, and `pnpm pages:check` verifies the `/org-tools` base path and absence of API or SQLite
