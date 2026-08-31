@@ -67,7 +67,11 @@ function SidebarTooltip({ children, collapsed }: { children: ReactNode; collapse
   );
 }
 
-export const OrgToolsShell = observer(() => {
+export const OrgToolsShell = observer(function OrgToolsShell({
+  serverSidebarAction,
+}: {
+  serverSidebarAction?: ReactNode;
+}) {
   const store = useOrgStore();
   const t = useUiText();
   const messageText = useMessageText();
@@ -242,6 +246,7 @@ export const OrgToolsShell = observer(() => {
                 </span>
                 <SidebarTooltip collapsed={sidebarCollapsed}>{t("Export state")}</SidebarTooltip>
               </Button>
+              {serverSidebarAction}
               <div className="group relative">
                 <LanguageToggle
                   labelClassName={sidebarLabelClassName}

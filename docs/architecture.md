@@ -39,12 +39,15 @@ arbitrary JSON are rejected.
 ## Local SQLite runtime
 
 `/` renders the application directly. `GET /api/state` returns `{ revision, state }` and
-`PUT /api/state` accepts exact `organization`, `ui`, or `all` scoped updates. Every response uses
+`PUT /api/state` accepts exact `organization`, `ui`, or `all` scoped updates plus the caller's
+`expectedRevision`. Every response uses
 `Cache-Control: no-store`. Mutations require JSON, a loopback Host, and a matching same-origin
 Origin. CORS is not enabled.
 
-SQLite schema v1 contains one strict `application_state` row with `organization_json`, `ui_json`,
-revision, and timestamps. The repository uses prepared statements, immediate transactions,
+SQLite schema v2 contains one strict `application_state` row with `organization_json`, `ui_json`,
+revision, and timestamps. It adds singleton `mcp_settings`, expiring `mcp_previews`, and bounded
+`mcp_changes`. Exact v1 singleton databases migrate in place without changing state or revision.
+The repository uses prepared statements, immediate transactions,
 rollback journal mode, `foreign_keys=ON`, `synchronous=FULL`, and a busy timeout. An exact obsolete
 `projects` plus `app_state` schema is destructively replaced on first open without data migration;
 unknown schemas and corrupt current rows are blocked rather than silently reset.
@@ -62,11 +65,38 @@ Organization actions enqueue an immediate full-state write. Durable UI changes u
 delay and a scoped UI write. The single-flight writer permits one active transaction, replaces an
 older queued snapshot with the latest one, retries failures with a bounded backoff, and retains an
 in-memory warning plus `beforeunload` protection until recovery. There is no Save button, dirty UI,
-revision conflict dialog, or user-controlled autosave.
+or user-controlled autosave.
+
+`GET /api/state/events` streams process-local revision notifications without state bytes. MCP writes
+trigger a refresh in every connected browser. The controller keeps the last accepted base state and
+performs a stable-ID three-way merge. Independent local and MCP fields are written back automatically;
+overlap opens a localized **Keep local**, **Use MCP**, or **Cancel** decision instead of silently
+discarding either value.
+
+## Embedded MCP boundary
+
+The local server exposes a stateless Streamable HTTP endpoint at `POST /mcp`. A transport guard
+requires a loopback Host, no Origin or the matching loopback Origin, JSON, and the enabled bearer
+token. GET, DELETE, OPTIONS, CORS, remote bind, and legacy SSE are unavailable. Same-origin control
+routes expose settings, token lifecycle, activity, and confirmed UI Undo; they never include MCP
+metadata in `OrgToolsState`.
+
+Typed operations execute against a detached state, replace temporary references with UUIDs, validate
+the complete result, and create a semantic field diff. A preview is immutable for ten minutes. Apply
+checks the stored base revision in one immediate transaction, writes one organization snapshot,
+advances the revision once, records forward/inverse diffs, and returns the same result on a repeated
+retained Apply. Selective Undo accepts only values that still equal the earlier Apply result. The
+activity journal retains at most 100 changes and 64 MiB; applied preview payloads are compacted.
+
+Read tools cache the validated state and derived View structures by revision. Collections are cursor
+paginated to 100 records and avatar bytes are opt-in. Resources, prompts, annotations, and server
+instructions encode the Preview → Apply rule and require agents to treat stored organization fields
+as untrusted data.
 
 ## Static runtime and tab synchronization
 
-The static runtime never imports server modules or references `/api/state`. A new tab requests the
+The static runtime never imports server modules or references `/api/state`, `/mcp`, MCP dependencies,
+tokens, or control UI. A new tab requests the
 latest state over the same-origin `BroadcastChannel`. A live tab answers with the current validated
 state; if no tab answers, the new tab starts empty. Closing the final tab destroys organization data.
 Only locale and theme may remain as browser metadata.
@@ -87,8 +117,9 @@ history, collaborative cursors, or remote synchronization.
 - Import owns one transient `File` and validated candidate. Export performs a direct download.
 - Data Download remains a separate reporting pipeline for CSV, JSON, templates, and PNG.
 
-The sidebar contains only product navigation, Import, state Export, language, theme, and its collapse
-control. The header contains only the active section icon and title. Floating non-modal surfaces use
+The server sidebar adds **Agent access** after state Export; the static sidebar omits that slot. Both
+retain identical compact/expanded geometry. The header contains only the active section icon and
+title. Floating non-modal surfaces use
 one neutral border and restrained shadow; hover and active states change tone without changing
 geometry.
 
@@ -98,6 +129,10 @@ geometry.
 uses an isolated ignored database and Chromium to verify the root application, state API, local-only
 requests, and Editor canvas. `pnpm build` produces the server build.
 
+`pnpm mcp:check` initializes a 2025-era client against the actual route contract, checks tool,
+resource, prompt, and annotation discovery, performs Preview → Apply, verifies idempotency, and probes
+transport rejection.
+
 `pnpm pages:build` creates the ignored `pages-out` static application. `pnpm pages:check` requires
 the `/org-tools` base path and rejects server chunks, SQLite symbols, database configuration, and
-state API references. Publication is a separate guarded maintainer action.
+state API or MCP references. Publication is a separate guarded maintainer action.

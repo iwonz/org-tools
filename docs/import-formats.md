@@ -20,6 +20,8 @@ rejected without migration or mutation.
 locale, theme, shell state, active section and View, selected and expanded Units, filters, searches,
 calendar settings, Data Download settings, and per-View viewport and selection. Transient dialogs,
 notifications, and unfinished forms are excluded.
+Local MCP enablement, bearer token, previews, and activity history are SQLite runtime metadata and
+are also excluded; Import and Export never transfer agent credentials or audit records.
 
 Import is limited to 25 MiB. It parses and validates a detached candidate, shows filename, size, and
 Employee, Unit, and View counts, and replaces current state only after explicit confirmation. Export

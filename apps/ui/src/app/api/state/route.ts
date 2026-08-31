@@ -8,6 +8,9 @@ export const GET = (request: Request) => withStateApi(request, () => getStateRep
 export const PUT = (request: Request) =>
   withStateApi(
     request,
-    async () => getStateRepository().write(parseStatePutRequest(await readJsonValue(request))),
+    async () => {
+      const { expectedRevision, ...update } = parseStatePutRequest(await readJsonValue(request));
+      return getStateRepository().write(update, expectedRevision);
+    },
     { mutation: true },
   );

@@ -224,7 +224,7 @@ async function expectSidebarActions(page: Page) {
   );
 
   expect(groupStyle).toEqual({ borderWidth: "0px", columnGap: "4px", flexDirection: "column" });
-  expect(buttonStyles).toHaveLength(4);
+  expect(buttonStyles).toHaveLength(5);
   expect(new Set(buttonStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(buttonStyles.map(({ height }) => height))).toEqual(new Set([40]));
   expect(new Set(buttonStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
@@ -265,7 +265,7 @@ async function expectSidebarActions(page: Page) {
           return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
         }),
       ),
-    ).toEqual(Array.from({ length: 4 }, () => 0));
+    ).toEqual(Array.from({ length: 5 }, () => 0));
   }
 }
 

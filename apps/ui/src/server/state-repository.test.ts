@@ -31,7 +31,7 @@ describe("singleton state repository", () => {
     expect(initial.state.organization.views).toHaveLength(1);
 
     const state = createBlankOrgToolsState("dark", "ru");
-    expect(repository.write({ scope: "all", state }).revision).toBe(2);
+    expect(repository.write({ scope: "all", state }, 1).revision).toBe(2);
     repository.close();
 
     const reopened = new StateRepository(databasePath);
@@ -54,10 +54,58 @@ describe("singleton state repository", () => {
     expect(
       repository
         .unsafeStatementForTests(
-          "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+          "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
         )
         .all(),
-    ).toEqual([{ name: "application_state" }]);
+    ).toEqual([
+      { name: "application_state" },
+      { name: "mcp_changes" },
+      { name: "mcp_previews" },
+      { name: "mcp_settings" },
+    ]);
+    repository.close();
+  });
+
+  it("migrates the singleton schema from version 1 without changing state", () => {
+    const databasePath = temporaryDatabasePath();
+    const state = createBlankOrgToolsState("dark", "ru");
+    const database = new DatabaseSync(databasePath);
+    database.exec(`
+      CREATE TABLE application_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        organization_json TEXT NOT NULL,
+        ui_json TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision >= 1),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      PRAGMA user_version = 1;
+    `);
+    database
+      .prepare(
+        `INSERT INTO application_state
+         (id, organization_json, ui_json, revision, created_at, updated_at)
+         VALUES (1, ?, ?, 7, ?, ?)`,
+      )
+      .run(
+        JSON.stringify(state.organization),
+        JSON.stringify(state.ui),
+        "2026-08-31T00:00:00.000Z",
+        "2026-08-31T00:00:00.000Z",
+      );
+    database.close();
+
+    const repository = new StateRepository(databasePath);
+    expect(repository.read()).toEqual({ revision: 7, state });
+    expect(repository.unsafeStatementForTests("PRAGMA user_version").get()).toEqual({
+      user_version: 2,
+    });
+    expect(
+      repository.unsafeStatementForTests("SELECT enabled, token FROM mcp_settings").get(),
+    ).toEqual({
+      enabled: 0,
+      token: null,
+    });
     repository.close();
   });
 
@@ -65,7 +113,7 @@ describe("singleton state repository", () => {
     const repository = new StateRepository(":memory:");
     const initial = repository.read();
     const ui = { ...initial.state.ui, locale: "ru" as const, theme: "dark" as const };
-    const updated = repository.write({ scope: "ui", ui });
+    const updated = repository.write({ scope: "ui", ui }, 1);
 
     expect(updated.revision).toBe(2);
     expect(updated.state.organization).toEqual(initial.state.organization);
@@ -79,7 +127,7 @@ describe("singleton state repository", () => {
     const invalid = structuredClone(before.state) as unknown as Record<string, unknown>;
     invalid.unexpected = true;
 
-    expect(() => repository.write({ scope: "all", state: invalid as never })).toThrow(
+    expect(() => repository.write({ scope: "all", state: invalid as never }, 1)).toThrow(
       StateRepositoryError,
     );
     expect(repository.read()).toEqual(before);

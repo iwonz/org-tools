@@ -1,6 +1,6 @@
 # Screenshots
 
-The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 38 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
+The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 43 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
 
 The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
 
@@ -328,6 +328,50 @@ Inspect the lower field list and formatted JSON structure before copying or down
 
 Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
+## MCP
+
+These server-only supporting frames are absent from the browser-only Pages runtime.
+
+### MCP access consent
+
+[![MCP access consent](screenshots/feature-mcp-disabled-consent.png)](screenshots/feature-mcp-disabled-consent.png)
+
+Review the local full-access boundary before enabling agent access.
+
+Capabilities: Disabled by default, Explicit consent, Provider disclosure.
+
+### MCP credentials
+
+[![MCP credentials](screenshots/feature-mcp-enabled-credentials.png)](screenshots/feature-mcp-enabled-credentials.png)
+
+Reveal or copy the loopback endpoint and revocable local access token.
+
+Capabilities: Loopback endpoint, Masked token, Copy, Rotation.
+
+### MCP client setup
+
+[![MCP client setup](screenshots/feature-mcp-client-setup.png)](screenshots/feature-mcp-client-setup.png)
+
+Configure a supported local agent with bundled offline instructions.
+
+Capabilities: Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, OpenCode.
+
+### Applied MCP activity
+
+[![Applied MCP activity](screenshots/feature-mcp-applied-activity.png)](screenshots/feature-mcp-applied-activity.png)
+
+Inspect the server-authored summary, actor, reason, revision, and selective Undo action.
+
+Capabilities: Activity journal, Exact summary, Revision, Undo.
+
+### Selective Undo conflict
+
+[![Selective Undo conflict](screenshots/feature-mcp-selective-undo-conflict.png)](screenshots/feature-mcp-selective-undo-conflict.png)
+
+Block Undo when a later edit changed the same value and identify the exact overlap.
+
+Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
+
 ## Review checklist
 
 - Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
@@ -335,4 +379,4 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 38 PNGs must retain identical hashes. Material differences require review and a deliberate update.
+- Regenerate immediately; all 43 PNGs must retain identical hashes. Material differences require review and a deliberate update.

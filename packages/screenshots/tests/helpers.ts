@@ -39,7 +39,7 @@ export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): 
     headers: { Host: new URL(origin).host },
   });
   if (!response.ok()) throw new Error(JSON.stringify(await response.json()));
-  const document = (await response.json()) as { state: OrgToolsState };
+  const document = (await response.json()) as { revision: number; state: OrgToolsState };
   const state = document.state;
   const main = state.organization.views.find((view) => view.kind === "main");
   if (!main) throw new Error("Main View is unavailable.");
@@ -74,7 +74,7 @@ export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): 
   state.ui.download.unitQuery = "";
   state.ui.views = [{ selectedItems: [], viewId: main.id, viewport: { scale: 1, x: 0, y: 0 } }];
   const write = await page.request.put("/api/state", {
-    data: { scope: "all", state },
+    data: { expectedRevision: document.revision, scope: "all", state },
     headers: { Origin: origin },
   });
   if (!write.ok()) throw new Error(JSON.stringify(await write.json()));

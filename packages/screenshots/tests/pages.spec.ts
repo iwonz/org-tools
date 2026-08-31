@@ -38,6 +38,7 @@ test("runs the complete state editor at the repository base path without APIs or
   await expect(page).toHaveURL(/\/org-tools\/$/u);
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toBeVisible();
   await expect(page.locator('[data-demo-id="browser-file-switcher"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="mcp-control"]')).toHaveCount(0);
   await expect(page.locator('[data-demo-id="project-save"]')).toHaveCount(0);
   await importSyntheticState(page);
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();

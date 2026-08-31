@@ -41,6 +41,7 @@ pnpm lint
 pnpm typecheck
 pnpm test:unit
 pnpm dev:check
+pnpm mcp:check
 pnpm build
 pnpm test:browser
 pnpm screenshots:generate

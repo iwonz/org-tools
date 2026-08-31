@@ -117,6 +117,11 @@ async function probe(origin, child) {
 
 async function probeBrowser(origin) {
   const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
+  const currentResponse = await fetch(`${origin}/api/state`);
+  const currentDocument = await currentResponse.json();
+  if (!currentResponse.ok || !validateStateDocument(currentDocument)) {
+    throw new Error("Could not read the development diagnostic state.");
+  }
   const mainView = fixture.organization.views.find((view) => view.kind === "main");
   const mainViewUi = fixture.ui.views.find((view) => view.viewId === mainView?.id);
   if (!mainView || !mainViewUi) throw new Error("The development fixture has no Main View.");
@@ -143,7 +148,11 @@ async function probeBrowser(origin) {
     viewport: { ...mainViewUi.viewport },
   });
   const seedResponse = await fetch(`${origin}/api/state`, {
-    body: JSON.stringify({ scope: "all", state: fixture }),
+    body: JSON.stringify({
+      expectedRevision: currentDocument.revision,
+      scope: "all",
+      state: fixture,
+    }),
     headers: { "Content-Type": "application/json", Origin: origin },
     method: "PUT",
   });

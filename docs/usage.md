@@ -13,7 +13,20 @@ short bounded delay. There is no Save action or state switcher.
 
 The compact sidebar contains Units, Employees, Editor, Analytics, Calendar, Data Download, Import,
 state Export, language, and theme. Its desktop control expands the 64 px icon rail to a 240 px label
-panel without moving icon centers. The header contains only the current section icon and title.
+panel without moving icon centers. The local server additionally places **Agent access** after state
+Export; Pages does not show it. The header contains only the current section icon and title.
+
+## Local agent access
+
+Open **Agent access** in the local server sidebar to enable or disable MCP, reveal or copy the
+loopback endpoint and token, rotate credentials, inspect bundled setup for supported local clients,
+see examples, and review applied activity. Enabling grants complete access to Employees, Units, Main,
+and custom Views. The dialog explains that a local client can pass data to its model provider.
+
+Agent changes always use Preview → Apply. Apply writes automatically like a user action and updates
+open browser tabs. Independent simultaneous fields merge; overlapping fields require **Keep local**,
+**Use MCP**, or **Cancel**. Activity **Undo** is confirmed and succeeds only when later edits do not
+overlap the values being restored. See [Local MCP agent access](mcp.md) for tools and client setup.
 
 ## Language and appearance
 
@@ -55,8 +68,8 @@ reporting outputs and cannot be imported as application state.
 If a SQLite write fails, current data remains in memory. Org Tools retries a bounded number of times,
 shows a localized Retry action, and enables the native leave warning while a write is pending. A
 corrupt current row or unknown database schema blocks startup with Retry; it is never reset
-automatically. Multiple tabs converge through logical last-write-wins stamps and server write order;
-there is no history or concurrent-edit conflict dialog.
+automatically. Browser tabs converge through logical stamps and server write order. MCP activity has
+a bounded local history, and cross-source overlapping fields use an explicit conflict dialog.
 
-See [State transfer format](import-formats.md), [Privacy](privacy.md), and
+See [State transfer format](import-formats.md), [MCP](mcp.md), [Privacy](privacy.md), and
 [Screenshots](screenshots.md) for the exact boundaries and visual catalog.

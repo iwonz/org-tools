@@ -5,7 +5,12 @@ import { createContext, useContext } from "react";
 export type StateRuntimeMode = "browser" | "sqlite";
 
 export type StateRuntimeContextValue = {
-  error: "corrupt_stored_state" | "database_unavailable" | "invalid_state" | null;
+  error:
+    | "corrupt_stored_state"
+    | "database_unavailable"
+    | "invalid_state"
+    | "revision_conflict"
+    | null;
   mode: StateRuntimeMode;
   pending: boolean;
   retry: () => void;

@@ -23,6 +23,7 @@
     "format": "biome format --write .",
     "fixture:performance": "node scripts/generate-performance-fixture.mjs",
     "lint": "biome check .",
+    "mcp:check": "vitest run apps/ui/src/server/mcp-protocol.test.ts",
     "pages:build": "node scripts/build-pages.mjs",
     "pages:check": "node scripts/check-pages.mjs",
     "pages:dev": "pnpm --filter @org-tools/pages dev",

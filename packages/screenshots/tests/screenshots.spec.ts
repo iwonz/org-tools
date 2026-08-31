@@ -121,6 +121,34 @@ async function openEditorExport(page: Page) {
   return dialog;
 }
 
+async function callMcp(
+  page: Page,
+  token: string,
+  id: number,
+  method: string,
+  params: Record<string, unknown>,
+) {
+  const response = await page.request.post("/mcp", {
+    data: { id, jsonrpc: "2.0", method, params },
+    headers: {
+      Accept: "application/json, text/event-stream",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  expect(response.status()).toBe(200);
+  const text = await response.text();
+  const data = response.headers()["content-type"]?.includes("text/event-stream")
+    ? text
+        .split("\n")
+        .find((line) => line.startsWith("data: "))
+        ?.slice("data: ".length)
+    : text;
+  if (!data) throw new Error("MCP response did not contain a JSON-RPC payload.");
+  return JSON.parse(data) as {
+    result?: { structuredContent?: Record<string, unknown> };
+  };
+}
+
 test.beforeAll(async () => {
   await mkdir(screenshotsDirectory, { recursive: true });
   const expectedFiles = new Set(screenshotManifest.map((scenario) => scenario.file));
@@ -206,6 +234,92 @@ test("captures both themes and both language states", async ({ page }) => {
   );
   await page.locator('[data-demo-id="language-toggle"]').click();
   await capture(page, "language");
+});
+
+test("captures MCP consent, credentials, setup, activity, and selective-undo conflict", async ({
+  page,
+}) => {
+  await openSyntheticState(page);
+  const origin = new URL(page.url()).origin;
+  const disabled = await page.request.post("/api/mcp", {
+    data: { action: "disable" },
+    headers: { Origin: origin },
+  });
+  expect(disabled.ok()).toBe(true);
+  await page.getByRole("button", { name: "Agent access", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "MCP agent access" });
+  await expect(dialog.getByText("MCP is disabled", { exact: true })).toBeVisible();
+  await capture(page, "mcp-disabled-consent");
+
+  await dialog.getByRole("button", { name: "Enable MCP", exact: true }).click();
+  await expect(dialog.locator('[data-demo-id="mcp-token"]')).toContainText("ot_mcp_");
+  await capture(page, "mcp-enabled-credentials");
+  await dialog.getByRole("button", { name: "Pi", exact: true }).click();
+  await expect(dialog.getByText("pi-codemcp", { exact: false })).toBeVisible();
+  await capture(page, "mcp-client-setup");
+
+  await dialog.getByRole("button", { name: "Reveal", exact: true }).click();
+  const tokenLocator = dialog.locator('[data-demo-id="mcp-token"]');
+  await expect(tokenLocator).toHaveText(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
+  const token = (await tokenLocator.textContent())?.trim() ?? "";
+  const currentResponse = await page.request.get("/api/state");
+  const current = (await currentResponse.json()) as {
+    revision: number;
+    state: { organization: { employees: Array<{ firstName: string; id: string }> } };
+  };
+  const employee = current.state.organization.employees[0];
+  if (!employee) throw new Error("Synthetic MCP screenshot Employee is unavailable.");
+  const preview = await callMcp(page, token, 1, "tools/call", {
+    arguments: {
+      expectedRevision: current.revision,
+      operations: [
+        {
+          employeeId: employee.id,
+          patch: { firstName: "Agent Avery" },
+          type: "employee.update",
+        },
+      ],
+      reason: "Prepare a product organization scenario",
+    },
+    name: "preview_change",
+  });
+  const previewId = preview.result?.structuredContent?.previewId;
+  await callMcp(page, token, 2, "tools/call", {
+    arguments: { previewId },
+    name: "apply_change",
+  });
+  await dialog.getByRole("tab", { name: "Activity", exact: true }).click();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Agent access", exact: true }).click();
+  await dialog.getByRole("tab", { name: "Activity", exact: true }).click();
+  await expect(
+    dialog.getByText("Prepare a product organization scenario", { exact: true }),
+  ).toBeVisible();
+  await capture(page, "mcp-applied-activity");
+
+  const afterApplyResponse = await page.request.get("/api/state");
+  const afterApply = (await afterApplyResponse.json()) as {
+    revision: number;
+    state: { organization: { employees: Array<{ firstName: string; id: string }> } };
+  };
+  const changedEmployee = afterApply.state.organization.employees.find(
+    (candidate) => candidate.id === employee.id,
+  );
+  if (!changedEmployee) throw new Error("Changed MCP screenshot Employee is unavailable.");
+  changedEmployee.firstName = "Local Avery";
+  const localWrite = await page.request.put("/api/state", {
+    data: { expectedRevision: afterApply.revision, scope: "all", state: afterApply.state },
+    headers: { Origin: origin },
+  });
+  expect(localWrite.ok()).toBe(true);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Agent access", exact: true }).click();
+  await dialog.getByRole("tab", { name: "Activity", exact: true }).click();
+  await dialog.getByRole("button", { name: "Undo", exact: true }).first().click();
+  const undoDialog = page.getByRole("alertdialog", { name: "Undo this agent change?" });
+  await undoDialog.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(dialog.locator('[data-demo-id="mcp-undo-conflict"]')).toBeVisible();
+  await capture(page, "mcp-selective-undo-conflict");
 });
 
 test("captures Team browsing, creation, Live rules, and editing", async ({ page }) => {
