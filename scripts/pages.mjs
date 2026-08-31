@@ -55,6 +55,10 @@ export async function validatePagesOutput() {
     ["/api/mcp", "MCP control routes must not appear in the Pages output"],
     ["/mcp", "MCP endpoint must not appear in the Pages output"],
     ["ot_mcp_", "MCP token material must not appear in the Pages output"],
+    [
+      "npx skills add iwonz/org-tools",
+      "MCP agent setup prompts must not appear in the Pages output",
+    ],
     ["node:sqlite", "node:sqlite must not appear in the Pages output"],
     ["/api/state", "state API routes must not appear in the Pages output"],
     ["ORG_TOOLS_DB_PATH", "database configuration must not appear in the Pages output"],

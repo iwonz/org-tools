@@ -40,6 +40,7 @@ pnpm format
 pnpm lint
 pnpm typecheck
 pnpm test:unit
+pnpm skill:check
 pnpm dev:check
 pnpm mcp:check
 pnpm build

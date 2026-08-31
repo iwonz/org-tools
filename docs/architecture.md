@@ -9,6 +9,8 @@ Org Tools has two deliveries over the same React, MobX, and strict `OrgToolsStat
 - `packages/types` defines the state, Employee, Unit, View, editor, and output contracts.
 - `packages/screenshots` contains production browser checks, the shared strict browser-diagnostic
   collector, and the deterministic gallery.
+- `skills/org-tools` is the public instruction-only Agent Skill installed by supported clients; the
+  application never executes it or its installer.
 
 ## State contract
 
@@ -89,9 +91,9 @@ retained Apply. Selective Undo accepts only values that still equal the earlier 
 activity journal retains at most 100 changes and 64 MiB; applied preview payloads are compacted.
 
 Read tools cache the validated state and derived View structures by revision. Collections are cursor
-paginated to 100 records and avatar bytes are opt-in. Resources, prompts, annotations, and server
-instructions encode the Preview → Apply rule and require agents to treat stored organization fields
-as untrusted data.
+paginated to 100 records and avatar bytes are opt-in. Resources, prompts, annotations, server
+instructions, and the public skill encode Preview → explicit approval → Apply and require agents
+to treat stored organization fields as untrusted data.
 
 ## Static runtime and tab synchronization
 
@@ -119,7 +121,9 @@ history, collaborative cursors, or remote synchronization.
 
 The server sidebar adds **MCP** after state Export; its icon is green only while enabled. The static
 sidebar omits that slot. Both retain identical compact/expanded geometry. The MCP modal contains
-Setup and Activity; Setup builds ready-to-paste client configuration with the current local token.
+Setup and Activity; Setup builds one English agent prompt with the selected-client skill install,
+current local endpoint and token, exact client configuration, reload step, and read-only connection
+check. The prompt exists only in component memory and the clipboard.
 The header contains only the active section icon and title. Floating non-modal surfaces use
 one neutral border and restrained shadow; hover and active states change tone without changing
 geometry.
@@ -133,6 +137,10 @@ requests, and Editor canvas. `pnpm build` produces the server build.
 `pnpm mcp:check` initializes a 2025-era client against the actual route contract, checks tool,
 resource, prompt, and annotation discovery, performs Preview → Apply, verifies idempotency, and probes
 transport rejection.
+
+`pnpm skill:check` validates the public skill layout, frontmatter, instruction-only boundary, source
+language, required safety guidance, and absence of credentials or placeholders without using the
+network.
 
 `pnpm pages:build` creates the ignored `pages-out` static application. `pnpm pages:check` requires
 the `/org-tools` base path and rejects server chunks, SQLite symbols, database configuration, and

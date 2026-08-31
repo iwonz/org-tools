@@ -352,9 +352,10 @@ Capabilities: Loopback endpoint, Masked token, Enabled signal, Rotation.
 
 [![MCP client setup](screenshots/feature-mcp-client-setup.png)](screenshots/feature-mcp-client-setup.png)
 
-Use a ready-to-paste local configuration containing the current token.
+Copy one agent setup prompt containing the selected skill install, current token, exact client
+configuration, reload step, and read-only verification.
 
-Capabilities: Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, OpenCode.
+Capabilities: Installable skill, Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, OpenCode.
 
 ### Applied MCP activity
 
@@ -377,6 +378,7 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
+- Confirm MCP frames contain only the synthetic token, the enabled icon is green, and setup shows the installable-skill prompt rather than a standalone configuration block.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
 - Regenerate immediately; all 43 PNGs must retain identical hashes. Material differences require review and a deliberate update.

@@ -23,9 +23,15 @@ Disable takes effect immediately; Rotate revokes the old token and pending previ
 
 Enabling MCP grants the chosen local agent complete access to organization data. Org Tools itself
 sends data only to that local client, but the client can forward it to its configured model provider.
-The consent dialog states this boundary. Stored Employee names, tags, Unit names, and every other
-field are treated as data rather than instructions. Tokens must never enter logs, screenshots,
-commits, shell history, or Pages artifacts.
+This provider boundary is documented here and in the MCP guide. Stored Employee names, tags, Unit
+names, and every other field are treated as data rather than instructions. Tokens must never enter
+logs, screenshots, commits, shell history, or Pages artifacts.
+
+The MCP setup prompt is assembled only after explicit Enable from bundled client templates and the
+current in-memory token. It exists only in component memory and a user-triggered clipboard copy; it
+is not written to organization state, SQLite, browser storage, or logs. Org Tools never executes the
+included `npx skills add` command or contacts GitHub. The installed public skill contains only
+instructions and no endpoint, credential, organization data, or executable resource.
 
 Import reads one explicitly selected JSON file into a bounded transient candidate. Export and Data
 Download begin only after explicit user actions. Organization records are never copied to browser

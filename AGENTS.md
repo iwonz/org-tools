@@ -52,6 +52,8 @@ Keep the README concise and link to the detailed documents.
 - `pnpm typecheck` checks all TypeScript workspaces.
 - `pnpm test:unit` runs unit tests.
 - `pnpm mcp:check` runs the isolated authenticated Streamable HTTP protocol smoke test.
+- `pnpm skill:check` validates the public instruction-only Org Tools Agent Skill without network
+  access.
 - `pnpm build` creates the production Next.js server application.
 - `pnpm test:browser` runs browser smoke tests against both production runtimes. Every owned page
   fails on unexpected console warnings/errors, page errors, and failed application resources.
@@ -83,11 +85,12 @@ commit, or branch is still active or unmerged.
    required project documentation before implementation.
 3. Implement the complete task list on that branch. Keep behavior, tests, documentation,
    screenshots, capability deltas, and checked task status in the same change.
-4. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm dev:check`,
-   `pnpm build`, `pnpm test:browser`, `pnpm screenshots:generate`, `pnpm pages:build`,
-   `pnpm pages:check`, `pnpm public:check`, `pnpm spec:validate`, and `git diff --check`. Inspect
-   every generated PNG and regenerate the gallery a second time to compare deterministic hashes.
-   Preserve the performance target of 20,000 Employees and 4,000 Units.
+4. Run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm skill:check`,
+   `pnpm dev:check`, `pnpm mcp:check`, `pnpm build`, `pnpm test:browser`,
+   `pnpm screenshots:generate`, `pnpm pages:build`, `pnpm pages:check`, `pnpm public:check`,
+   `pnpm spec:validate`, and `git diff --check`. Inspect every generated PNG and regenerate the
+   gallery a second time to compare deterministic hashes. Preserve the performance target of 20,000
+   Employees and 4,000 Units.
 5. Synchronize delta specs into canonical specs, archive the completed OpenSpec change according to
    the repository workflow, validate strictly again, and require `pnpm spec -- list --json` to show
    no active changes.

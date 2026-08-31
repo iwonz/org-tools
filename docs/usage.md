@@ -19,14 +19,17 @@ Export; Pages does not show it. The header contains only the current section ico
 ## Local MCP
 
 Open **MCP** in the local server sidebar to enable or disable access, reveal or copy the loopback
-endpoint and token, rotate credentials, use bundled ready-to-paste configuration for supported local
-clients, and review applied activity. The icon is green while MCP is enabled. Enabling grants
-complete access to Employees, Units, Main, and custom Views.
+endpoint and token, rotate credentials, select a supported local client, copy its complete English
+setup prompt, and review applied activity. The prompt tells the agent to install the public
+`org-tools` skill, add the current endpoint and token to its exact MCP configuration, reload if
+needed, and verify only read tools. The icon is green while MCP is enabled. Enabling grants complete
+access to Employees, Units, Main, and custom Views.
 
-Agent changes always use Preview → Apply. Apply writes automatically like a user action and updates
-open browser tabs. Independent simultaneous fields merge; overlapping fields require **Keep local**,
-**Use MCP**, or **Cancel**. Activity **Undo** is confirmed and succeeds only when later edits do not
-overlap the values being restored. See [Local MCP](mcp.md) for tools and client setup.
+Agent changes always use Preview → a new explicit user approval → Apply. Apply writes automatically
+like a user action and updates open browser tabs. Independent simultaneous fields merge; overlapping
+fields require **Keep local**, **Use MCP**, or **Cancel**. Activity **Undo** is confirmed and succeeds
+only when later edits do not overlap the values being restored. See [Local MCP](mcp.md) for tools and
+client setup.
 
 ## Language and appearance
 

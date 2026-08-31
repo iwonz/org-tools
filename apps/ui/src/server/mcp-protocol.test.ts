@@ -125,6 +125,11 @@ describe("stateless Streamable HTTP MCP", () => {
         ]),
       },
     });
+    const guide = await call("tools/call", { arguments: {}, name: "get_domain_guide" }, 5);
+    const guideText = JSON.stringify(guide);
+    expect(guideText).toContain("wait for a new explicit user approval");
+    expect(guideText).toContain("The request that led to Preview is not approval to Apply");
+    expect(guideText).toContain("wait for explicit approval before applying any undo");
   });
 
   it("applies only a stored preview and reports the exact resulting revision", async () => {

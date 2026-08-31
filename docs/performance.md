@@ -20,6 +20,8 @@ changes. Every collection page is capped at 100 records, avatar bytes are opt-in
 serialize a new full state snapshot. Preview validates one detached result; Apply performs one
 organization serialization and one SQLite transaction. Applied preview snapshots are compacted, and
 history is pruned to 100 changes and 64 MiB. A revision event contains only a revision and source.
+Changing the selected MCP client or rebuilding its short setup prompt operates only on the endpoint,
+token, and bundled templates; it never reads or serializes organization state.
 
 ## Indexing and rendering
 

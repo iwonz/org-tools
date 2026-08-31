@@ -34,7 +34,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUiText } from "@/i18n/use-ui-text";
 import {
-  buildMcpClientConfiguration,
+  buildMcpAgentSetupPrompt,
   MCP_CLIENTS,
   type McpClientName,
 } from "@/lib/mcp-client-configuration";
@@ -99,7 +99,7 @@ export function McpControl() {
   const [activeTab, setActiveTab] = useState<McpTab>("setup");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<McpUiError | null>(null);
-  const [copied, setCopied] = useState<"endpoint" | "token" | null>(null);
+  const [copied, setCopied] = useState<"endpoint" | "prompt" | "token" | null>(null);
   const [rotateConfirmationOpen, setRotateConfirmationOpen] = useState(false);
   const [undoChange, setUndoChange] = useState<McpActivityItem | null>(null);
   const sidebarCollapsed = store.sidebarCollapsed;
@@ -115,6 +115,7 @@ export function McpControl() {
 
   const load = useCallback(async (includeToken = false) => {
     setError(null);
+    if (includeToken) setToken(null);
     try {
       const response = await fetch("/api/mcp", { cache: "no-store" });
       if (!response.ok) throw new Error("request_failed");
@@ -137,6 +138,7 @@ export function McpControl() {
         setTokenVisible(false);
       }
     } catch {
+      if (includeToken) setToken(null);
       setError({ kind: "load" });
     }
   }, []);
@@ -194,7 +196,7 @@ export function McpControl() {
     }
   };
 
-  const copyValue = async (kind: "endpoint" | "token", value: string) => {
+  const copyValue = async (kind: "endpoint" | "prompt" | "token", value: string) => {
     await copyTextToClipboard(value);
     setCopied(kind);
   };
@@ -236,7 +238,7 @@ export function McpControl() {
   };
 
   const displayToken = tokenVisible ? token : (controlState?.settings.maskedToken ?? null);
-  const configuration = token ? buildMcpClientConfiguration(client, endpoint, token) : null;
+  const setupPrompt = token ? buildMcpAgentSetupPrompt(client, endpoint, token) : null;
 
   return (
     <>
@@ -279,8 +281,8 @@ export function McpControl() {
         >
           <DialogHeader>
             <DialogTitle>{t("MCP")}</DialogTitle>
-            <DialogDescription>
-              {t("Allow local agents to read and change all organization data through MCP.")}
+            <DialogDescription className="sr-only">
+              {t("Manage local MCP access and agent setup.")}
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -443,7 +445,7 @@ export function McpControl() {
                         <div className="text-sm font-semibold">{t("Client setup")}</div>
                         <fieldset className="flex flex-wrap gap-1.5">
                           <legend className="sr-only">{t("Client")}</legend>
-                          {MCP_CLIENTS.map((name) => (
+                          {MCP_CLIENTS.map(({ name }) => (
                             <Button
                               className="h-8"
                               key={name}
@@ -456,12 +458,25 @@ export function McpControl() {
                             </Button>
                           ))}
                         </fieldset>
-                        <div className="text-sm font-semibold">{t("Configuration")}</div>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-semibold">{t("Agent setup prompt")}</div>
+                          <Button
+                            aria-label={t("Copy setup prompt")}
+                            disabled={!setupPrompt}
+                            onClick={() => setupPrompt && void copyValue("prompt", setupPrompt)}
+                            size="sm"
+                            type="button"
+                            variant="secondary"
+                          >
+                            {copied === "prompt" ? <HiOutlineCheck /> : <HiOutlineClipboard />}
+                            {t("Copy")}
+                          </Button>
+                        </div>
                         <pre
-                          className="overflow-x-auto rounded-md bg-muted/70 p-3 text-xs"
-                          data-demo-id="mcp-configuration"
+                          className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-muted/70 p-3 text-xs"
+                          data-demo-id="mcp-setup-prompt"
                         >
-                          <code>{configuration ?? t("Loading MCP settings…")}</code>
+                          <code>{setupPrompt ?? t("Loading MCP settings…")}</code>
                         </pre>
                       </section>
                     </div>

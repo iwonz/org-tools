@@ -253,9 +253,12 @@ test("captures MCP consent, credentials, setup, activity, and selective-undo con
 
   await dialog.getByRole("button", { name: "Enable MCP", exact: true }).click();
   await expect(dialog.locator('[data-demo-id="mcp-token"]')).toContainText("ot_mcp_");
-  const configuration = dialog.locator('[data-demo-id="mcp-configuration"]');
-  await expect(configuration).toContainText(/Bearer ot_mcp_[A-Za-z0-9_-]{43}/u);
-  await configuration.locator("code").evaluate((element) => {
+  const setupPrompt = dialog.locator('[data-demo-id="mcp-setup-prompt"]');
+  await expect(setupPrompt).toContainText(
+    "npx skills add iwonz/org-tools --skill org-tools -g -a codex -y",
+  );
+  await expect(setupPrompt).toContainText(/Bearer ot_mcp_[A-Za-z0-9_-]{43}/u);
+  await setupPrompt.locator("code").evaluate((element) => {
     element.textContent =
       element.textContent?.replace(
         /ot_mcp_[A-Za-z0-9_-]{43}/gu,
@@ -265,8 +268,11 @@ test("captures MCP consent, credentials, setup, activity, and selective-undo con
   await capture(page, "mcp-enabled-credentials");
   await dialog.getByRole("button", { name: "Pi", exact: true }).click();
   await expect(dialog.getByText("pi-codemcp", { exact: false })).toBeVisible();
-  await expect(configuration).toContainText(/Bearer ot_mcp_[A-Za-z0-9_-]{43}/u);
-  await configuration.locator("code").evaluate((element) => {
+  await expect(setupPrompt).toContainText(
+    "npx skills add iwonz/org-tools --skill org-tools -g -a pi -y",
+  );
+  await expect(setupPrompt).toContainText(/Bearer ot_mcp_[A-Za-z0-9_-]{43}/u);
+  await setupPrompt.locator("code").evaluate((element) => {
     element.textContent =
       element.textContent?.replace(
         /ot_mcp_[A-Za-z0-9_-]{43}/gu,

@@ -423,8 +423,17 @@
     "featured": false,
     "title": "MCP client setup",
     "file": "feature-mcp-client-setup.png",
-    "description": "Use a ready-to-paste local configuration containing the current token.",
-    "capabilities": ["Codex", "Claude Code", "Cursor", "OpenClaw", "Hermes", "Pi", "OpenCode"]
+    "description": "Copy one setup prompt containing the selected skill install, current token, exact client configuration, reload step, and read-only verification.",
+    "capabilities": [
+      "Installable skill",
+      "Codex",
+      "Claude Code",
+      "Cursor",
+      "OpenClaw",
+      "Hermes",
+      "Pi",
+      "OpenCode"
+    ]
   },
   {
     "id": "mcp-applied-activity",

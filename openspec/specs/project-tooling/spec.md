@@ -219,15 +219,20 @@ runners without deprecation annotations.
 
 ### Requirement: MCP protocol and isolation have dedicated validation
 The repository SHALL provide `pnpm mcp:check` as an isolated raw-protocol smoke test for disabled,
-authentication, discovery, bounded read, Preview, Apply, idempotency, activity, and undo behavior.
-Unit and browser validation SHALL additionally cover strict rejection of every non-current database
-shape without mutation, token lifecycle, complete typed CRUD, expiry, staleness, selective undo
-conflicts, revision reconciliation, localization, live UI updates, ready client configuration, and
-absence of unexpected diagnostics or external requests.
+authentication, discovery, bounded read, Preview, Apply, idempotency, activity, and undo behavior,
+and `pnpm skill:check` as a local validation of the public instruction-only skill. Unit and browser
+validation SHALL additionally cover strict rejection of every non-current database shape without
+mutation, token lifecycle, complete typed CRUD, expiry, staleness, selective undo conflicts,
+revision reconciliation, localization, live UI updates, generated setup prompts, semantic enabled
+color, and absence of unexpected diagnostics or external requests.
 
 #### Scenario: Isolated protocol smoke
 - **WHEN** `pnpm mcp:check` runs against a temporary database through the actual route handler
 - **THEN** it enables MCP through the same-origin control contract, authenticates, discovers protocol surfaces, applies and undoes one preview, and removes owned state
+
+#### Scenario: Public skill check
+- **WHEN** `pnpm skill:check` runs without network access
+- **THEN** it validates the discoverable skill name, frontmatter, instruction-only shape, source language, and absence of credentials or unfinished placeholders
 
 #### Scenario: Large organization reads
 - **WHEN** validation uses 20,000 Employees and 4,000 Units
@@ -235,20 +240,23 @@ absence of unexpected diagnostics or external requests.
 
 #### Scenario: Pages isolation scan
 - **WHEN** Pages and publication checks inspect source and output
-- **THEN** any MCP SDK, `/mcp` or MCP control reference, token prefix, server chunk, SQLite symbol, credential, or organization fixture fails validation
+- **THEN** any MCP SDK, `/mcp` or MCP control reference, token prefix, server chunk, SQLite symbol, credential, setup prompt, or organization fixture fails validation
 
 ### Requirement: Documentation and gallery explain local agent access
-The repository SHALL document MCP setup, trust boundaries, supported local clients, tools,
-Preview -> Apply, activity, undo, revision reconciliation, and recovery in `docs/mcp.md` and the
-existing architecture, privacy, performance, usage, screenshot, contributor, and README surfaces.
-Client setup SHALL be ready to paste with the current token and no separate environment step. The
-deterministic gallery SHALL contain exactly 43 PNGs: the existing 38 product scenarios plus disabled
-consent, enabled credentials, client setup, applied activity, and selective-undo conflict. The README
-SHALL retain exactly ten featured product frames, and generated frames MUST NOT contain a real token.
+The repository SHALL document MCP setup, the globally installable `org-tools` skill, trust
+boundaries, supported local clients, tools, explicit Preview approval before Apply, activity, undo,
+revision reconciliation, and recovery in `docs/mcp.md` and the existing architecture, privacy,
+performance, usage, screenshot, contributor, and README surfaces. Client setup SHALL be one
+copyable English prompt containing the selected client's global skill command, loopback endpoint,
+current token, exact configuration, reload step, and read-only verification without a separate
+environment step. The deterministic gallery SHALL contain exactly 43 PNGs: the existing 38 product
+scenarios plus disabled consent, enabled credentials, client setup, applied activity, and
+selective-undo conflict. The README SHALL retain exactly ten featured product frames, and generated
+frames MUST NOT contain a real token.
 
-#### Scenario: MCP documentation
+#### Scenario: MCP setup prompt
 - **WHEN** a local user selects one supported client in the MCP Setup tab
-- **THEN** bundled instructions contain the loopback endpoint and current token without requiring an environment step, remote tunnel, or fetched documentation
+- **THEN** one bundled prompt contains the exact global skill install, loopback endpoint, current token, client configuration, reload guidance, and read-only verification without an environment step, remote tunnel, or fetched instruction
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes

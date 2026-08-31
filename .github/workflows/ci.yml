@@ -51,6 +51,12 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
+      - name: Validate public Agent Skill
+        run: pnpm skill:check
+
+      - name: Check MCP protocol
+        run: pnpm mcp:check
+
       - name: Validate OpenSpec
         run: pnpm spec:validate
 

@@ -1,4 +1,4 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import {
@@ -15,6 +15,21 @@ type RpcResponse = {
 const configuredOrigin = () => {
   const port = process.env.ORG_TOOLS_PORT ?? "4273";
   return process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
+};
+
+const expectSuccessIconColor = async (page: Page, control: Locator) => {
+  const iconColor = await control
+    .locator("svg")
+    .evaluate((element) => window.getComputedStyle(element).color);
+  const successColor = await page.evaluate(() => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--success)";
+    document.body.appendChild(probe);
+    const color = window.getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  expect(iconColor).toBe(successColor);
 };
 
 const disableMcp = async (request: APIRequestContext) => {
@@ -71,14 +86,36 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   await disableMcp(request);
   await openBlankState(page);
   const mcpButton = page.locator('[data-demo-id="mcp-control"]');
+  const disabledIconColor = await mcpButton
+    .locator("svg")
+    .evaluate((element) => window.getComputedStyle(element).color);
   await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "false");
   await page.getByRole("button", { name: "MCP", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "MCP" });
   await expect(dialog).toBeVisible();
+  const accessibleDescription = dialog.getByText("Manage local MCP access and agent setup.", {
+    exact: true,
+  });
+  await expect(accessibleDescription).toHaveClass(/sr-only/u);
+  expect(
+    await accessibleDescription.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.width <= 1 && bounds.height <= 1;
+    }),
+  ).toBe(true);
+  await expect(
+    dialog.getByText("Allow local agents to read and change all organization data through MCP.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
   await expect(dialog.getByText("MCP is disabled", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Enable MCP", exact: true }).click();
   await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
   await expect(mcpButton.locator("svg")).toHaveClass(/text-success/u);
+  await expectSuccessIconColor(page, mcpButton);
+  expect(
+    await mcpButton.locator("svg").evaluate((element) => getComputedStyle(element).color),
+  ).not.toBe(disabledIconColor);
   await expect(dialog.getByText("Enabled", { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole("tab", { name: "Examples", exact: true })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Reveal", exact: true }).click();
@@ -86,9 +123,66 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   await expect(tokenLocator).toHaveText(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
   const token = (await tokenLocator.textContent())?.trim();
   expect(token).toMatch(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
-  await expect(dialog.locator('[data-demo-id="mcp-configuration"]')).toContainText(
-    `Authorization = "Bearer ${token}"`,
+  const setupPrompt = dialog.locator('[data-demo-id="mcp-setup-prompt"]');
+  await expect(setupPrompt).toContainText(
+    "npx skills add iwonz/org-tools --skill org-tools -g -a codex -y",
   );
+  await expect(setupPrompt).toContainText(`Authorization = "Bearer ${token}"`);
+  await expect(setupPrompt).toContainText("get_domain_guide");
+  await expect(setupPrompt).toContainText("get_organization_overview");
+  await expect(dialog.locator('[data-demo-id="mcp-configuration"]')).toHaveCount(0);
+  const setupPromptText = await setupPrompt.textContent();
+  const organizationBeforeCopy = (
+    (await (await request.get("/api/state")).json()) as {
+      state: { organization: unknown };
+    }
+  ).state.organization;
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (value: string) => {
+          Reflect.set(window, "__copiedMcpSetupPrompt", value);
+          return Promise.resolve();
+        },
+      },
+    });
+  });
+  await dialog.getByRole("button", { name: "Copy setup prompt", exact: true }).click();
+  expect(await page.evaluate(() => Reflect.get(window, "__copiedMcpSetupPrompt"))).toBe(
+    setupPromptText,
+  );
+  const organizationAfterCopy = (
+    (await (await request.get("/api/state")).json()) as {
+      state: { organization: unknown };
+    }
+  ).state.organization;
+  expect(organizationAfterCopy).toEqual(organizationBeforeCopy);
+  await dialog.getByRole("button", { name: "Pi", exact: true }).click();
+  await expect(setupPrompt).toContainText(
+    "npx skills add iwonz/org-tools --skill org-tools -g -a pi -y",
+  );
+  await expect(setupPrompt).toContainText("pi-codemcp");
+  await expect(setupPrompt).toContainText(`Bearer ${token}`);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await mcpButton.hover();
+  await expectSuccessIconColor(page, mcpButton);
+  await page.mouse.down();
+  await expectSuccessIconColor(page, mcpButton);
+  await page.mouse.move(1_000, 500);
+  await page.mouse.up();
+  const sidebar = page.locator('[data-demo-id="app-sidebar"]');
+  const initialCollapsed = await sidebar.getAttribute("data-collapsed");
+  await page.locator('[data-demo-id="sidebar-toggle"]').click();
+  await expect(sidebar).toHaveAttribute(
+    "data-collapsed",
+    initialCollapsed === "true" ? "false" : "true",
+  );
+  await mcpButton.hover();
+  await expectSuccessIconColor(page, mcpButton);
+  await mcpButton.click();
+  await expect(dialog).toBeVisible();
+  await expectSuccessIconColor(page, mcpButton);
 
   const initialized = await rpc(request, token ?? "", 1, "initialize", {
     capabilities: {},
@@ -160,10 +254,14 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
 
   await page.getByRole("button", { name: "MCP", exact: true }).click();
   await dialog.getByRole("tab", { name: "Setup", exact: true }).click();
+  const promptBeforeRotation = await setupPrompt.textContent();
   await dialog.getByRole("button", { name: "Rotate token", exact: true }).click();
   const rotateDialog = page.getByRole("alertdialog", { name: "Rotate access token?" });
   await rotateDialog.getByRole("button", { name: "Rotate", exact: true }).click();
   await expect(rotateDialog).toBeHidden();
+  await expect(setupPrompt).not.toHaveText(promptBeforeRotation ?? "");
+  await expect(setupPrompt).not.toContainText(token ?? "");
+  await expect(setupPrompt).toContainText(/Bearer ot_mcp_[A-Za-z0-9_-]{43}/u);
   const rejected = await request.post("/mcp", {
     data: { id: 5, jsonrpc: "2.0", method: "tools/list", params: {} },
     headers: {
@@ -172,6 +270,35 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
     },
   });
   expect(rejected.status()).toBe(401);
+  await assertLocalRequests();
+});
+
+test("disables setup prompt copy when the current token cannot be loaded", async ({
+  page,
+  request,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await enableAndRevealMcp(request);
+  await page.route("**/api/mcp", async (route) => {
+    if (route.request().method() === "POST" && route.request().postData()?.includes('"reveal"')) {
+      await route.fulfill({ body: "{}", contentType: "application/json", status: 200 });
+      return;
+    }
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "MCP", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "MCP" });
+  await expect(
+    dialog.getByText("MCP settings could not be loaded.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Copy setup prompt", exact: true }),
+  ).toBeDisabled();
+  await expect(dialog.locator('[data-demo-id="mcp-setup-prompt"]')).toContainText(
+    "Loading MCP settings…",
+  );
+  await page.unroute("**/api/mcp");
   await assertLocalRequests();
 });
 
@@ -184,13 +311,22 @@ test("localizes the MCP consent and credentials in Russian", async ({ page, requ
   const mcpButton = page.locator('[data-demo-id="mcp-control"]');
   await page.getByRole("button", { name: ruMessages.Ui.MCP, exact: true }).click();
   const dialog = page.getByRole("dialog", { name: ruMessages.Ui.MCP });
+  await expect(
+    dialog.getByText(ruMessages.Ui["Manage local MCP access and agent setup."], {
+      exact: true,
+    }),
+  ).toHaveClass(/sr-only/u);
   await expect(dialog.getByText(ruMessages.Ui["MCP is disabled"], { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: ruMessages.Ui["Enable MCP"], exact: true }).click();
   await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
+  await expectSuccessIconColor(page, mcpButton);
   await expect(dialog.getByRole("tab", { name: ruMessages.Ui.Setup, exact: true })).toBeVisible();
   await expect(dialog.locator('[data-demo-id="mcp-endpoint"]')).toContainText("/mcp");
   await expect(dialog.getByRole("tab")).toHaveCount(2);
-  await expect(dialog.locator('[data-demo-id="mcp-configuration"]')).toContainText("Authorization");
+  await expect(dialog.locator('[data-demo-id="mcp-setup-prompt"]')).toContainText("Authorization");
+  await expect(
+    dialog.getByRole("button", { name: ruMessages.Ui["Copy setup prompt"], exact: true }),
+  ).toBeVisible();
   await dialog.getByRole("tab", { name: ruMessages.Ui.Activity, exact: true }).click();
   await expect(dialog.locator('[data-demo-id="mcp-activity"]')).toBeVisible();
 });

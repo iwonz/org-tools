@@ -31,6 +31,7 @@
     "pages:start": "node scripts/serve-pages.mjs",
     "public:check": "node scripts/check-public-safety.mjs",
     "screenshots:generate": "pnpm pages:build && pnpm --filter @org-tools/screenshots generate:pages && pnpm build && pnpm --filter @org-tools/screenshots generate",
+    "skill:check": "node scripts/check-agent-skill.mjs",
     "spec": "node scripts/run-openspec.mjs",
     "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
     "start": "pnpm --filter @org-tools/ui start",
