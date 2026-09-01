@@ -1313,9 +1313,10 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   const editorUnit = page.locator(
     '[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]',
   );
+  const lightUnitResting = await getBackgroundPresentation(editorUnit);
   await expectStableHoverGeometry(editorUnit);
   const lightUnitHover = await getBackgroundPresentation(editorUnit);
-  expect(lightUnitHover.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(lightUnitHover).toEqual(lightUnitResting);
   expect(lightUnitHover.alpha).toBe(1);
   expect(lightUnitHover.opacity).toBe("1");
 
@@ -1394,9 +1395,10 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   const darkTopBackground = await getBackgroundColor(topActions);
   expect(darkTopBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(viewportActions)).toBe(darkTopBackground);
+  const darkUnitResting = await getBackgroundPresentation(editorUnit);
   await expectStableHoverGeometry(editorUnit);
   const darkUnitHover = await getBackgroundPresentation(editorUnit);
-  expect(darkUnitHover.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(darkUnitHover).toEqual(darkUnitResting);
   expect(darkUnitHover.alpha).toBe(1);
   expect(darkUnitHover.opacity).toBe("1");
   await assertLocalRequests();

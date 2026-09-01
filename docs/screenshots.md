@@ -378,6 +378,8 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
+- Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
+  both themes.
 - Confirm MCP frames contain only the synthetic token, the enabled icon is green, and setup shows the installable-skill prompt rather than a standalone configuration block.
 - Confirm every Pages frame and sidebar state contains no MCP action, dialog, endpoint request, or server-only marker.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.

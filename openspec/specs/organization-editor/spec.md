@@ -181,8 +181,9 @@ tags or unused tag-row space.
 - **AND** dated tags use a localized date after a middle dot without bright blue styling or reserved empty rows
 
 ### Requirement: Editor commands retain readable interaction feedback
-Editor toolbar controls, command actions, and Unit cards SHALL use an opaque tonal hover surface
-with readable foreground contrast and SHALL NOT fade the command or Unit into the canvas.
+Editor toolbar controls and command actions SHALL use an opaque tonal hover surface with readable
+foreground contrast and SHALL NOT fade into the canvas. An unselected Unit card SHALL preserve its
+exact resting background color and opacity during passive pointer hover.
 
 #### Scenario: Hover an Editor command
 - **WHEN** a pointer hovers an available Editor toolbar or command action in either theme
@@ -191,8 +192,8 @@ with readable foreground contrast and SHALL NOT fade the command or Unit into th
 
 #### Scenario: Hover an Editor Unit
 - **WHEN** a pointer hovers an unselected Unit card in either theme
-- **THEN** the complete card remains opaque and readable on the accent surface without changing its
-  dimensions, position, or selection
+- **THEN** the complete card keeps its exact resting background color and opacity without changing
+  its dimensions, position, or selection
 
 ### Requirement: Employee and Unit forms avoid redundant chrome
 Employee create and edit forms SHALL expose a Gender selector and SHALL omit visible storage-scope
