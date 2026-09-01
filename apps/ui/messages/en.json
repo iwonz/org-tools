@@ -22,8 +22,7 @@
     "importSummary": "{newCount, plural, one {# Employee imported} other {# Employees imported}}{duplicateCount, plural, =0 {.} one {; # existing row skipped.} other {; # existing rows skipped.}}",
     "manualToLive": "{count, plural, one {# manual assignment will be removed} other {# manual assignments will be removed}}. Positions for current matches will remain, and membership will be calculated by the Live filter.",
     "liveToManual": "{count, plural, one {# current match will become fixed} other {# current matches will become fixed}} as static membership with their positions. The Live filter will be removed.",
-    "calendarEvents": "{count, plural, one {# calendar event} other {# calendar events}}",
-    "datedTagEvents": "{count, plural, one {# dated tag event} other {# dated tag events}}"
+    "calendarEvents": "{count, plural, one {# calendar event} other {# calendar events}}"
   },
   "Ui": {
     "Actions": "Actions",
@@ -111,7 +110,6 @@
     "Delete Unit?": "Delete Unit?",
     "Delete View": "Delete View",
     "Delete View?": "Delete View?",
-    "Direct Employees": "Direct Employees",
     "Drag Unit connection": "Drag Unit connection",
     "Drag field": "Drag field",
     "Edit": "Edit",

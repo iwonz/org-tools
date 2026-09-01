@@ -428,12 +428,16 @@ export function EmployeeCardList({
       if (section.employees.length === 0) return [];
 
       return [
-        {
-          count: section.employees.length,
-          id: section.id,
-          title: section.title,
-          type: "section" as const,
-        },
+        ...(section.title === null
+          ? []
+          : [
+              {
+                count: section.employees.length,
+                id: section.id,
+                title: section.title,
+                type: "section" as const,
+              },
+            ]),
         ...section.employees.map((employee) => ({
           employee,
           id: `${section.id}:${employee.id}`,

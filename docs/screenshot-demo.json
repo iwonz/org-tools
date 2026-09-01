@@ -78,8 +78,8 @@
     "featured": true,
     "title": "Team hierarchy and roster",
     "file": "demo-teams.png",
-    "description": "Browse the hierarchy, selected path, direct Employees, descendant Employees, tags, and row actions.",
-    "capabilities": ["Nested Teams", "Direct roster", "Descendant roster", "Employee actions"]
+    "description": "Browse the edge-aligned hierarchy, selected path, searchable roster count, descendant Employees, tags, and row actions.",
+    "capabilities": ["Nested Teams", "Search and counts", "Descendant roster", "Employee actions"]
   },
   {
     "id": "teams-create-manual",
@@ -342,12 +342,12 @@
     "featured": false,
     "title": "Dated-tag event history",
     "file": "feature-calendar-tag-events.png",
-    "description": "Open a tag from the bounded cloud to inspect current and future events plus past events when present.",
+    "description": "Open a tag from the bounded cloud to inspect current and future events plus past events as complete Employee cards with actions.",
     "capabilities": [
       "Tag cloud",
       "Conditional history",
-      "Past events",
-      "Current and future events",
+      "Complete Employee cards",
+      "Employee actions",
       "Virtualized dialog"
     ]
   },
@@ -417,7 +417,7 @@
     "featured": false,
     "title": "MCP access consent",
     "file": "feature-mcp-disabled-consent.png",
-    "description": "Review the local full-access boundary before enabling MCP.",
+    "description": "Review the local full-access boundary and icon-bearing Enable action before enabling MCP.",
     "capabilities": ["Disabled by default", "Explicit consent", "Full access"]
   },
   {
@@ -426,8 +426,8 @@
     "featured": false,
     "title": "MCP credentials",
     "file": "feature-mcp-enabled-credentials.png",
-    "description": "Use the loopback endpoint, masked token controls, and green enabled sidebar signal.",
-    "capabilities": ["Loopback endpoint", "Masked token", "Enabled signal", "Rotation"]
+    "description": "Use icon-bearing Setup and Activity controls, the loopback endpoint, masked token controls, and green enabled sidebar signal.",
+    "capabilities": ["Icon-bearing tabs", "Loopback endpoint", "Masked token", "Enabled signal"]
   },
   {
     "id": "mcp-client-setup",

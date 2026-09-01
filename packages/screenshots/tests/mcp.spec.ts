@@ -32,6 +32,15 @@ const expectSuccessIconColor = async (page: Page, control: Locator) => {
   expect(iconColor).toBe(successColor);
 };
 
+const expectTrailingDecorativeIcon = async (control: Locator, accessibleName: string) => {
+  await expect(control).toHaveAccessibleName(accessibleName);
+  await expect(control.locator(":scope > svg")).toHaveCount(1);
+  await expect(control.locator(":scope > svg")).toHaveAttribute("aria-hidden", "true");
+  expect(
+    await control.evaluate((element) => element.lastElementChild?.tagName.toLowerCase() ?? null),
+  ).toBe("svg");
+};
+
 const disableMcp = async (request: APIRequestContext) => {
   const response = await request.post("/api/mcp", {
     data: { action: "disable" },
@@ -109,7 +118,9 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
     }),
   ).toHaveCount(0);
   await expect(dialog.getByText("MCP is disabled", { exact: true })).toBeVisible();
-  await dialog.getByRole("button", { name: "Enable MCP", exact: true }).click();
+  const enableButton = dialog.getByRole("button", { name: "Enable MCP", exact: true });
+  await expectTrailingDecorativeIcon(enableButton, "Enable MCP");
+  await enableButton.click();
   await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
   await expect(mcpButton.locator("svg")).toHaveClass(/text-success/u);
   await expectSuccessIconColor(page, mcpButton);
@@ -118,6 +129,12 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   ).not.toBe(disabledIconColor);
   await expect(dialog.getByText("Enabled", { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole("tab", { name: "Examples", exact: true })).toHaveCount(0);
+  const setupTab = dialog.getByRole("tab", { name: "Setup", exact: true });
+  const activityTab = dialog.getByRole("tab", { name: "Activity", exact: true });
+  const disableButton = dialog.getByRole("button", { name: "Disable MCP", exact: true });
+  await expectTrailingDecorativeIcon(setupTab, "Setup");
+  await expectTrailingDecorativeIcon(activityTab, "Activity");
+  await expectTrailingDecorativeIcon(disableButton, "Disable MCP");
   await dialog.getByRole("button", { name: "Reveal", exact: true }).click();
   const tokenLocator = dialog.locator('[data-demo-id="mcp-token"]');
   await expect(tokenLocator).toHaveText(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
@@ -321,6 +338,18 @@ test("localizes the MCP consent and credentials in Russian", async ({ page, requ
   await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
   await expectSuccessIconColor(page, mcpButton);
   await expect(dialog.getByRole("tab", { name: ruMessages.Ui.Setup, exact: true })).toBeVisible();
+  await expectTrailingDecorativeIcon(
+    dialog.getByRole("tab", { name: ruMessages.Ui.Setup, exact: true }),
+    ruMessages.Ui.Setup,
+  );
+  await expectTrailingDecorativeIcon(
+    dialog.getByRole("tab", { name: ruMessages.Ui.Activity, exact: true }),
+    ruMessages.Ui.Activity,
+  );
+  await expectTrailingDecorativeIcon(
+    dialog.getByRole("button", { name: ruMessages.Ui["Disable MCP"], exact: true }),
+    ruMessages.Ui["Disable MCP"],
+  );
   await expect(dialog.locator('[data-demo-id="mcp-endpoint"]')).toContainText("/mcp");
   await expect(dialog.getByRole("tab")).toHaveCount(2);
   await expect(dialog.locator('[data-demo-id="mcp-setup-prompt"]')).toContainText("Authorization");

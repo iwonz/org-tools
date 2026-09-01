@@ -1170,7 +1170,7 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
     "border-right-width",
     "0px",
   );
-  await expectNoHorizontalRule(page.locator('[data-demo-id="units-tree-header"]'));
+  await expect(page.locator('[data-demo-id="units-tree-header"]')).toHaveCount(0);
   await expectNoHorizontalRule(page.locator('[data-demo-id="units-employee-header"]'));
   const firstUnitRow = page.locator('[data-demo-id="unit-tree-item"]').first();
   await expect(firstUnitRow).toHaveCSS("border-width", "0px");
@@ -1179,6 +1179,45 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   await expectFullBleedProductSurface(unitsSurface);
   await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-tree-panel"]'));
   await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-employee-panel"]'));
+  const [surfaceBox, firstUnitBox] = await Promise.all([
+    unitsSurface.boundingBox(),
+    firstUnitRow.boundingBox(),
+  ]);
+  expect(surfaceBox).not.toBeNull();
+  expect(firstUnitBox).not.toBeNull();
+  expect((firstUnitBox?.y ?? 0) - (surfaceBox?.y ?? 0)).toBeLessThanOrEqual(16);
+
+  const unitEmployeeSearch = page.locator('[data-demo-id="units-employee-search"]');
+  const unitBreadcrumbs = page.locator('[data-demo-id="units-selected-path"]');
+  const unitEmployeeAvatar = page.locator('[data-demo-id="unit-employee-card"] > span').first();
+  const [unitSearchBox, breadcrumbsBox, employeeAvatarBox] = await Promise.all([
+    unitEmployeeSearch.boundingBox(),
+    unitBreadcrumbs.boundingBox(),
+    unitEmployeeAvatar.boundingBox(),
+  ]);
+  expect(unitSearchBox).not.toBeNull();
+  expect(breadcrumbsBox).not.toBeNull();
+  expect(employeeAvatarBox).not.toBeNull();
+  expect(Math.abs((unitSearchBox?.x ?? 0) - (employeeAvatarBox?.x ?? 0))).toBeLessThanOrEqual(1);
+  expect(Math.abs((breadcrumbsBox?.x ?? 0) - (employeeAvatarBox?.x ?? 0))).toBeLessThanOrEqual(1);
+  await expect(page.getByText("Direct Employees", { exact: true })).toHaveCount(0);
+  const unitSummary = page.locator('[data-demo-id="units-employee-summary"]');
+  await expect(unitSummary).toContainText(/\d+ Employees/u);
+  const [unitSummaryBox, unitSearchControlBox] = await Promise.all([
+    unitSummary.boundingBox(),
+    unitEmployeeSearch.boundingBox(),
+  ]);
+  expect(unitSummaryBox).not.toBeNull();
+  expect(unitSearchControlBox).not.toBeNull();
+  expect(unitSummaryBox?.y ?? 0).toBeGreaterThanOrEqual(
+    (unitSearchControlBox?.y ?? 0) + (unitSearchControlBox?.height ?? 0),
+  );
+  await unitEmployeeSearch.getByRole("searchbox").fill("Avery");
+  await expect(page.locator('[data-demo-id="units-employee-match-count"]')).toContainText(
+    "1 match",
+  );
+  await unitEmployeeSearch.getByRole("searchbox").fill("");
+  await expect(page.locator('[data-demo-id="units-employee-match-count"]')).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Download", exact: true }).click();
   await expect(page.locator('[data-demo-id="export-source-panel"]')).toHaveCSS(
@@ -1802,6 +1841,16 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
     .click();
   const futureTagDialog = page.getByRole("dialog", { name: "Remote" });
   await expect(futureTagDialog).toContainText("Avery Stone");
+  await expect(futureTagDialog.locator('[data-slot="dialog-description"]')).toHaveCount(0);
+  const futureEmployeeCard = futureTagDialog
+    .locator('[data-demo-id="calendar-tag-event-employee-card"]')
+    .first();
+  await expect(futureEmployeeCard).toBeVisible();
+  await expect(futureEmployeeCard.locator("[data-employee-card-actions] button")).toHaveCount(3);
+  await expect(futureEmployeeCard.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(
+    futureEmployeeCard.getByRole("button", { name: "Delete", exact: true }),
+  ).toBeVisible();
   await expect(
     futureTagDialog.locator('[data-demo-id="calendar-past-events-section"]'),
   ).toHaveCount(0);
@@ -1816,6 +1865,16 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await expect(tagDialog).toContainText("Morgan Park");
   await expect(tagDialog).toContainText("Past");
   await expect(tagDialog.locator('[data-demo-id="calendar-past-events-section"]')).toBeVisible();
+  await expect(tagDialog.locator('[data-slot="dialog-description"]')).toHaveCount(0);
+  const tagEmployeeCard = tagDialog
+    .locator('[data-demo-id="calendar-tag-event-employee-card"]')
+    .first();
+  await expect(tagEmployeeCard.locator("[data-employee-card-actions] button")).toHaveCount(3);
+  await tagEmployeeCard.getByRole("button", { name: "Edit", exact: true }).click();
+  const tagEmployeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
+  await tagEmployeeDialog.getByLabel("First name", { exact: true }).fill("Morgan Updated");
+  await tagEmployeeDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(tagDialog).toContainText("Morgan Updated Park");
 
   await assertLocalRequests();
 });

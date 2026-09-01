@@ -5,9 +5,12 @@ import {
   HiOutlineBolt,
   HiOutlineCheck,
   HiOutlineClipboard,
+  HiOutlineClock,
+  HiOutlineCog6Tooth,
   HiOutlineEye,
   HiOutlineEyeSlash,
   HiOutlineKey,
+  HiOutlinePower,
 } from "react-icons/hi2";
 
 import {
@@ -348,6 +351,7 @@ export function McpControl() {
                 </div>
                 <Button disabled={busy} onClick={() => void mutate("enable")} type="button">
                   {t("Enable MCP")}
+                  <HiOutlinePower aria-hidden className="size-4" />
                 </Button>
               </div>
             )}
@@ -359,8 +363,14 @@ export function McpControl() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <TabsList>
-                    <TabsTrigger value="setup">{t("Setup")}</TabsTrigger>
-                    <TabsTrigger value="activity">{t("Activity")}</TabsTrigger>
+                    <TabsTrigger value="setup">
+                      {t("Setup")}
+                      <HiOutlineCog6Tooth aria-hidden className="size-4" />
+                    </TabsTrigger>
+                    <TabsTrigger value="activity">
+                      {t("Activity")}
+                      <HiOutlineClock aria-hidden className="size-4" />
+                    </TabsTrigger>
                   </TabsList>
                   <Button
                     disabled={busy}
@@ -370,6 +380,7 @@ export function McpControl() {
                     variant="secondary"
                   >
                     {t("Disable MCP")}
+                    <HiOutlinePower aria-hidden className="size-4" />
                   </Button>
                 </div>
                 <TabsContent className="min-h-0 pt-4" value="setup">

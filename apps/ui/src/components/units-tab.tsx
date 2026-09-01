@@ -59,7 +59,7 @@ import { ProductSurface } from "@/components/ui/product-surface";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UnitDialog } from "@/components/unit-dialog";
 import { UnitTree } from "@/components/unit-tree";
-import { useUiText } from "@/i18n/use-ui-text";
+import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -125,6 +125,7 @@ function UnitEmployeeDragPreview({
 export const UnitsTab = observer(() => {
   const store = useOrgStore();
   const t = useUiText();
+  const countText = useCountText();
   const getUnitEmployeeSummary = useUnitEmployeeSummary();
   const units = store.units;
   const selectedUnit = store.selectedUnit;
@@ -299,7 +300,7 @@ export const UnitsTab = observer(() => {
       {
         employees: filteredDirectEmployees,
         id: "direct",
-        title: t("Direct Employees"),
+        title: null,
       },
       {
         employees: filteredNestedEmployees,
@@ -351,8 +352,8 @@ export const UnitsTab = observer(() => {
         style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
       >
         <div className="flex min-h-0 min-w-0 flex-col bg-muted/25" data-demo-id="units-tree-panel">
-          <div className="flex shrink-0 items-start gap-2 p-4" data-demo-id="units-tree-header">
-            {showUnitSearch && (
+          {showUnitSearch && (
+            <div className="flex shrink-0 items-start gap-2 p-3" data-demo-id="units-tree-header">
               <UnitSearchInput
                 ariaLabel={t("Search Units by name")}
                 className="min-w-40 flex-1"
@@ -361,8 +362,8 @@ export const UnitsTab = observer(() => {
                 placeholder={t("Search Units by name")}
                 value={unitSearchQuery}
               />
-            )}
-          </div>
+            </div>
+          )}
           <ScrollArea className="min-h-0 flex-1" scrollbars="none">
             {hasVisibleUnits ? (
               <ul className="grid min-w-max gap-1.5 p-3">
@@ -479,7 +480,10 @@ export const UnitsTab = observer(() => {
           className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent"
           data-demo-id="units-employee-panel"
         >
-          <div className="grid shrink-0 gap-2 bg-muted/15 p-4" data-demo-id="units-employee-header">
+          <div
+            className="grid shrink-0 gap-2 bg-muted/15 px-3.5 py-4"
+            data-demo-id="units-employee-header"
+          >
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
               <nav
@@ -501,19 +505,42 @@ export const UnitsTab = observer(() => {
               </nav>
             </div>
             {hasUnitEmployees && (
-              <EmployeeSearchInput
-                ariaLabel={t("Search Employees in the selected Unit")}
-                dataDemoId="units-employee-search"
-                filters={employeeSearchFilters}
-                onFiltersChange={(employeeFilters) => store.setUnitsUi({ employeeFilters })}
-                onValueChange={(employeeQuery) => store.setUnitsUi({ employeeQuery })}
-                placeholder={t("Search Employees")}
-                positionButtonDemoId="units-employee-position-filter"
-                positionOptions={units.indexes.positionOptions}
-                positionPopoverDemoId="units-employee-position-popover"
-                tagOptions={units.indexes.tagOptions}
-                value={employeeSearchQuery}
-              />
+              <div className="grid gap-1" data-demo-id="units-employee-search-column">
+                <EmployeeSearchInput
+                  ariaLabel={t("Search Employees in the selected Unit")}
+                  dataDemoId="units-employee-search"
+                  filters={employeeSearchFilters}
+                  onFiltersChange={(employeeFilters) => store.setUnitsUi({ employeeFilters })}
+                  onValueChange={(employeeQuery) => store.setUnitsUi({ employeeQuery })}
+                  placeholder={t("Search Employees")}
+                  positionButtonDemoId="units-employee-position-filter"
+                  positionOptions={units.indexes.positionOptions}
+                  positionPopoverDemoId="units-employee-position-popover"
+                  tagOptions={units.indexes.tagOptions}
+                  value={employeeSearchQuery}
+                />
+                <div
+                  className="px-1 text-xs text-muted-foreground"
+                  data-demo-id="units-employee-summary"
+                >
+                  <span data-demo-id="units-employee-total-count">
+                    {countText("employees", {
+                      count: sortedDirectEmployees.length + nestedEmployees.length,
+                    })}
+                  </span>
+                  {hasEmployeeSearch && (
+                    <>
+                      {" "}
+                      <span data-demo-id="units-employee-match-count">
+                        ·{" "}
+                        {countText("matches", {
+                          count: filteredDirectEmployees.length + filteredNestedEmployees.length,
+                        })}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           <EmployeeCardList

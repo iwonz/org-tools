@@ -28,8 +28,9 @@ Open **MCP** in the local server sidebar to enable or disable access, reveal or 
 endpoint and token, rotate credentials, select a supported local client, copy its complete English
 setup prompt, and review applied activity. The prompt tells the agent to install the public
 `org-tools` skill, add the current endpoint and token to its exact MCP configuration, reload if
-needed, and verify only read tools. The icon is green while MCP is enabled. Enabling grants complete
-access to Employees, Units, Main, and custom Views.
+needed, and verify only read tools. Setup and Activity tabs and the Enable or Disable action pair
+their visible localized label with a trailing thematic icon. The sidebar icon is green while MCP is
+enabled. Enabling grants complete access to Employees, Units, Main, and custom Views.
 
 Agent changes always use Preview → a new explicit user approval → Apply. Apply writes automatically
 like a user action and updates open browser tabs. Independent simultaneous fields merge; overlapping
@@ -51,7 +52,9 @@ control.
 ## Product modules
 
 - **Units** manages the hierarchy, manual and Live membership, bosses, positions, and Employee
-  movement. **Add Unit** is in the shared header.
+  movement. The hierarchy starts directly below the shared header; selected-path and search controls
+  align with roster avatars, and the current roster count appears below search without a redundant
+  direct-Employee heading. **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, birthday, embedded avatar, tags, contact fields, and Unit
   assignments with compound filters. **Add Employee** is in the shared header.
 - **Editor** manages Main and custom Views on an adaptive snapped grid, including search, history,
@@ -60,8 +63,9 @@ control.
   selected, with selection indicated only by the signal border.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
-  actions. Day and tag dialogs omit Birthday, Dated tags, or Past sections when that section has no
-  events, without reserving empty rows or columns.
+  actions. Day and tag dialogs omit redundant descriptions and empty Birthday, Dated tags, or Past
+  sections. Dated-tag history uses complete Employee cards with the ordinary Tag, Edit, and Delete
+  actions while retaining bounded scrolling.
 - **Data Download** selects Units or Employees and produces CSV, JSON, templates, and PNG output.
   **Continue** stays disabled in the shared header until at least one Employee is selected.
 

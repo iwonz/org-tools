@@ -1,15 +1,14 @@
 "use client";
 
 import type { DatedTagEvent, DatedTagGroup, Employee } from "@org-tools/types";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import { useLocale } from "next-intl";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { HiOutlineCalendarDays, HiOutlineTag, HiOutlineUserGroup } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeCardActions } from "@/components/employee-card-actions";
-import { EmployeeCardList } from "@/components/employee-card-list";
+import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { MiddleDot } from "@/components/middle-dot";
 import { TopLevelEmptyState } from "@/components/source-empty-state";
@@ -28,12 +27,12 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
+import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -52,7 +51,6 @@ const EMPTY_DATED_EVENTS_BY_DATE = new Map<string, DatedTagEvent[]>();
 const EMPTY_DATED_TAG_GROUPS: DatedTagGroup[] = [];
 const CLOUD_VISIBLE_LIMIT = 10;
 const DAY_EVENT_LIMIT = 2;
-const TAG_EVENT_ROW_HEIGHT = 58;
 
 const padDatePart = (value: number) => String(value).padStart(2, "0");
 const createIsoDate = (year: number, month: number, day: number) =>
@@ -176,43 +174,47 @@ function CalendarDayCell({
   );
 }
 
-function TagEventSection({ events }: { events: DatedTagEvent[] }) {
+function TagEventSection({
+  actions,
+  events,
+  onUnitContextClick,
+  unitContextsByEmployeeId,
+}: {
+  actions: (employee: Employee) => ReactNode;
+  events: DatedTagEvent[];
+  onUnitContextClick: (unitContext: EmployeeUnitContext) => void;
+  unitContextsByEmployeeId: ReadonlyMap<Employee["id"], EmployeeUnitContext[]>;
+}) {
   const format = useAppFormatter();
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const virtualizer = useVirtualizer({
-    count: events.length,
-    estimateSize: () => TAG_EVENT_ROW_HEIGHT,
-    getScrollElement: () => scrollRef.current,
-    getItemKey: (index) => `${events[index]?.date}:${events[index]?.employee.id}:${index}`,
-    overscan: 8,
-  });
+  const eventsByEmployeeId = new Map(events.map((event) => [event.employee.id, event]));
+
   return (
-    <div className="min-h-0 flex-1 overflow-auto" ref={scrollRef}>
-      <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
-        {virtualizer.getVirtualItems().map((row) => {
-          const event = events[row.index];
-          if (!event) return null;
-          return (
-            <div
-              className="absolute left-0 top-0 flex w-full items-center gap-3 px-1 py-2"
-              key={row.key}
-              style={{ height: row.size, transform: `translateY(${row.start}px)` }}
-            >
-              <EmployeeAvatar className="size-8" employee={event.employee} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{event.employee.fullName}</div>
-                <div className="text-xs text-muted-foreground">
-                  {format.dateTime(new Date(`${event.date}T00:00:00Z`), {
-                    dateStyle: "long",
-                    timeZone: "UTC",
-                  })}
-                </div>
+    <EmployeeCardList
+      actions={actions}
+      cardDataDemoId="calendar-tag-event-employee-card"
+      className="min-h-0 flex-1 p-0"
+      dataDemoId="calendar-tag-event-list"
+      employees={events.map((event) => event.employee)}
+      onUnitContextClick={onUnitContextClick}
+      resetKey={events.map((event) => `${event.employee.id}:${event.date}`).join("|")}
+      subtitle={(employee) => {
+        const event = eventsByEmployeeId.get(employee.id);
+        return (
+          <>
+            <EmployeeIdentity className="mt-0" employee={employee} />
+            {event && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                {format.dateTime(new Date(`${event.date}T00:00:00Z`), {
+                  dateStyle: "long",
+                  timeZone: "UTC",
+                })}
               </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+            )}
+          </>
+        );
+      }}
+      unitContextsByEmployeeId={unitContextsByEmployeeId}
+    />
   );
 }
 
@@ -242,7 +244,7 @@ export const CalendarTab = observer(() => {
   );
   const { cloudExpanded, monthIndex, year } = store.calendarUi;
   const [dialogDayKey, setDialogDayKey] = useState<string | null>(null);
-  const [dialogTag, setDialogTag] = useState<DatedTagGroup | null>(null);
+  const [dialogTagKey, setDialogTagKey] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const todayDate = useMemo(getTodayDate, []);
@@ -269,6 +271,10 @@ export const CalendarTab = observer(() => {
     ? datedTagGroups
     : datedTagGroups.slice(0, CLOUD_VISIBLE_LIMIT);
   const hiddenGroupCount = Math.max(0, datedTagGroups.length - visibleGroups.length);
+  const dialogTag = useMemo(
+    () => datedTagGroups.find((group) => group.normalizedLabel === dialogTagKey) ?? null,
+    [datedTagGroups, dialogTagKey],
+  );
   const selectedTagEvents = dialogTag?.events ?? [];
   const upcomingEvents = selectedTagEvents.filter(({ date }) => date >= todayIso);
   const pastEvents = selectedTagEvents.filter(({ date }) => date < todayIso).reverse();
@@ -334,7 +340,7 @@ export const CalendarTab = observer(() => {
                 className="h-7 gap-0 rounded-full px-2.5 text-xs"
                 data-demo-id="calendar-dated-tag-group"
                 key={group.normalizedLabel}
-                onClick={() => setDialogTag(group)}
+                onClick={() => setDialogTagKey(group.normalizedLabel)}
                 size="sm"
                 type="button"
                 variant="secondary"
@@ -441,14 +447,7 @@ export const CalendarTab = observer(() => {
                   <button
                     className="flex items-center gap-3 rounded-md bg-muted/35 p-2 text-left outline-none transition-colors hover:bg-accent/65 active:bg-accent-strong/70 focus-visible:ring-2 focus-visible:ring-ring/40"
                     key={`${event.employee.id}:${event.label}`}
-                    onClick={() =>
-                      setDialogTag(
-                        datedTagGroups.find(
-                          (group) =>
-                            group.normalizedLabel === event.label.toLocaleLowerCase("en-US"),
-                        ) ?? null,
-                      )
-                    }
+                    onClick={() => setDialogTagKey(event.label.toLocaleLowerCase("en-US"))}
                     type="button"
                   >
                     <EmployeeAvatar className="size-8" employee={event.employee} />
@@ -511,13 +510,10 @@ export const CalendarTab = observer(() => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog onOpenChange={(open) => !open && setDialogTag(null)} open={dialogTag !== null}>
+      <Dialog onOpenChange={(open) => !open && setDialogTagKey(null)} open={dialogTag !== null}>
         <DialogContent className="flex h-[min(760px,90dvh)] max-w-2xl flex-col">
           <DialogHeader>
             <DialogTitle>{dialogTag?.label ?? ""}</DialogTitle>
-            <DialogDescription>
-              {dialogTag ? countText("datedTagEvents", { count: dialogTag.events.length }) : null}
-            </DialogDescription>
           </DialogHeader>
           <DialogBody
             className={cn(
@@ -532,7 +528,21 @@ export const CalendarTab = observer(() => {
             >
               <h3 className="text-sm font-semibold">{t("Current and upcoming")}</h3>
               {upcomingEvents.length > 0 ? (
-                <TagEventSection events={upcomingEvents} />
+                <TagEventSection
+                  actions={(employee) => (
+                    <EmployeeCardActions
+                      employee={employee}
+                      onApplyTags={store.updateEmployeeTags}
+                      onDelete={setDeletingEmployee}
+                      onEdit={setEditingEmployee}
+                      tagOptions={store.units?.indexes.tagOptions ?? []}
+                      tagPickerDataDemoId="calendar-tag-dialog-employee-tag-picker"
+                    />
+                  )}
+                  events={upcomingEvents}
+                  onUnitContextClick={(context) => store.selectUnitFromEmployeeCard(context.unitId)}
+                  unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   {t("No current or upcoming events")}
@@ -545,7 +555,21 @@ export const CalendarTab = observer(() => {
                 data-demo-id="calendar-past-events-section"
               >
                 <h3 className="text-sm font-semibold">{t("Past")}</h3>
-                <TagEventSection events={pastEvents} />
+                <TagEventSection
+                  actions={(employee) => (
+                    <EmployeeCardActions
+                      employee={employee}
+                      onApplyTags={store.updateEmployeeTags}
+                      onDelete={setDeletingEmployee}
+                      onEdit={setEditingEmployee}
+                      tagOptions={store.units?.indexes.tagOptions ?? []}
+                      tagPickerDataDemoId="calendar-tag-dialog-employee-tag-picker"
+                    />
+                  )}
+                  events={pastEvents}
+                  onUnitContextClick={(context) => store.selectUnitFromEmployeeCard(context.unitId)}
+                  unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
+                />
               </section>
             )}
           </DialogBody>

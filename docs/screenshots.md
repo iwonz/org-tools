@@ -74,9 +74,10 @@ Capabilities: English locale, Flag selector, Selected indicator, Stable menu geo
 
 [![Team hierarchy and roster](screenshots/demo-teams.png)](screenshots/demo-teams.png)
 
-Browse the hierarchy, selected path, direct Employees, descendant Employees, tags, and row actions.
+Browse the edge-aligned hierarchy, selected path, searchable roster count, descendant Employees,
+tags, and row actions without a redundant direct-roster heading.
 
-Capabilities: Nested Teams, Direct roster, Descendant roster, Employee actions.
+Capabilities: Nested Teams, Search and counts, Descendant roster, Employee actions.
 
 ### Create a manual Team
 
@@ -274,9 +275,10 @@ Capabilities: Interactive dates, Conditional sections, Birthday rows, Dated-tag 
 
 [![Dated-tag event history](screenshots/feature-calendar-tag-events.png)](screenshots/feature-calendar-tag-events.png)
 
-Open a tag from the bounded cloud to inspect current and future events plus past events when present.
+Open a tag from the bounded cloud to inspect current and future events plus past events as complete
+Employee cards with right-aligned actions.
 
-Capabilities: Tag cloud, Conditional history, Past events, Current and future events, Virtualized dialog.
+Capabilities: Tag cloud, Conditional history, Complete Employee cards, Employee actions, Virtualized dialog.
 
 ## Download
 
@@ -336,7 +338,7 @@ These server-only supporting frames are absent from the browser-only Pages runti
 
 [![MCP access consent](screenshots/feature-mcp-disabled-consent.png)](screenshots/feature-mcp-disabled-consent.png)
 
-Review the local full-access boundary before enabling MCP.
+Review the local full-access boundary and the icon-bearing Enable action before enabling MCP.
 
 Capabilities: Disabled by default, Explicit consent, Full access.
 
@@ -344,7 +346,8 @@ Capabilities: Disabled by default, Explicit consent, Full access.
 
 [![MCP credentials](screenshots/feature-mcp-enabled-credentials.png)](screenshots/feature-mcp-enabled-credentials.png)
 
-Use the loopback endpoint, masked token controls, and green enabled sidebar signal.
+Use the icon-bearing Setup and Activity controls, loopback endpoint, masked token controls, and
+green enabled sidebar signal.
 
 Capabilities: Loopback endpoint, Masked token, Enabled signal, Rotation.
 
@@ -379,9 +382,11 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
+- Confirm Units has no empty hierarchy header, its path/search aligns to roster avatars, and its count sits below search without a direct-roster heading.
+- Confirm Calendar tag history omits the event-count subtitle and exposes complete Employee cards with Tag, Edit, and Delete actions.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
   both themes.
-- Confirm MCP frames contain only the synthetic token, the enabled icon is green, and setup shows the installable-skill prompt rather than a standalone configuration block.
+- Confirm MCP frames contain only the synthetic token, the enabled icon is green, tabs and Enable/Disable carry trailing icons, and setup shows the installable-skill prompt rather than a standalone configuration block.
 - Confirm every Pages frame and sidebar state contains no MCP action, dialog, endpoint request, or server-only marker.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.

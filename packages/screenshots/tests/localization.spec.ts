@@ -258,6 +258,9 @@ for (const [locale, messages] of [
     await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("4");
     await dialog.getByRole("button", { name: messages.Ui["Replace state"], exact: true }).click();
     await expect(dialog).toBeHidden();
+    await page.locator('[data-demo-id="tab-units"]').click();
+    await expect(page.locator('[data-demo-id="units-employee-summary"]')).toContainText("4");
+    await expect(page.locator('[data-demo-id="units-employee-match-count"]')).toHaveCount(0);
     await page.locator('[data-demo-id="tab-employees"]').click();
     await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
     await page.locator('[data-demo-id="employee-create-button"]').click();
@@ -334,7 +337,18 @@ for (const [locale, messages] of [
       .locator('[data-demo-id="dated-tag-cloud"]')
       .getByRole("button", { name: /Operations/u })
       .click();
-    await expect(page.getByRole("dialog", { name: "Operations" })).toContainText("Morgan Park");
+    const tagDialog = page.getByRole("dialog", { name: "Operations" });
+    await expect(tagDialog).toContainText("Morgan Park");
+    await expect(tagDialog.locator('[data-slot="dialog-description"]')).toHaveCount(0);
+    const tagEmployeeCard = tagDialog
+      .locator('[data-demo-id="calendar-tag-event-employee-card"]')
+      .first();
+    await expect(
+      tagEmployeeCard.getByRole("button", { name: messages.Ui.Edit, exact: true }),
+    ).toBeVisible();
+    await expect(
+      tagEmployeeCard.getByRole("button", { name: messages.Ui.Delete, exact: true }),
+    ).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", locale);
     await assertLocalRequests();
   });

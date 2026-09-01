@@ -168,13 +168,15 @@ sidebar foreground while disabled and a defined semantic green token while enabl
 and every hover, active, open, compact, or expanded state. The modal title SHALL be MCP and SHALL
 provide Enable or Disable, full-access consent, endpoint, masked Reveal/Copy/Rotate controls, a
 copyable setup prompt for supported local clients containing the current endpoint and token, bounded
-activity, and confirmed Undo. It SHALL omit a visible title description, Enabled badge,
-environment-variable setup step, raw standalone configuration block, Examples tab, provider-notice
-section, and remote-only web clients while retaining a localized hidden dialog description.
+activity, and confirmed Undo. Setup and Activity tabs and the current Enable or Disable action SHALL
+place a thematic decorative icon after their localized visible label. The modal SHALL omit a visible
+title description, Enabled badge, environment-variable setup step, raw standalone configuration
+block, Examples tab, provider-notice section, and remote-only web clients while retaining a
+localized hidden dialog description.
 
 #### Scenario: Disabled consent
 - **WHEN** a server user opens MCP before enabling it
-- **THEN** the modal explains full local read/write authority and offers an explicit Enable action without exposing a token
+- **THEN** the modal explains full local read/write authority and offers an explicit icon-bearing Enable action without exposing a token
 
 #### Scenario: Enabled sidebar state
 - **WHEN** MCP settings report enabled
@@ -190,7 +192,11 @@ section, and remote-only web clients while retaining a localized hidden dialog d
 
 #### Scenario: Reduced visible header and tabs
 - **WHEN** the enabled MCP modal opens
-- **THEN** it exposes Setup and Activity with no visible title description, raw configuration section, Examples tab, or provider-notice section
+- **THEN** it exposes icon-bearing Setup and Activity tabs with no visible title description, raw configuration section, Examples tab, or provider-notice section
+
+#### Scenario: Disable action icon
+- **WHEN** an enabled user opens MCP management
+- **THEN** the localized Disable label precedes one thematic decorative icon without changing its accessible name
 
 #### Scenario: Confirmed UI undo
 - **WHEN** the user selects Undo on an activity entry and confirms a safe generated preview
