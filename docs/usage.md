@@ -28,9 +28,10 @@ Open **MCP** in the local server sidebar to enable or disable access, reveal or 
 endpoint and token, rotate credentials, select a supported local client, copy its complete English
 setup prompt, and review applied activity. The prompt tells the agent to install the public
 `org-tools` skill, add the current endpoint and token to its exact MCP configuration, reload if
-needed, and verify only read tools. Setup and Activity tabs and the Enable or Disable action pair
-their visible localized label with a trailing thematic icon. The sidebar icon is green while MCP is
-enabled. Enabling grants complete access to Employees, Units, Main, and custom Views.
+needed, and verify only read tools. Setup, Activity, Enable, Disable, and token rotation place a
+thematic icon before their visible localized label. Every Client setup choice also starts with its
+own bundled client icon. The sidebar icon is green while MCP is enabled. Enabling grants complete
+access to Employees, Units, Main, and custom Views.
 
 Agent changes always use Preview → a new explicit user approval → Apply. Apply writes automatically
 like a user action and updates open browser tabs. Independent simultaneous fields merge; overlapping

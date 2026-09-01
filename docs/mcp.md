@@ -16,7 +16,8 @@ preview.
 ## Connect a client
 
 Open the **Setup** tab and select Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, or OpenCode. The
-displayed English prompt is ready to paste into that agent. It asks the agent to:
+choices use bundled client-specific leading icons, while the exact visible client names remain the
+accessible labels. The displayed English prompt is ready to paste into that agent. It asks the agent to:
 
 1. install the public [`org-tools` skill](../skills/org-tools/SKILL.md) globally and only for the
    selected client with

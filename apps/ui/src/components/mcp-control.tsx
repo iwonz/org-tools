@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  HiOutlineArrowPath,
   HiOutlineBolt,
   HiOutlineCheck,
   HiOutlineClipboard,
@@ -13,6 +14,7 @@ import {
   HiOutlinePower,
 } from "react-icons/hi2";
 
+import { McpClientIcon } from "@/components/mcp-client-icon";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -350,8 +352,8 @@ export function McpControl() {
                   </p>
                 </div>
                 <Button disabled={busy} onClick={() => void mutate("enable")} type="button">
-                  {t("Enable MCP")}
                   <HiOutlinePower aria-hidden className="size-4" />
+                  {t("Enable MCP")}
                 </Button>
               </div>
             )}
@@ -364,12 +366,12 @@ export function McpControl() {
                 <div className="flex items-center justify-between gap-3">
                   <TabsList>
                     <TabsTrigger value="setup">
-                      {t("Setup")}
                       <HiOutlineCog6Tooth aria-hidden className="size-4" />
+                      {t("Setup")}
                     </TabsTrigger>
                     <TabsTrigger value="activity">
-                      {t("Activity")}
                       <HiOutlineClock aria-hidden className="size-4" />
+                      {t("Activity")}
                     </TabsTrigger>
                   </TabsList>
                   <Button
@@ -379,8 +381,8 @@ export function McpControl() {
                     type="button"
                     variant="secondary"
                   >
-                    {t("Disable MCP")}
                     <HiOutlinePower aria-hidden className="size-4" />
+                    {t("Disable MCP")}
                   </Button>
                 </div>
                 <TabsContent className="min-h-0 pt-4" value="setup">
@@ -415,6 +417,7 @@ export function McpControl() {
                             type="button"
                             variant="ghost"
                           >
+                            <HiOutlineArrowPath aria-hidden className="size-4" />
                             {t("Rotate token")}
                           </Button>
                         </div>
@@ -456,15 +459,17 @@ export function McpControl() {
                         <div className="text-sm font-semibold">{t("Client setup")}</div>
                         <fieldset className="flex flex-wrap gap-1.5">
                           <legend className="sr-only">{t("Client")}</legend>
-                          {MCP_CLIENTS.map(({ name }) => (
+                          {MCP_CLIENTS.map(({ name, skillsAgentId }) => (
                             <Button
                               className="h-8"
+                              data-mcp-client={skillsAgentId}
                               key={name}
                               onClick={() => setClient(name)}
                               size="sm"
                               type="button"
                               variant={client === name ? "secondary" : "ghost"}
                             >
+                              <McpClientIcon client={name} />
                               {name}
                             </Button>
                           ))}

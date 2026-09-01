@@ -32,14 +32,24 @@ const expectSuccessIconColor = async (page: Page, control: Locator) => {
   expect(iconColor).toBe(successColor);
 };
 
-const expectTrailingDecorativeIcon = async (control: Locator, accessibleName: string) => {
+const expectLeadingDecorativeIcon = async (control: Locator, accessibleName: string) => {
   await expect(control).toHaveAccessibleName(accessibleName);
   await expect(control.locator(":scope > svg")).toHaveCount(1);
   await expect(control.locator(":scope > svg")).toHaveAttribute("aria-hidden", "true");
   expect(
-    await control.evaluate((element) => element.lastElementChild?.tagName.toLowerCase() ?? null),
+    await control.evaluate((element) => element.firstElementChild?.tagName.toLowerCase() ?? null),
   ).toBe("svg");
 };
+
+const mcpClients = [
+  { id: "codex", name: "Codex" },
+  { id: "claude-code", name: "Claude Code" },
+  { id: "cursor", name: "Cursor" },
+  { id: "openclaw", name: "OpenClaw" },
+  { id: "hermes-agent", name: "Hermes" },
+  { id: "pi", name: "Pi" },
+  { id: "opencode", name: "OpenCode" },
+] as const;
 
 const disableMcp = async (request: APIRequestContext) => {
   const response = await request.post("/api/mcp", {
@@ -119,7 +129,7 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   ).toHaveCount(0);
   await expect(dialog.getByText("MCP is disabled", { exact: true })).toBeVisible();
   const enableButton = dialog.getByRole("button", { name: "Enable MCP", exact: true });
-  await expectTrailingDecorativeIcon(enableButton, "Enable MCP");
+  await expectLeadingDecorativeIcon(enableButton, "Enable MCP");
   await enableButton.click();
   await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
   await expect(mcpButton.locator("svg")).toHaveClass(/text-success/u);
@@ -132,9 +142,17 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   const setupTab = dialog.getByRole("tab", { name: "Setup", exact: true });
   const activityTab = dialog.getByRole("tab", { name: "Activity", exact: true });
   const disableButton = dialog.getByRole("button", { name: "Disable MCP", exact: true });
-  await expectTrailingDecorativeIcon(setupTab, "Setup");
-  await expectTrailingDecorativeIcon(activityTab, "Activity");
-  await expectTrailingDecorativeIcon(disableButton, "Disable MCP");
+  await expectLeadingDecorativeIcon(setupTab, "Setup");
+  await expectLeadingDecorativeIcon(activityTab, "Activity");
+  await expectLeadingDecorativeIcon(disableButton, "Disable MCP");
+  for (const { id, name } of mcpClients) {
+    const clientButton = dialog.locator(`[data-mcp-client="${id}"]`);
+    await expectLeadingDecorativeIcon(clientButton, name);
+    await expect(clientButton.locator(":scope > svg")).toHaveAttribute(
+      "data-mcp-client-icon",
+      name,
+    );
+  }
   await dialog.getByRole("button", { name: "Reveal", exact: true }).click();
   const tokenLocator = dialog.locator('[data-demo-id="mcp-token"]');
   await expect(tokenLocator).toHaveText(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
@@ -272,7 +290,9 @@ test("enables local MCP, applies a live agent change, shows activity, undoes, an
   await page.getByRole("button", { name: "MCP", exact: true }).click();
   await dialog.getByRole("tab", { name: "Setup", exact: true }).click();
   const promptBeforeRotation = await setupPrompt.textContent();
-  await dialog.getByRole("button", { name: "Rotate token", exact: true }).click();
+  const rotateTokenButton = dialog.getByRole("button", { name: "Rotate token", exact: true });
+  await expectLeadingDecorativeIcon(rotateTokenButton, "Rotate token");
+  await rotateTokenButton.click();
   const rotateDialog = page.getByRole("alertdialog", { name: "Rotate access token?" });
   await rotateDialog.getByRole("button", { name: "Rotate", exact: true }).click();
   await expect(rotateDialog).toBeHidden();
@@ -338,17 +358,21 @@ test("localizes the MCP consent and credentials in Russian", async ({ page, requ
   await expect(mcpButton).toHaveAttribute("data-mcp-enabled", "true");
   await expectSuccessIconColor(page, mcpButton);
   await expect(dialog.getByRole("tab", { name: ruMessages.Ui.Setup, exact: true })).toBeVisible();
-  await expectTrailingDecorativeIcon(
+  await expectLeadingDecorativeIcon(
     dialog.getByRole("tab", { name: ruMessages.Ui.Setup, exact: true }),
     ruMessages.Ui.Setup,
   );
-  await expectTrailingDecorativeIcon(
+  await expectLeadingDecorativeIcon(
     dialog.getByRole("tab", { name: ruMessages.Ui.Activity, exact: true }),
     ruMessages.Ui.Activity,
   );
-  await expectTrailingDecorativeIcon(
+  await expectLeadingDecorativeIcon(
     dialog.getByRole("button", { name: ruMessages.Ui["Disable MCP"], exact: true }),
     ruMessages.Ui["Disable MCP"],
+  );
+  await expectLeadingDecorativeIcon(
+    dialog.getByRole("button", { name: ruMessages.Ui["Rotate token"], exact: true }),
+    ruMessages.Ui["Rotate token"],
   );
   await expect(dialog.locator('[data-demo-id="mcp-endpoint"]')).toContainText("/mcp");
   await expect(dialog.getByRole("tab")).toHaveCount(2);

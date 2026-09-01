@@ -205,7 +205,7 @@
     "Revision {revision}": "Ревизия {revision}",
     "Rotate": "Заменить",
     "Rotate access token?": "Заменить токен доступа?",
-    "Rotate token": "Заменить токен",
+    "Rotate token": "Обновить токен",
     "Rotating the token disconnects existing clients and invalidates pending previews.": "Замена токена отключит текущие клиенты и отменит неподтверждённые предпросмотры.",
     "Setup": "Настройка",
     "Undo only succeeds when later changes do not overlap the affected values.": "Отмена сработает, только если более поздние изменения не затронули те же значения.",

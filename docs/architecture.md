@@ -136,8 +136,10 @@ The Units split workflow omits its tree-search header entirely below the search 
 selected-path and roster search controls with Employee avatars, and derives its compact roster count
 from current membership below search. Calendar day and dated-tag details reuse the virtualized
 Employee card and action composition; a selected dated tag is stored by normalized key so edits and
-deletions re-derive current events instead of retaining a stale group snapshot. MCP Setup/Activity
-tabs and Enable/Disable actions keep visible labels followed by decorative icons.
+deletions re-derive current events instead of retaining a stale group snapshot. MCP Setup/Activity,
+Enable/Disable, and token-rotation controls keep visible labels after their decorative icons. The
+Client setup selector uses an exhaustive local icon mapping for all seven supported agents, with no
+remote brand assets or runtime requests.
 
 The Editor keeps pointer and wheel previews outside the MobX View document. One animation-frame
 scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce
