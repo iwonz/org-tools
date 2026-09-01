@@ -64,9 +64,10 @@ control.
   selected, with selection indicated only by the signal border.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
-  actions. Day and tag dialogs omit redundant descriptions and empty Birthday, Dated tags, or Past
-  sections. Dated-tag history uses complete Employee cards with the ordinary Tag, Edit, and Delete
-  actions while retaining bounded scrolling.
+  actions. Day and tag dialogs omit redundant descriptions, the dated-event and current/future
+  headings, and empty Birthday, dated-event, or Past sections. Both day details and dated-tag
+  history use complete Employee cards with the ordinary Tag, Edit, and Delete actions while
+  retaining bounded scrolling and tag-history navigation.
 - **Data Download** selects Units or Employees and produces CSV, JSON, templates, and PNG output.
   **Continue** stays disabled in the shared header until at least one Employee is selected.
 

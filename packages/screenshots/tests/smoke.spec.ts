@@ -1782,7 +1782,18 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
 test("renders safe profile links, birthdays, and dated tag events", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
-  await replaceWithSyntheticState(page);
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const datedEmployee = state.organization.employees.find(
+    (employee) => employee.firstName === "Morgan" && employee.lastName === "Park",
+  );
+  if (!datedEmployee) throw new Error("Synthetic dated-tag Employee is unavailable.");
+  datedEmployee.tags.push({ date: "2026-07-10", label: "Planning" });
+  const importDialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "calendar-events-state.json",
+  });
+  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   const profileLink = page.getByRole("link", { name: "Avery Stone", exact: true }).first();
@@ -1828,12 +1839,30 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await birthdayDialog.getByRole("button", { name: "Close" }).click();
   await page.locator('[data-calendar-date="2026-07-10"]').click();
   const datedTagDayDialog = page.getByRole("dialog", { name: /July 10, 2026/ });
-  await expect(datedTagDayDialog.getByText("Dated tags", { exact: true })).toBeVisible();
+  await expect(datedTagDayDialog.getByText("Dated tags", { exact: true })).toHaveCount(0);
   await expect(datedTagDayDialog).toContainText("Morgan Park");
+  const datedEmployeeCards = datedTagDayDialog.locator(
+    '[data-demo-id="calendar-day-dated-event-employee-card"]',
+  );
+  await expect(datedEmployeeCards).toHaveCount(1);
+  const datedEmployeeCard = datedEmployeeCards.first();
+  await expect(datedEmployeeCard.locator("[data-employee-card-actions] button")).toHaveCount(3);
+  await expect(datedEmployeeCard.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(
+    datedEmployeeCard.getByRole("button", { name: "Delete", exact: true }),
+  ).toBeVisible();
+  await expect(
+    datedEmployeeCard.locator('[data-demo-id="calendar-day-dated-event-label"]'),
+  ).toHaveText(["Operations", "Planning"]);
   await expect(
     datedTagDayDialog.locator('[data-demo-id="calendar-birthdays-section"]'),
   ).toHaveCount(0);
   await expect(datedTagDayDialog.getByText("Birthdays", { exact: true })).toHaveCount(0);
+  await datedEmployeeCard.getByRole("button", { name: "Planning", exact: true }).click();
+  const planningTagDialog = page.getByRole("dialog", { name: "Planning" });
+  await expect(planningTagDialog).toContainText("Morgan Park");
+  await expect(planningTagDialog.getByText("Current and upcoming", { exact: true })).toHaveCount(0);
+  await planningTagDialog.getByRole("button", { name: "Close" }).click();
   await datedTagDayDialog.getByRole("button", { name: "Close" }).click();
   await page
     .locator('[data-demo-id="dated-tag-cloud"]')
@@ -1841,6 +1870,7 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
     .click();
   const futureTagDialog = page.getByRole("dialog", { name: "Remote" });
   await expect(futureTagDialog).toContainText("Avery Stone");
+  await expect(futureTagDialog.getByText("Current and upcoming", { exact: true })).toHaveCount(0);
   await expect(futureTagDialog.locator('[data-slot="dialog-description"]')).toHaveCount(0);
   const futureEmployeeCard = futureTagDialog
     .locator('[data-demo-id="calendar-tag-event-employee-card"]')
@@ -1863,8 +1893,14 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
     .click();
   const tagDialog = page.getByRole("dialog", { name: "Operations" });
   await expect(tagDialog).toContainText("Morgan Park");
+  await expect(tagDialog.getByText("Current and upcoming", { exact: true })).toHaveCount(0);
   await expect(tagDialog).toContainText("Past");
-  await expect(tagDialog.locator('[data-demo-id="calendar-past-events-section"]')).toBeVisible();
+  const upcomingSection = tagDialog.locator('[data-demo-id="calendar-upcoming-events-section"]');
+  const pastSection = tagDialog.locator('[data-demo-id="calendar-past-events-section"]');
+  await expect(pastSection).toBeVisible();
+  expect(
+    await upcomingSection.evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeLessThan(await pastSection.evaluate((element) => element.getBoundingClientRect().height));
   await expect(tagDialog.locator('[data-slot="dialog-description"]')).toHaveCount(0);
   const tagEmployeeCard = tagDialog
     .locator('[data-demo-id="calendar-tag-event-employee-card"]')

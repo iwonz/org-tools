@@ -176,11 +176,20 @@ virtualized internal scroll container.
 - **THEN** eight rows remain visible and additional virtualized rows are reachable through internal scrolling
 
 ### Requirement: Calendar exposes dated tag events and details
-The Calendar SHALL show exact-date tag events separately from birthday avatars, limit a day cell to two inline tag events plus an overflow count, and open a localized day dialog with Birthday and Dated tags sections.
+The Calendar SHALL show exact-date tag events separately from birthday avatars, limit a day cell to
+two inline tag events plus an overflow count, and open a localized day dialog containing only
+populated Birthday and dated-event content. Dated-event details SHALL omit a redundant section
+heading and SHALL use complete shared Employee cards with right-aligned Tag, Edit, and Delete
+actions while keeping every event label available for tag-history navigation.
 
 #### Scenario: Open a populated day
 - **WHEN** a user activates a day containing birthdays and dated tags
-- **THEN** the dialog lists both event sections with their Employees and labels
+- **THEN** the dialog lists both populated content groups with their Employees and labels
+- **AND** dated events use complete actionable Employee cards without a Dated tags heading
+
+#### Scenario: Open tag history from a day
+- **WHEN** a user activates a dated-event label within an Employee card
+- **THEN** the Calendar opens that label's current, future, and conditional past event history
 
 ### Requirement: Calendar provides a bounded dated-tag cloud
 The Calendar SHALL show all dated tag labels from global Main Employees as localized chips with event counts in at most two rows, disclose overflow without expanding the page, and open a virtualized dialog for the selected label.

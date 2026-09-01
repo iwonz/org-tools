@@ -327,12 +327,12 @@
     "featured": false,
     "title": "Calendar day details",
     "file": "feature-calendar-day-details.png",
-    "description": "Open any date to inspect only its populated birthday and dated-tag sections with Employee actions.",
+    "description": "Open a dated-event date to inspect complete Employee cards, every event label, and right-aligned actions without a redundant section heading.",
     "capabilities": [
       "Interactive dates",
-      "Conditional sections",
-      "Birthday rows",
-      "Dated-tag rows",
+      "Conditional content",
+      "Dated-event cards",
+      "Tag history",
       "Employee actions"
     ]
   },
@@ -342,7 +342,7 @@
     "featured": false,
     "title": "Dated-tag event history",
     "file": "feature-calendar-tag-events.png",
-    "description": "Open a tag from the bounded cloud to inspect current and future events plus past events as complete Employee cards with actions.",
+    "description": "Open a tag from the bounded cloud to inspect heading-free current and future events plus conditional past events as complete Employee cards with actions.",
     "capabilities": [
       "Tag cloud",
       "Conditional history",

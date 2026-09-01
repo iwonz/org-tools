@@ -520,8 +520,12 @@ test("captures Calendar overview, day details, and dated-tag history", async ({ 
   await openSyntheticTab(page, "Calendar");
   await expect(page.getByText("Employee Calendar", { exact: true })).toBeVisible();
   await capture(page, "calendar");
-  await page.locator('[data-calendar-date="2026-07-22"]').click();
-  await expect(page.getByRole("dialog", { name: /July 22, 2026/u })).toBeVisible();
+  await page.locator('[data-calendar-date="2026-07-10"]').click();
+  const dayDialog = page.getByRole("dialog", { name: /July 10, 2026/u });
+  await expect(dayDialog).toBeVisible();
+  await expect(
+    dayDialog.locator('[data-demo-id="calendar-day-dated-event-employee-card"]'),
+  ).toBeVisible();
   await capture(page, "calendar-day-details");
   await page.keyboard.press("Escape");
   await page

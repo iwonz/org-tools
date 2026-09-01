@@ -267,16 +267,17 @@ Capabilities: Monthly navigation, Birthdays, Dated tags, Today state, Tag cloud.
 
 [![Calendar day details](screenshots/feature-calendar-day-details.png)](screenshots/feature-calendar-day-details.png)
 
-Open any date to inspect only its populated birthday and dated-tag sections with Employee actions.
+Open a dated-event date to inspect complete Employee cards, every event label, and the ordinary
+right-aligned actions without a redundant section heading.
 
-Capabilities: Interactive dates, Conditional sections, Birthday rows, Dated-tag rows, Employee actions.
+Capabilities: Interactive dates, Conditional content, Dated-event cards, Tag history, Employee actions.
 
 ### Dated-tag event history
 
 [![Dated-tag event history](screenshots/feature-calendar-tag-events.png)](screenshots/feature-calendar-tag-events.png)
 
-Open a tag from the bounded cloud to inspect current and future events plus past events as complete
-Employee cards with right-aligned actions.
+Open a tag from the bounded cloud to inspect current and future events without a redundant heading,
+plus conditional past events as complete Employee cards with right-aligned actions.
 
 Capabilities: Tag cloud, Conditional history, Complete Employee cards, Employee actions, Virtualized dialog.
 
@@ -383,7 +384,10 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
 - Confirm Units has no empty hierarchy header, its path/search aligns to roster avatars, and its count sits below search without a direct-roster heading.
-- Confirm Calendar tag history omits the event-count subtitle and exposes complete Employee cards with Tag, Edit, and Delete actions.
+- Confirm Calendar day details omit the Dated tags heading, group same-day labels by Employee, and
+  expose complete Employee cards with Tag, Edit, and Delete actions.
+- Confirm Calendar tag history omits the Current and upcoming heading and exposes complete Employee
+  cards while retaining the conditional Past section.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
   both themes.
 - Confirm MCP frames contain only the synthetic token; the enabled icon is green; Setup, Activity,

@@ -135,8 +135,10 @@ states change tone without changing geometry.
 The Units split workflow omits its tree-search header entirely below the search threshold, aligns
 selected-path and roster search controls with Employee avatars, and derives its compact roster count
 from current membership below search. Calendar day and dated-tag details reuse the virtualized
-Employee card and action composition; a selected dated tag is stored by normalized key so edits and
-deletions re-derive current events instead of retaining a stale group snapshot. MCP Setup/Activity,
+Employee card and action composition without redundant current/future or dated-event headings. Day
+events group by Employee while preserving each label as an explicit tag-history action. A selected
+dated tag is stored by normalized key so edits and deletions re-derive current events instead of
+retaining a stale group snapshot. MCP Setup/Activity,
 Enable/Disable, and token-rotation controls keep visible labels after their decorative icons. The
 Client setup selector uses an exhaustive local icon mapping for all seven supported agents, with no
 remote brand assets or runtime requests.
