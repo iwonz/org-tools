@@ -104,14 +104,14 @@ mapping, legacy migration, project metadata, or compatibility readers.
 
 #### Scenario: Complete visual capability catalog
 - **WHEN** a visitor opens the detailed screenshot guide
-- **THEN** the 38-frame gallery contains ten featured workflows and only currently visible supporting
-  behavior, without project, file, Save, autosave, or conflict frames
+- **THEN** the 43-frame gallery contains ten featured workflows and only currently visible supporting
+  behavior, without project, file, Save, autosave, or obsolete conflict frames
 
 #### Scenario: Continuous validation
 - **WHEN** CI runs on a clean checkout
 - **THEN** locale completeness, singleton repository/API, tab synchronization, automatic writes,
-  complete state transfer, both builds, browser suites, screenshots, OpenSpec, and public-safety
-  checks pass against isolated synthetic state
+  frame-coalesced Editor interaction, complete state transfer, both builds, browser suites,
+  screenshots, OpenSpec, and public-safety checks pass against isolated synthetic state
 
 #### Scenario: Current-schema policy
 - **WHEN** the public state interface changes
@@ -120,7 +120,7 @@ mapping, legacy migration, project metadata, or compatibility readers.
 
 #### Scenario: Screenshot generation
 - **WHEN** screenshot generation runs against both production runtimes
-- **THEN** it deterministically replaces exactly 38 declared PNGs, including ten featured frames
+- **THEN** it deterministically replaces exactly 43 declared PNGs, including ten featured frames
 
 #### Scenario: Screenshot manifest consistency
 - **WHEN** generation or publication checks inspect the gallery
@@ -130,6 +130,11 @@ mapping, legacy migration, project metadata, or compatibility readers.
 #### Scenario: Publication language scan
 - **WHEN** public-safety checks scan tracked source and production output
 - **THEN** Cyrillic outside the exact Russian catalog path fails validation
+
+#### Scenario: Large Editor interaction validation
+- **WHEN** automated performance coverage prepares 20,000 Employees and 4,000 Units
+- **THEN** pan and Unit drag preview produce no durable writes before completion, one final logical
+  write after completion, and no per-event full Unit visibility scan
 
 ### Requirement: Development startup has a bounded functional probe
 The repository SHALL provide a development smoke command that starts the loopback Next.js entry

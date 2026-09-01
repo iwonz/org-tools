@@ -11,6 +11,7 @@ import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
+import { MiddleDot } from "@/components/middle-dot";
 import { TopLevelEmptyState } from "@/components/source-empty-state";
 import {
   AlertDialog,
@@ -330,14 +331,17 @@ export const CalendarTab = observer(() => {
           >
             {visibleGroups.map((group) => (
               <Button
-                className="h-7 rounded-full px-2.5 text-xs"
+                className="h-7 gap-0 rounded-full px-2.5 text-xs"
+                data-demo-id="calendar-dated-tag-group"
                 key={group.normalizedLabel}
                 onClick={() => setDialogTag(group)}
                 size="sm"
                 type="button"
                 variant="secondary"
               >
-                {group.label} · {format.number(group.events.length)}
+                <span>{group.label}</span>
+                <MiddleDot className="mx-1" />
+                <span>{format.number(group.events.length)}</span>
               </Button>
             ))}
             {hiddenGroupCount > 0 && (

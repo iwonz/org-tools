@@ -3,8 +3,9 @@
 import type { Employee } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
 import { useDeferredValue, useMemo, useState } from "react";
-import { HiOutlinePlus, HiOutlineUsers } from "react-icons/hi2";
+import { HiOutlineUserPlus, HiOutlineUsers } from "react-icons/hi2";
 
+import { useContextHeaderAction } from "@/components/context-header-action";
 import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
@@ -27,7 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { ProductSurface } from "@/components/ui/product-surface";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -41,6 +41,13 @@ export const EmployeesTab = observer(() => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  useContextHeaderAction({
+    dataDemoId: "employee-create-button",
+    icon: HiOutlineUserPlus,
+    id: "add-employee",
+    label: t("Add Employee"),
+    onClick: () => setIsCreateOpen(true),
+  });
   const deferredQuery = useDeferredValue(query);
   const queryTokens = useMemo(() => getSearchTokens(deferredQuery), [deferredQuery]);
   const sortedEmployees = units?.indexes.employeesByName ?? [];
@@ -66,16 +73,6 @@ export const EmployeesTab = observer(() => {
     >
       {sortedEmployees.length === 0 ? (
         <TopLevelEmptyState
-          action={
-            <Button
-              data-demo-id="employee-create-button"
-              onClick={() => setIsCreateOpen(true)}
-              type="button"
-            >
-              <HiOutlinePlus />
-              {t("Create Employee")}
-            </Button>
-          }
           description={t("Create the first Employee to start building your organization.")}
           icon={<HiOutlineUsers className="size-6" />}
           title={t("No Employees yet")}
@@ -115,15 +112,6 @@ export const EmployeesTab = observer(() => {
                 )}
               </div>
             </div>
-            <Button
-              className="shrink-0"
-              data-demo-id="employee-create-button"
-              onClick={() => setIsCreateOpen(true)}
-              type="button"
-            >
-              <HiOutlinePlus />
-              {t("Create")}
-            </Button>
           </div>
           <EmployeeCardList
             actions={(employee) => {

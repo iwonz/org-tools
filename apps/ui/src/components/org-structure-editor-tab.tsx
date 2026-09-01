@@ -4,6 +4,7 @@ import type {
   Employee,
   EmployeeId,
   EmployeeSearchDocument,
+  OrgEditorCanvasViewport,
   OrgEditorEmployee,
   OrgEditorEmployeeId,
   OrgEditorEmployeePosition,
@@ -121,7 +122,6 @@ import {
   buildOrgEditorUnitEmployeeSummaryById,
   createOrgEditorSelectedItemKey,
   createOrgEditorUnitsFromOrgUnit,
-  doRectsIntersect,
   findOrgEditorEmployeeRowIndex,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
@@ -143,6 +143,7 @@ import {
   type OrgEditorUnitEmployeeSummary,
   setOrgEditorUnitEmployeeRowHeights,
 } from "@/lib/org-editor";
+import { createLatestFrameScheduler, createSpatialIndex } from "@/lib/org-editor-interaction";
 import {
   createEmployeeSearchDocument,
   getPositionOptionsFromSearchDocuments,
@@ -166,6 +167,11 @@ type UnitDialogState = {
   parentId: OrgEditorUnitId | null;
   point: CanvasPoint;
   unitId: OrgEditorUnitId | null;
+};
+type OrgEditorConnectionEntry = {
+  bounds: CanvasRect;
+  parentUnit: OrgEditorUnit;
+  unit: OrgEditorUnit;
 };
 type OrgEditorContextMenu =
   | {
@@ -238,6 +244,8 @@ const MIN_CANVAS_SCALE = 0.1;
 const MAX_CANVAS_SCALE = 2.2;
 const DRAG_START_THRESHOLD = 4;
 const CANVAS_VIEWPORT_OVERSCAN_PX = 420;
+const ORG_EDITOR_SPATIAL_CELL_SIZE = 512;
+const ORG_EDITOR_WHEEL_COMMIT_DELAY_MS = 140;
 const EMPLOYEE_ROW_OVERSCAN = 8;
 const EMPLOYEE_LIST_VIRTUALIZATION_THRESHOLD = 80;
 const INITIAL_CANVAS_SIZE = { height: 720, width: 1280 };
@@ -245,6 +253,9 @@ const ORG_EDITOR_SEARCH_RESULT_LIMIT = 36;
 const ORG_EDITOR_SEARCH_VIEWPORT_MARGIN = 96;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const areViewportsEqual = (first: OrgEditorCanvasViewport, second: OrgEditorCanvasViewport) =>
+  first.x === second.x && first.y === second.y && first.scale === second.scale;
 
 const getPointerScreenPoint = (event: Pick<PointerEvent, "clientX" | "clientY">): ScreenPoint => ({
   x: event.clientX,
@@ -670,7 +681,7 @@ function OrgEditorToolbarButton({
     <Button
       aria-label={ariaLabel}
       className={cn(
-        "h-9 rounded-md border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-inset",
+        "h-9 rounded-md border-0 bg-transparent font-normal shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-inset",
         className,
       )}
       data-demo-id={dataDemoId}
@@ -807,7 +818,7 @@ function OrgEditorSearchControl({
       <div
         className={cn(
           "grid overflow-hidden transition-all duration-200 ease-out",
-          open ? "w-72 opacity-100" : "w-0 opacity-0",
+          open ? "visible w-72 opacity-100" : "invisible w-0 opacity-0",
         )}
         data-demo-id="org-editor-search-field"
       >
@@ -835,16 +846,12 @@ function OrgEditorSearchControl({
           )}
         </div>
       </div>
-      {open && (
+      {open && hasQuery && (
         <div
           className="absolute right-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
           data-demo-id="org-editor-search-results"
         >
-          {!hasQuery ? (
-            <div className="px-3 py-2.5 text-sm text-muted-foreground">
-              {t("Search by Unit name, Employee name, username, email, or tag")}
-            </div>
-          ) : results.length === 0 ? (
+          {results.length === 0 ? (
             <div className="px-3 py-2.5 text-sm text-muted-foreground">{t("Nothing found")}</div>
           ) : (
             <div className="max-h-96 overflow-auto p-1">
@@ -1052,7 +1059,7 @@ function OrgEditorNode({
       aria-label={t("Canvas Unit {name}", { name: getOrgEditorUnitDisplayName(unit) })}
       className={cn(
         "group absolute flex min-w-0 select-none flex-col rounded-lg border bg-card p-0 text-card-foreground transition-colors",
-        selected ? "border-signal bg-accent/30" : "border-border",
+        selected ? "!border-signal" : "border-border",
         isConnectionDropTarget && "border-signal bg-accent/45 ring-2 ring-signal/25",
         isEmployeeDropTarget && "border-signal bg-accent/45 ring-2 ring-signal/25",
       )}
@@ -1723,6 +1730,107 @@ export const OrgStructureEditorTab = observer(() => {
   const { searchOpen, searchQuery } = store.editorUi;
   const [searchPinnedUnitId, setSearchPinnedUnitId] = useState<OrgEditorUnitId | null>(null);
   const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
+  const [renderViewport, setRenderViewport] = useState<OrgEditorCanvasViewport>(() => ({
+    ...editor.viewport,
+  }));
+  const renderViewportRef = useRef<OrgEditorCanvasViewport>(renderViewport);
+  const pendingViewportRef = useRef<OrgEditorCanvasViewport | null>(null);
+  const viewportFrameSchedulerRef = useRef<ReturnType<
+    typeof createLatestFrameScheduler<OrgEditorCanvasViewport>
+  > | null>(null);
+  const wheelCommitTimeoutRef = useRef<number | null>(null);
+  const [unitDragDelta, setUnitDragDelta] = useState<CanvasPoint | null>(null);
+  const unitDragDeltaRef = useRef<CanvasPoint | null>(null);
+  const unitDragFrameSchedulerRef = useRef<ReturnType<
+    typeof createLatestFrameScheduler<CanvasPoint>
+  > | null>(null);
+
+  useEffect(() => {
+    viewportFrameSchedulerRef.current = createLatestFrameScheduler({
+      cancelFrame: (frameId) => window.cancelAnimationFrame(frameId),
+      onFrame: (viewport: OrgEditorCanvasViewport) => {
+        pendingViewportRef.current = null;
+        renderViewportRef.current = viewport;
+        setRenderViewport((currentViewport) =>
+          areViewportsEqual(currentViewport, viewport) ? currentViewport : viewport,
+        );
+      },
+      requestFrame: (callback) => window.requestAnimationFrame(callback),
+    });
+    unitDragFrameSchedulerRef.current = createLatestFrameScheduler({
+      cancelFrame: (frameId) => window.cancelAnimationFrame(frameId),
+      onFrame: (delta: CanvasPoint) => {
+        unitDragDeltaRef.current = delta;
+        setUnitDragDelta(delta);
+      },
+      requestFrame: (callback) => window.requestAnimationFrame(callback),
+    });
+
+    return () => {
+      viewportFrameSchedulerRef.current?.cancel();
+      viewportFrameSchedulerRef.current = null;
+      unitDragFrameSchedulerRef.current?.cancel();
+      unitDragFrameSchedulerRef.current = null;
+      if (wheelCommitTimeoutRef.current !== null) {
+        window.clearTimeout(wheelCommitTimeoutRef.current);
+        wheelCommitTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const scheduleViewportPreview = useCallback((viewport: OrgEditorCanvasViewport) => {
+    pendingViewportRef.current = viewport;
+    const scheduler = viewportFrameSchedulerRef.current;
+
+    if (scheduler) {
+      scheduler.schedule(viewport);
+      return;
+    }
+
+    renderViewportRef.current = viewport;
+    setRenderViewport(viewport);
+  }, []);
+
+  const commitViewport = useCallback(
+    (viewport: OrgEditorCanvasViewport) => {
+      viewportFrameSchedulerRef.current?.cancel();
+      pendingViewportRef.current = null;
+      renderViewportRef.current = viewport;
+      setRenderViewport((currentViewport) =>
+        areViewportsEqual(currentViewport, viewport) ? currentViewport : viewport,
+      );
+      if (!areViewportsEqual(editor.viewport, viewport)) editor.setViewport(viewport);
+    },
+    [editor],
+  );
+
+  const scheduleUnitDragPreview = useCallback((delta: CanvasPoint) => {
+    const scheduler = unitDragFrameSchedulerRef.current;
+    if (scheduler) {
+      scheduler.schedule(delta);
+      return;
+    }
+
+    unitDragDeltaRef.current = delta;
+    setUnitDragDelta(delta);
+  }, []);
+
+  const clearUnitDragPreview = useCallback(() => {
+    unitDragFrameSchedulerRef.current?.cancel();
+    unitDragDeltaRef.current = null;
+    setUnitDragDelta(null);
+  }, []);
+
+  useEffect(() => {
+    if (dragStateRef.current?.type === "pan" || wheelCommitTimeoutRef.current !== null) return;
+
+    viewportFrameSchedulerRef.current?.cancel();
+    pendingViewportRef.current = null;
+    renderViewportRef.current = editor.viewport;
+    setRenderViewport((currentViewport) =>
+      areViewportsEqual(currentViewport, editor.viewport) ? currentViewport : editor.viewport,
+    );
+  }, [editor.viewport]);
   const selectedItemKeySet = useMemo(
     () => new Set(editor.selectedItems.map(createOrgEditorSelectedItemKey)),
     [editor.selectedItems],
@@ -1931,17 +2039,15 @@ export const OrgStructureEditorTab = observer(() => {
     [displayUnits],
   );
 
-  const screenToCanvasPoint = useCallback(
-    (point: ScreenPoint): CanvasPoint => {
-      const bounds = canvasRef.current?.getBoundingClientRect();
+  const screenToCanvasPoint = useCallback((point: ScreenPoint): CanvasPoint => {
+    const bounds = canvasRef.current?.getBoundingClientRect();
+    const viewport = pendingViewportRef.current ?? renderViewportRef.current;
 
-      return {
-        x: (point.x - (bounds?.left ?? 0) - editor.viewport.x) / editor.viewport.scale,
-        y: (point.y - (bounds?.top ?? 0) - editor.viewport.y) / editor.viewport.scale,
-      };
-    },
-    [editor.viewport],
-  );
+    return {
+      x: (point.x - (bounds?.left ?? 0) - viewport.x) / viewport.scale,
+      y: (point.y - (bounds?.top ?? 0) - viewport.y) / viewport.scale,
+    };
+  }, []);
 
   const getCanvasCenterScreenPoint = useCallback((): ScreenPoint => {
     const bounds = canvasRef.current?.getBoundingClientRect();
@@ -1989,13 +2095,13 @@ export const OrgStructureEditorTab = observer(() => {
         }
       }
 
-      editor.setViewport({
+      commitViewport({
         scale,
         x,
         y,
       });
     },
-    [editor],
+    [commitViewport],
   );
 
   const centerUnitInViewport = useCallback(
@@ -2012,18 +2118,18 @@ export const OrgStructureEditorTab = observer(() => {
     const screenX = centerPoint.x - (bounds?.left ?? 0);
     const screenY = centerPoint.y - (bounds?.top ?? 0);
 
-    editor.setViewport({
+    commitViewport({
       scale: 1,
       x: screenX - canvasPoint.x,
       y: screenY - canvasPoint.y,
     });
-  }, [editor, getCanvasCenterScreenPoint, screenToCanvasPoint]);
+  }, [commitViewport, getCanvasCenterScreenPoint, screenToCanvasPoint]);
 
   const focusPrimaryRootUnit = useCallback(() => {
     if (!primaryRootUnit) return;
 
     editor.setSelectedItems([{ type: "unit", unitId: primaryRootUnit.id }]);
-    centerUnitInViewport(primaryRootUnit, editor.viewport.scale);
+    centerUnitInViewport(primaryRootUnit, renderViewportRef.current.scale);
   }, [centerUnitInViewport, editor, primaryRootUnit]);
 
   const selectOrgEditorSearchResult = useCallback(
@@ -2046,7 +2152,7 @@ export const OrgStructureEditorTab = observer(() => {
       if (result.type === "unit") {
         editor.setSelectedItems([{ type: "unit", unitId: nextUnit.id }]);
         centerCanvasRectInViewport(unitBounds, 1);
-        store.setEditorUi({ searchOpen: false });
+        store.setEditorUi({ searchOpen: false, searchQuery: "" });
         return;
       }
 
@@ -2069,7 +2175,7 @@ export const OrgStructureEditorTab = observer(() => {
       centerCanvasRectInViewport(unitBounds, 1, {
         ensureRect: employeeBounds,
       });
-      store.setEditorUi({ searchOpen: false });
+      store.setEditorUi({ searchOpen: false, searchQuery: "" });
     },
     [centerCanvasRectInViewport, editor, employeeById, store, unitById],
   );
@@ -2106,15 +2212,15 @@ export const OrgStructureEditorTab = observer(() => {
   }, []);
 
   const visibleWorldRect = useMemo<CanvasRect>(() => {
-    const scale = Math.max(editor.viewport.scale, MIN_CANVAS_SCALE);
+    const scale = Math.max(renderViewport.scale, MIN_CANVAS_SCALE);
 
     return {
       height: (canvasSize.height + CANVAS_VIEWPORT_OVERSCAN_PX * 2) / scale,
       width: (canvasSize.width + CANVAS_VIEWPORT_OVERSCAN_PX * 2) / scale,
-      x: (-editor.viewport.x - CANVAS_VIEWPORT_OVERSCAN_PX) / scale,
-      y: (-editor.viewport.y - CANVAS_VIEWPORT_OVERSCAN_PX) / scale,
+      x: (-renderViewport.x - CANVAS_VIEWPORT_OVERSCAN_PX) / scale,
+      y: (-renderViewport.y - CANVAS_VIEWPORT_OVERSCAN_PX) / scale,
     };
-  }, [canvasSize.height, canvasSize.width, editor.viewport]);
+  }, [canvasSize.height, canvasSize.width, renderViewport]);
   const connectionDragUnitId = dragState?.type === "connection" ? dragState.unitId : null;
 
   const pinnedVisibleUnitIds = useMemo(() => {
@@ -2140,28 +2246,63 @@ export const OrgStructureEditorTab = observer(() => {
       unitIds.add(connectionDragUnitId);
     }
 
-    return unitIds;
-  }, [connectionDragUnitId, contextMenu, exportUnitId, searchPinnedUnitId]);
-
-  const visibleUnitIds = useMemo(() => {
-    const unitIds = new Set(pinnedVisibleUnitIds);
-
-    for (const unit of displayUnits) {
-      if (doRectsIntersect(getOrgEditorUnitBounds(unit), visibleWorldRect)) {
-        unitIds.add(unit.id);
-      }
+    if (dragState?.type === "unit") {
+      for (const unitId of dragState.selectedUnitIds) unitIds.add(unitId);
     }
 
     return unitIds;
-  }, [displayUnits, pinnedVisibleUnitIds, visibleWorldRect]);
+  }, [connectionDragUnitId, contextMenu, dragState, exportUnitId, searchPinnedUnitId]);
 
-  const visibleUnits = useMemo(
-    () => displayUnits.filter((unit) => visibleUnitIds.has(unit.id)),
-    [displayUnits, visibleUnitIds],
+  const unitSpatialIndex = useMemo(
+    () =>
+      createSpatialIndex(
+        displayUnits,
+        (unit) => getOrgEditorUnitBounds(unit),
+        ORG_EDITOR_SPATIAL_CELL_SIZE,
+      ),
+    [displayUnits],
+  );
+  const visibleUnitQuery = useMemo(
+    () => unitSpatialIndex.query(visibleWorldRect),
+    [unitSpatialIndex, visibleWorldRect],
   );
 
-  const visibleConnectionUnits = useMemo(() => {
-    const connections: Array<{ parentUnit: OrgEditorUnit; unit: OrgEditorUnit }> = [];
+  const unitPreviewPositionById = useMemo(() => {
+    const positions = new Map<OrgEditorUnitId, CanvasPoint>();
+    if (dragState?.type !== "unit" || !unitDragDelta) return positions;
+
+    for (const position of dragState.startUnitPositions) {
+      positions.set(position.unitId, {
+        x: position.x + unitDragDelta.x,
+        y: position.y + unitDragDelta.y,
+      });
+    }
+
+    return positions;
+  }, [dragState, unitDragDelta]);
+
+  const withUnitPreviewPosition = useCallback(
+    (unit: OrgEditorUnit) => {
+      const position = unitPreviewPositionById.get(unit.id);
+      return position ? { ...unit, ...position } : unit;
+    },
+    [unitPreviewPositionById],
+  );
+
+  const visibleUnits = useMemo(() => {
+    const nextVisibleUnits = [...visibleUnitQuery.items];
+    const queriedUnitIds = new Set(nextVisibleUnits.map((unit) => unit.id));
+
+    for (const unitId of pinnedVisibleUnitIds) {
+      const unit = unitById.get(unitId);
+      if (unit && !queriedUnitIds.has(unitId)) nextVisibleUnits.push(unit);
+    }
+
+    return nextVisibleUnits.map(withUnitPreviewPosition);
+  }, [pinnedVisibleUnitIds, unitById, visibleUnitQuery.items, withUnitPreviewPosition]);
+
+  const connectionEntries = useMemo(() => {
+    const entries: OrgEditorConnectionEntry[] = [];
 
     for (const unit of displayUnits) {
       if (!unit.parentId) continue;
@@ -2171,28 +2312,53 @@ export const OrgStructureEditorTab = observer(() => {
 
       const parentBounds = getOrgEditorUnitBounds(parentUnit);
       const unitBounds = getOrgEditorUnitBounds(unit);
-      const connectionBounds = {
-        height:
-          Math.max(parentBounds.y + parentBounds.height, unitBounds.y + unitBounds.height) -
-          Math.min(parentBounds.y, unitBounds.y),
-        width:
-          Math.max(parentBounds.x + parentBounds.width, unitBounds.x + unitBounds.width) -
-          Math.min(parentBounds.x, unitBounds.x),
-        x: Math.min(parentBounds.x, unitBounds.x),
-        y: Math.min(parentBounds.y, unitBounds.y),
-      };
-
-      if (
-        visibleUnitIds.has(unit.id) ||
-        visibleUnitIds.has(parentUnit.id) ||
-        doRectsIntersect(connectionBounds, visibleWorldRect)
-      ) {
-        connections.push({ parentUnit, unit });
-      }
+      entries.push({
+        bounds: {
+          height:
+            Math.max(parentBounds.y + parentBounds.height, unitBounds.y + unitBounds.height) -
+            Math.min(parentBounds.y, unitBounds.y),
+          width:
+            Math.max(parentBounds.x + parentBounds.width, unitBounds.x + unitBounds.width) -
+            Math.min(parentBounds.x, unitBounds.x),
+          x: Math.min(parentBounds.x, unitBounds.x),
+          y: Math.min(parentBounds.y, unitBounds.y),
+        },
+        parentUnit,
+        unit,
+      });
     }
 
-    return connections;
-  }, [displayUnits, unitById, visibleUnitIds, visibleWorldRect]);
+    return entries;
+  }, [displayUnits, unitById]);
+  const connectionSpatialIndex = useMemo(
+    () =>
+      createSpatialIndex(connectionEntries, (entry) => entry.bounds, ORG_EDITOR_SPATIAL_CELL_SIZE),
+    [connectionEntries],
+  );
+  const visibleConnectionQuery = useMemo(
+    () => connectionSpatialIndex.query(visibleWorldRect),
+    [connectionSpatialIndex, visibleWorldRect],
+  );
+  const dragConnectionEntries = useMemo(() => {
+    if (dragState?.type !== "unit") return [];
+
+    const movingUnitIds = new Set(dragState.selectedUnitIds);
+    return connectionEntries.filter(
+      (entry) => movingUnitIds.has(entry.unit.id) || movingUnitIds.has(entry.parentUnit.id),
+    );
+  }, [connectionEntries, dragState]);
+
+  const visibleConnectionUnits = useMemo(() => {
+    const entriesByUnitId = new Map<OrgEditorUnitId, OrgEditorConnectionEntry>();
+
+    for (const entry of visibleConnectionQuery.items) entriesByUnitId.set(entry.unit.id, entry);
+    for (const entry of dragConnectionEntries) entriesByUnitId.set(entry.unit.id, entry);
+
+    return [...entriesByUnitId.values()].map((entry) => ({
+      parentUnit: withUnitPreviewPosition(entry.parentUnit),
+      unit: withUnitPreviewPosition(entry.unit),
+    }));
+  }, [dragConnectionEntries, visibleConnectionQuery.items, withUnitPreviewPosition]);
 
   const getConnectionDropTarget = useCallback(
     (unitId: OrgEditorUnitId, point: CanvasPoint) => {
@@ -2239,15 +2405,13 @@ export const OrgStructureEditorTab = observer(() => {
         y: Math.min(canvasTopLeft.y, canvasBottomRight.y),
       };
 
-      for (const unit of displayUnits) {
-        if (doRectsIntersect(canvasRect, getOrgEditorUnitBounds(unit))) {
-          selectedItems.push({ type: "unit", unitId: unit.id });
-        }
+      for (const unit of unitSpatialIndex.query(canvasRect).items) {
+        selectedItems.push({ type: "unit", unitId: unit.id });
       }
 
       return selectedItems;
     },
-    [displayUnits, screenToCanvasPoint],
+    [screenToCanvasPoint, unitSpatialIndex],
   );
 
   const setActiveDragState = useCallback((nextDragState: DragState | null) => {
@@ -2350,8 +2514,8 @@ export const OrgStructureEditorTab = observer(() => {
       const currentScreenPoint = getPointerScreenPoint(event);
 
       if (currentDragState.type === "pan") {
-        editor.setViewport({
-          ...editor.viewport,
+        scheduleViewportPreview({
+          ...currentDragState.startViewport,
           x:
             currentDragState.startViewport.x +
             currentScreenPoint.x -
@@ -2390,7 +2554,7 @@ export const OrgStructureEditorTab = observer(() => {
 
       if (Math.abs(delta.x) < 0.01 && Math.abs(delta.y) < 0.01) return;
 
-      editor.moveUnitsFromPositions(currentDragState.startUnitPositions, delta);
+      scheduleUnitDragPreview(delta);
     };
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -2398,6 +2562,20 @@ export const OrgStructureEditorTab = observer(() => {
       if (!currentDragState) return;
 
       const currentScreenPoint = getPointerScreenPoint(event);
+
+      if (currentDragState.type === "pan") {
+        commitViewport({
+          ...currentDragState.startViewport,
+          x:
+            currentDragState.startViewport.x +
+            currentScreenPoint.x -
+            currentDragState.startScreenPoint.x,
+          y:
+            currentDragState.startViewport.y +
+            currentScreenPoint.y -
+            currentDragState.startScreenPoint.y,
+        });
+      }
 
       if (currentDragState.type === "select") {
         const screenRect = getSelectionRect(currentDragState.startScreenPoint, currentScreenPoint);
@@ -2440,25 +2618,49 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if (currentDragState.type === "unit") {
-        editor.commitCommandFromSnapshot(currentDragState.historySnapshot, "Move Units");
+        const currentCanvasPoint = screenToCanvasPoint(currentScreenPoint);
+        const delta = {
+          x: currentCanvasPoint.x - currentDragState.startCanvasPoint.x,
+          y: currentCanvasPoint.y - currentDragState.startCanvasPoint.y,
+        };
+
+        clearUnitDragPreview();
+        if (Math.abs(delta.x) >= 0.01 || Math.abs(delta.y) >= 0.01) {
+          editor.moveUnitsFromPositions(currentDragState.startUnitPositions, delta);
+          editor.commitCommandFromSnapshot(currentDragState.historySnapshot, "Move Units");
+        }
       }
 
       setActiveDragState(null);
     };
 
+    const handlePointerCancel = () => {
+      const currentDragState = dragStateRef.current;
+      if (!currentDragState) return;
+
+      if (currentDragState.type === "pan") commitViewport(currentDragState.startViewport);
+      if (currentDragState.type === "unit") clearUnitDragPreview();
+      setActiveDragState(null);
+    };
+
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
 
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
     };
   }, [
+    clearUnitDragPreview,
+    commitViewport,
     editor,
-    editor.viewport,
     getConnectionDropTarget,
     getEmployeeDropTarget,
     getUnitsInsideScreenRect,
+    scheduleUnitDragPreview,
+    scheduleViewportPreview,
     screenToCanvasPoint,
     setActiveDragState,
   ]);
@@ -2593,7 +2795,7 @@ export const OrgStructureEditorTab = observer(() => {
       : null;
 
     if (rootImportedUnit) {
-      centerUnitInViewport(rootImportedUnit, editor.viewport.scale);
+      centerUnitInViewport(rootImportedUnit, renderViewportRef.current.scale);
     }
     setImportDialogMode(null);
     setPendingCanvasActionPoint(null);
@@ -2702,12 +2904,16 @@ export const OrgStructureEditorTab = observer(() => {
   };
 
   const zoomAt = (screenPoint: ScreenPoint, nextScale: number) => {
+    if (wheelCommitTimeoutRef.current !== null) {
+      window.clearTimeout(wheelCommitTimeoutRef.current);
+      wheelCommitTimeoutRef.current = null;
+    }
     const canvasPoint = screenToCanvasPoint(screenPoint);
     const bounds = canvasRef.current?.getBoundingClientRect();
     const screenX = screenPoint.x - (bounds?.left ?? 0);
     const screenY = screenPoint.y - (bounds?.top ?? 0);
 
-    editor.setViewport({
+    commitViewport({
       scale: nextScale,
       x: screenX - canvasPoint.x * nextScale,
       y: screenY - canvasPoint.y * nextScale,
@@ -2716,23 +2922,51 @@ export const OrgStructureEditorTab = observer(() => {
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
+    const currentViewport = pendingViewportRef.current ?? renderViewportRef.current;
     const nextScale = clamp(
-      editor.viewport.scale * (event.deltaY > 0 ? 0.92 : 1.08),
+      currentViewport.scale * (event.deltaY > 0 ? 0.92 : 1.08),
       MIN_CANVAS_SCALE,
       MAX_CANVAS_SCALE,
     );
+    const screenPoint = { x: event.clientX, y: event.clientY };
+    const bounds = canvasRef.current?.getBoundingClientRect();
+    const canvasPoint = {
+      x: (screenPoint.x - (bounds?.left ?? 0) - currentViewport.x) / currentViewport.scale,
+      y: (screenPoint.y - (bounds?.top ?? 0) - currentViewport.y) / currentViewport.scale,
+    };
+    const nextViewport = {
+      scale: nextScale,
+      x: screenPoint.x - (bounds?.left ?? 0) - canvasPoint.x * nextScale,
+      y: screenPoint.y - (bounds?.top ?? 0) - canvasPoint.y * nextScale,
+    };
 
-    zoomAt({ x: event.clientX, y: event.clientY }, nextScale);
+    scheduleViewportPreview(nextViewport);
+    if (wheelCommitTimeoutRef.current !== null) {
+      window.clearTimeout(wheelCommitTimeoutRef.current);
+    }
+    wheelCommitTimeoutRef.current = window.setTimeout(() => {
+      wheelCommitTimeoutRef.current = null;
+      commitViewport(pendingViewportRef.current ?? renderViewportRef.current);
+    }, ORG_EDITOR_WHEEL_COMMIT_DELAY_MS);
+  };
+
+  const finishWheelPreview = () => {
+    if (wheelCommitTimeoutRef.current === null) return;
+
+    window.clearTimeout(wheelCommitTimeoutRef.current);
+    wheelCommitTimeoutRef.current = null;
+    commitViewport(pendingViewportRef.current ?? renderViewportRef.current);
   };
 
   const handleCanvasPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     setContextMenu(null);
+    finishWheelPreview();
 
     if (event.button === 1) {
       event.preventDefault();
       setActiveDragState({
         startScreenPoint: getPointerScreenPoint(event.nativeEvent),
-        startViewport: editor.viewport,
+        startViewport: renderViewportRef.current,
         type: "pan",
       });
       return;
@@ -2754,7 +2988,7 @@ export const OrgStructureEditorTab = observer(() => {
     editor.clearSelection();
     setActiveDragState({
       startScreenPoint: getPointerScreenPoint(event.nativeEvent),
-      startViewport: editor.viewport,
+      startViewport: renderViewportRef.current,
       type: "pan",
     });
   };
@@ -3079,8 +3313,8 @@ export const OrgStructureEditorTab = observer(() => {
         employeeDragSourceUnitIds ?? undefined,
       )
     : null;
-  const canvasGridSize = getAdaptiveOrgEditorGridSize(editor.viewport.scale);
-  const canvasGridScreenSize = canvasGridSize * editor.viewport.scale;
+  const canvasGridSize = getAdaptiveOrgEditorGridSize(renderViewport.scale);
+  const canvasGridScreenSize = canvasGridSize * renderViewport.scale;
 
   return (
     <>
@@ -3098,6 +3332,7 @@ export const OrgStructureEditorTab = observer(() => {
           data-grid-base-size={ORG_EDITOR_GRID_SIZE}
           data-grid-screen-size={canvasGridScreenSize}
           data-grid-size={canvasGridSize}
+          data-spatial-candidate-count={visibleUnitQuery.candidateCount}
           onAuxClick={(event) => event.preventDefault()}
           onContextMenu={handleCanvasContextMenu}
           onPointerDown={handleCanvasPointerDown}
@@ -3112,7 +3347,7 @@ export const OrgStructureEditorTab = observer(() => {
               linear-gradient(to bottom, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px)
             `
                 : "none",
-            backgroundPosition: `${editor.viewport.x}px ${editor.viewport.y}px`,
+            backgroundPosition: `${renderViewport.x}px ${renderViewport.y}px`,
             backgroundSize: `${canvasGridScreenSize}px ${canvasGridScreenSize}px`,
           }}
         >
@@ -3121,7 +3356,7 @@ export const OrgStructureEditorTab = observer(() => {
             data-org-editor-rendered-unit-count={visibleUnits.length}
             data-org-editor-total-unit-count={editor.units.length}
             style={{
-              transform: `translate(${editor.viewport.x}px, ${editor.viewport.y}px) scale(${editor.viewport.scale})`,
+              transform: `translate(${renderViewport.x}px, ${renderViewport.y}px) scale(${renderViewport.scale})`,
               transformOrigin: "0 0",
             }}
           >
@@ -3503,8 +3738,8 @@ export const OrgStructureEditorTab = observer(() => {
                   onClick={() => editor.applyLayout()}
                   title={t("Arrange the current hierarchy")}
                 >
+                  <span>{t("Arrange")}</span>
                   <HiOutlineSquares2X2 />
-                  {t("Arrange")}
                 </OrgEditorToolbarButton>
                 <OrgEditorToolbarButton
                   ariaLabel={toggleAllUnitsLabel}
@@ -3518,16 +3753,19 @@ export const OrgStructureEditorTab = observer(() => {
                   }
                   title={toggleAllUnitsLabel}
                 >
+                  <span>{toggleAllUnitsLabel}</span>
                   {hasCollapsedUnits ? (
                     <HiOutlineArrowsPointingOut />
                   ) : (
                     <HiOutlineArrowsPointingIn />
                   )}
-                  {toggleAllUnitsLabel}
                 </OrgEditorToolbarButton>
                 <OrgEditorSearchControl
                   onOpenChange={(nextSearchOpen) =>
-                    store.setEditorUi({ searchOpen: nextSearchOpen })
+                    store.setEditorUi({
+                      searchOpen: nextSearchOpen,
+                      ...(nextSearchOpen ? {} : { searchQuery: "" }),
+                    })
                   }
                   onQueryChange={(searchQuery) => store.setEditorUi({ searchQuery })}
                   onSelectResult={selectOrgEditorSearchResult}
@@ -3553,7 +3791,7 @@ export const OrgStructureEditorTab = observer(() => {
               onClick={() =>
                 zoomAt(
                   { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-                  clamp(editor.viewport.scale * 0.9, MIN_CANVAS_SCALE, MAX_CANVAS_SCALE),
+                  clamp(renderViewportRef.current.scale * 0.9, MIN_CANVAS_SCALE, MAX_CANVAS_SCALE),
                 )
               }
             >
@@ -3563,7 +3801,7 @@ export const OrgStructureEditorTab = observer(() => {
               onClick={() =>
                 zoomAt(
                   { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-                  clamp(editor.viewport.scale * 1.1, MIN_CANVAS_SCALE, MAX_CANVAS_SCALE),
+                  clamp(renderViewportRef.current.scale * 1.1, MIN_CANVAS_SCALE, MAX_CANVAS_SCALE),
                 )
               }
             >
@@ -3571,7 +3809,7 @@ export const OrgStructureEditorTab = observer(() => {
             </OrgEditorToolbarButton>
             <OrgEditorToolbarButton onClick={resetViewportScale}>
               <HiOutlineArrowPath />
-              {Math.round(editor.viewport.scale * 100)}%
+              {Math.round(renderViewport.scale * 100)}%
             </OrgEditorToolbarButton>
             <OrgEditorToolbarButton
               ariaLabel={t("Focus the primary Unit")}

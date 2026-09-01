@@ -160,7 +160,7 @@ test("switches the interface in place and persists the choice", async ({ page },
   expect((await stateDownloadPromise).suggestedFilename()).toBe("org-tools-state.json");
 
   await page.getByRole("tab", { name: ruMessages.Ui.Employees, exact: true }).click();
-  await page.getByRole("button", { name: ruMessages.Ui["Create Employee"], exact: true }).click();
+  await page.getByRole("button", { name: ruMessages.Ui["Add Employee"], exact: true }).click();
   const employeeDialog = page.getByRole("dialog", { name: ruMessages.Ui["Create Employee"] });
   await expect(
     employeeDialog.getByRole("button", { name: ruMessages.Ui["Paste image"], exact: true }),

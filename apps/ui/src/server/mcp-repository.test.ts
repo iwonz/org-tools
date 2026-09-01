@@ -48,14 +48,19 @@ describe("MCP repository", () => {
     expect(firstToken).toMatch(/^ot_mcp_[A-Za-z0-9_-]{43}$/u);
     expect(repository.getSettings().maskedToken).toBe(`ot_mcp_${"•".repeat(24)}`);
     expect(repository.authenticate(firstToken)).toBe(true);
-    const rotated = repository.rotateToken();
-    expect(rotated.token).not.toBe(firstToken);
-    expect(repository.authenticate(firstToken)).toBe(false);
-    expect(repository.authenticate(rotated.token)).toBe(true);
-    repository.setEnabled(false);
-    expect(repository.authenticate(rotated.token)).toBe(false);
-    expect(repository.revealToken()).toBe(rotated.token);
     repository.close();
+
+    const reopenedRepository = new McpRepository(path);
+    expect(reopenedRepository.getSettings()).toMatchObject({ enabled: true, hasToken: true });
+    expect(reopenedRepository.authenticate(firstToken)).toBe(true);
+    const rotated = reopenedRepository.rotateToken();
+    expect(rotated.token).not.toBe(firstToken);
+    expect(reopenedRepository.authenticate(firstToken)).toBe(false);
+    expect(reopenedRepository.authenticate(rotated.token)).toBe(true);
+    reopenedRepository.setEnabled(false);
+    expect(reopenedRepository.authenticate(rotated.token)).toBe(false);
+    expect(reopenedRepository.revealToken()).toBe(rotated.token);
+    reopenedRepository.close();
   });
 
   it("previews and atomically applies an idempotent change, then selectively undoes it", () => {

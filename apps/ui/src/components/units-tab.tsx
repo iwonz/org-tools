@@ -21,6 +21,7 @@ import {
 } from "react-icons/hi2";
 
 import { ActionIconButton } from "@/components/action-icon-button";
+import { useContextHeaderAction } from "@/components/context-header-action";
 import { EmployeeCard, EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { EmployeeTagPopover } from "@/components/employee-tag-picker";
@@ -138,6 +139,13 @@ export const UnitsTab = observer(() => {
   const [employeeDragPoint, setEmployeeDragPoint] = useState<EmployeeDragPoint | null>(null);
   const [dropTargetUnitId, setDropTargetUnitId] = useState<UnitId | null>(null);
   const dragPreviewRef = useRef<HTMLDivElement | null>(null);
+  useContextHeaderAction({
+    dataDemoId: "unit-create-root-button",
+    icon: HiOutlinePlus,
+    id: "add-unit",
+    label: t("Add Unit"),
+    onClick: () => setUnitDialog({ parentId: null, unitId: null }),
+  });
   const finishEmployeeDrag = useCallback(() => {
     setEmployeeDrag(null);
     setEmployeeDragPoint(null);
@@ -318,16 +326,6 @@ export const UnitsTab = observer(() => {
     return (
       <>
         <TopLevelEmptyState
-          action={
-            <Button
-              data-demo-id="unit-create-root-button"
-              onClick={() => setUnitDialog({ parentId: null, unitId: null })}
-              type="button"
-            >
-              <HiOutlinePlus />
-              {t("Add Unit")}
-            </Button>
-          }
           description={t("Create the first Unit to start building the hierarchy.")}
           icon={<HiOutlineFolder className="size-6" />}
           title={t("No Units yet")}
@@ -364,16 +362,6 @@ export const UnitsTab = observer(() => {
                 value={unitSearchQuery}
               />
             )}
-            <Button
-              className="shrink-0"
-              data-demo-id="unit-create-root-button"
-              onClick={() => setUnitDialog({ parentId: null, unitId: null })}
-              size="sm"
-              type="button"
-            >
-              <HiOutlinePlus />
-              {t("Add Unit")}
-            </Button>
           </div>
           <ScrollArea className="min-h-0 flex-1" scrollbars="none">
             {hasVisibleUnits ? (

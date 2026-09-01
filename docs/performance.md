@@ -30,7 +30,11 @@ token, and bundled templates; it never reads or serializes organization state.
   position, and tag indexes outside React render paths.
 - Build expensive structures lazily for Main and the active or selected View.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
-- Keep canvas pointer previews imperative; commit drag and pan state at gesture completion.
+- Coalesce pan, zoom, and Unit-drag samples through one latest-value animation-frame scheduler.
+- Keep viewport and Unit deltas in transient render previews; write the MobX document once after
+  pointer release or wheel debounce, then run snapping, overlap resolution, history, and persistence.
+- Query visible Unit and connection candidates through a geometry-keyed spatial index that is not
+  rebuilt for pointer samples.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid.
 
@@ -53,4 +57,7 @@ Generate the maintained large fixture outside the repository with `pnpm fixture:
 search, filters, Unit navigation, View switching, canvas selection, Import, automatic SQLite writes,
 MCP pagination/read caching/Preview/Apply, tab synchronization, Export, and UI-only updates. Treat
 blocking interaction, unbounded duplication,
-per-row network work, or organization serialization during UI-only actions as regressions.
+per-row network work, organization serialization during UI-only actions, or full Unit scans during
+pointer previews as regressions. The browser suite exercises 20,000 Employees and 4,000 Units,
+requires bounded spatial candidates, observes no state write during preview, and allows one final
+write for each completed pan or Unit drag.

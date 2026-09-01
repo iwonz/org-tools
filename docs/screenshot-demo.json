@@ -192,7 +192,7 @@
     "featured": true,
     "title": "Visual organization Editor",
     "file": "demo-editor.png",
-    "description": "Arrange Unit cards on the adaptive snap grid with hierarchy lines, zoom, history, and layout controls.",
+    "description": "Arrange opaque Unit cards on the adaptive snap grid with frame-bounded gestures, hierarchy lines, zoom, history, and normal-weight layout controls.",
     "capabilities": [
       "Canvas layout",
       "Adaptive snap grid",
@@ -216,7 +216,7 @@
     "featured": false,
     "title": "Editor search",
     "file": "feature-editor-search.png",
-    "description": "Reveal the right-growing search field and locate Units and Employees without leaving the canvas.",
+    "description": "Reveal the right-growing search field, locate Units and Employees without leaving the canvas, and clear the query when Search closes.",
     "capabilities": ["Unit search", "Employee search", "Canvas navigation"]
   },
   {
@@ -318,7 +318,7 @@
     "featured": true,
     "title": "Employee Calendar",
     "file": "demo-calendar.png",
-    "description": "Navigate a monthly calendar with birthdays, dated tags, event counts, and a strong current-day state.",
+    "description": "Navigate a monthly calendar with birthdays, uniformly spaced dated-tag counts, events, and a strong current-day state.",
     "capabilities": ["Monthly navigation", "Birthdays", "Dated tags", "Today state", "Tag cloud"]
   },
   {
@@ -366,7 +366,7 @@
     "featured": false,
     "title": "Download source selection",
     "file": "feature-download-source-selection.png",
-    "description": "Select Employees from Teams or the catalog, inspect the resulting set, filter it, and exclude rows.",
+    "description": "Select Employees from Teams or the catalog, inspect and filter the resulting set, then continue from the shared header.",
     "capabilities": [
       "Team sources",
       "Employee sources",

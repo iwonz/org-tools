@@ -12,6 +12,11 @@ count only while search or filters are active. The populated Org Editor SHALL pl
 layout, hierarchy, and search controls in one compact top-left toolbar surface and viewport controls
 in one compact bottom-left toolbar surface. The Editor canvas SHALL retain a distinct neutral-gray
 background while the sidebar, context header, and ordinary workflows use the layered shell system.
+Selected Team nodes SHALL retain the same opaque background as their resting state and communicate
+selection only through the existing semantic boundary. The View selector SHALL use the shared styled
+Select surface and indicator. Arrange and hierarchy commands SHALL use normal text weight and place
+their thematic icon after the label. Closing Editor Search SHALL clear its query, and an empty query
+SHALL render no explanatory result surface.
 
 #### Scenario: Product navigation order
 - **WHEN** the product shell renders in either locale
@@ -23,7 +28,7 @@ background while the sidebar, context header, and ordinary workflows use the lay
 
 #### Scenario: Feature-specific empty data
 - **WHEN** Download or Analytics has no Employees or Calendar has no birthdays or dated tags
-- **THEN** the surface omits its data chrome and offers one relevant action through the shared empty layout
+- **THEN** the surface omits its data chrome and offers one relevant action through the header or shared empty layout
 
 #### Scenario: Empty Org Editor
 - **WHEN** the active View contains no Units
@@ -31,20 +36,20 @@ background while the sidebar, context header, and ordinary workflows use the lay
 
 #### Scenario: Localized active View label
 - **WHEN** the Org Editor displays the built-in Main View in either supported locale
-- **THEN** the localized label remains fully visible on one line inside the View selector without overlapping adjacent controls
+- **THEN** the localized label remains fully visible on one line inside the shared styled View selector without overlapping adjacent controls
 - **AND** longer user-authored View names remain contained with a single-line ellipsis
 
 #### Scenario: Sidebar application shell
 - **WHEN** the product shell renders in light or dark theme
 - **THEN** one dark 240 px sidebar contains the six product destinations followed by Import, Export,
   locale, and theme controls without a visible wordmark or Org Tools title
-- **AND** one 64 px content header contains only the active workflow icon and localized title
+- **AND** one 64 px content header contains the active workflow icon, localized title, and at most one contextual workflow action
 
 #### Scenario: Narrow application shell
 - **WHEN** the viewport is narrower than 1024 px
 - **THEN** the sidebar uses a 64 px icon rail whose controls hide visible labels while retaining
   localized accessible names and tooltips
-- **AND** the workspace remains contained without page-level overflow or changing navigation order
+- **AND** the workspace and icon-only context action remain contained without page-level overflow or changing navigation order
 
 #### Scenario: Populated Employee catalog count
 - **WHEN** the Employees surface contains Employees and no search or filter is active
@@ -63,7 +68,17 @@ background while the sidebar, context header, and ordinary workflows use the lay
 
 #### Scenario: Editor search placement
 - **WHEN** Search is the final control in the top-left group and the user opens it
-- **THEN** the field appears to the right of its trigger while the complete group and results remain within the viewport
+- **THEN** the field appears to the right of its trigger while the complete group remains within the viewport
+- **AND** no results surface appears until the user enters a non-empty query
+
+#### Scenario: Selected Team node
+- **WHEN** a Team node is selected or passively hovered in either theme
+- **THEN** its computed background and opacity equal its resting presentation
+- **AND** selection changes only the existing border color without a shadow, transform, or geometry change
+
+#### Scenario: Close Editor search
+- **WHEN** the user closes Editor Search
+- **THEN** the field and results close together and the retained query becomes empty
 
 #### Scenario: Neutral Editor canvas
 - **WHEN** the Org Editor is visible in light or dark theme
@@ -79,6 +94,11 @@ avoidance, hierarchy relayout, and full arrangement SHALL finish with every affe
 the base step. Opening an existing workspace SHALL NOT mutate legacy coordinates until an explicit
 editor operation affects them. Grid rendering SHALL remain a constant-cost background operation and
 SHALL NOT change PNG dimensions, connection behavior, selection behavior, or organization data.
+Pointer and wheel input SHALL replace the pending transient sample and render at most once per
+animation frame. Pan, zoom, and Unit drag SHALL preview without mutating the durable viewport or
+document on every pointer event. The final gesture SHALL commit at most one viewport update or one
+organization command. Viewport visibility SHALL use a geometry index built only when Unit bounds
+change rather than scanning every Unit on each interaction frame.
 
 #### Scenario: Adaptive zoom density
 - **WHEN** the user zooms the Editor from its minimum to maximum supported scale
@@ -99,6 +119,20 @@ SHALL NOT change PNG dimensions, connection behavior, selection behavior, or org
 - **WHEN** a valid workspace contains a Unit whose stored coordinate is not on the base grid
 - **THEN** opening and viewing that workspace preserves the coordinate until an explicit editor
   operation affects that Unit
+
+#### Scenario: Frame-coalesced viewport gesture
+- **WHEN** multiple pan or wheel events arrive before the next animation frame
+- **THEN** only their latest viewport preview renders in that frame
+- **AND** durable UI persistence receives one final viewport after pointer release or wheel idle
+
+#### Scenario: Transient Unit drag
+- **WHEN** one or more Units move across multiple pointer events
+- **THEN** preview positions and affected connections update without replacing the document Unit collection or running overlap avoidance per event
+- **AND** release performs one snapped overlap-resolved command and one organization write
+
+#### Scenario: Indexed large canvas
+- **WHEN** a View contains 4,000 Units and the viewport changes
+- **THEN** visible Unit and connection candidates come from the intersecting spatial buckets without a full-collection scan per frame
 
 ### Requirement: Main and custom Views remain independent
 The editor SHALL preserve the canonical Main View, custom Views, Live Units, undo/redo, drag-and-drop, layout, and viewport isolation.
@@ -158,6 +192,15 @@ The Calendar SHALL show all dated tag labels from global Main Employees as local
 #### Scenario: Calendar empty state
 - **WHEN** no global Main Employee has either a birthday or a dated tag
 - **THEN** the shared Calendar empty state is shown instead of the cloud and grid
+
+### Requirement: Calendar dated-tag counts use uniform separators
+The Calendar tag cloud SHALL render each dated-tag label, one shared middle-dot separator, and its
+localized count as distinct aligned elements with the same horizontal separator spacing for every
+tag length and count.
+
+#### Scenario: Dated-tag cloud spacing
+- **WHEN** the Calendar renders multiple dated-tag groups with different label lengths and counts
+- **THEN** every middle dot has the same computed left and right spacing and the label and count remain vertically aligned
 
 ### Requirement: Org Editor Employee geometry follows wrapped tags
 The Org Editor SHALL compute Employee row heights from all rendered localized tag chips and SHALL

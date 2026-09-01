@@ -125,9 +125,18 @@ retain identical compact/expanded geometry. The MCP modal contains
 Setup and Activity; Setup builds one English agent prompt with the selected-client skill install,
 current local endpoint and token, exact client configuration, reload step, and read-only connection
 check. The prompt exists only in component memory and the clipboard.
-The header contains only the active section icon and title. Floating non-modal surfaces use
-one neutral border and restrained shadow; hover and active states change tone without changing
-geometry.
+The header combines the active section icon and title with one effect-registered contextual action
+slot. Units registers **Add Unit**, Employees registers **Add Employee**, and Data Download registers
+**Continue**; inactive sections unregister without updating the shell during render. Labels precede
+their thematic icons and collapse to an accessible icon-only control with a tooltip on narrow
+screens. Floating non-modal surfaces use one neutral border and restrained shadow; hover and active
+states change tone without changing geometry.
+
+The Editor keeps pointer and wheel previews outside the MobX View document. One animation-frame
+scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce
+performs the single snapped command and persistence observation. A geometry-keyed spatial index
+limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
+document geometry changes.
 
 ## Builds and development
 

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import type { OrgToolsState } from "@org-tools/types";
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Request } from "@playwright/test";
 
 import { expect, test } from "./browser-test.js";
 import {
@@ -46,6 +46,24 @@ async function getBackgroundPresentation(locator: Locator) {
 
 async function expectTransparentBackground(locator: Locator) {
   expect(await getBackgroundColor(locator)).toBe("rgba(0, 0, 0, 0)");
+}
+
+async function expectTextBeforeIcon(locator: Locator) {
+  const positions = await locator.evaluate((element) => {
+    const label = element.querySelector("span");
+    const icon = element.querySelector("svg");
+    if (!(label instanceof HTMLElement) || !(icon instanceof SVGElement)) {
+      throw new Error("Expected a text label followed by an SVG icon.");
+    }
+    return {
+      iconLeft: icon.getBoundingClientRect().left,
+      labelDisplay: window.getComputedStyle(label).display,
+      labelRight: label.getBoundingClientRect().right,
+    };
+  });
+
+  expect(positions.labelDisplay).not.toBe("none");
+  expect(positions.iconLeft).toBeGreaterThanOrEqual(positions.labelRight);
 }
 
 async function expectStableHoverGeometry(locator: Locator) {
@@ -176,6 +194,62 @@ test("shows one centered icon-only loader while loading initial state", async ({
 
   await expect(loadingSurface).toHaveCount(0);
   await expect(page.locator('[data-demo-id="app-shell"]')).toBeVisible();
+  await assertLocalRequests();
+});
+
+test("registers responsive workflow actions in the shared header", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  const header = page.locator('[data-demo-id="app-header"]');
+  const actionSlot = page.locator('[data-demo-id="context-header-action-slot"]');
+
+  await page.getByRole("tab", { name: "Units", exact: true }).click();
+  const addUnit = page.locator('[data-demo-id="unit-create-root-button"]');
+  await expect(addUnit).toHaveCount(1);
+  await expectContainedBy(header, addUnit);
+  await expectTextBeforeIcon(addUnit);
+  await expect(
+    page.locator('[data-demo-id="units-tab-content"] [data-demo-id="unit-create-root-button"]'),
+  ).toHaveCount(0);
+  await addUnit.click();
+  const unitDialog = page.getByRole("dialog", { name: "Add Unit" });
+  await expect(unitDialog).toBeVisible();
+  await unitDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  const addEmployee = page.locator('[data-demo-id="employee-create-button"]');
+  await expect(addEmployee).toHaveCount(1);
+  await expectContainedBy(header, addEmployee);
+  await expectTextBeforeIcon(addEmployee);
+  await expect(
+    page.locator('[data-demo-id="employees-tab-content"] [data-demo-id="employee-create-button"]'),
+  ).toHaveCount(0);
+
+  await page.getByRole("tab", { name: "Download", exact: true }).click();
+  const continueButton = page.locator('[data-demo-id="export-continue-button"]');
+  await expect(continueButton).toBeDisabled();
+  await expectContainedBy(header, continueButton);
+  await expectTextBeforeIcon(continueButton);
+  await page
+    .getByRole("button", { name: "Add Unit Employees to download", exact: true })
+    .first()
+    .click();
+  await expect(continueButton).toBeEnabled();
+  await expect(
+    page.locator('[data-demo-id="export-surface"] [data-demo-id="export-continue-button"]'),
+  ).toHaveCount(0);
+
+  await page.setViewportSize({ width: 390, height: 720 });
+  await expect(actionSlot).toBeVisible();
+  await expect(continueButton.locator("span")).toBeHidden();
+  await expect(continueButton).toHaveAccessibleName("Continue");
+  const compactActionBox = await continueButton.boundingBox();
+  expect(compactActionBox).not.toBeNull();
+  expect(compactActionBox?.width).toBe(compactActionBox?.height);
+  await continueButton.hover();
+  await expect(actionSlot.getByRole("tooltip")).toHaveText("Continue");
   await assertLocalRequests();
 });
 
@@ -787,11 +861,7 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   expect(editorCanvasBox).not.toBeNull();
 
   const surfaces = [
-    [
-      "tab-units",
-      '[data-demo-id="units-surface"]',
-      ['[data-demo-id="unit-create-root-button"]', '[data-demo-id="units-employee-header"]'],
-    ],
+    ["tab-units", '[data-demo-id="units-surface"]', ['[data-demo-id="units-employee-header"]']],
     ["tab-employees", '[data-demo-id="employees-surface"]', ['[data-demo-id="employees-search"]']],
     ["tab-analytics", '[data-demo-id="analytics-surface"]', ['[data-demo-id="analytics-header"]']],
     ["tab-calendar", '[data-demo-id="calendar-tab"]', ['[data-demo-id="calendar-header"]']],
@@ -1014,7 +1084,7 @@ test("creates, crops, re-crops, pastes, and removes a local Employee avatar", as
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
-  await page.getByRole("button", { name: "Create Employee", exact: true }).click();
+  await page.getByRole("button", { name: "Add Employee", exact: true }).click();
   const employeeDialog = page.getByRole("dialog", { name: "Create Employee" });
   const pngBase64 =
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=";
@@ -1355,6 +1425,13 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await expect(canvas).toHaveAttribute("data-grid-size", "24");
   expect(Number(await canvas.getAttribute("data-grid-screen-size"))).toBe(24);
   await expect(topActions.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(1);
+  const viewSelect = page.locator('[data-demo-id="org-view-select-trigger"]');
+  await expect(viewSelect).toHaveAttribute("role", "combobox");
+  await expect(viewSelect.locator("svg")).toBeVisible();
+  expect(await getBackgroundColor(viewSelect)).not.toBe("rgba(0, 0, 0, 0)");
+  await viewSelect.click();
+  await expect(page.getByRole("option", { name: "Main", exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "Main", exact: true }).click();
   expect(
     await topActions.evaluate(
       (element) => element.lastElementChild?.getAttribute("data-demo-id") ?? null,
@@ -1368,9 +1445,14 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
           buttons.map((button) => window.getComputedStyle(button).borderWidth),
         ),
     ),
-  ).toEqual(new Set(["0px"]));
+  ).toEqual(new Set(["0px", "1px"]));
 
   const editorCommand = page.locator('[data-demo-id="org-editor-align-button"]');
+  const collapseCommand = page.locator('[data-demo-id="org-editor-toggle-all-units-button"]');
+  for (const command of [editorCommand, collapseCommand]) {
+    await expect(command).toHaveCSS("font-weight", "400");
+    await expectTextBeforeIcon(command);
+  }
   await expectStableHoverGeometry(editorCommand);
   const editorCommandHover = await getBackgroundPresentation(editorCommand);
   expect(editorCommandHover.background).not.toBe("rgba(0, 0, 0, 0)");
@@ -1386,6 +1468,16 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   expect(lightUnitHover).toEqual(lightUnitResting);
   expect(lightUnitHover.alpha).toBe(1);
   expect(lightUnitHover.opacity).toBe("1");
+  const restingBorderColor = await editorUnit.evaluate(
+    (element) => window.getComputedStyle(element).borderColor,
+  );
+  await editorUnit.click({ position: { x: 72, y: 64 } });
+  await expect(editorUnit).toHaveClass(/border-signal/u);
+  const selectedUnit = await getBackgroundPresentation(editorUnit);
+  expect(selectedUnit).toEqual(lightUnitResting);
+  expect(
+    await editorUnit.evaluate((element) => window.getComputedStyle(element).borderColor),
+  ).not.toBe(restingBorderColor);
 
   const zoomOutButton = viewportActions.getByRole("button").first();
   for (let index = 0; index < 5; index += 1) await zoomOutButton.click();
@@ -1441,6 +1533,7 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await searchButton.click();
   const searchInput = page.locator('[data-demo-id="org-editor-search-input"]');
   await expect(searchInput).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-search-results"]')).toHaveCount(0);
   await expect(page.locator('[data-demo-id="org-editor-search-field"]')).toHaveCSS(
     "width",
     "288px",
@@ -1454,6 +1547,14 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   expect(inputBox?.x ?? 0).toBeGreaterThanOrEqual(
     (buttonBox?.x ?? 0) + (buttonBox?.width ?? 0) - 1,
   );
+  await searchInput.fill("Product");
+  await expect(page.locator('[data-demo-id="org-editor-search-results"]')).toBeVisible();
+  await searchButton.click();
+  await expect(searchInput).toBeHidden();
+  await expect(page.locator('[data-demo-id="org-editor-search-results"]')).toHaveCount(0);
+  await searchButton.click();
+  await expect(searchInput).toHaveValue("");
+  await expect(page.locator('[data-demo-id="org-editor-search-results"]')).toHaveCount(0);
 
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.getByRole("option", { name: "Dark", exact: true }).click();
@@ -1468,6 +1569,129 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   expect(darkUnitHover).toEqual(darkUnitResting);
   expect(darkUnitHover.alpha).toBe(1);
   expect(darkUnitHover.opacity).toBe("1");
+  await assertLocalRequests();
+});
+
+test("coalesces large Editor previews and commits each gesture once", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openBlankState(page);
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const timestamp = "2026-08-31T12:00:00.000Z";
+  const uuid = (group: string, index: number) =>
+    `00000000-0000-${group}-8000-${index.toString(16).padStart(12, "0")}`;
+  const employeeId = (index: number) => uuid("4000", index + 1);
+  const unitId = (index: number) => uuid("4001", index + 1);
+  state.organization.employees = Array.from({ length: 20_000 }, (_, index) => ({
+    avatarBase64Url: null,
+    birthday: null,
+    createdAt: timestamp,
+    email: `employee-${index + 1}@example.test`,
+    firstName: "Employee",
+    gender: "unspecified" as const,
+    id: employeeId(index),
+    lastName: String(index + 1).padStart(5, "0"),
+    phone: null,
+    profileUrl: null,
+    tags: [],
+    updatedAt: timestamp,
+    username: `employee-${index + 1}`,
+  }));
+  const mainView = state.organization.views.find((view) => view.kind === "main");
+  if (!mainView) throw new Error("Synthetic state is missing Main.");
+  mainView.document.employeeOverrides = [];
+  mainView.document.employees = [];
+  mainView.document.units = Array.from({ length: 4_000 }, (_, index) => {
+    const firstEmployeeIndex = index * 5;
+    const employeeIds = Array.from({ length: 5 }, (_, offset) =>
+      employeeId(firstEmployeeIndex + offset),
+    );
+    return {
+      bossEmployeeId: employeeIds[0] ?? null,
+      collapsed: false,
+      createdAt: timestamp,
+      employeeIds,
+      employeePositions: employeeIds.map((id, positionIndex) => ({
+        employeeId: id,
+        position: positionIndex === 0 ? "Unit Lead" : "Specialist",
+      })),
+      id: unitId(index),
+      liveFilter: null,
+      name: `Unit ${String(index + 1).padStart(4, "0")}`,
+      order: index,
+      parentId: null,
+      updatedAt: timestamp,
+      x: (index % 50) * 360,
+      y: Math.floor(index / 50) * 240,
+    };
+  });
+  state.organization.views = [mainView];
+  state.ui.activeTab = "orgEditor";
+  state.ui.activeViewId = mainView.id;
+  state.ui.expandedUnitIds = [];
+  state.ui.selectedUnitId = null;
+  state.ui.views = [{ selectedItems: [], viewId: mainView.id, viewport: { scale: 1, x: 0, y: 0 } }];
+  const dialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "large-editor-state.json",
+  });
+  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
+    "20,000 Employees",
+  );
+  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
+  await expect(canvas).toBeVisible();
+  await expect
+    .poll(async () => Number(await canvas.getAttribute("data-spatial-candidate-count")))
+    .toBeLessThan(200);
+  await page.waitForTimeout(800);
+
+  const writes: Array<{ scope?: string }> = [];
+  const onRequest = (request: Request) => {
+    if (request.method() !== "PUT" || !request.url().endsWith("/api/state")) return;
+    const payload = request.postDataJSON();
+    if (payload && typeof payload === "object") writes.push(payload as { scope?: string });
+  };
+  page.on("request", onRequest);
+
+  const canvasBox = await canvas.boundingBox();
+  if (!canvasBox) throw new Error("Large Editor canvas is unavailable.");
+  const panStart = {
+    x: canvasBox.x + canvasBox.width - 80,
+    y: canvasBox.y + canvasBox.height - 80,
+  };
+  await page.mouse.move(panStart.x, panStart.y);
+  await page.mouse.down({ button: "middle" });
+  await page.mouse.move(panStart.x + 48, panStart.y + 24, { steps: 20 });
+  await page.waitForTimeout(500);
+  expect(writes).toEqual([]);
+  await page.mouse.up({ button: "middle" });
+  await expect.poll(() => writes.filter((write) => write.scope === "ui").length).toBe(1);
+
+  const firstUnit = canvas.locator("[data-org-editor-unit-id]").first();
+  await firstUnit.click({ position: { x: 72, y: 64 } });
+  await page.waitForTimeout(500);
+  writes.length = 0;
+  const unitBox = await firstUnit.boundingBox();
+  if (!unitBox) throw new Error("A visible large-state Unit is unavailable.");
+  const dragStart = { x: unitBox.x + 72, y: unitBox.y + 64 };
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.x + 37, dragStart.y + 35, { steps: 20 });
+  await page.waitForTimeout(500);
+  expect(writes.filter((write) => write.scope === "all")).toEqual([]);
+  await page.mouse.up();
+  await expect.poll(() => writes.filter((write) => write.scope === "all").length).toBe(1);
+  const committedPosition = await firstUnit.evaluate((element) => {
+    const unit = element as HTMLElement;
+    return { x: Number.parseFloat(unit.style.left), y: Number.parseFloat(unit.style.top) };
+  });
+  expect(Math.abs(committedPosition.x % 24)).toBe(0);
+  expect(Math.abs(committedPosition.y % 24)).toBe(0);
+  expect(Number(await canvas.getAttribute("data-spatial-candidate-count"))).toBeLessThan(200);
+  page.off("request", onRequest);
   await assertLocalRequests();
 });
 
@@ -1640,6 +1864,29 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   ).not.toBe("rgba(0, 0, 0, 0)");
   await expect(navigation).toContainText("July 2026");
   await expect(navigation.getByRole("button")).toHaveText(["Previous", "Next"]);
+  const datedTagSpacing = await page
+    .locator('[data-demo-id="calendar-dated-tag-group"]')
+    .evaluateAll((groups) =>
+      groups.map((group) => {
+        const [label, dot, count] = [...group.children];
+        if (
+          !(label instanceof HTMLElement) ||
+          !(dot instanceof HTMLElement) ||
+          !(count instanceof HTMLElement)
+        ) {
+          throw new Error("Calendar dated-tag content is incomplete.");
+        }
+        return {
+          afterDot: count.getBoundingClientRect().left - dot.getBoundingClientRect().right,
+          beforeDot: dot.getBoundingClientRect().left - label.getBoundingClientRect().right,
+        };
+      }),
+    );
+  expect(datedTagSpacing.length).toBeGreaterThan(1);
+  for (const spacing of datedTagSpacing) {
+    expect(spacing.beforeDot).toBeCloseTo(spacing.afterDot, 1);
+    expect(spacing.beforeDot).toBeCloseTo(4, 1);
+  }
   const layout = await page.locator('[data-demo-id="calendar-scroll-area"]').evaluate((element) => {
     const grid = element.querySelector('[data-demo-id="calendar-month-grid"]');
     if (!(grid instanceof HTMLElement)) throw new Error("Calendar grid is unavailable.");

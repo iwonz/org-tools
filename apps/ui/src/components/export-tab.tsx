@@ -12,6 +12,7 @@ import {
 } from "react-icons/hi2";
 
 import { ActionIconButton } from "@/components/action-icon-button";
+import { useContextHeaderAction } from "@/components/context-header-action";
 import { EmployeeSourcePicker } from "@/components/employee-source-picker";
 import { ExportSettingsStep } from "@/components/export-settings-step";
 import {
@@ -93,6 +94,20 @@ function ExportSelectedEmployeesEmptyState() {
       {t("Select a Unit or Employee")}
     </SourceEmptyBody>
   );
+}
+
+function ExportHeaderAction({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
+  const t = useUiText();
+  useContextHeaderAction({
+    dataDemoId: "export-continue-button",
+    disabled,
+    icon: HiOutlineArrowRight,
+    id: "continue-export",
+    label: t("Continue"),
+    onClick,
+  });
+
+  return null;
 }
 
 export const ExportTab = observer(() => {
@@ -471,9 +486,10 @@ export const ExportTab = observer(() => {
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       data-demo-id="export-tab"
     >
+      <ExportHeaderAction disabled={!hasSelectedEmployees} onClick={continueToSettings} />
       <ProductSurface className="relative min-h-0 flex-1" data-demo-id="export-surface">
         <div
-          className="grid h-full min-h-0 overflow-hidden pb-[86px]"
+          className="grid h-full min-h-0 overflow-hidden"
           data-demo-id="export-selection-grid"
           style={{
             gridTemplateColumns:
@@ -732,18 +748,6 @@ export const ExportTab = observer(() => {
             visibleRemoveLabel={t("Exclude matches")}
             visibleRemoveSuffix={(count) => countText("employees", { count })}
           />
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[70px] items-center justify-center bg-gradient-to-t from-background via-background/94 to-background/0 px-6 backdrop-blur-sm">
-          <Button
-            className="pointer-events-auto h-12 min-w-72 text-base"
-            data-demo-id="export-continue-button"
-            disabled={!hasSelectedEmployees}
-            onClick={continueToSettings}
-            type="button"
-          >
-            {t("Continue")}
-            <HiOutlineArrowRight />
-          </Button>
         </div>
       </ProductSurface>
       <Dialog

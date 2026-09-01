@@ -81,6 +81,10 @@ collapse control and every compact sidebar action SHALL keep the same 48 px widt
 14 px horizontal padding, 20 px icon size, and icon axis. The shell SHALL render no decorative
 product glyph, visible product title, Save control, Autosave control, or persistence status. Sidebar
 collapse and all other durable navigation context SHALL be represented in the current state.
+The 64 px context header SHALL reserve one right-aligned workflow action for populated or empty
+Teams and Employees and for populated Download. The action SHALL keep its localized accessible name
+and right-side thematic icon at ordinary widths and SHALL become icon-only without overflow at
+narrow widths. Workflows SHALL NOT repeat that action inside their content or empty state.
 
 #### Scenario: Initial blank sidebar
 - **WHEN** a new blank state renders at desktop width
@@ -104,7 +108,16 @@ collapse and all other durable navigation context SHALL be represented in the cu
 
 #### Scenario: Responsive shell containment
 - **WHEN** either runtime renders at 390, 1024, or 1280 px wide
-- **THEN** global actions remain reachable, narrow layouts retain an icon rail, and no persistence control or header action consumes workflow width
+- **THEN** global actions remain reachable, narrow layouts retain an icon rail, and the context action remains contained without consuming workflow width
+
+#### Scenario: Workflow context actions
+- **WHEN** Teams, Employees, or populated Download is active
+- **THEN** the context header exposes exactly one localized primary action with its thematic icon after the visible label
+- **AND** the workflow body and empty state contain no duplicate of that action
+
+#### Scenario: Narrow workflow context action
+- **WHEN** a header action renders at a narrow supported width
+- **THEN** its visible label is hidden, its icon remains centered, and its accessible name and tooltip remain available
 
 ### Requirement: Product workflows use purposeful grouping
 Teams, Employees, Analytics, Calendar, and Download SHALL render their primary task content

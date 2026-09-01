@@ -3,7 +3,7 @@
 import { observer } from "mobx-react-lite";
 import { useTheme } from "next-themes";
 import type { ComponentType, ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   HiOutlineBuildingOffice2,
   HiOutlineCalendarDays,
@@ -18,6 +18,10 @@ import {
 
 import { AnalyticsTab } from "@/components/analytics-tab";
 import { CalendarTab } from "@/components/calendar-tab";
+import {
+  type ContextHeaderAction,
+  ContextHeaderActionContext,
+} from "@/components/context-header-action";
 import { EmployeesTab } from "@/components/employees-tab";
 import { ExportTab } from "@/components/export-tab";
 import { ImportDialog } from "@/components/import-dialog";
@@ -81,7 +85,17 @@ export const OrgToolsShell = observer(function OrgToolsShell({
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
+  const [contextHeaderAction, setContextHeaderAction] = useState<ContextHeaderAction | null>(null);
   const sidebarCollapsed = store.sidebarCollapsed;
+  const registerContextHeaderAction = useCallback((action: ContextHeaderAction) => {
+    setContextHeaderAction(action);
+
+    return () => {
+      setContextHeaderAction((currentAction) =>
+        currentAction?.id === action.id ? null : currentAction,
+      );
+    };
+  }, []);
 
   const activeNavigationItem =
     PRODUCT_NAVIGATION_ITEMS.find((item) => item.value === store.activeTab) ??
@@ -91,6 +105,7 @@ export const OrgToolsShell = observer(function OrgToolsShell({
       value: "orgEditor",
     } satisfies (typeof PRODUCT_NAVIGATION_ITEMS)[number]);
   const ActiveNavigationIcon = activeNavigationItem.icon;
+  const ContextHeaderActionIcon = contextHeaderAction?.icon;
   const sidebarLabelClassName = cn(
     "hidden min-w-0 overflow-hidden truncate whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 ease-out motion-reduce:transition-none lg:inline-block",
     sidebarCollapsed ? "lg:max-w-0 lg:opacity-0" : "lg:max-w-[10rem] lg:opacity-100",
@@ -106,7 +121,7 @@ export const OrgToolsShell = observer(function OrgToolsShell({
   };
 
   return (
-    <>
+    <ContextHeaderActionContext.Provider value={registerContextHeaderAction}>
       <main
         className="flex h-dvh w-dvw overflow-hidden bg-shell text-foreground"
         data-demo-id="app-shell"
@@ -272,6 +287,33 @@ export const OrgToolsShell = observer(function OrgToolsShell({
               <h1 className="truncate text-base font-semibold" data-demo-id="app-title">
                 {t(activeNavigationItem.label)}
               </h1>
+              <div
+                className="ml-auto flex min-h-9 min-w-9 shrink-0 items-center justify-end"
+                data-demo-id="context-header-action-slot"
+              >
+                {contextHeaderAction && ContextHeaderActionIcon && (
+                  <div className="group relative flex">
+                    <Button
+                      aria-label={contextHeaderAction.label}
+                      className="size-9 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
+                      data-demo-id={contextHeaderAction.dataDemoId}
+                      disabled={contextHeaderAction.disabled}
+                      onClick={contextHeaderAction.onClick}
+                      title={contextHeaderAction.label}
+                      type="button"
+                    >
+                      <span className="hidden sm:inline">{contextHeaderAction.label}</span>
+                      <ContextHeaderActionIcon className="size-4" />
+                    </Button>
+                    <span
+                      className="pointer-events-none absolute right-0 top-11 z-30 hidden whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background group-focus-within:block group-hover:block sm:!hidden"
+                      role="tooltip"
+                    >
+                      {contextHeaderAction.label}
+                    </span>
+                  </div>
+                )}
+              </div>
             </header>
             {error && (
               <div
@@ -353,6 +395,6 @@ export const OrgToolsShell = observer(function OrgToolsShell({
         }}
         open={importFile !== null}
       />
-    </>
+    </ContextHeaderActionContext.Provider>
   );
 });

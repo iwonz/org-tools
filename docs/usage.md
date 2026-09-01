@@ -17,8 +17,10 @@ a localized accessible status name.
 
 The compact sidebar contains Units, Employees, Editor, Analytics, Calendar, Data Download, Import,
 state Export, language, and theme. Its desktop control expands the 64 px icon rail to a 240 px label
-panel without moving icon centers. The local server additionally places **MCP** after state
-Export; Pages does not show it. The header contains only the current section icon and title.
+panel without moving icon centers. The local server additionally places **MCP** after state Export;
+Pages does not show it. The header shows the current section icon and title plus its primary action:
+**Add Unit**, **Add Employee**, or enabled **Continue** in the relevant workflow. On narrow screens
+the action keeps its accessible name and tooltip while showing only the icon.
 
 ## Local MCP
 
@@ -49,17 +51,19 @@ control.
 ## Product modules
 
 - **Units** manages the hierarchy, manual and Live membership, bosses, positions, and Employee
-  movement.
+  movement. **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, birthday, embedded avatar, tags, contact fields, and Unit
-  assignments with compound filters.
+  assignments with compound filters. **Add Employee** is in the shared header.
 - **Editor** manages Main and custom Views on an adaptive snapped grid, including search, history,
-  layout, bulk commands, templates, and PNG output. Unit cards keep their resting background and
-  opacity during passive pointer hover.
+  layout, bulk commands, templates, and PNG output. The View chooser is a standard styled Select;
+  closing Search clears its query. Unit cards keep the same opaque background when hovered or
+  selected, with selection indicated only by the signal border.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
   actions. Day and tag dialogs omit Birthday, Dated tags, or Past sections when that section has no
   events, without reserving empty rows or columns.
 - **Data Download** selects Units or Employees and produces CSV, JSON, templates, and PNG output.
+  **Continue** stays disabled in the shared header until at least one Employee is selected.
 
 ## Import and Export
 

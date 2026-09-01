@@ -130,7 +130,8 @@ export const OrgViewToolbar = observer(
               <Select onValueChange={store.selectOrgView} value={store.activeOrgViewId}>
                 <SelectTrigger
                   aria-label={t("Active View")}
-                  className="h-9 w-48 max-w-[calc(100vw-6rem)] overflow-hidden rounded-md border-0 bg-transparent shadow-none hover:bg-accent focus-visible:ring-inset xl:w-64"
+                  className="h-9 w-48 max-w-[calc(100vw-6rem)] overflow-hidden xl:w-64"
+                  data-demo-id="org-view-select-trigger"
                   title={activeViewDisplayName}
                 >
                   <span

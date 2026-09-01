@@ -158,7 +158,7 @@ Capabilities: Local file, Clipboard image, Crop and zoom, Embedded WebP.
 
 [![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png)
 
-Arrange Unit cards on the adaptive snap grid with hierarchy lines, zoom, history, and layout controls.
+Arrange opaque Unit cards on the adaptive snap grid with frame-bounded gestures, hierarchy lines, zoom, history, and normal-weight layout controls.
 
 Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse.
 
@@ -174,7 +174,7 @@ Capabilities: Main View, Custom Views, Copy from Main, Empty View.
 
 [![Editor search](screenshots/feature-editor-search.png)](screenshots/feature-editor-search.png)
 
-Reveal the right-growing search field and locate Units and Employees without leaving the canvas.
+Reveal the right-growing search field, locate Units and Employees without leaving the canvas, and clear the query when Search closes.
 
 Capabilities: Unit search, Employee search, Canvas navigation.
 
@@ -258,7 +258,7 @@ Capabilities: Value drill-down, Matching Employees, Employee actions.
 
 [![Employee Calendar](screenshots/demo-calendar.png)](screenshots/demo-calendar.png)
 
-Navigate a monthly calendar with birthdays, dated tags, event counts, and a strong current-day state.
+Navigate a monthly calendar with birthdays, uniformly spaced dated-tag counts, events, and a strong current-day state.
 
 Capabilities: Monthly navigation, Birthdays, Dated tags, Today state, Tag cloud.
 
@@ -292,7 +292,7 @@ Capabilities: Template format, Row mode, Field tokens, Preview, Copy and downloa
 
 [![Download source selection](screenshots/feature-download-source-selection.png)](screenshots/feature-download-source-selection.png)
 
-Select Employees from Teams or the catalog, inspect the resulting set, filter it, and exclude rows.
+Select Employees from Teams or the catalog, inspect and filter the resulting set, then continue from the shared header.
 
 Capabilities: Team sources, Employee sources, Selected set, Search and filters, Exclusions.
 
