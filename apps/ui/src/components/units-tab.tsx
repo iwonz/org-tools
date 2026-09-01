@@ -295,20 +295,9 @@ export const UnitsTab = observer(() => {
     nestedEmployees,
   ]);
   const hasUnitEmployees = sortedDirectEmployees.length > 0 || nestedEmployees.length > 0;
-  const employeeSections = useMemo(
-    () => [
-      {
-        employees: filteredDirectEmployees,
-        id: "direct",
-        title: null,
-      },
-      {
-        employees: filteredNestedEmployees,
-        id: "nested",
-        title: t("Employees in descendant Units"),
-      },
-    ],
-    [filteredDirectEmployees, filteredNestedEmployees, t],
+  const filteredUnitEmployees = useMemo(
+    () => [...filteredDirectEmployees, ...filteredNestedEmployees],
+    [filteredDirectEmployees, filteredNestedEmployees],
   );
   const draggedEmployee = employeeDrag
     ? (units?.indexes.employeesById.get(employeeDrag.employeeId) ?? null)
@@ -580,6 +569,7 @@ export const UnitsTab = observer(() => {
                 ? t("No Employees found")
                 : t("The selected Unit has no Employees")
             }
+            employees={filteredUnitEmployees}
             name={(employee) => (
               <HighlightedText queryTokens={employeeSearchTokens} text={employee.fullName} />
             )}
@@ -603,7 +593,6 @@ export const UnitsTab = observer(() => {
             }}
             resetKey={`units:${selectedUnit.id}:${deferredEmployeeSearchQuery}:${employeeSearchFiltersKey}`}
             queryTokens={employeeSearchTokens}
-            sections={employeeSections}
             subtitle={(employee) => (
               <EmployeeIdentity employee={employee} queryTokens={employeeSearchTokens} />
             )}

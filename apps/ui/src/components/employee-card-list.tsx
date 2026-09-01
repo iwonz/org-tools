@@ -4,27 +4,20 @@ import type { Employee, EmployeeId, EmployeeUnitPosition, UnitId } from "@org-to
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import type { DragEvent, KeyboardEvent, ReactNode } from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { HiOutlineInformationCircle } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeTags } from "@/components/employee-tags";
 import { HighlightedText } from "@/components/highlighted-text";
 import { MiddleDot } from "@/components/middle-dot";
-import { useCountText, useUiText } from "@/i18n/use-ui-text";
+import { useUiText } from "@/i18n/use-ui-text";
 import { createEmployeeProfileUrl, createMailtoUrl } from "@/lib/employee-links";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { cn } from "@/lib/utils";
 
 const CARD_HEIGHT_ESTIMATE = 132;
-const SECTION_HEADER_HEIGHT_ESTIMATE = 36;
 const EMPTY_EMPLOYEES: Employee[] = [];
-
-export type EmployeeCardListSection = {
-  employees: Employee[];
-  id: string;
-  title: ReactNode;
-};
 
 type EmployeeCardListProps = {
   actions?: (employee: Employee) => ReactNode;
@@ -42,7 +35,6 @@ type EmployeeCardListProps = {
   onUnitContextClick?: (unitContext: EmployeeUnitContext) => void;
   queryTokens?: string[];
   resetKey?: string;
-  sections?: EmployeeCardListSection[];
   selected?: (employee: Employee) => boolean;
   subtitle?: (employee: Employee) => ReactNode;
   unitContextsByEmployeeId?: ReadonlyMap<EmployeeId, EmployeeUnitContext[]>;
@@ -87,19 +79,6 @@ type EmployeeIdentityProps = {
   includePositions?: boolean;
   queryTokens?: string[];
 };
-
-type EmployeeCardListRow =
-  | {
-      count: number;
-      id: string;
-      title: ReactNode;
-      type: "section";
-    }
-  | {
-      employee: Employee;
-      id: string;
-      type: "employee";
-    };
 
 const getBossPosition = (employee: Employee, bossUnitId: UnitId | null | undefined) => {
   if (bossUnitId === null || bossUnitId === undefined) return null;
@@ -412,50 +391,19 @@ export function EmployeeCardList({
   onUnitContextClick,
   queryTokens = [],
   resetKey,
-  sections,
   selected,
   subtitle,
   unitContextsByEmployeeId,
   variant = "list",
 }: EmployeeCardListProps) {
   const t = useUiText();
-  const countText = useCountText();
   const resolvedEmptyState = emptyState ?? t("No Employees found");
   const parentRef = useRef<HTMLDivElement | null>(null);
-  const sectionRows = useMemo<EmployeeCardListRow[] | null>(() => {
-    if (!sections) return null;
-    return sections.flatMap((section) => {
-      if (section.employees.length === 0) return [];
-
-      return [
-        ...(section.title === null
-          ? []
-          : [
-              {
-                count: section.employees.length,
-                id: section.id,
-                title: section.title,
-                type: "section" as const,
-              },
-            ]),
-        ...section.employees.map((employee) => ({
-          employee,
-          id: `${section.id}:${employee.id}`,
-          type: "employee" as const,
-        })),
-      ];
-    });
-  }, [sections]);
-  const itemCount = sectionRows?.length ?? employees.length;
   const virtualizer = useVirtualizer({
-    count: itemCount,
-    estimateSize: (index) =>
-      sectionRows?.[index]?.type === "section"
-        ? SECTION_HEADER_HEIGHT_ESTIMATE
-        : CARD_HEIGHT_ESTIMATE_BY_VARIANT[variant],
+    count: employees.length,
+    estimateSize: () => CARD_HEIGHT_ESTIMATE_BY_VARIANT[variant],
     gap: CARD_GAP_BY_VARIANT[variant],
-    getItemKey: (index) =>
-      sectionRows?.[index]?.id ?? String(employees[index]?.id ?? `employee-row:${index}`),
+    getItemKey: (index) => String(employees[index]?.id ?? `employee-row:${index}`),
     getScrollElement: () => parentRef.current,
     overscan: 8,
   });
@@ -496,7 +444,7 @@ export function EmployeeCardList({
       data-demo-id={dataDemoId}
       ref={parentRef}
     >
-      {itemCount === 0 ? (
+      {employees.length === 0 ? (
         <div className="grid h-full min-h-[220px] place-items-center p-8 text-center text-sm text-muted-foreground">
           {resolvedEmptyState}
         </div>
@@ -507,10 +455,9 @@ export function EmployeeCardList({
           style={{ height: virtualizer.getTotalSize() }}
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
-            const row = sectionRows?.[virtualRow.index];
-            const employee = row?.type === "employee" ? row.employee : employees[virtualRow.index];
+            const employee = employees[virtualRow.index];
 
-            if (!row && !employee) return null;
+            if (!employee) return null;
 
             return (
               <div
@@ -520,31 +467,23 @@ export function EmployeeCardList({
                 ref={virtualizer.measureElement}
                 style={{ transform: `translateY(${virtualRow.start}px)` }}
               >
-                {row?.type === "section" ? (
-                  <div className="flex min-h-8 items-center gap-1.5 px-1 pt-1 text-xs text-muted-foreground">
-                    <span className="truncate font-medium text-foreground">{row.title}</span>
-                    <MiddleDot className="mx-0.5" />
-                    <span className="shrink-0">{countText("employees", { count: row.count })}</span>
-                  </div>
-                ) : employee ? (
-                  <EmployeeCard
-                    actions={actions}
-                    bossPosition={getBossPosition(employee, bossUnitId)}
-                    draggable={draggable?.(employee) ?? false}
-                    employee={employee}
-                    name={name?.(employee)}
-                    selected={selected?.(employee) ?? false}
-                    queryTokens={queryTokens}
-                    subtitle={subtitle?.(employee)}
-                    unitContexts={unitContextsByEmployeeId?.get(employee.id) ?? []}
-                    variant={variant}
-                    {...(onDragEnd ? { onDragEnd } : {})}
-                    {...(onDragStart ? { onDragStart } : {})}
-                    {...(cardDataDemoId ? { dataDemoId: cardDataDemoId } : {})}
-                    {...(onUnitContextClick ? { onUnitContextClick } : {})}
-                    {...(cardClassName ? { className: cardClassName } : {})}
-                  />
-                ) : null}
+                <EmployeeCard
+                  actions={actions}
+                  bossPosition={getBossPosition(employee, bossUnitId)}
+                  draggable={draggable?.(employee) ?? false}
+                  employee={employee}
+                  name={name?.(employee)}
+                  selected={selected?.(employee) ?? false}
+                  queryTokens={queryTokens}
+                  subtitle={subtitle?.(employee)}
+                  unitContexts={unitContextsByEmployeeId?.get(employee.id) ?? []}
+                  variant={variant}
+                  {...(onDragEnd ? { onDragEnd } : {})}
+                  {...(onDragStart ? { onDragStart } : {})}
+                  {...(cardDataDemoId ? { dataDemoId: cardDataDemoId } : {})}
+                  {...(onUnitContextClick ? { onUnitContextClick } : {})}
+                  {...(cardClassName ? { className: cardClassName } : {})}
+                />
               </div>
             );
           })}

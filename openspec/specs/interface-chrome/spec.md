@@ -83,7 +83,7 @@ product glyph, visible product title, Save control, Autosave control, or persist
 collapse and all other durable navigation context SHALL be represented in the current state.
 The 64 px context header SHALL reserve one right-aligned workflow action for populated or empty
 Teams and Employees and for populated Download. The action SHALL keep its localized accessible name
-and right-side thematic icon at ordinary widths and SHALL become icon-only without overflow at
+and leading thematic icon at ordinary widths and SHALL become icon-only without overflow at
 narrow widths. Workflows SHALL NOT repeat that action inside their content or empty state.
 
 #### Scenario: Initial blank sidebar
@@ -112,7 +112,7 @@ narrow widths. Workflows SHALL NOT repeat that action inside their content or em
 
 #### Scenario: Workflow context actions
 - **WHEN** Teams, Employees, or populated Download is active
-- **THEN** the context header exposes exactly one localized primary action with its thematic icon after the visible label
+- **THEN** the context header exposes exactly one localized primary action whose thematic icon precedes the visible label
 - **AND** the workflow body and empty state contain no duplicate of that action
 
 #### Scenario: Narrow workflow context action
@@ -182,6 +182,26 @@ popover, tooltip, and drag overlay layers MAY use at most one restrained separat
 - **WHEN** an error or informational status appears
 - **THEN** its semantic color, icon-independent text, spacing, and owned boundary distinguish it from
   both the header and workflow content
+
+### Requirement: Text controls use leading thematic icons
+Every text-bearing button and tab that includes a thematic action or destination icon SHALL render
+that icon before its visible label in DOM and visual order. Icon-only controls and controls without
+an icon SHALL remain unchanged. A disclosure chevron, sort direction, removal mark, status badge,
+or count MAY remain after the label when its trailing position communicates its distinct affordance
+or state. Icon order SHALL NOT change the control's accessible name, geometry, responsive behavior,
+or interaction states.
+
+#### Scenario: Thematic button or tab icon
+- **WHEN** a text-bearing button or tab includes a thematic action or destination icon
+- **THEN** exactly that thematic icon appears before the visible label without duplicating its accessible name
+
+#### Scenario: Trailing affordance
+- **WHEN** a button includes a disclosure, sorting, removal, badge, or count affordance after its label
+- **THEN** the affordance retains its trailing position and the control retains its existing accessible behavior
+
+#### Scenario: Narrow icon-only action
+- **WHEN** a responsive text action hides its label at a maintained narrow width
+- **THEN** the same thematic icon remains centered with the unchanged accessible name and tooltip
 
 ### Requirement: MCP modal controls use leading decorative icons
 The server-only MCP modal SHALL place one bundled thematic decorative icon before the localized
@@ -253,7 +273,7 @@ sidebar geometry. Its title SHALL have a localized screen-reader description but
 Long setup prompts and activity lists SHALL scroll within bounded regions while primary Enable,
 Disable, Rotate, Copy, and Undo decisions remain explicit. Setup and Activity tabs and the primary
 Enable or Disable action SHALL retain localized visible labels and place a thematic decorative icon
-after each label without changing control geometry. The modal SHALL not duplicate enabled status in
+before each label without changing control geometry. The modal SHALL not duplicate enabled status in
 a badge and SHALL not render a raw configuration section, Examples tab, or provider-notice section.
 
 #### Scenario: Compact consent modal
@@ -270,13 +290,20 @@ a badge and SHALL not render a raw configuration section, Examples tab, or provi
 
 #### Scenario: MCP control icon order
 - **WHEN** Setup, Activity, Enable, or Disable renders in the MCP modal
-- **THEN** the localized text precedes one thematic icon and the icon does not add a duplicate accessible name
+- **THEN** one thematic icon precedes the localized text and does not add a duplicate accessible name
 
 ### Requirement: Units detail panes use one compact alignment
 The Units hierarchy SHALL begin directly at the workflow content boundary without an empty spacer
 below the shared header. Search, breadcrumbs, and Employee rows SHALL share one horizontal start
-aligned to the Employee avatar column without introducing an outer border or shadow.
+aligned to the Employee avatar column without introducing an outer border or shadow. The selected
+Unit roster SHALL present direct and descendant Employees as one contiguous list without a section
+heading or repeated section count.
 
 #### Scenario: Populated Units workflow alignment
 - **WHEN** a Unit with Employees is selected at a maintained desktop width
 - **THEN** the hierarchy has no redundant header gap and search, breadcrumbs, and Employee avatars share the documented content edge
+
+#### Scenario: Contiguous selected-Unit roster
+- **WHEN** a selected Unit contains both direct and descendant Employees
+- **THEN** all matching Employee cards appear in one contiguous list without direct or descendant section headings
+- **AND** one summary below search reports the complete total and conditional filtered match count

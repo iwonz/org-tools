@@ -78,8 +78,8 @@
     "featured": true,
     "title": "Team hierarchy and roster",
     "file": "demo-teams.png",
-    "description": "Browse the edge-aligned hierarchy, selected path, searchable roster count, descendant Employees, tags, and row actions.",
-    "capabilities": ["Nested Teams", "Search and counts", "Descendant roster", "Employee actions"]
+    "description": "Browse the edge-aligned hierarchy, selected path, searchable roster count, and one contiguous direct and descendant Employee list with tags and row actions.",
+    "capabilities": ["Nested Teams", "Search and counts", "Unified roster", "Employee actions"]
   },
   {
     "id": "teams-create-manual",

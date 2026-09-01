@@ -21,6 +21,9 @@ panel without moving icon centers. The local server additionally places **MCP** 
 Pages does not show it. The header shows the current section icon and title plus its primary action:
 **Add Unit**, **Add Employee**, or enabled **Continue** in the relevant workflow. On narrow screens
 the action keeps its accessible name and tooltip while showing only the icon.
+Text-bearing buttons and tabs place their thematic icon before the visible label. Disclosure,
+sorting, removal, status, and count affordances remain trailing when that position communicates
+their distinct role.
 
 ## Local MCP
 
@@ -54,8 +57,9 @@ control.
 
 - **Units** manages the hierarchy, manual and Live membership, bosses, positions, and Employee
   movement. The hierarchy starts directly below the shared header; selected-path and search controls
-  align with roster avatars, and the current roster count appears below search without a redundant
-  direct-Employee heading. **Add Unit** is in the shared header.
+  align with roster avatars, and direct plus descendant Employees appear in one contiguous list.
+  The current roster count appears below search without redundant roster-section headings or counts.
+  **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, birthday, embedded avatar, tags, contact fields, and Unit
   assignments with compound filters. **Add Employee** is in the shared header.
 - **Editor** manages Main and custom Views on an adaptive snapped grid, including search, history,

@@ -74,10 +74,10 @@ Capabilities: English locale, Flag selector, Selected indicator, Stable menu geo
 
 [![Team hierarchy and roster](screenshots/demo-teams.png)](screenshots/demo-teams.png)
 
-Browse the edge-aligned hierarchy, selected path, searchable roster count, descendant Employees,
-tags, and row actions without a redundant direct-roster heading.
+Browse the edge-aligned hierarchy, selected path, searchable roster count, and one contiguous direct
+and descendant Employee roster with tags and row actions but no redundant section headings.
 
-Capabilities: Nested Teams, Search and counts, Descendant roster, Employee actions.
+Capabilities: Nested Teams, Search and counts, Unified roster, Employee actions.
 
 ### Create a manual Team
 
@@ -383,7 +383,10 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
-- Confirm Units has no empty hierarchy header, its path/search aligns to roster avatars, and its count sits below search without a direct-roster heading.
+- Confirm thematic icons precede text in buttons and tabs while disclosure, sorting, removal,
+  status, and count affordances retain their semantic trailing positions.
+- Confirm Units has no empty hierarchy header, its path/search aligns to roster avatars, direct and
+  descendant Employees form one contiguous list, and its count sits below search without roster-section headings.
 - Confirm Calendar day details omit the Dated tags heading, group same-day labels by Employee, and
   expose complete Employee cards with Tag, Edit, and Delete actions.
 - Confirm Calendar tag history omits the Current and upcoming heading and exposes complete Employee

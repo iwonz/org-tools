@@ -67,6 +67,19 @@ const readSelectValueLayout = async (value: Locator) =>
     };
   });
 
+const expectLeadingThematicIcon = async (control: Locator, accessibleName: string) => {
+  await expect(control).toHaveAccessibleName(accessibleName);
+  expect(
+    await control.evaluate((element) => ({
+      firstChild: element.firstElementChild?.tagName.toLowerCase() ?? null,
+      iconIndex: [...element.children].findIndex((child) => child.tagName.toLowerCase() === "svg"),
+      labelIndex: [...element.children].findIndex(
+        (child) => child.tagName.toLowerCase() === "span",
+      ),
+    })),
+  ).toEqual({ firstChild: "svg", iconIndex: 0, labelIndex: 1 });
+};
+
 test("detects Russian from browser preferences on first use", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await setBrowserLanguages(page, ["de-DE", "ru-RU", "en-US"]);
@@ -259,11 +272,22 @@ for (const [locale, messages] of [
     await dialog.getByRole("button", { name: messages.Ui["Replace state"], exact: true }).click();
     await expect(dialog).toBeHidden();
     await page.locator('[data-demo-id="tab-units"]').click();
+    await expectLeadingThematicIcon(
+      page.locator('[data-demo-id="unit-create-root-button"]'),
+      messages.Ui["Add Unit"],
+    );
     await expect(page.locator('[data-demo-id="units-employee-summary"]')).toContainText("4");
     await expect(page.locator('[data-demo-id="units-employee-match-count"]')).toHaveCount(0);
+    const unitRosterRows = page.locator(
+      '[data-demo-id="units-employee-cards"] [data-employee-list-track] > [data-index]',
+    );
+    await expect(unitRosterRows).toHaveCount(4);
+    await expect(unitRosterRows.locator('[data-demo-id="unit-employee-card"]')).toHaveCount(4);
     await page.locator('[data-demo-id="tab-employees"]').click();
     await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
-    await page.locator('[data-demo-id="employee-create-button"]').click();
+    const createEmployeeButton = page.locator('[data-demo-id="employee-create-button"]');
+    await expectLeadingThematicIcon(createEmployeeButton, messages.Ui["Add Employee"]);
+    await createEmployeeButton.click();
     const employeeDialog = page.getByRole("dialog", { name: messages.Ui["Create Employee"] });
     await expect(employeeDialog.getByText(messages.Ui.Avatar, { exact: true })).toBeVisible();
     await expect(
@@ -274,7 +298,9 @@ for (const [locale, messages] of [
     await page.getByRole("tab", { name: messages.Ui["Data Download"], exact: true }).click();
     await page.locator('[data-demo-id="export-source-tab-employees"]').click();
     await page.locator('[data-demo-id="export-toggle-employee"]').first().click();
-    await page.getByRole("button", { name: messages.Ui.Continue, exact: true }).click();
+    const continueButton = page.getByRole("button", { name: messages.Ui.Continue, exact: true });
+    await expectLeadingThematicIcon(continueButton, messages.Ui.Continue);
+    await continueButton.click();
     const downloadSettings = page.getByRole("dialog").filter({
       hasText: messages.Ui["Download settings"],
     });

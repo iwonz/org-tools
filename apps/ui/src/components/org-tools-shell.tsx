@@ -302,8 +302,8 @@ export const OrgToolsShell = observer(function OrgToolsShell({
                       title={contextHeaderAction.label}
                       type="button"
                     >
-                      <span className="hidden sm:inline">{contextHeaderAction.label}</span>
                       <ContextHeaderActionIcon className="size-4" />
+                      <span className="hidden sm:inline">{contextHeaderAction.label}</span>
                     </Button>
                     <span
                       className="pointer-events-none absolute right-0 top-11 z-30 hidden whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background group-focus-within:block group-hover:block sm:!hidden"

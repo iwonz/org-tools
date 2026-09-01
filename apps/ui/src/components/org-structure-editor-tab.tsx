@@ -3738,8 +3738,8 @@ export const OrgStructureEditorTab = observer(() => {
                   onClick={() => editor.applyLayout()}
                   title={t("Arrange the current hierarchy")}
                 >
-                  <span>{t("Arrange")}</span>
                   <HiOutlineSquares2X2 />
+                  <span>{t("Arrange")}</span>
                 </OrgEditorToolbarButton>
                 <OrgEditorToolbarButton
                   ariaLabel={toggleAllUnitsLabel}
@@ -3753,12 +3753,12 @@ export const OrgStructureEditorTab = observer(() => {
                   }
                   title={toggleAllUnitsLabel}
                 >
-                  <span>{toggleAllUnitsLabel}</span>
                   {hasCollapsedUnits ? (
                     <HiOutlineArrowsPointingOut />
                   ) : (
                     <HiOutlineArrowsPointingIn />
                   )}
+                  <span>{toggleAllUnitsLabel}</span>
                 </OrgEditorToolbarButton>
                 <OrgEditorSearchControl
                   onOpenChange={(nextSearchOpen) =>

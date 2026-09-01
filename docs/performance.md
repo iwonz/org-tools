@@ -30,6 +30,8 @@ token, and bundled templates; it never reads or serializes organization state.
   position, and tag indexes outside React render paths.
 - Build expensive structures lazily for Main and the active or selected View.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
+- Flatten the selected-Unit direct and descendant result groups once before rendering them through
+  the ordinary Employee virtualizer; do not create virtual header rows or repeat count formatting.
 - Coalesce pan, zoom, and Unit-drag samples through one latest-value animation-frame scheduler.
 - Keep viewport and Unit deltas in transient render previews; write the MobX document once after
   pointer release or wheel debounce, then run snapping, overlap resolution, history, and persistence.

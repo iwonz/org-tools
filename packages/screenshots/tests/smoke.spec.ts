@@ -48,21 +48,37 @@ async function expectTransparentBackground(locator: Locator) {
   expect(await getBackgroundColor(locator)).toBe("rgba(0, 0, 0, 0)");
 }
 
-async function expectTextBeforeIcon(locator: Locator) {
+async function expectIconBeforeText(locator: Locator) {
   const positions = await locator.evaluate((element) => {
     const label = element.querySelector("span");
     const icon = element.querySelector("svg");
     if (!(label instanceof HTMLElement) || !(icon instanceof SVGElement)) {
-      throw new Error("Expected a text label followed by an SVG icon.");
+      throw new Error("Expected an SVG icon followed by a text label.");
     }
     return {
-      iconLeft: icon.getBoundingClientRect().left,
+      iconRight: icon.getBoundingClientRect().right,
       labelDisplay: window.getComputedStyle(label).display,
-      labelRight: label.getBoundingClientRect().right,
+      labelLeft: label.getBoundingClientRect().left,
     };
   });
 
   expect(positions.labelDisplay).not.toBe("none");
+  expect(positions.iconRight).toBeLessThanOrEqual(positions.labelLeft);
+}
+
+async function expectTextBeforeTrailingIcon(locator: Locator) {
+  const positions = await locator.evaluate((element) => {
+    const label = element.querySelector("span");
+    const icon = element.querySelector("svg");
+    if (!(label instanceof HTMLElement) || !(icon instanceof SVGElement)) {
+      throw new Error("Expected a text label followed by a trailing SVG affordance.");
+    }
+    return {
+      iconLeft: icon.getBoundingClientRect().left,
+      labelRight: label.getBoundingClientRect().right,
+    };
+  });
+
   expect(positions.iconLeft).toBeGreaterThanOrEqual(positions.labelRight);
 }
 
@@ -209,7 +225,7 @@ test("registers responsive workflow actions in the shared header", async ({ page
   const addUnit = page.locator('[data-demo-id="unit-create-root-button"]');
   await expect(addUnit).toHaveCount(1);
   await expectContainedBy(header, addUnit);
-  await expectTextBeforeIcon(addUnit);
+  await expectIconBeforeText(addUnit);
   await expect(
     page.locator('[data-demo-id="units-tab-content"] [data-demo-id="unit-create-root-button"]'),
   ).toHaveCount(0);
@@ -222,7 +238,7 @@ test("registers responsive workflow actions in the shared header", async ({ page
   const addEmployee = page.locator('[data-demo-id="employee-create-button"]');
   await expect(addEmployee).toHaveCount(1);
   await expectContainedBy(header, addEmployee);
-  await expectTextBeforeIcon(addEmployee);
+  await expectIconBeforeText(addEmployee);
   await expect(
     page.locator('[data-demo-id="employees-tab-content"] [data-demo-id="employee-create-button"]'),
   ).toHaveCount(0);
@@ -231,7 +247,7 @@ test("registers responsive workflow actions in the shared header", async ({ page
   const continueButton = page.locator('[data-demo-id="export-continue-button"]');
   await expect(continueButton).toBeDisabled();
   await expectContainedBy(header, continueButton);
-  await expectTextBeforeIcon(continueButton);
+  await expectIconBeforeText(continueButton);
   await page
     .getByRole("button", { name: "Add Unit Employees to download", exact: true })
     .first()
@@ -298,6 +314,15 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
       };
     }),
   );
+  const tabIconOrders = await tabs.evaluateAll((elements) =>
+    elements.map((element) => ({
+      firstChild: element.firstElementChild?.tagName.toLowerCase() ?? null,
+      iconIndex: [...element.children].findIndex((child) => child.tagName.toLowerCase() === "svg"),
+      labelIndex: [...element.children].findIndex((child) =>
+        child.hasAttribute("data-sidebar-label"),
+      ),
+    })),
+  );
 
   expect(await sidebar.evaluate((element) => element.getBoundingClientRect().width)).toBe(
     expectedWidth,
@@ -312,6 +337,9 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
   expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
   expect(new Set(tabStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(tabStyles.map(({ height }) => height))).toEqual(new Set([40]));
+  expect(tabIconOrders).toEqual(
+    tabIconOrders.map(() => ({ firstChild: "svg", iconIndex: 0, labelIndex: 1 })),
+  );
 
   const active = tabsList.locator('[data-demo-id^="tab-"][aria-selected="true"]');
   const inactive = tabsList.locator('[data-demo-id^="tab-"][aria-selected="false"]').first();
@@ -1201,8 +1229,17 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   expect(Math.abs((unitSearchBox?.x ?? 0) - (employeeAvatarBox?.x ?? 0))).toBeLessThanOrEqual(1);
   expect(Math.abs((breadcrumbsBox?.x ?? 0) - (employeeAvatarBox?.x ?? 0))).toBeLessThanOrEqual(1);
   await expect(page.getByText("Direct Employees", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Employees in descendant Units", { exact: true })).toHaveCount(0);
   const unitSummary = page.locator('[data-demo-id="units-employee-summary"]');
   await expect(unitSummary).toContainText(/\d+ Employees/u);
+  const unitRosterRows = page.locator(
+    '[data-demo-id="units-employee-cards"] [data-employee-list-track] > [data-index]',
+  );
+  await expect(unitRosterRows).toHaveCount(4);
+  await expect(unitRosterRows.locator('[data-demo-id="unit-employee-card"]')).toHaveCount(4);
+  await expect(unitRosterRows.first().locator("[data-employee-card-actions] button")).toHaveCount(
+    3,
+  );
   const [unitSummaryBox, unitSearchControlBox] = await Promise.all([
     unitSummary.boundingBox(),
     unitEmployeeSearch.boundingBox(),
@@ -1216,6 +1253,7 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   await expect(page.locator('[data-demo-id="units-employee-match-count"]')).toContainText(
     "1 match",
   );
+  await expect(page.locator('[data-demo-id="unit-employee-card"]')).toHaveCount(1);
   await unitEmployeeSearch.getByRole("searchbox").fill("");
   await expect(page.locator('[data-demo-id="units-employee-match-count"]')).toHaveCount(0);
 
@@ -1390,8 +1428,10 @@ test("renders tonal content-sized Analytics groups with working drill-down", asy
   await expect(firstRow).toHaveCSS("box-shadow", "none");
 
   const valueHeader = positions.getByRole("columnheader", { name: /Value/u });
-  await valueHeader.getByRole("button", { name: "Value", exact: true }).click();
+  const valueSortButton = valueHeader.getByRole("button", { name: "Value", exact: true });
+  await valueSortButton.click();
   await expect(valueHeader).toHaveAttribute("aria-sort", "ascending");
+  await expectTextBeforeTrailingIcon(valueSortButton);
   await positions.locator('[data-demo-id="analytics-positions-view-button"]').first().click();
   const drillDown = page.locator('[data-demo-id="analytics-employees-dialog"]');
   await expect(drillDown).toBeVisible();
@@ -1490,8 +1530,14 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   const collapseCommand = page.locator('[data-demo-id="org-editor-toggle-all-units-button"]');
   for (const command of [editorCommand, collapseCommand]) {
     await expect(command).toHaveCSS("font-weight", "400");
-    await expectTextBeforeIcon(command);
+    await expectIconBeforeText(command);
   }
+  await collapseCommand.click();
+  await expect(collapseCommand).toHaveAccessibleName("Expand all");
+  await expectIconBeforeText(collapseCommand);
+  await collapseCommand.click();
+  await expect(collapseCommand).toHaveAccessibleName("Collapse all");
+  await expectIconBeforeText(collapseCommand);
   await expectStableHoverGeometry(editorCommand);
   const editorCommandHover = await getBackgroundPresentation(editorCommand);
   expect(editorCommandHover.background).not.toBe("rgba(0, 0, 0, 0)");

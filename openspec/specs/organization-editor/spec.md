@@ -15,7 +15,7 @@ background while the sidebar, context header, and ordinary workflows use the lay
 Selected Team nodes SHALL retain the same opaque background as their resting state and communicate
 selection only through the existing semantic boundary. The View selector SHALL use the shared styled
 Select surface and indicator. Arrange and hierarchy commands SHALL use normal text weight and place
-their thematic icon after the label. Closing Editor Search SHALL clear its query, and an empty query
+their thematic icon before the label. Closing Editor Search SHALL clear its query, and an empty query
 SHALL render no explanatory result surface.
 
 #### Scenario: Product navigation order
@@ -317,13 +317,18 @@ mutation.
   rendered
 
 ### Requirement: Units detail counts follow the Employee catalog pattern
-The selected Unit detail pane SHALL omit the redundant direct-Employee descriptive label and SHALL
-show the current Employee count in a compact line directly below search. The count SHALL update from
-the current Unit membership and localized plural rules after search, assignment, edit, or deletion.
+The selected Unit detail pane SHALL omit redundant direct-Employee and descendant-Employee section
+labels and SHALL show the current Employee count in a compact line directly below search. Direct and
+descendant Employees SHALL render as one contiguous virtualized list. The count SHALL update from the
+current Unit membership and localized plural rules after search, assignment, edit, or deletion.
 
 #### Scenario: Selected Unit Employee count
-- **WHEN** a selected Unit contains Employees
-- **THEN** one localized Employee count appears below search and no direct-Employee summary appears above the list
+- **WHEN** a selected Unit contains direct or descendant Employees
+- **THEN** one localized Employee count appears below search and no roster-section summary appears above or within the list
+
+#### Scenario: Mixed selected Unit roster
+- **WHEN** a selected Unit contains both direct and descendant Employees
+- **THEN** their Employee cards retain the existing group order inside one contiguous virtualized list without a section header
 
 #### Scenario: Unit membership changes
 - **WHEN** an Employee is assigned, edited, or removed while the Unit remains selected

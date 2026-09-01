@@ -154,6 +154,9 @@ export async function stabilizeForScreenshot(page: Page): Promise<void> {
         caret-color: transparent !important;
         transition-duration: 0s !important;
       }
+      [data-slot="scroll-area-scrollbar"] {
+        display: none !important;
+      }
     `,
   });
   await page.evaluate(async () => {
