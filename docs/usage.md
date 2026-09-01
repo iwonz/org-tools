@@ -11,6 +11,10 @@ stores one state in SQLite. Every organization action is written automatically; 
 theme, locale, sidebar, active sections, calendar period, selection, and viewport follow after a
 short bounded delay. There is no Save action or state switcher.
 
+While either runtime resolves its initial state, the shell shows only one centered circular loader
+without technical status copy. The indicator uses local styles, respects reduced motion, and keeps
+a localized accessible status name.
+
 The compact sidebar contains Units, Employees, Editor, Analytics, Calendar, Data Download, Import,
 state Export, language, and theme. Its desktop control expands the 64 px icon rail to a 240 px label
 panel without moving icon centers. The local server additionally places **MCP** after state

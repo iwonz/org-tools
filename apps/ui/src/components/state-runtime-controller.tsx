@@ -67,13 +67,35 @@ const errorCodeFrom = (error: unknown): StateApiErrorCode => {
 function StateLoading() {
   const t = useUiText();
   return (
-    <main className="flex h-dvh items-center justify-center bg-shell text-foreground">
-      <div
-        className="flex items-center gap-3 text-sm font-medium text-muted-foreground"
-        role="status"
-      >
-        <HiOutlineCircleStack className="size-5 animate-pulse" />
-        {t("Reading state…")}
+    <main
+      aria-busy="true"
+      className="flex h-dvh items-center justify-center bg-shell"
+      data-demo-id="state-loading"
+    >
+      <div aria-label={t("Loading")} className="size-8" role="status">
+        <svg
+          aria-hidden="true"
+          className="size-full text-signal motion-safe:animate-spin"
+          data-demo-id="state-loading-indicator"
+          viewBox="0 0 32 32"
+        >
+          <circle
+            className="opacity-20"
+            cx="16"
+            cy="16"
+            fill="none"
+            r="13"
+            stroke="currentColor"
+            strokeWidth="3"
+          />
+          <path
+            d="M16 3a13 13 0 0 1 13 13"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="3"
+          />
+        </svg>
       </div>
     </main>
   );

@@ -377,6 +377,7 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 
 - Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
+- Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
   both themes.

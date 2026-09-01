@@ -100,7 +100,7 @@
     "Only a complete Org Tools state can be imported.": "Only a complete Org Tools state can be imported.",
     "Org Tools and MCP changed the same {count} values. Independent changes are preserved.": "Org Tools and MCP changed the same {count} values. Independent changes are preserved.",
     "Replace state": "Replace state",
-    "Reading state…": "Reading state…",
+    "Loading": "Loading",
     "Use MCP": "Use MCP",
     "Select a complete Org Tools state to replace the current state.": "Select a complete Org Tools state to replace the current state.",
     "Delete": "Delete",

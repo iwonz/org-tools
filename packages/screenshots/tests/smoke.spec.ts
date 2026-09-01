@@ -10,6 +10,7 @@ import {
   openImportDialog,
   productTabs,
   replaceWithSyntheticState,
+  resetServerState,
   syntheticStatePath,
 } from "./helpers.js";
 
@@ -111,6 +112,72 @@ async function expectStablePressedGeometry(locator: Locator) {
   expect(pressed.transform).toBe("none");
   expect(pressed.translate).toBe("none");
 }
+
+test("shows one centered icon-only loader while loading initial state", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  const path = await resetServerState(page);
+  await page.addInitScript(() => window.localStorage.setItem("org-tools-locale", "en"));
+
+  let releaseStateRequest = () => {};
+  const stateRequestGate = new Promise<void>((resolve) => {
+    releaseStateRequest = resolve;
+  });
+  await page.route("**/api/state", async (route) => {
+    if (route.request().method() === "GET") await stateRequestGate;
+    await route.continue();
+  });
+
+  await page.goto(path, { waitUntil: "domcontentloaded" });
+  const loadingSurface = page.locator('[data-demo-id="state-loading"]');
+  const loadingStatus = loadingSurface.getByRole("status");
+  const indicator = page.locator('[data-demo-id="state-loading-indicator"]');
+
+  try {
+    await expect(loadingSurface).toBeVisible();
+    await expect(loadingSurface).toHaveAttribute("aria-busy", "true");
+    await expect(loadingStatus).toHaveAccessibleName("Loading");
+    await expect(loadingStatus).toHaveText("");
+    await expect(indicator).toHaveCount(1);
+
+    const presentation = await loadingStatus.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const ring = element.firstElementChild;
+      if (!(ring instanceof SVGElement)) throw new Error("Startup loading indicator is missing.");
+      const ringStyle = window.getComputedStyle(ring);
+      return {
+        boxCenterX: box.left + box.width / 2,
+        boxCenterY: box.top + box.height / 2,
+        boxShadow: ringStyle.boxShadow,
+        childElements: [...ring.children].map((child) => child.tagName.toLowerCase()),
+        color: ringStyle.color,
+        height: box.height,
+        tagName: ring.tagName.toLowerCase(),
+        viewportCenterX: window.innerWidth / 2,
+        viewportCenterY: window.innerHeight / 2,
+        width: box.width,
+      };
+    });
+    expect(presentation).toMatchObject({
+      boxShadow: "none",
+      childElements: ["circle", "path"],
+      height: 32,
+      tagName: "svg",
+      width: 32,
+    });
+    expect(presentation.color).not.toBe("rgba(0, 0, 0, 0)");
+    expect(presentation.boxCenterX).toBeCloseTo(presentation.viewportCenterX, 1);
+    expect(presentation.boxCenterY).toBeCloseTo(presentation.viewportCenterY, 1);
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(indicator).toHaveCSS("animation-name", "none");
+  } finally {
+    releaseStateRequest();
+  }
+
+  await expect(loadingSurface).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="app-shell"]')).toBeVisible();
+  await assertLocalRequests();
+});
 
 async function getSidebarControlGeometry(locator: Locator) {
   return locator.evaluate((element) => {

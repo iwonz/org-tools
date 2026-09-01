@@ -100,7 +100,7 @@
     "Only a complete Org Tools state can be imported.": "Можно импортировать только полный файл состояния Org Tools.",
     "Org Tools and MCP changed the same {count} values. Independent changes are preserved.": "Org Tools и MCP изменили одни и те же значения: {count}. Независимые изменения будут сохранены.",
     "Replace state": "Заменить состояние",
-    "Reading state…": "Чтение состояния…",
+    "Loading": "Загрузка",
     "Use MCP": "Использовать MCP",
     "Select a complete Org Tools state to replace the current state.": "Выберите полный файл состояния Org Tools, чтобы заменить текущие данные.",
     "Delete": "Удалить",
