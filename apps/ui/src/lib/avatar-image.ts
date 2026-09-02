@@ -33,25 +33,38 @@ const loadImage = async (url: string): Promise<HTMLImageElement> => {
 };
 
 const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
-  new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) resolve(blob);
-        else reject(new LocalizedError(uiMessage("The avatar crop could not be encoded as WebP.")));
-      },
-      type,
-      quality,
-    );
+  new Promise<Blob | null>((resolve) => {
+    try {
+      canvas.toBlob(resolve, type, quality);
+    } catch {
+      resolve(null);
+    }
   });
+
+const isEncodedAvatarBlob = (blob: Blob | null): blob is Blob =>
+  blob !== null && (blob.type === "image/webp" || blob.type === "image/png");
+
+export const encodeAvatarCanvasBlob = async (
+  canvas: HTMLCanvasElement,
+  webpQuality: number,
+): Promise<Blob> => {
+  const preferredBlob = await canvasToBlob(canvas, "image/webp", webpQuality);
+  if (isEncodedAvatarBlob(preferredBlob)) return preferredBlob;
+
+  const fallbackBlob = await canvasToBlob(canvas, "image/png");
+  if (fallbackBlob?.type === "image/png") return fallbackBlob;
+
+  throw new LocalizedError(uiMessage("The avatar crop could not be encoded."));
+};
 
 const blobToDataUrl = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () =>
-      reject(new LocalizedError(uiMessage("The avatar crop could not be encoded as WebP.")));
+      reject(new LocalizedError(uiMessage("The avatar crop could not be encoded.")));
     reader.onload = () => {
       if (typeof reader.result === "string") resolve(reader.result);
-      else reject(new LocalizedError(uiMessage("The avatar crop could not be encoded as WebP.")));
+      else reject(new LocalizedError(uiMessage("The avatar crop could not be encoded.")));
     };
     reader.readAsDataURL(blob);
   });
@@ -89,7 +102,7 @@ export const prepareAvatarSource = async (blob: Blob): Promise<PreparedAvatarSou
       throw new LocalizedError(uiMessage("The avatar image could not be decoded."));
     }
     context.drawImage(image, 0, 0, width, height);
-    const previewBlob = await canvasToBlob(canvas, "image/webp", 0.92);
+    const previewBlob = await encodeAvatarCanvasBlob(canvas, 0.92);
     const previewUrl = URL.createObjectURL(previewBlob);
     URL.revokeObjectURL(sourceUrl);
     return { height, url: previewUrl, width };
@@ -143,7 +156,7 @@ export const createCroppedAvatarDataUrl = async (
   canvas.height = AVATAR_OUTPUT_SIZE;
   const context = canvas.getContext("2d");
   if (!context) {
-    throw new LocalizedError(uiMessage("The avatar crop could not be encoded as WebP."));
+    throw new LocalizedError(uiMessage("The avatar crop could not be encoded."));
   }
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
@@ -158,9 +171,10 @@ export const createCroppedAvatarDataUrl = async (
     AVATAR_OUTPUT_SIZE,
     AVATAR_OUTPUT_SIZE,
   );
-  const blob = await canvasToBlob(canvas, "image/webp", AVATAR_WEBP_QUALITY);
-  if (blob.type !== "image/webp") {
-    throw new LocalizedError(uiMessage("The avatar crop could not be encoded as WebP."));
+  const blob = await encodeAvatarCanvasBlob(canvas, AVATAR_WEBP_QUALITY);
+  const dataUrl = normalizeAvatarBase64Url(await blobToDataUrl(blob));
+  if (!dataUrl) {
+    throw new LocalizedError(uiMessage("The avatar crop could not be encoded."));
   }
-  return normalizeAvatarBase64Url(await blobToDataUrl(blob)) ?? "";
+  return dataUrl;
 };

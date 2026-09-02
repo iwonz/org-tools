@@ -123,7 +123,7 @@
     "Avatar source exceeds the 25 MiB limit.": "Размер исходного аватара превышает 25 МиБ.",
     "Avatar source exceeds the 40 megapixel limit.": "Разрешение исходного аватара превышает 40 мегапикселей.",
     "The avatar image could not be decoded.": "Не удалось прочитать изображение аватара.",
-    "The avatar crop could not be encoded as WebP.": "Не удалось сохранить кадрирование аватара в WebP.",
+    "The avatar crop could not be encoded.": "Не удалось сохранить кадрирование аватара.",
     "The browser did not allow reading an image from the clipboard.": "Браузер не разрешил прочитать изображение из буфера обмена.",
     "The clipboard does not contain a supported image.": "В буфере обмена нет поддерживаемого изображения.",
     "Paste image": "Вставить изображение",

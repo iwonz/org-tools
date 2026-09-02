@@ -123,7 +123,7 @@
     "Avatar source exceeds the 25 MiB limit.": "Avatar source exceeds the 25 MiB limit.",
     "Avatar source exceeds the 40 megapixel limit.": "Avatar source exceeds the 40 megapixel limit.",
     "The avatar image could not be decoded.": "The avatar image could not be decoded.",
-    "The avatar crop could not be encoded as WebP.": "The avatar crop could not be encoded as WebP.",
+    "The avatar crop could not be encoded.": "The avatar crop could not be encoded.",
     "The browser did not allow reading an image from the clipboard.": "The browser did not allow reading an image from the clipboard.",
     "The clipboard does not contain a supported image.": "The clipboard does not contain a supported image.",
     "Paste image": "Paste image",

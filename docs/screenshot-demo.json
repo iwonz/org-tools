@@ -183,8 +183,8 @@
     "featured": false,
     "title": "Local avatar crop",
     "file": "feature-employees-avatar-crop.png",
-    "description": "Crop and zoom a local PNG, JPEG, WebP, or pasted image before embedding it into the organization state.",
-    "capabilities": ["Local file", "Clipboard image", "Crop and zoom", "Embedded WebP"]
+    "description": "Crop and zoom a local PNG, JPEG, WebP, or pasted image before embedding a 512 by 512 result with a local PNG fallback.",
+    "capabilities": ["Local file", "Clipboard image", "Crop and zoom", "WebP with PNG fallback"]
   },
   {
     "id": "editor",

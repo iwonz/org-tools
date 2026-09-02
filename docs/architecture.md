@@ -38,6 +38,11 @@ references, graph invariants, and UI references, then performs one atomic store 
 validates and downloads the current live value as `org-tools-state.json`. Old JSON shapes and
 arbitrary JSON are rejected.
 
+Avatar input is decoded from an explicit local PNG, JPEG, or WebP source. Canvas preparation and the
+512 by 512 crop request WebP first, accept a browser-selected PNG, and explicitly retry PNG when the
+WebP attempt fails. The resulting local data URL must pass the existing avatar type and byte limits
+before it replaces the Employee draft; no source image, crop, or fallback output leaves the browser.
+
 ## Local SQLite runtime
 
 `/` renders the application directly. `GET /api/state` returns `{ revision, state }` and
@@ -98,9 +103,10 @@ to treat stored organization fields as untrusted data.
 ## Static runtime and tab synchronization
 
 The static runtime never imports server modules or references `/api/state`, `/mcp`, MCP dependencies,
-tokens, or control UI. A new tab requests the
-latest state over the same-origin `BroadcastChannel`. A live tab answers with the current validated
-state; if no tab answers, the new tab starts empty. Closing the final tab destroys organization data.
+tokens, or control UI. A new tab makes a bounded series of requests for the latest state over the
+same-origin `BroadcastChannel`, avoiding browser channel-registration races without delaying the
+empty-state fallback. A live tab answers with the current validated state; if no tab answers, the new
+tab starts empty. Closing the final tab destroys organization data.
 Only locale and theme may remain as browser metadata.
 
 Messages include a per-tab origin and logical stamp. Exact parsing, deterministic last-write-wins

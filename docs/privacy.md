@@ -36,7 +36,9 @@ instructions and no endpoint, credential, organization data, or executable resou
 Import reads one explicitly selected JSON file into a bounded transient candidate. Export and Data
 Download begin only after explicit user actions. Organization records are never copied to browser
 storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs; remote avatars are
-never fetched. Profile and email navigation require direct user actions and referrer protection.
+never fetched. Crop encoding prefers WebP and falls back only to the browser's local PNG canvas
+encoder; neither path uploads the source or result. Profile and email navigation require direct user
+actions and referrer protection.
 
 ## Local files and publication
 

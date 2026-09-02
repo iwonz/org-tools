@@ -54,8 +54,9 @@ Canvas PNG generation uses current layout, shared live-card geometry, bounded em
 and local vector primitives without network work.
 
 Avatar input is bounded to 25 MiB compressed and 40 megapixels decoded. The crop preview is capped at
-4096 pixels on its longest side; confirmation creates one 512 by 512 WebP and releases temporary
-object URLs.
+4096 pixels on its longest side; confirmation creates one 512 by 512 image, preferring WebP and
+retrying local PNG only when necessary, then releases temporary object URLs. The final embedded data
+URL remains subject to the 2 MiB avatar limit.
 
 Generate the maintained large fixture outside the repository with `pnpm fixture:performance`. Test
 search, filters, Unit navigation, View switching, canvas selection, Import, automatic SQLite writes,

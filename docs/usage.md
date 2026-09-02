@@ -61,7 +61,9 @@ control.
   The current roster count appears below search without redundant roster-section headings or counts.
   **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, birthday, embedded avatar, tags, contact fields, and Unit
-  assignments with compound filters. **Add Employee** is in the shared header.
+  assignments with compound filters. Avatar cropping produces a local 512 by 512 image, preferring
+  WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
+  header.
 - **Editor** manages the protected built-in Units View and independent custom Views on an adaptive
   snapped grid, including search, history, layout, bulk commands, templates, and PNG output. The
   View chooser is a standard styled Select. Every custom View, including an empty one, can be

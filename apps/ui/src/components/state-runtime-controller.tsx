@@ -122,6 +122,7 @@ export const StateRuntimeController = observer(
     const originIdRef = useRef(crypto.randomUUID());
     const stampRef = useRef<StateStamp>({ counter: -1, originId: "" });
     const channelRef = useRef<BroadcastChannel | null>(null);
+    const readyRef = useRef(ready);
     const applyingRef = useRef(false);
     const organizationSequenceRef = useRef(store.organizationChangeSequence);
     const uiSequenceRef = useRef(store.uiChangeSequence);
@@ -139,6 +140,7 @@ export const StateRuntimeController = observer(
     const setThemeRef = useRef(setTheme);
     setLocaleRef.current = setLocale;
     setThemeRef.current = setTheme;
+    readyRef.current = ready;
 
     const syncEnvironment = useCallback((state: OrgToolsState) => {
       setThemeRef.current(state.ui.theme);
@@ -223,8 +225,12 @@ export const StateRuntimeController = observer(
           return;
         }
         if (message.type === "request") {
-          if (!ready || message.originId === originIdRef.current) return;
-          post({ stamp: stampRef.current, state: store.createOrgToolsState(), type: "state" });
+          if (!readyRef.current || message.originId === originIdRef.current) return;
+          channel.postMessage({
+            stamp: stampRef.current,
+            state: store.createOrgToolsState(),
+            type: "state",
+          });
           return;
         }
         if (message.stamp.originId === originIdRef.current) return;
@@ -232,12 +238,17 @@ export const StateRuntimeController = observer(
         if (message.type === "state") installState(message.state, message.stamp);
         else installUi(message.ui, message.stamp);
       };
-      post({ originId: originIdRef.current, type: "request" });
+      const requestLatestState = () => {
+        channel.postMessage({ originId: originIdRef.current, type: "request" });
+      };
+      requestLatestState();
+      const retryTimers = [50, 150].map((delay) => window.setTimeout(requestLatestState, delay));
       return () => {
+        for (const timer of retryTimers) window.clearTimeout(timer);
         channel.close();
         channelRef.current = null;
       };
-    }, [installState, installUi, post, ready, store]);
+    }, [installState, installUi, store]);
 
     useEffect(() => {
       if (mode !== "sqlite") return;

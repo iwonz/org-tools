@@ -130,3 +130,70 @@ test("hands state to another live tab and forgets it after the final tab closes"
   await expect(freshPage.getByText("Product", { exact: true })).toHaveCount(0);
   await expect(freshPage.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
 });
+
+test("crops and exports a PNG avatar when WebP canvas encoding is unavailable", async ({
+  page,
+}) => {
+  const externalRequests: string[] = [];
+  const apiRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      ["http:", "https:"].includes(url.protocol) &&
+      !["127.0.0.1", "localhost"].includes(url.hostname)
+    ) {
+      externalRequests.push(request.url());
+    }
+    if (url.pathname.includes("/api/")) apiRequests.push(request.url());
+  });
+  await page.addInitScript(useEnglish, localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await page.getByRole("button", { name: "Add Employee", exact: true }).click();
+  const employeeDialog = page.getByRole("dialog", { name: "Create Employee" });
+  const pngBuffer = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
+    "base64",
+  );
+  await page.evaluate(() => {
+    const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+      if (type === "image/webp") {
+        callback(null);
+        return;
+      }
+      originalToBlob.call(this, callback, type, quality);
+    };
+  });
+  await employeeDialog.getByLabel("Choose file", { exact: true }).setInputFiles({
+    buffer: pngBuffer,
+    mimeType: "image/png",
+    name: "avatar.png",
+  });
+  const cropDialog = page.getByRole("dialog", { name: "Crop avatar" });
+  await expect(cropDialog).toBeVisible();
+  await cropDialog.getByRole("button", { name: "Use avatar", exact: true }).click();
+  const preview = employeeDialog.locator('[data-demo-id="employee-avatar-preview"]');
+  await expect(preview).toHaveAttribute("src", /^data:image\/png;base64,/);
+  expect(
+    await preview.evaluate(async (element) => {
+      const image = element as HTMLImageElement;
+      await image.decode();
+      return [image.naturalWidth, image.naturalHeight];
+    }),
+  ).toEqual([512, 512]);
+  await employeeDialog.getByLabel("First name", { exact: true }).fill("Fallback");
+  await employeeDialog.getByRole("button", { name: "Create", exact: true }).click();
+
+  const exportPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export state", exact: true }).click();
+  const exportPath = await (await exportPromise).path();
+  const exportedState = JSON.parse(await readFile(exportPath ?? "", "utf8")) as {
+    organization: { employees: Array<{ avatarBase64Url: string | null }> };
+  };
+  expect(exportedState.organization.employees[0]?.avatarBase64Url).toMatch(
+    /^data:image\/png;base64,/,
+  );
+  expect(externalRequests).toEqual([]);
+  expect(apiRequests).toEqual([]);
+});

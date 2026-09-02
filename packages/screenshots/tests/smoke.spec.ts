@@ -1208,6 +1208,14 @@ test("creates, crops, re-crops, pastes, and removes a local Employee avatar", as
   await page.evaluate((encodedImage) => {
     const bytes = Uint8Array.from(atob(encodedImage), (character) => character.charCodeAt(0));
     const blob = new Blob([bytes], { type: "image/png" });
+    const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+      if (type === "image/webp") {
+        callback(null);
+        return;
+      }
+      originalToBlob.call(this, callback, type, quality);
+    };
     Object.defineProperty(navigator.clipboard, "read", {
       configurable: true,
       value: async () => [{ getType: async () => blob, types: ["image/png"] }],
@@ -1216,6 +1224,7 @@ test("creates, crops, re-crops, pastes, and removes a local Employee avatar", as
   await employeeDialog.getByRole("button", { name: "Paste image", exact: true }).click();
   cropDialog = page.getByRole("dialog", { name: "Crop avatar" });
   await cropDialog.getByRole("button", { name: "Use avatar", exact: true }).click();
+  await expect(preview).toHaveAttribute("src", /^data:image\/png;base64,/);
   await employeeDialog.getByLabel("First name", { exact: true }).fill("Riley");
   await employeeDialog.getByRole("button", { name: "Create", exact: true }).click();
 
@@ -1223,7 +1232,7 @@ test("creates, crops, re-crops, pastes, and removes a local Employee avatar", as
   const editDialog = page.getByRole("dialog", { name: "Edit Employee" });
   await expect(editDialog.locator('[data-demo-id="employee-avatar-preview"]')).toHaveAttribute(
     "src",
-    /^data:image\/webp;base64,/,
+    /^data:image\/png;base64,/,
   );
   await editDialog.getByRole("button", { name: "Remove avatar", exact: true }).click();
   await expect(editDialog.locator('[data-demo-id="employee-avatar-preview"]')).toHaveCount(0);

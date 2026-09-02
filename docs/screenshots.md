@@ -149,9 +149,10 @@ Capabilities: Team membership, Boss state, Per-Team positions, Multiple assignme
 
 [![Local avatar crop](screenshots/feature-employees-avatar-crop.png)](screenshots/feature-employees-avatar-crop.png)
 
-Crop and zoom a local PNG, JPEG, WebP, or pasted image before embedding it into the organization state.
+Crop and zoom a local PNG, JPEG, WebP, or pasted image before embedding a 512 by 512 local result.
+WebP is preferred and the browser's PNG encoder is the compatibility fallback.
 
-Capabilities: Local file, Clipboard image, Crop and zoom, Embedded WebP.
+Capabilities: Local file, Clipboard image, Crop and zoom, WebP with PNG fallback.
 
 ## Editor
 
@@ -401,6 +402,8 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, compact tag wrapping, boss marker, variable row heights, and connection endpoints
   without card overlap or transient editing chrome.
+- Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
+  browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
 - Confirm MCP frames contain only the synthetic token; the enabled icon is green; Setup, Activity,
   Enable, Disable, and token rotation use leading icons; all seven Client setup choices have their
   own leading bundled icon; and setup shows the installable-skill prompt rather than a standalone
