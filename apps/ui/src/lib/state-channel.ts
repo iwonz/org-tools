@@ -11,6 +11,7 @@ export type StateStamp = {
 
 export type StateChannelMessage =
   | { originId: string; type: "request" }
+  | { stamp: StateStamp; state: OrgToolsState; targetOriginId: string; type: "snapshot" }
   | { stamp: StateStamp; state: OrgToolsState; type: "state" }
   | { stamp: StateStamp; type: "ui"; ui: OrgToolsState["ui"] };
 
@@ -52,6 +53,20 @@ export const parseStateChannelMessage = (input: unknown): StateChannelMessage =>
     input.originId
   ) {
     return { originId: input.originId, type: "request" };
+  }
+  if (
+    input.type === "snapshot" &&
+    Object.keys(input).sort().join("\0") ===
+      ["stamp", "state", "targetOriginId", "type"].sort().join("\0") &&
+    typeof input.targetOriginId === "string" &&
+    input.targetOriginId
+  ) {
+    return {
+      stamp: parseStamp(input.stamp),
+      state: parseOrgToolsState(input.state),
+      targetOriginId: input.targetOriginId,
+      type: "snapshot",
+    };
   }
   if (
     input.type === "state" &&

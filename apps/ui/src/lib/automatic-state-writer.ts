@@ -9,7 +9,6 @@ type StateWriteQueueOptions = {
 
 export class AutomaticStateWriter {
   private active = false;
-  private epoch = 0;
   private paused = false;
   private pendingAll: Extract<StatePutRequest, { scope: "all" }> | null = null;
   private pendingOrganization: Extract<StatePutRequest, { scope: "organization" }> | null = null;
@@ -41,15 +40,6 @@ export class AutomaticStateWriter {
   retry(): void {
     this.paused = false;
     void this.pump();
-  }
-
-  discardPending(): void {
-    this.epoch += 1;
-    this.pendingAll = null;
-    this.pendingOrganization = null;
-    this.pendingUi = null;
-    this.paused = false;
-    if (!this.active) this.options.onPendingChange?.(false);
   }
 
   private takeNext(): StatePutRequest | null {
@@ -87,16 +77,13 @@ export class AutomaticStateWriter {
       return;
     }
     this.active = true;
-    const epoch = this.epoch;
     try {
       const document = await this.options.write(request);
-      if (epoch === this.epoch) this.options.onSuccess?.(document, request);
+      this.options.onSuccess?.(document, request);
     } catch (error) {
-      if (epoch === this.epoch) {
-        this.restore(request);
-        this.paused = true;
-        this.options.onError(error);
-      }
+      this.restore(request);
+      this.paused = true;
+      this.options.onError(error);
     } finally {
       this.active = false;
     }

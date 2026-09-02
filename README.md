@@ -22,7 +22,7 @@ telemetry, remote logging, or background requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 43 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 38 maintained scenarios.
 
 ## Run locally
 
@@ -39,17 +39,10 @@ database is `.org-tools/org-tools.sqlite3`. Override it with `ORG_TOOLS_DB_PATH`
 `.org-tools/config.example.json` to `.org-tools/config.json` and set `databasePath`. Stop the server
 before copying the SQLite file.
 
-The local SQLite runtime also provides disabled-by-default MCP access for local coding agents. Use
-**MCP** in the sidebar footer to enable it, copy a selected-client setup prompt that installs the
-public [`org-tools` skill](skills/org-tools/SKILL.md) and configures the current token, rotate
-credentials, inspect applied activity, and perform selective Undo. MCP is never included in the
-GitHub Pages runtime. See [Local MCP](docs/mcp.md) for supported clients and the Preview → explicit
-approval → Apply contract.
-
 Use `pnpm pages:dev` for the in-memory static runtime. `pnpm pages:build` exports it to ignored
 `pages-out`, and `pnpm pages:check` verifies the `/org-tools` base path and absence of API or SQLite
 code. Publishing remains an explicit maintainer action through `pnpm pages:publish`.
 
-More: [Usage](docs/usage.md) · [MCP](docs/mcp.md) · [Architecture](docs/architecture.md) ·
+More: [Usage](docs/usage.md) · [Architecture](docs/architecture.md) ·
 [Privacy](docs/privacy.md) · [Performance](docs/performance.md) ·
 [Contributing](CONTRIBUTING.md) · [License](LICENSE)

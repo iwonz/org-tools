@@ -71,7 +71,6 @@ test("validates scoped state writes and rejects cross-origin mutations", async (
 
   const uiWrite = await page.request.put("/api/state", {
     data: {
-      expectedRevision: document.revision,
       scope: "ui",
       ui: { ...document.state.ui, sidebarCollapsed: false },
     },
@@ -80,7 +79,17 @@ test("validates scoped state writes and rejects cross-origin mutations", async (
   expect(uiWrite.ok()).toBe(true);
   expect((await uiWrite.json()).revision).toBe(document.revision + 1);
 
-  const stale = await page.request.put("/api/state", {
+  const secondWrite = await page.request.put("/api/state", {
+    data: {
+      scope: "ui",
+      ui: document.state.ui,
+    },
+    headers: { Origin: configuredOrigin() },
+  });
+  expect(secondWrite.ok()).toBe(true);
+  expect((await secondWrite.json()).revision).toBe(document.revision + 2);
+
+  const obsoleteShape = await page.request.put("/api/state", {
     data: {
       expectedRevision: document.revision,
       scope: "ui",
@@ -88,10 +97,8 @@ test("validates scoped state writes and rejects cross-origin mutations", async (
     },
     headers: { Origin: configuredOrigin() },
   });
-  expect(stale.status()).toBe(200);
-  expect(await stale.json()).toEqual({
-    error: { code: "revision_conflict", currentRevision: document.revision + 1 },
-  });
+  expect(obsoleteShape.status()).toBe(400);
+  expect(await obsoleteShape.json()).toEqual({ error: { code: "invalid_input" } });
 
   const invalid = await page.request.put("/api/state", {
     data: { scope: "unknown" },

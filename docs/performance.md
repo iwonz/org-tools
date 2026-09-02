@@ -15,14 +15,6 @@ transaction keep each update atomic. A bounded retry does not create parallel wr
 runtime broadcasts only after logical store changes and does not serialize organization data for
 theme, locale, tab, filter, search, viewport, or selection changes.
 
-MCP read tools reuse the validated state and derived View structures until the SQLite revision
-changes. Every collection page is capped at 100 records, avatar bytes are opt-in, and reads never
-serialize a new full state snapshot. Preview validates one detached result; Apply performs one
-organization serialization and one SQLite transaction. Applied preview snapshots are compacted, and
-history is pruned to 100 changes and 64 MiB. A revision event contains only a revision and source.
-Changing the selected MCP client or rebuilding its short setup prompt operates only on the endpoint,
-token, and bundled templates; it never reads or serializes organization state.
-
 ## Indexing and rendering
 
 - Persist identifiers and relationships rather than nested Employee copies.
@@ -64,8 +56,7 @@ URL remains subject to the 2 MiB avatar limit.
 
 Generate the maintained large fixture outside the repository with `pnpm fixture:performance`. Test
 search, filters, Unit navigation, View switching, canvas selection, Import, automatic SQLite writes,
-MCP pagination/read caching/Preview/Apply, tab synchronization, Export, and UI-only updates. Treat
-blocking interaction, unbounded duplication,
+tab synchronization, Export, and UI-only updates. Treat blocking interaction, unbounded duplication,
 per-row network work, organization serialization during UI-only actions, or full Unit scans during
 pointer previews as regressions. The browser suite exercises 20,000 Employees and 4,000 Units,
 requires bounded spatial candidates, observes no state write during preview, and allows one final

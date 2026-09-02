@@ -424,59 +424,5 @@
     "file": "feature-download-json-preview.png",
     "description": "Inspect the lower field list and formatted JSON structure before copying or downloading the local file.",
     "capabilities": ["Remaining fields", "Formatted JSON", "Copy", "Local download"]
-  },
-  {
-    "id": "mcp-disabled-consent",
-    "module": "mcp",
-    "featured": false,
-    "title": "MCP access consent",
-    "file": "feature-mcp-disabled-consent.png",
-    "description": "Review the local full-access boundary and icon-bearing Enable action before enabling MCP.",
-    "capabilities": ["Disabled by default", "Explicit consent", "Full access"]
-  },
-  {
-    "id": "mcp-enabled-credentials",
-    "module": "mcp",
-    "featured": false,
-    "title": "MCP credentials",
-    "file": "feature-mcp-enabled-credentials.png",
-    "description": "Use icon-bearing Setup and Activity controls, the loopback endpoint, masked token controls, and green enabled sidebar signal.",
-    "capabilities": ["Icon-bearing tabs", "Loopback endpoint", "Masked token", "Enabled signal"]
-  },
-  {
-    "id": "mcp-client-setup",
-    "module": "mcp",
-    "featured": false,
-    "title": "MCP client setup",
-    "file": "feature-mcp-client-setup.png",
-    "description": "Copy one setup prompt containing the selected skill install, current token, exact client configuration, reload step, and read-only verification.",
-    "capabilities": [
-      "Installable skill",
-      "Codex",
-      "Claude Code",
-      "Cursor",
-      "OpenClaw",
-      "Hermes",
-      "Pi",
-      "OpenCode"
-    ]
-  },
-  {
-    "id": "mcp-applied-activity",
-    "module": "mcp",
-    "featured": false,
-    "title": "Applied MCP activity",
-    "file": "feature-mcp-applied-activity.png",
-    "description": "Inspect the server-authored summary, actor, reason, revision, and selective Undo action.",
-    "capabilities": ["Activity journal", "Exact summary", "Revision", "Undo"]
-  },
-  {
-    "id": "mcp-selective-undo-conflict",
-    "module": "mcp",
-    "featured": false,
-    "title": "Selective Undo conflict",
-    "file": "feature-mcp-selective-undo-conflict.png",
-    "description": "Block Undo when a later edit changed the same value and identify the exact overlap.",
-    "capabilities": ["Safe Undo", "Overlap blocking", "Conflict details", "No silent loss"]
   }
 ]

@@ -54,27 +54,4 @@ describe("automatic state writer", () => {
     expect(write).toHaveBeenCalledTimes(2);
     expect(writer.hasPending).toBe(false);
   });
-
-  it("ignores the late outcome of an explicitly discarded active write", async () => {
-    const state = createBlankOrgToolsState();
-    const onError = vi.fn();
-    const onSuccess = vi.fn();
-    let rejectWrite: ((error: Error) => void) | undefined;
-    const write = vi.fn(
-      () =>
-        new Promise<StateDocument>((_resolve, reject) => {
-          rejectWrite = reject;
-        }),
-    );
-    const writer = new AutomaticStateWriter({ onError, onSuccess, write });
-
-    writer.enqueue({ scope: "all", state });
-    writer.discardPending();
-    rejectWrite?.(new Error("stale conflict"));
-    await flushTasks();
-
-    expect(onError).not.toHaveBeenCalled();
-    expect(onSuccess).not.toHaveBeenCalled();
-    expect(writer.hasPending).toBe(false);
-  });
 });

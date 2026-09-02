@@ -51,15 +51,6 @@ export async function validatePagesOutput() {
     violations.push("Pages CSS is missing shared application utility styles");
   }
   const blocked = [
-    ["@modelcontextprotocol/server", "MCP server SDK must not appear in the Pages output"],
-    ["/api/mcp", "MCP control routes must not appear in the Pages output"],
-    ["/mcp", "MCP endpoint must not appear in the Pages output"],
-    ["ot_mcp_", "MCP token material must not appear in the Pages output"],
-    ["mcp-control", "MCP control markup must not appear in the Pages output"],
-    [
-      "npx skills add iwonz/org-tools",
-      "MCP agent setup prompts must not appear in the Pages output",
-    ],
     ["node:sqlite", "node:sqlite must not appear in the Pages output"],
     ["/api/state", "state API routes must not appear in the Pages output"],
     ["ORG_TOOLS_DB_PATH", "database configuration must not appear in the Pages output"],

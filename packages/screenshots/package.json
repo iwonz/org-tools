@@ -7,7 +7,7 @@
     "generate": "playwright test tests/screenshots.spec.ts --project=chromium",
     "generate:pages": "playwright test tests/pages-screenshots.spec.ts --config=playwright.pages.config.ts --project=chromium",
     "pages:smoke": "playwright test tests/pages.spec.ts --config=playwright.pages.config.ts --project=chromium",
-    "smoke": "playwright test tests/smoke.spec.ts tests/localization.spec.ts tests/state.spec.ts tests/mcp.spec.ts --project=chromium",
+    "smoke": "playwright test tests/smoke.spec.ts tests/localization.spec.ts tests/state.spec.ts --project=chromium",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

@@ -74,7 +74,7 @@ export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): 
   state.ui.download.unitQuery = "";
   state.ui.views = [{ selectedItems: [], viewId: main.id, viewport: { scale: 1, x: 0, y: 0 } }];
   const write = await page.request.put("/api/state", {
-    data: { expectedRevision: document.revision, scope: "all", state },
+    data: { scope: "all", state },
     headers: { Origin: origin },
   });
   if (!write.ok()) throw new Error(JSON.stringify(await write.json()));

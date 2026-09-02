@@ -1,6 +1,6 @@
 # Screenshots
 
-The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 43 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
+The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 38 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
 
 The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
 
@@ -337,52 +337,6 @@ Inspect the lower field list and formatted JSON structure before copying or down
 
 Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
-## MCP
-
-These server-only supporting frames are absent from the browser-only Pages runtime.
-
-### MCP access consent
-
-[![MCP access consent](screenshots/feature-mcp-disabled-consent.png)](screenshots/feature-mcp-disabled-consent.png)
-
-Review the local full-access boundary and the icon-bearing Enable action before enabling MCP.
-
-Capabilities: Disabled by default, Explicit consent, Full access.
-
-### MCP credentials
-
-[![MCP credentials](screenshots/feature-mcp-enabled-credentials.png)](screenshots/feature-mcp-enabled-credentials.png)
-
-Use the icon-bearing Setup and Activity controls, loopback endpoint, masked token controls, and
-green enabled sidebar signal.
-
-Capabilities: Loopback endpoint, Masked token, Enabled signal, Rotation.
-
-### MCP client setup
-
-[![MCP client setup](screenshots/feature-mcp-client-setup.png)](screenshots/feature-mcp-client-setup.png)
-
-Copy one agent setup prompt containing the selected skill install, current token, exact client
-configuration, reload step, and read-only verification.
-
-Capabilities: Installable skill, Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, OpenCode.
-
-### Applied MCP activity
-
-[![Applied MCP activity](screenshots/feature-mcp-applied-activity.png)](screenshots/feature-mcp-applied-activity.png)
-
-Inspect the server-authored summary, actor, reason, revision, and selective Undo action.
-
-Capabilities: Activity journal, Exact summary, Revision, Undo.
-
-### Selective Undo conflict
-
-[![Selective Undo conflict](screenshots/feature-mcp-selective-undo-conflict.png)](screenshots/feature-mcp-selective-undo-conflict.png)
-
-Block Undo when a later edit changed the same value and identify the exact overlap.
-
-Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
-
 ## Review checklist
 
 - Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
@@ -407,11 +361,7 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
   editing chrome.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
   browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
-- Confirm MCP frames contain only the synthetic token; the enabled icon is green; Setup, Activity,
-  Enable, Disable, and token rotation use leading icons; all seven Client setup choices have their
-  own leading bundled icon; and setup shows the installable-skill prompt rather than a standalone
-  configuration block.
-- Confirm every Pages frame and sidebar state contains no MCP action, dialog, endpoint request, or server-only marker.
+- Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 43 PNGs must retain identical hashes. Material differences require review and a deliberate update.
+- Regenerate immediately; all 38 PNGs must retain identical hashes. Material differences require review and a deliberate update.

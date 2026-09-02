@@ -150,7 +150,6 @@ async function probeBrowser(origin) {
   });
   const seedResponse = await fetch(`${origin}/api/state`, {
     body: JSON.stringify({
-      expectedRevision: currentDocument.revision,
       scope: "all",
       state: fixture,
     }),

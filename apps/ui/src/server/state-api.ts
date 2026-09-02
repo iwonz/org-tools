@@ -6,7 +6,7 @@ import { StateConfigurationError } from "@/server/state-config";
 import { StateRepositoryError } from "@/server/state-repository";
 
 const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "::1", "[::1]", "localhost"]);
-type ApiStatus = 400 | 403 | 409 | 415 | 500 | 503;
+type ApiStatus = 400 | 403 | 415 | 500 | 503;
 
 export class StateApiRequestError extends Error {
   readonly code: StateApiErrorCode;
@@ -71,36 +71,28 @@ const hasExactKeys = (value: Record<string, unknown>, keys: readonly string[]) =
   Object.keys(value).sort().join("\0") === [...keys].sort().join("\0");
 
 export const parseStatePutRequest = (input: unknown): StatePutApiRequest => {
-  if (
-    !isRecord(input) ||
-    typeof input.scope !== "string" ||
-    !Number.isSafeInteger(input.expectedRevision) ||
-    (input.expectedRevision as number) < 1
-  ) {
+  if (!isRecord(input) || typeof input.scope !== "string") {
     throw new StateApiRequestError("invalid_input", "State update shape is invalid.", 400);
   }
   try {
-    if (input.scope === "all" && hasExactKeys(input, ["expectedRevision", "scope", "state"])) {
+    if (input.scope === "all" && hasExactKeys(input, ["scope", "state"])) {
       return {
-        expectedRevision: input.expectedRevision as number,
         scope: "all",
         state: parseOrgToolsState(input.state),
       };
     }
-    if (input.scope === "ui" && hasExactKeys(input, ["expectedRevision", "scope", "ui"])) {
+    if (input.scope === "ui" && hasExactKeys(input, ["scope", "ui"])) {
       return {
-        expectedRevision: input.expectedRevision as number,
         scope: "ui",
         ui: parseOrgToolsUiState(input.ui),
       };
     }
     if (
       input.scope === "organization" &&
-      hasExactKeys(input, ["expectedRevision", "organization", "scope"]) &&
+      hasExactKeys(input, ["organization", "scope"]) &&
       isRecord(input.organization)
     ) {
       return {
-        expectedRevision: input.expectedRevision as number,
         organization: input.organization as OrgToolsState["organization"],
         scope: "organization",
       };
@@ -131,16 +123,8 @@ export const stateApiErrorResponse = (error: unknown): Response => {
     });
   }
   if (error instanceof StateRepositoryError) {
-    const details =
-      error.code === "revision_conflict" &&
-      typeof error.details === "object" &&
-      error.details !== null &&
-      "currentRevision" in error.details &&
-      Number.isSafeInteger(error.details.currentRevision)
-        ? { currentRevision: error.details.currentRevision as number }
-        : {};
-    return jsonResponse({ error: { code: error.code, ...details } } satisfies StateApiError, {
-      status: error.code === "revision_conflict" ? 200 : statusForCode(error.code),
+    return jsonResponse({ error: { code: error.code } } satisfies StateApiError, {
+      status: statusForCode(error.code),
     });
   }
   if (error instanceof StateConfigurationError) {

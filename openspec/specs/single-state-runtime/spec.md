@@ -57,9 +57,8 @@ corrupt current database with memory state.
 
 ### Requirement: SQLite uses a singleton current schema
 SQLite SHALL keep exactly one application-state row with separate validated organization and UI
-JSON, one monotonic revision, and timestamps. The exact current managed schema SHALL additionally
-keep singleton MCP settings, short-lived MCP previews, and a bounded MCP activity journal outside
-application state. The repository SHALL use prepared statements, transactions, rollback journal
+JSON, one monotonic revision, and timestamps. SQLite SHALL keep exactly one `application_state`
+table and one row. The repository SHALL use prepared statements, transactions, rollback journal
 mode, foreign-key enforcement, full synchronous writes, and a busy timeout. Startup SHALL create the
 current schema only when the database has no managed tables, reopen only the exact current table and
 column shape, and reject every obsolete, incomplete, unknown, or corrupt shape without mutating it.
@@ -68,14 +67,14 @@ migrations, compatibility readers, or automatic resets.
 
 #### Scenario: Empty database
 - **WHEN** startup opens a database with no managed tables
-- **THEN** the exact current singleton state and MCP tables are created without a schema-version marker
+- **THEN** the exact current singleton state table and row are created without a schema-version marker
 
 #### Scenario: Exact current database
 - **WHEN** startup opens the exact current table and column shape with a valid singleton row
-- **THEN** the existing state, revision, MCP settings, previews, and activity remain available without migration
+- **THEN** the existing state and revision remain available without migration
 
 #### Scenario: Obsolete or incomplete database
-- **WHEN** startup opens a former project layout, a pre-MCP singleton layout, or any other incomplete managed shape
+- **WHEN** startup opens a former multi-project, multi-table, or otherwise incomplete managed shape
 - **THEN** startup fails visibly and every existing table and row remains unchanged
 
 #### Scenario: Unknown schema
@@ -88,28 +87,22 @@ migrations, compatibility readers, or automatic resets.
 
 ### Requirement: The local state API is scoped and private
 `GET /api/state` SHALL return the complete state and current revision. `PUT /api/state` SHALL accept
-only JSON with an `organization`, `ui`, or `all` scope plus `expectedRevision`, validate the complete
-affected result, and update only when the expected revision is current. A successful write SHALL
-increment revision atomically and notify local subscribers. `/api/state/events` SHALL stream only
-no-store local revision metadata so browsers can fetch current state after external changes. Every
-route SHALL return stable error codes; mutations MUST reject a non-loopback Host, mismatched Origin,
-CORS use, and unsupported content type.
+only JSON with an `organization`, `ui`, or `all` scope, validate the complete affected result, commit
+the selected projection atomically, and increment revision. Every response SHALL use stable error
+codes; mutations MUST reject a non-loopback Host, mismatched Origin, CORS use, and unsupported
+content type.
 
 #### Scenario: Bounded UI update
-- **WHEN** a client submits a valid UI-scoped update at the expected revision
+- **WHEN** a client submits a valid UI-scoped update
 - **THEN** SQLite changes `ui_json` and revision without parsing or serializing the Employee catalog
 
 #### Scenario: Atomic state replacement
-- **WHEN** a client submits a valid all-scoped update at the expected revision
+- **WHEN** a client submits a valid all-scoped update
 - **THEN** both projections and one new revision commit in the same transaction
 
-#### Scenario: Stale state update
-- **WHEN** expected revision differs from the persisted revision
-- **THEN** neither projection nor revision changes and the stable conflict response identifies the current revision
-
-#### Scenario: External revision event
-- **WHEN** MCP or another accepted writer commits a revision
-- **THEN** connected loopback browsers receive its revision and source without organization data in the event
+#### Scenario: Serialized state writes
+- **WHEN** the application produces organization or UI updates
+- **THEN** its single-flight writer sends one request at a time and the latest pending projection is committed next
 
 #### Scenario: Invalid or cross-origin update
 - **WHEN** input is invalid or violates the loopback same-origin boundary
@@ -140,25 +133,3 @@ NOT be presented as collaborative merge behavior.
 #### Scenario: Concurrent tab messages
 - **WHEN** two tabs emit independently before observing each other
 - **THEN** every live tab deterministically selects the same winning stamped state
-
-### Requirement: Browser and MCP edits reconcile without silent loss
-The server controller SHALL retain its last acknowledged base state. After an external revision it
-SHALL three-way merge local and persisted values by stable semantic identity. Independent changes
-SHALL merge automatically. Overlapping values MUST pause persistence and present Keep local, Use
-MCP, or Cancel; no choice SHALL be selected silently.
-
-#### Scenario: Independent concurrent changes
-- **WHEN** the user changes one Employee while MCP changes a different Employee or field from the same base
-- **THEN** the validated merged state preserves both changes and becomes the next revision
-
-#### Scenario: Keep local overlap
-- **WHEN** both writers change the same value and the user chooses Keep local
-- **THEN** that local value and all independent current MCP values are written over the latest revision
-
-#### Scenario: Use MCP overlap
-- **WHEN** both writers change the same value and the user chooses Use MCP
-- **THEN** the persisted MCP value and all independent local values are retained
-
-#### Scenario: Cancel overlap
-- **WHEN** the user cancels conflict resolution
-- **THEN** current local memory remains protected from unload and no conflicting write occurs

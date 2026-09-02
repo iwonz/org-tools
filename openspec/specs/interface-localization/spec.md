@@ -6,29 +6,23 @@ Define complete English/Russian runtime localization, bounded bootstrap metadata
 ### Requirement: The interface supports English and Russian
 The application SHALL provide complete English and Russian translations for every runtime label,
 status, empty state, dialog, validation and persistence error, accessibility name, tooltip, plural,
-number, tag date, state replacement summary, destructive warning, calendar date, MCP consent,
-credential control, setup-prompt control, activity summary, and state-merge choice while leaving
+number, tag date, state replacement summary, destructive warning, and calendar date while leaving
 user-authored content unchanged. Product copy SHALL use neutral Import, Export, and state language
-and SHALL NOT expose project, workspace, working-area, Save, or Autosave terminology. Russian UI
-copy SHALL present Unit as Team with grammatical declension and Live Unit as Dynamic Team while
-machine contracts, the English agent setup prompt, configuration syntax, and supported client
-product names remain English.
+and SHALL NOT expose project, workspace, working-area, Save, Autosave, or agent-access terminology.
+Russian UI copy SHALL present Unit as Team with grammatical declension and Live Unit as Dynamic Team
+while machine contracts and supported public format tokens remain English.
 
 #### Scenario: English runtime surfaces
 - **WHEN** the active locale is English
-- **THEN** every visible, error, menu, dialog, tooltip, accessibility, MCP, and merge surface is English except user-authored data and explicitly allowed machine or client tokens
+- **THEN** every visible, error, menu, dialog, tooltip, and accessibility surface is English except user-authored data and explicitly allowed machine tokens
 
 #### Scenario: Russian runtime surfaces
 - **WHEN** the active locale is Russian
-- **THEN** the same product surfaces are Russian without an untranslated key while the preformatted agent prompt and machine configuration remain intentionally English
+- **THEN** the same product surfaces are Russian without an untranslated key while machine tokens remain intentionally English
 
 #### Scenario: Namespace-safe catalog initialization
 - **WHEN** sentence-style typed UI IDs contain period characters
 - **THEN** provider initialization and runtime lookup succeed in both locales without an invalid-key console error
-
-#### Scenario: Hidden MCP description
-- **WHEN** the visible MCP title has no subtitle in either locale
-- **THEN** assistive technology receives the localized MCP management description from the message catalog
 
 ### Requirement: Locale is detected and persisted locally
 The application SHALL use a valid saved `en` or `ru` bootstrap preference, otherwise select the
@@ -86,24 +80,11 @@ Runtime error codes SHALL map to catalog entries and raw internal messages MUST 
 - **THEN** no untranslated key, raw internal error, or unexpected foreign-language product copy is
   visible or announced
 
-### Requirement: Protocol failures map to stable localized messages
-MCP control and concurrent-state errors SHALL expose stable machine codes that map through the
-bundled catalog. Raw exceptions, database paths, token fragments, protocol request bodies, and
-internal error messages MUST NOT render in the interface.
-
-#### Scenario: MCP authorization or persistence error
-- **WHEN** a control request fails with a stable server code
-- **THEN** the modal renders the matching localized recovery copy without raw internal content
-
-#### Scenario: Merge conflict localization audit
-- **WHEN** browser validation opens the same-field conflict in English and Russian
-- **THEN** Keep local, Use MCP, Cancel, affected-field summary, and accessibility names use the active catalog
-
 ### Requirement: The canonical Editor View uses destination terminology
 The interface SHALL label the canonical Editor View with the existing localized Units destination
 term in English and Russian. Related visible copy for copying from the canonical View, Employee
 membership, and destructive warnings SHALL use the same localized product term without changing
-machine-facing `main` values, MCP terminology, or user-authored custom View names.
+machine-facing `main` values or user-authored custom View names.
 
 #### Scenario: English canonical View copy
 - **WHEN** the Editor and related workflows render in English
@@ -114,5 +95,5 @@ machine-facing `main` values, MCP terminology, or user-authored custom View name
 - **THEN** the canonical View and related user-facing phrases use the Russian Units destination term rather than the former dedicated Main label
 
 #### Scenario: Machine contracts remain stable
-- **WHEN** state is imported, exported, persisted, synchronized, or accessed through MCP
+- **WHEN** state is imported, exported, persisted, or synchronized
 - **THEN** canonical View kind and field values remain unchanged and only localized display copy differs

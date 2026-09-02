@@ -71,16 +71,14 @@ and inline SVG with semantic theme tokens without decorative containers, shadows
 ### Requirement: Navigation states are explicit and responsive
 Product destinations SHALL retain their accessible Radix tab behavior and order inside a vertical
 sidebar. The sidebar SHALL initialize compact and SHALL own language, theme, Import, and Export
-without a project or file persistence control. Server mode SHALL additionally show MCP immediately
-after Export and before language and theme; Pages SHALL omit it completely. Expanded mode SHALL show
-icons and visible labels; compact mode SHALL show only icons with localized accessible names and
-tooltips. The active destination, hover, press, and keyboard focus SHALL remain tonal, borderless,
-shadowless, and geometry-stable. The enabled MCP icon SHALL use semantic green without changing its
-container geometry; its disabled icon SHALL use the standard sidebar foreground. The desktop
-collapse control and every compact sidebar action SHALL keep the same 48 px width, 40 px height,
-14 px horizontal padding, 20 px icon size, and icon axis. The shell SHALL render no decorative
-product glyph, visible product title, Save control, Autosave control, or persistence status. Sidebar
-collapse and all other durable navigation context SHALL be represented in the current state.
+without a project, file, agent-access, or persistence control in either runtime. Expanded mode SHALL
+show icons and visible labels; compact mode SHALL show only icons with localized accessible names
+and tooltips. The active destination, hover, press, and keyboard focus SHALL remain tonal,
+borderless, shadowless, and geometry-stable. The desktop collapse control and every compact sidebar
+action SHALL keep the same 48 px width, 40 px height, 14 px horizontal padding, 20 px icon size, and
+icon axis. The shell SHALL render no decorative product glyph, visible product title, Save control,
+Autosave control, or persistence status. Sidebar collapse and all other durable navigation context
+SHALL be represented in the current state.
 The 64 px context header SHALL reserve one right-aligned workflow action for populated or empty
 Teams and Employees and for populated Download. The action SHALL keep its localized accessible name
 and leading thematic icon at ordinary widths and SHALL become icon-only without overflow at
@@ -94,16 +92,12 @@ narrow widths. Workflows SHALL NOT repeat that action inside their content or em
 - **WHEN** a desktop user toggles the sidebar mode
 - **THEN** the right edge moves continuously between 240 and 64 px, icons keep one coordinate, and current product data remains unchanged
 
-#### Scenario: Server MCP action
-- **WHEN** the SQLite runtime renders the sidebar
-- **THEN** MCP appears after Export and before language and theme with the same geometry in compact and expanded modes and a green icon only while enabled
-
-#### Scenario: Pages actions
-- **WHEN** Pages renders the sidebar
-- **THEN** it exposes Import, Export, language, and theme without MCP, project, file, Save, or Autosave controls
+#### Scenario: Runtime sidebar actions
+- **WHEN** either the SQLite or Pages runtime renders the sidebar
+- **THEN** it exposes Import, Export, language, and theme in the same order without an agent, project, file, Save, or Autosave control
 
 #### Scenario: Stable menu content
-- **WHEN** theme, language, MCP, or another menu item is hovered, focused, selected, or pressed
+- **WHEN** theme, language, or another menu item is hovered, focused, selected, or pressed
 - **THEN** its content position and geometry remain unchanged without a pointer-state border
 
 #### Scenario: Responsive shell containment
@@ -203,25 +197,6 @@ or interaction states.
 - **WHEN** a responsive text action hides its label at a maintained narrow width
 - **THEN** the same thematic icon remains centered with the unchanged accessible name and tooltip
 
-### Requirement: MCP modal controls use leading decorative icons
-The server-only MCP modal SHALL place one bundled thematic decorative icon before the localized
-visible label in its Setup and Activity tabs and current Enable, Disable, or Rotate token action. Every supported
-Client setup choice SHALL place one bundled client-specific decorative icon before its unchanged
-visible client name. The icons MUST NOT alter the accessible names, control geometry, or Pages
-runtime surface.
-
-#### Scenario: Leading MCP action icons
-- **WHEN** the user opens the disabled or enabled MCP modal
-- **THEN** each visible Enable, Disable, Rotate token, Setup, and Activity label follows exactly one thematic decorative icon
-
-#### Scenario: Leading client icons
-- **WHEN** Client setup lists Codex, Claude Code, Cursor, OpenClaw, Hermes, Pi, and OpenCode
-- **THEN** every choice begins with its own bundled client-specific decorative icon and retains its full accessible name
-
-#### Scenario: Static runtime remains isolated
-- **WHEN** the Pages application is built or used
-- **THEN** it contains no MCP control or client icon surface
-
 ### Requirement: Repeated content remains scan-friendly and performant
 Repeated content SHALL use alignment, compact spacing, subtle row separation where useful, and
 interaction feedback instead of floating row tiles across Employee lists, Analytics tables,
@@ -265,32 +240,6 @@ retain localized copy, accessible names, close behavior, and focus management.
 - **WHEN** any non-modal floating menu opens over a same-tone page in either theme
 - **THEN** one stable neutral outline distinguishes the container without an item border, geometry
   shift, or additional elevation
-
-### Requirement: MCP management is a focused floating workflow
-The MCP modal SHALL use the shared dialog hierarchy and provide compact consent, credentials, a
-copyable agent setup prompt, and activity without exposing credentials behind the modal or shifting
-sidebar geometry. Its title SHALL have a localized screen-reader description but no visible subtitle.
-Long setup prompts and activity lists SHALL scroll within bounded regions while primary Enable,
-Disable, Rotate, Copy, and Undo decisions remain explicit. Setup and Activity tabs and the primary
-Enable or Disable action SHALL retain localized visible labels and place a thematic decorative icon
-before each label without changing control geometry. The modal SHALL not duplicate enabled status in
-a badge and SHALL not render a raw configuration section, Examples tab, or provider-notice section.
-
-#### Scenario: Compact consent modal
-- **WHEN** disabled MCP management opens at a narrow viewport
-- **THEN** the full-access warning, cancellation, and icon-bearing Enable action remain readable without page overflow
-
-#### Scenario: Enabled management modal
-- **WHEN** enabled MCP management opens in either theme
-- **THEN** endpoint, masked credentials, selected client, copyable setup prompt, and activity remain visually separated with restrained boundaries and shadows
-
-#### Scenario: Accessible compact header
-- **WHEN** assistive technology opens MCP management
-- **THEN** it receives the MCP title and localized hidden description without rendering a visible subtitle
-
-#### Scenario: MCP control icon order
-- **WHEN** Setup, Activity, Enable, or Disable renders in the MCP modal
-- **THEN** one thematic icon precedes the localized text and does not add a duplicate accessible name
 
 ### Requirement: Units detail panes use one compact alignment
 The Units hierarchy SHALL begin directly at the workflow content boundary without an empty spacer

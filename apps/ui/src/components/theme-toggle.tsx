@@ -5,7 +5,6 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { observer } from "mobx-react-lite";
 import { useTheme } from "next-themes";
 import type { ComponentType } from "react";
-import { useEffect } from "react";
 import {
   HiMiniCheck,
   HiOutlineComputerDesktop,
@@ -39,14 +38,8 @@ export const ThemeToggle = observer(
   }) => {
     const store = useOrgStore();
     const t = useUiText();
-    const { setTheme, theme } = useTheme();
-    const selectedTheme = normalizeUiTheme(theme);
-
-    useEffect(() => {
-      if (store.theme !== selectedTheme) {
-        store.setTheme(selectedTheme);
-      }
-    }, [selectedTheme, store]);
+    const { setTheme } = useTheme();
+    const selectedTheme = store.theme;
 
     const handleThemeChange = (theme: UiTheme) => {
       store.setTheme(theme);

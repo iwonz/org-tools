@@ -23,7 +23,6 @@ test("runs the complete state editor at the repository base path without APIs or
 }) => {
   const externalRequests: string[] = [];
   const apiRequests: string[] = [];
-  const mcpRequests: string[] = [];
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (
@@ -33,9 +32,6 @@ test("runs the complete state editor at the repository base path without APIs or
       externalRequests.push(request.url());
     }
     if (url.pathname.includes("/api/")) apiRequests.push(request.url());
-    if (url.pathname === "/mcp" || url.pathname.includes("/api/mcp")) {
-      mcpRequests.push(request.url());
-    }
   });
   await page.addInitScript(useEnglish, localeStorageKey);
   await page.goto("./", { waitUntil: "domcontentloaded" });
@@ -43,9 +39,6 @@ test("runs the complete state editor at the repository base path without APIs or
   await expect(page).toHaveURL(/\/org-tools\/$/u);
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toBeVisible();
   await expect(page.locator('[data-demo-id="browser-file-switcher"]')).toHaveCount(0);
-  await expect(page.locator('[data-demo-id="mcp-control"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "MCP", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "MCP", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-demo-id="project-save"]')).toHaveCount(0);
   await importSyntheticState(page);
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
@@ -98,12 +91,8 @@ test("runs the complete state editor at the repository base path without APIs or
   await page.getByRole("option", { name: "Dark", exact: true }).click();
   await page.locator('[data-demo-id="language-toggle"]').click();
   await page.getByRole("option", { name: ruMessages.Ui.Russian, exact: true }).click();
-  await expect(page.locator('[data-demo-id="mcp-control"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "MCP", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "MCP", exact: true })).toHaveCount(0);
   expect(externalRequests).toEqual([]);
   expect(apiRequests).toEqual([]);
-  expect(mcpRequests).toEqual([]);
 });
 
 test("hands state to another live tab and forgets it after the final tab closes", async ({
@@ -116,8 +105,16 @@ test("hands state to another live tab and forgets it after the final tab closes"
 
   const secondPage = await context.newPage();
   await secondPage.goto("./", { waitUntil: "domcontentloaded" });
+  await page.bringToFront();
+  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
+  await secondPage.bringToFront();
   await expect(secondPage.getByText("Product", { exact: true }).first()).toBeVisible();
   await secondPage.getByRole("tab", { name: "Employees", exact: true }).click();
+  await expect(secondPage.getByRole("tab", { name: "Employees", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.bringToFront();
   await expect(page.getByRole("tab", { name: "Employees", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",

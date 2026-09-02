@@ -15,24 +15,6 @@ SQLite stores one singleton state in the configured local file. The API rejects 
 cross-origin mutations, non-JSON mutations, malformed scopes, and invalid state. It does not enable
 CORS. A failed or corrupt database is reported by a stable code and is never replaced silently.
 
-Optional MCP access is available only in this local runtime and is disabled by default. `/mcp`
-accepts authenticated JSON POST requests from loopback clients, permits no CORS or remote binding,
-and rejects GET, legacy SSE, mismatched Origins, and invalid tokens. The 256-bit `ot_mcp_` token,
-ten-minute previews, and bounded activity journal remain in SQLite and never enter state Export.
-Disable takes effect immediately; Rotate revokes the old token and pending previews.
-
-Enabling MCP grants the chosen local agent complete access to organization data. Org Tools itself
-sends data only to that local client, but the client can forward it to its configured model provider.
-This provider boundary is documented here and in the MCP guide. Stored Employee names, tags, Unit
-names, and every other field are treated as data rather than instructions. Tokens must never enter
-logs, screenshots, commits, shell history, or Pages artifacts.
-
-The MCP setup prompt is assembled only after explicit Enable from bundled client templates and the
-current in-memory token. It exists only in component memory and a user-triggered clipboard copy; it
-is not written to organization state, SQLite, browser storage, or logs. Org Tools never executes the
-included `npx skills add` command or contacts GitHub. The installed public skill contains only
-instructions and no endpoint, credential, organization data, or executable resource.
-
 Import reads one explicitly selected JSON file into a bounded transient candidate. Export and Data
 Download begin only after explicit user actions. Organization records are never copied to browser
 storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs; remote avatars are
@@ -47,8 +29,7 @@ the SQLite file so rollback-journal transactions are settled. A custom path may 
 repository, but invalid configuration is a blocking error.
 
 The Pages artifact contains HTML, CSS, JavaScript, and local fonts only. It contains no SQLite code,
-state or MCP endpoint, MCP package, token prefix, MCP control, organization fixture, secret, remote
-asset, or external request. `pnpm pages:check`
+state endpoint, organization fixture, secret, remote asset, or external request. `pnpm pages:check`
 and `pnpm public:check` scan these boundaries.
 
 Tests and screenshots use fictional names, `example.test`, reserved `555-01xx` phone numbers, and

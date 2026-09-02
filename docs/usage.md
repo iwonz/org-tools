@@ -17,30 +17,12 @@ a localized accessible status name.
 
 The compact sidebar contains Units, Employees, Editor, Analytics, Calendar, Data Download, Import,
 state Export, language, and theme. Its desktop control expands the 64 px icon rail to a 240 px label
-panel without moving icon centers. The local server additionally places **MCP** after state Export;
-Pages does not show it. The header shows the current section icon and title plus its primary action:
+panel without moving icon centers. The header shows the current section icon and title plus its primary action:
 **Add Unit**, **Add Employee**, or enabled **Continue** in the relevant workflow. On narrow screens
 the action keeps its accessible name and tooltip while showing only the icon.
 Text-bearing buttons and tabs place their thematic icon before the visible label. Disclosure,
 sorting, removal, status, and count affordances remain trailing when that position communicates
 their distinct role.
-
-## Local MCP
-
-Open **MCP** in the local server sidebar to enable or disable access, reveal or copy the loopback
-endpoint and token, rotate credentials, select a supported local client, copy its complete English
-setup prompt, and review applied activity. The prompt tells the agent to install the public
-`org-tools` skill, add the current endpoint and token to its exact MCP configuration, reload if
-needed, and verify only read tools. Setup, Activity, Enable, Disable, and token rotation place a
-thematic icon before their visible localized label. Every Client setup choice also starts with its
-own bundled client icon. The sidebar icon is green while MCP is enabled. Enabling grants complete
-access to Employees, Units, the canonical Units View, and custom Views.
-
-Agent changes always use Preview → a new explicit user approval → Apply. Apply writes automatically
-like a user action and updates open browser tabs. Independent simultaneous fields merge; overlapping
-fields require **Keep local**, **Use MCP**, or **Cancel**. Activity **Undo** is confirmed and succeeds
-only when later edits do not overlap the values being restored. See [Local MCP](mcp.md) for tools and
-client setup.
 
 ## Language and appearance
 
@@ -98,8 +80,8 @@ reporting outputs and cannot be imported as application state.
 If a SQLite write fails, current data remains in memory. Org Tools retries a bounded number of times,
 shows a localized Retry action, and enables the native leave warning while a write is pending. A
 corrupt current row or unknown database schema blocks startup with Retry; it is never reset
-automatically. Browser tabs converge through logical stamps and server write order. MCP activity has
-a bounded local history, and cross-source overlapping fields use an explicit conflict dialog.
+automatically. Browser tabs converge through deterministic logical stamps while server writes remain
+serialized.
 
-See [State transfer format](import-formats.md), [MCP](mcp.md), [Privacy](privacy.md), and
+See [State transfer format](import-formats.md), [Privacy](privacy.md), and
 [Screenshots](screenshots.md) for the exact boundaries and visual catalog.

@@ -21,6 +21,14 @@ describe("state channel", () => {
       parseStateChannelMessage({
         stamp: { counter: 2, originId: "tab-a" },
         state,
+        targetOriginId: "tab-b",
+        type: "snapshot",
+      }),
+    ).toMatchObject({ state, targetOriginId: "tab-b", type: "snapshot" });
+    expect(
+      parseStateChannelMessage({
+        stamp: { counter: 2, originId: "tab-a" },
+        state,
         type: "state",
       }),
     ).toMatchObject({ state, type: "state" });

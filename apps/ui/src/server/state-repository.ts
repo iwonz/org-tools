@@ -6,7 +6,6 @@ import type { OrgToolsState } from "@org-tools/types";
 import { createBlankOrgToolsState, parseOrgToolsState } from "@/lib/org-file";
 import type { StateApiErrorCode, StateDocument, StatePutRequest } from "@/lib/state-runtime";
 import { resolveStateRuntimeConfig } from "@/server/state-config";
-import { emitStateRevision, type StateRevisionSource } from "@/server/state-events";
 
 const DEFAULT_BUSY_TIMEOUT_MS = 5_000;
 
@@ -20,13 +19,11 @@ type StateRow = {
 
 export class StateRepositoryError extends Error {
   readonly code: StateApiErrorCode;
-  readonly details?: unknown;
 
-  constructor(code: StateApiErrorCode, message: string, details?: unknown, options?: ErrorOptions) {
+  constructor(code: StateApiErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = "StateRepositoryError";
     this.code = code;
-    this.details = details;
   }
 }
 
@@ -39,7 +36,7 @@ const parseStoredState = (row: StateRow): OrgToolsState => {
       ui: JSON.parse(row.ui_json),
     });
   } catch (error) {
-    throw new StateRepositoryError("corrupt_stored_state", "Stored state is corrupt.", undefined, {
+    throw new StateRepositoryError("corrupt_stored_state", "Stored state is corrupt.", {
       cause: error,
     });
   }
@@ -49,7 +46,7 @@ const validateState = (input: unknown): OrgToolsState => {
   try {
     return parseOrgToolsState(input);
   } catch (error) {
-    throw new StateRepositoryError("invalid_state", "State is invalid.", undefined, {
+    throw new StateRepositoryError("invalid_state", "State is invalid.", {
       cause: error,
     });
   }
@@ -85,44 +82,6 @@ const hasExactStateColumns = (database: DatabaseSync): boolean =>
     "updated_at",
   ]);
 
-const hasExactMcpColumns = (database: DatabaseSync): boolean =>
-  hasExactColumns(database, "mcp_settings", [
-    "created_at",
-    "enabled",
-    "id",
-    "rotated_at",
-    "token",
-    "updated_at",
-  ]) &&
-  hasExactColumns(database, "mcp_previews", [
-    "actor",
-    "affected_ids_json",
-    "after_organization_json",
-    "applied_change_id",
-    "base_revision",
-    "before_organization_json",
-    "created_at",
-    "diff_json",
-    "expires_at",
-    "id",
-    "operations_json",
-    "reason",
-    "result_json",
-    "summary_json",
-  ]) &&
-  hasExactColumns(database, "mcp_changes", [
-    "actor",
-    "affected_ids_json",
-    "base_revision",
-    "created_at",
-    "forward_diff_json",
-    "id",
-    "inverse_diff_json",
-    "reason",
-    "result_revision",
-    "summary_json",
-  ]);
-
 export class StateRepository {
   readonly databasePath: string;
   private readonly database: DatabaseSync;
@@ -138,12 +97,9 @@ export class StateRepository {
     } catch (error) {
       database?.close();
       if (error instanceof StateRepositoryError) throw error;
-      throw new StateRepositoryError(
-        "database_unavailable",
-        "Database is unavailable.",
-        undefined,
-        { cause: error },
-      );
+      throw new StateRepositoryError("database_unavailable", "Database is unavailable.", {
+        cause: error,
+      });
     }
   }
 
@@ -161,57 +117,6 @@ export class StateRepository {
       this.database.exec("ROLLBACK");
       throw error;
     }
-  }
-
-  private createMcpSchema(): void {
-    const timestamp = new Date().toISOString();
-    this.database.exec(`
-      CREATE TABLE mcp_settings (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
-        token TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        rotated_at TEXT
-      ) STRICT;
-      CREATE TABLE mcp_previews (
-        id TEXT PRIMARY KEY,
-        base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-        actor TEXT NOT NULL,
-        reason TEXT NOT NULL,
-        operations_json TEXT NOT NULL,
-        before_organization_json TEXT NOT NULL,
-        after_organization_json TEXT NOT NULL,
-        diff_json TEXT NOT NULL,
-        summary_json TEXT NOT NULL,
-        affected_ids_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        expires_at TEXT NOT NULL,
-        applied_change_id TEXT,
-        result_json TEXT
-      ) STRICT;
-      CREATE INDEX mcp_previews_expiry_index ON mcp_previews(expires_at);
-      CREATE TABLE mcp_changes (
-        id TEXT PRIMARY KEY,
-        actor TEXT NOT NULL,
-        reason TEXT NOT NULL,
-        forward_diff_json TEXT NOT NULL,
-        inverse_diff_json TEXT NOT NULL,
-        summary_json TEXT NOT NULL,
-        affected_ids_json TEXT NOT NULL,
-        base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-        result_revision INTEGER NOT NULL CHECK (result_revision > base_revision),
-        created_at TEXT NOT NULL
-      ) STRICT;
-      CREATE INDEX mcp_changes_created_index ON mcp_changes(created_at DESC);
-    `);
-    this.database
-      .prepare(
-        `INSERT INTO mcp_settings
-         (id, enabled, token, created_at, updated_at, rotated_at)
-         VALUES (1, 0, NULL, ?, ?, NULL)`,
-      )
-      .run(timestamp, timestamp);
   }
 
   private createSchema(): void {
@@ -234,7 +139,6 @@ export class StateRepository {
          VALUES (1, ?, ?, 1, ?, ?)`,
       )
       .run(JSON.stringify(state.organization), JSON.stringify(state.ui), timestamp, timestamp);
-    this.createMcpSchema();
   }
 
   private initialize(): void {
@@ -249,12 +153,7 @@ export class StateRepository {
       this.transaction(() => this.createSchema());
       return;
     }
-    if (
-      tables.join("\0") !==
-        ["application_state", "mcp_changes", "mcp_previews", "mcp_settings"].join("\0") ||
-      !hasExactStateColumns(this.database) ||
-      !hasExactMcpColumns(this.database)
-    ) {
+    if (tables.join("\0") !== "application_state" || !hasExactStateColumns(this.database)) {
       throw new StateRepositoryError("database_unavailable", "Database schema is not recognized.");
     }
     this.read();
@@ -278,18 +177,9 @@ export class StateRepository {
     return { revision: toNumber(row.revision), state: parseStoredState(row) };
   }
 
-  write(
-    input: StatePutRequest,
-    expectedRevision: number,
-    source: StateRevisionSource = "ui",
-  ): StateDocument {
-    const document = this.transaction(() => {
+  write(input: StatePutRequest): StateDocument {
+    return this.transaction(() => {
       const current = this.read();
-      if (current.revision !== expectedRevision) {
-        throw new StateRepositoryError("revision_conflict", "State revision is stale.", {
-          currentRevision: current.revision,
-        });
-      }
       let nextState: OrgToolsState;
       if (input.scope === "all") {
         nextState = validateState(input.state);
@@ -313,8 +203,6 @@ export class StateRepository {
         );
       return { revision, state: nextState };
     });
-    emitStateRevision({ revision: document.revision, source });
-    return document;
   }
 
   unsafeStatementForTests(sql: string): StatementSync {
