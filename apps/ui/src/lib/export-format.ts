@@ -22,6 +22,7 @@ import type {
   ExportJsonEmployeeFieldKey,
   ExportJsonFieldNames,
   ExportJsonTagFieldKey,
+  ExportJsonTopLevelFieldKey,
   ExportJsonUnitFieldKey,
   ExportRowMode,
   ExportTabMode,
@@ -314,6 +315,7 @@ export type StructuredJsonExportOptions = {
   excludedJsonTagKeys: readonly string[];
   excludedJsonUnitIds: readonly UnitId[];
   jsonFieldNames: ExportJsonFieldNames;
+  jsonTopLevelFieldOrder: readonly ExportJsonTopLevelFieldKey[];
   selectedEmployeeFieldKeys: readonly ExportJsonEmployeeFieldKey[];
   selectedJsonTagFieldKeys: readonly ExportJsonTagFieldKey[];
   selectedJsonUnitFieldKeys: readonly ExportJsonUnitFieldKey[];
@@ -329,40 +331,49 @@ export const createStructuredJsonRecords = (
     const firstRow = employeeRows[0];
     if (!firstRow) return {};
     const employee = firstRow.employee;
-    const entries: Array<[string, unknown]> = options.selectedEmployeeFieldKeys.map((fieldKey) => [
-      options.jsonFieldNames.employee[fieldKey].trim(),
-      getExportEmployeeFieldValue(employee, fieldKey),
-    ]);
-    if (options.selectedJsonUnitFieldKeys.length > 0) {
+    const selectedEmployeeFields = new Set(options.selectedEmployeeFieldKeys);
+    const entries: Array<[string, unknown]> = [];
+    for (const fieldKey of options.jsonTopLevelFieldOrder) {
+      if (fieldKey === "units") {
+        if (options.selectedJsonUnitFieldKeys.length === 0) continue;
+        entries.push([
+          options.jsonFieldNames.units.collection.trim(),
+          employeeRows.flatMap((row) => {
+            if (!row.unitContext || excludedUnitIds.has(row.unitContext.unitId)) return [];
+            return [
+              Object.fromEntries(
+                options.selectedJsonUnitFieldKeys.map((unitFieldKey) => [
+                  options.jsonFieldNames.units.fields[unitFieldKey].trim(),
+                  getUnitFieldValue(row, unitFieldKey, true),
+                ]),
+              ),
+            ];
+          }),
+        ]);
+        continue;
+      }
+      if (fieldKey === "tags") {
+        if (options.selectedJsonTagFieldKeys.length === 0) continue;
+        entries.push([
+          options.jsonFieldNames.tags.collection.trim(),
+          employee.tags.flatMap((tag) => {
+            if (excludedTagKeys.has(normalizeSearchValue(tag.label))) return [];
+            return [
+              Object.fromEntries(
+                options.selectedJsonTagFieldKeys.map((tagFieldKey) => [
+                  options.jsonFieldNames.tags.fields[tagFieldKey].trim(),
+                  tag[tagFieldKey],
+                ]),
+              ),
+            ];
+          }),
+        ]);
+        continue;
+      }
+      if (!selectedEmployeeFields.has(fieldKey)) continue;
       entries.push([
-        options.jsonFieldNames.units.collection.trim(),
-        employeeRows.flatMap((row) => {
-          if (!row.unitContext || excludedUnitIds.has(row.unitContext.unitId)) return [];
-          return [
-            Object.fromEntries(
-              options.selectedJsonUnitFieldKeys.map((fieldKey) => [
-                options.jsonFieldNames.units.fields[fieldKey].trim(),
-                getUnitFieldValue(row, fieldKey, true),
-              ]),
-            ),
-          ];
-        }),
-      ]);
-    }
-    if (options.selectedJsonTagFieldKeys.length > 0) {
-      entries.push([
-        options.jsonFieldNames.tags.collection.trim(),
-        employee.tags.flatMap((tag) => {
-          if (excludedTagKeys.has(normalizeSearchValue(tag.label))) return [];
-          return [
-            Object.fromEntries(
-              options.selectedJsonTagFieldKeys.map((fieldKey) => [
-                options.jsonFieldNames.tags.fields[fieldKey].trim(),
-                tag[fieldKey],
-              ]),
-            ),
-          ];
-        }),
+        options.jsonFieldNames.employee[fieldKey].trim(),
+        getExportEmployeeFieldValue(employee, fieldKey),
       ]);
     }
     return Object.fromEntries(entries);

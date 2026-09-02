@@ -106,8 +106,10 @@ history, collaborative cursors, or remote synchronization.
 - Import owns one transient `File`, mapping, and validated candidate. Global Export validates and
   downloads the complete current state only after an explicit action.
 - Data Download is a separate reporting pipeline for structured JSON and separator templates.
-  JSON creates one record per Employee with independently enabled, named, and filtered nested Unit
-  and Tag arrays. Template retains All Units and First Unit row modes.
+  JSON creates one record per Employee from one sortable top-level list of scalar Employee fields
+  and optional Unit and Tag arrays. Unit and Tag rows use the same geometry as scalar fields, retain
+  independently sortable nested fields, and support naming plus exact exclusions. Template retains
+  All Units and First Unit row modes through one control shared with Editor export.
 
 Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
 headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row
@@ -115,10 +117,12 @@ heights, and hierarchy anchors. The selected export font measures one immutable 
 Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
 drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
 Employee summary, and boss treatment while excluding Static/Live membership type, transient
-selection, hover, handles, and menus. Image titles, backgrounds, fonts, scope, radius, Employee
-templates, and Editor JSON settings remain output-only session settings and do not mutate the
-current structure. Editor JSON and Template use the same formatter as Data Download while limiting
-Employees and assignments to Unit-only or subtree scope.
+selection, hover, handles, and menus. Its bounded inline preview has no secondary full-image
+viewer. Image titles, backgrounds, fonts, icon-only alignment, scope, radius, Employee templates,
+and Editor JSON settings remain output-only session settings and do not mutate the current
+structure. Image template tokens exclude avatar bytes, while painted avatars remain available.
+Editor JSON and Template use the same formatter and sortable field controls as Data Download while
+limiting Employees and assignments to Unit-only or subtree scope.
 
 Both runtimes expose the same Import, Export, language, and theme actions and retain identical
 compact/expanded sidebar geometry.

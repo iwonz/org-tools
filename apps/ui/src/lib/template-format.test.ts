@@ -7,7 +7,10 @@ import {
   type TemplateFieldValue,
   templateReferencesField,
 } from "@/lib/template-format";
-import { createDefaultExportJsonFieldNames } from "@/stores/export-session-store";
+import {
+  createDefaultExportJsonFieldNames,
+  defaultExportJsonTopLevelFieldOrder,
+} from "@/stores/export-session-store";
 
 const render = (template: string, values: Record<string, unknown>) =>
   renderTemplateFormat({
@@ -97,6 +100,7 @@ describe("createExportText template mode", () => {
         excludedJsonTagKeys: [],
         excludedJsonUnitIds: [],
         jsonFieldNames: createDefaultExportJsonFieldNames(),
+        jsonTopLevelFieldOrder: defaultExportJsonTopLevelFieldOrder,
         rows,
         selectedEmployeeFieldKeys: [],
         selectedJsonTagFieldKeys: [],
@@ -133,6 +137,7 @@ describe("createExportText template mode", () => {
       excludedJsonTagKeys: [],
       excludedJsonUnitIds: [],
       jsonFieldNames,
+      jsonTopLevelFieldOrder: defaultExportJsonTopLevelFieldOrder,
       rows,
       selectedEmployeeFieldKeys: [],
       selectedJsonTagFieldKeys: ["label", "date"] as const,

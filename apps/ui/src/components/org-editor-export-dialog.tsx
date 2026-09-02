@@ -3,16 +3,21 @@
 import type { Employee, EmployeeId, OrgEditorLayoutMode, OrgEditorUnit } from "@org-tools/types";
 import Image from "next/image";
 import { useLocale } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   HiOutlineArrowDownTray,
+  HiOutlineBars3,
+  HiOutlineBars3BottomLeft,
+  HiOutlineBars3BottomRight,
+  HiOutlineBuildingOffice2,
   HiOutlineClipboardDocument,
   HiOutlineCodeBracket,
-  HiOutlineMagnifyingGlassPlus,
   HiOutlinePhoto,
   HiOutlineQueueList,
+  HiOutlineRectangleGroup,
 } from "react-icons/hi2";
 
+import { ExportRowModeControl } from "@/components/export-row-mode-control";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
 import {
   StructuredJsonSettings,
@@ -44,7 +49,6 @@ import {
   createExportPreview,
   createExportTextAsync,
   exportEmployeeFields,
-  exportRowModeOptions,
   exportUnitFields,
   validateExportFieldNames,
 } from "@/lib/export-format";
@@ -74,8 +78,8 @@ import { cn } from "@/lib/utils";
 import {
   createDefaultExportJsonFieldNames,
   defaultExportEmployeeFieldKeys,
-  defaultExportEmployeeFieldOrder,
   defaultExportJsonTagFieldOrder,
+  defaultExportJsonTopLevelFieldOrder,
   defaultExportJsonUnitFieldOrder,
 } from "@/stores/export-session-store";
 import type { ExportRowMode } from "@/stores/org-store";
@@ -130,19 +134,21 @@ export function OrgEditorExportDialog({
   const t = useUiText();
   const locale = useLocale();
   const countText = useCountText();
+  const localizedManagerLabel = t("Manager");
   const [scope, setScope] = useState<OrgEditorExportScope>("subtree");
   const [activeTab, setActiveTab] = useState<OrgEditorExportTab>("image");
   const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() =>
-    createDefaultOrgEditorImageExportSettings(),
+    createDefaultOrgEditorImageExportSettings(localizedManagerLabel),
   );
+  const previousLocalizedManagerLabelRef = useRef(localizedManagerLabel);
   const [templateFormat, setTemplateFormat] = useState(DEFAULT_TEMPLATE_FORMAT);
   const [rowMode, setRowMode] = useState<ExportRowMode>("allUnits");
   const [jsonSettings, setJsonSettings] = useState<StructuredJsonSettingsValue>(() => ({
-    employeeFieldOrder: [...defaultExportEmployeeFieldOrder],
     excludedJsonTagKeys: [],
     excludedJsonUnitIds: [],
     jsonFieldNames: createDefaultExportJsonFieldNames(),
     jsonTagFieldOrder: [...defaultExportJsonTagFieldOrder],
+    jsonTopLevelFieldOrder: [...defaultExportJsonTopLevelFieldOrder],
     jsonUnitFieldOrder: [...defaultExportJsonUnitFieldOrder],
     selectedEmployeeFieldKeys: [...defaultExportEmployeeFieldKeys],
     selectedJsonTagFieldKeys: [],
@@ -152,7 +158,17 @@ export function OrgEditorExportDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<UiTextKey | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [isZoomPreviewOpen, setIsZoomPreviewOpen] = useState(false);
+  useEffect(() => {
+    const previousLocalizedManagerLabel = previousLocalizedManagerLabelRef.current;
+    if (previousLocalizedManagerLabel === localizedManagerLabel) return;
+
+    setImageSettings((currentSettings) =>
+      currentSettings.imageBossLabel === previousLocalizedManagerLabel
+        ? { ...currentSettings, imageBossLabel: localizedManagerLabel }
+        : currentSettings,
+    );
+    previousLocalizedManagerLabelRef.current = localizedManagerLabel;
+  }, [localizedManagerLabel]);
   const formatUnitSummary = useCallback(
     (summary: OrgEditorUnitEmployeeSummary) => {
       const direct = countText("employees", { count: summary.directCount });
@@ -174,7 +190,10 @@ export function OrgEditorExportDialog({
     [hasAvatarBase64UrlField],
   );
   const visibleImageEmployeeFields = useMemo(
-    () => visibleEmployeeFields.filter((field) => field.key !== "tags"),
+    () =>
+      visibleEmployeeFields.filter(
+        (field) => field.key !== "avatarBase64Url" && field.key !== "tags",
+      ),
     [visibleEmployeeFields],
   );
   const exportRows = useMemo(() => {
@@ -191,6 +210,29 @@ export function OrgEditorExportDialog({
   const scopedUnits = useMemo(
     () => (unit ? getOrgEditorExportUnits({ rootUnit: unit, scope, units }) : []),
     [scope, unit, units],
+  );
+  const rowCountByMode = useMemo(
+    () => ({
+      allUnits: unit
+        ? buildOrgEditorExportRows({
+            rootUnit: unit,
+            rowMode: "allUnits",
+            scope,
+            sourceIndex,
+            units,
+          }).length
+        : 0,
+      firstUnit: unit
+        ? buildOrgEditorExportRows({
+            rootUnit: unit,
+            rowMode: "firstUnit",
+            scope,
+            sourceIndex,
+            units,
+          }).length
+        : 0,
+    }),
+    [scope, sourceIndex, unit, units],
   );
   const tagOptions = useMemo(() => {
     const labels = new Map<string, string>();
@@ -296,7 +338,6 @@ export function OrgEditorExportDialog({
     if (open) return;
 
     setStatus(null);
-    setIsZoomPreviewOpen(false);
     setPreviewUrl((currentUrl) => {
       if (currentUrl) URL.revokeObjectURL(currentUrl);
       return null;
@@ -402,463 +443,440 @@ export function OrgEditorExportDialog({
     imageSettings.background.type === "solid" ? imageSettings.background.color : "#ffffff";
 
   return (
-    <>
-      <Dialog onOpenChange={onOpenChange} open={open}>
-        <DialogContent
-          className="flex h-[min(820px,calc(100dvh-32px))] max-w-5xl flex-col overflow-hidden p-0"
-          data-demo-id="org-editor-export-dialog"
-        >
-          <DialogHeader>
-            <DialogTitle>{t("Export")}</DialogTitle>
-            <DialogDescription>
-              {unit ? unit.name : t("No Unit selected")}
-              {unit && (
-                <>
-                  {" · "}
-                  {scope === "subtree" ? t("entire subtree") : t("selected Unit only")}
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody className="flex flex-1 flex-col gap-4 overflow-y-auto">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Tabs
-                onValueChange={(value) => {
-                  setScope(value as OrgEditorExportScope);
-                  setStatus(null);
-                }}
-                value={scope}
-              >
-                <TabsList>
-                  <TabsTrigger value="subtree">{t("Entire subtree")}</TabsTrigger>
-                  <TabsTrigger value="unit">{t("Unit only")}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <Tabs
-                onValueChange={(value) => {
-                  setActiveTab(value as OrgEditorExportTab);
-                  setStatus(null);
-                }}
-                value={activeTab}
-              >
-                <TabsList>
-                  <TabsTrigger value="image">
-                    <HiOutlinePhoto />
-                    {t("Image")}
-                  </TabsTrigger>
-                  <TabsTrigger value="json">
-                    <HiOutlineCodeBracket />
-                    JSON
-                  </TabsTrigger>
-                  <TabsTrigger value="template">
-                    <HiOutlineQueueList />
-                    {t("Template")}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent
+        className="flex h-[min(820px,calc(100dvh-32px))] max-w-5xl flex-col overflow-hidden p-0"
+        data-demo-id="org-editor-export-dialog"
+      >
+        <DialogHeader>
+          <DialogTitle>{t("Export")}</DialogTitle>
+          <DialogDescription>
+            {unit ? unit.name : t("No Unit selected")}
+            {unit && (
+              <>
+                {" · "}
+                {scope === "subtree" ? t("entire subtree") : t("selected Unit only")}
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex flex-1 flex-col gap-4 overflow-y-auto">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Tabs
-              onValueChange={(value) => setActiveTab(value as OrgEditorExportTab)}
+              onValueChange={(value) => {
+                setScope(value as OrgEditorExportScope);
+                setStatus(null);
+              }}
+              value={scope}
+            >
+              <TabsList>
+                <TabsTrigger value="subtree">
+                  <HiOutlineRectangleGroup />
+                  {t("Entire subtree")}
+                </TabsTrigger>
+                <TabsTrigger value="unit">
+                  <HiOutlineBuildingOffice2 />
+                  {t("Unit only")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Tabs
+              onValueChange={(value) => {
+                setActiveTab(value as OrgEditorExportTab);
+                setStatus(null);
+              }}
               value={activeTab}
             >
-              <TabsContent className="mt-0 grid gap-4" value="image">
-                <section className="grid gap-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label>{t("Preview")}</Label>
+              <TabsList>
+                <TabsTrigger value="image">
+                  <HiOutlinePhoto />
+                  {t("Image")}
+                </TabsTrigger>
+                <TabsTrigger value="json">
+                  <HiOutlineCodeBracket />
+                  JSON
+                </TabsTrigger>
+                <TabsTrigger value="template">
+                  <HiOutlineQueueList />
+                  {t("Template")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          <Tabs
+            onValueChange={(value) => setActiveTab(value as OrgEditorExportTab)}
+            value={activeTab}
+          >
+            <TabsContent className="mt-0 grid gap-4" value="image">
+              <section className="grid gap-3">
+                <div
+                  className="relative grid min-h-64 place-items-center overflow-hidden rounded-md border bg-[linear-gradient(45deg,#f1f5f9_25%,transparent_25%),linear-gradient(-45deg,#f1f5f9_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f1f5f9_75%),linear-gradient(-45deg,transparent_75%,#f1f5f9_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0] p-4"
+                  data-demo-id="org-editor-export-image-preview"
+                >
+                  {previewUrl && (
+                    <Image
+                      alt={t("Unit export preview")}
+                      className="max-h-[360px] max-w-full object-contain"
+                      data-demo-id="org-editor-export-image"
+                      height={800}
+                      src={previewUrl}
+                      unoptimized
+                      width={1200}
+                    />
+                  )}
+                  {isPreviewLoading && (
+                    <div className="absolute inset-0 grid place-items-center bg-background/80 text-sm text-muted-foreground">
+                      {t("Preparing preview...")}
+                    </div>
+                  )}
+                  {previewError && (
+                    <div className="max-w-md rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                      {t(previewError)}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="grid gap-4 py-2">
+                <div className="grid gap-2">
+                  <Label>{t("Background")}</Label>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <Button
-                      disabled={!previewUrl}
-                      onClick={() => setIsZoomPreviewOpen(true)}
-                      size="sm"
+                      className={getBackgroundButtonClassName(
+                        imageSettings.background.type === "transparent",
+                      )}
+                      onClick={() => setImageBackground({ type: "transparent" })}
                       type="button"
                       variant="outline"
                     >
-                      <HiOutlineMagnifyingGlassPlus />
-                      {t("Open")}
+                      <span className="size-5 rounded border bg-[linear-gradient(45deg,#e2e8f0_25%,transparent_25%),linear-gradient(-45deg,#e2e8f0_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e2e8f0_75%),linear-gradient(-45deg,transparent_75%,#e2e8f0_75%)] bg-[length:10px_10px] bg-[position:0_0,0_5px,5px_-5px,-5px_0]" />
+                      {t("Transparent")}
                     </Button>
-                  </div>
-                  <div
-                    className="relative grid min-h-64 place-items-center overflow-hidden rounded-md border bg-[linear-gradient(45deg,#f1f5f9_25%,transparent_25%),linear-gradient(-45deg,#f1f5f9_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f1f5f9_75%),linear-gradient(-45deg,transparent_75%,#f1f5f9_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0] p-4"
-                    data-demo-id="org-editor-export-image-preview"
-                  >
-                    {previewUrl && (
-                      <Image
-                        alt={t("Unit export preview")}
-                        className="max-h-[360px] max-w-full object-contain"
-                        data-demo-id="org-editor-export-image"
-                        height={800}
-                        src={previewUrl}
-                        unoptimized
-                        width={1200}
+                    <div
+                      className={cn(
+                        getBackgroundButtonClassName(isSolidBackgroundActive),
+                        "inline-flex cursor-pointer items-center gap-2 rounded-md",
+                      )}
+                    >
+                      <Input
+                        className="h-6 w-8 border-0 p-0"
+                        onChange={(event) =>
+                          setImageBackground({
+                            color: event.currentTarget.value,
+                            type: "solid",
+                          })
+                        }
+                        type="color"
+                        value={solidColor}
                       />
-                    )}
-                    {isPreviewLoading && (
-                      <div className="absolute inset-0 grid place-items-center bg-background/80 text-sm text-muted-foreground">
-                        {t("Preparing preview...")}
-                      </div>
-                    )}
-                    {previewError && (
-                      <div className="max-w-md rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                        {t(previewError)}
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                <section className="grid gap-4 py-2">
-                  <div className="grid gap-2">
-                    <Label>{t("Background")}</Label>
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {t("Color")}
+                    </div>
+                    {ORG_EDITOR_EXPORT_GRADIENTS.map((gradient) => (
                       <Button
                         className={getBackgroundButtonClassName(
-                          imageSettings.background.type === "transparent",
+                          imageSettings.background.type === "gradient" &&
+                            imageSettings.background.gradientId === gradient.id,
                         )}
-                        onClick={() => setImageBackground({ type: "transparent" })}
+                        key={gradient.id}
+                        onClick={() =>
+                          setImageBackground({
+                            gradientId: gradient.id,
+                            type: "gradient",
+                          })
+                        }
                         type="button"
                         variant="outline"
                       >
-                        <span className="size-5 rounded border bg-[linear-gradient(45deg,#e2e8f0_25%,transparent_25%),linear-gradient(-45deg,#e2e8f0_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e2e8f0_75%),linear-gradient(-45deg,transparent_75%,#e2e8f0_75%)] bg-[length:10px_10px] bg-[position:0_0,0_5px,5px_-5px,-5px_0]" />
-                        {t("Transparent")}
+                        <span
+                          className="size-5 rounded border"
+                          style={{ background: gradient.previewCss }}
+                        />
+                        {t(gradient.label as UiTextKey)}
                       </Button>
-                      <div
-                        className={cn(
-                          getBackgroundButtonClassName(isSolidBackgroundActive),
-                          "inline-flex cursor-pointer items-center gap-2 rounded-md",
-                        )}
-                      >
-                        <Input
-                          className="h-6 w-8 border-0 p-0"
-                          onChange={(event) =>
-                            setImageBackground({
-                              color: event.currentTarget.value,
-                              type: "solid",
-                            })
-                          }
-                          type="color"
-                          value={solidColor}
-                        />
-                        {t("Color")}
-                      </div>
-                      {ORG_EDITOR_EXPORT_GRADIENTS.map((gradient) => (
-                        <Button
-                          className={getBackgroundButtonClassName(
-                            imageSettings.background.type === "gradient" &&
-                              imageSettings.background.gradientId === gradient.id,
-                          )}
-                          key={gradient.id}
-                          onClick={() =>
-                            setImageBackground({
-                              gradientId: gradient.id,
-                              type: "gradient",
-                            })
-                          }
-                          type="button"
-                          variant="outline"
-                        >
-                          <span
-                            className="size-5 rounded border"
-                            style={{ background: gradient.previewCss }}
-                          />
-                          {t(gradient.label as UiTextKey)}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="org-editor-export-padding">{t("Padding")}</Label>
-                      <Input
-                        id="org-editor-export-padding"
-                        max={100}
-                        min={0}
-                        onChange={(event) =>
-                          updateImageSettings({
-                            padding: Number.parseInt(event.currentTarget.value || "0", 10),
-                          })
-                        }
-                        type="number"
-                        value={imageSettings.padding}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="org-editor-export-unit-radius">{t("Corner radius")}</Label>
-                      <Input
-                        id="org-editor-export-unit-radius"
-                        max={100}
-                        min={0}
-                        onChange={(event) =>
-                          updateImageSettings({
-                            unitBorderRadius: Number.parseInt(event.currentTarget.value || "5", 10),
-                          })
-                        }
-                        type="number"
-                        value={imageSettings.unitBorderRadius}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="org-editor-export-font">{t("Font")}</Label>
-                      <Select
-                        onValueChange={(value) => updateImageSettings({ fontFamily: value })}
-                        value={imageSettings.fontFamily}
-                      >
-                        <SelectTrigger id="org-editor-export-font">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ORG_EDITOR_EXPORT_FONTS.map((font) => (
-                            <SelectItem key={font.family} value={font.family}>
-                              <span style={{ fontFamily: font.family }}>{font.label}</span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-                    <div className="grid gap-2">
-                      <Label htmlFor="org-editor-export-title">{t("Title")}</Label>
-                      <Input
-                        id="org-editor-export-title"
-                        onChange={(event) =>
-                          updateImageSettings({ title: event.currentTarget.value })
-                        }
-                        placeholder={t("No title")}
-                        value={imageSettings.title}
-                      />
-                    </div>
-                    <div className="grid gap-2 md:w-32">
-                      <Label htmlFor="org-editor-export-title-font-size">{t("Size")}</Label>
-                      <Input
-                        id="org-editor-export-title-font-size"
-                        max={48}
-                        min={12}
-                        onChange={(event) =>
-                          updateImageSettings({
-                            titleFontSize: Number.parseInt(event.currentTarget.value || "20", 10),
-                          })
-                        }
-                        type="number"
-                        value={imageSettings.titleFontSize}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>{t("Alignment")}</Label>
-                      <Tabs
-                        onValueChange={(value) =>
-                          updateImageSettings({ titleAlign: value as OrgEditorExportTitleAlign })
-                        }
-                        value={imageSettings.titleAlign}
-                      >
-                        <TabsList>
-                          <TabsTrigger value="left">{t("Left")}</TabsTrigger>
-                          <TabsTrigger value="center">{t("Center")}</TabsTrigger>
-                          <TabsTrigger value="right">{t("Right")}</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 pt-2">
-                    <div className="grid gap-2">
-                      <Label>{t("Employee format")}</Label>
-                      <div className="flex min-w-0 flex-wrap gap-2">
-                        {visibleImageEmployeeFields.map((field) => (
-                          <Button
-                            key={field.key}
-                            onClick={() => appendImageEmployeeField(field.key)}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            {field.label}
-                          </Button>
-                        ))}
-                        <Button
-                          onClick={() => appendImageEmployeeField("isBoss")}
-                          size="sm"
-                          type="button"
-                          variant="outline"
-                        >
-                          isBoss
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="org-editor-export-employee-format">{t("Format")}</Label>
-                      <Textarea
-                        className="h-20 resize-none"
-                        id="org-editor-export-employee-format"
-                        onChange={(event) =>
-                          updateImageSettings({ employeeFormat: event.currentTarget.value })
-                        }
-                        value={imageSettings.employeeFormat}
-                      />
-                    </div>
-                    {hasImageBossToken && (
-                      <div className="grid max-w-sm gap-2">
-                        <Label htmlFor="org-editor-export-image-boss-label">
-                          {t("isBoss value")}
-                        </Label>
-                        <Input
-                          aria-invalid={!isImageBossLabelValid}
-                          id="org-editor-export-image-boss-label"
-                          onChange={(event) =>
-                            updateImageSettings({ imageBossLabel: event.currentTarget.value })
-                          }
-                          value={imageSettings.imageBossLabel}
-                        />
-                        {!isImageBossLabelValid && (
-                          <p className="text-xs text-destructive">
-                            {t("The boss value cannot be empty.")}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              </TabsContent>
-
-              <TabsContent className="mt-0 grid gap-4" value="json">
-                <StructuredJsonSettings
-                  errors={jsonValidation.errors}
-                  onChange={(value) => {
-                    setJsonSettings(value);
-                    setStatus(null);
-                  }}
-                  tagOptions={tagOptions}
-                  unitOptions={scopedUnits.map((currentUnit) => ({
-                    label: currentUnit.name,
-                    value: currentUnit.id,
-                  }))}
-                  value={jsonSettings}
-                />
-                <div className="grid gap-2" data-demo-id="org-editor-export-json-preview">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label>{t("Preview")}</Label>
-                    <span className="text-xs text-muted-foreground">
-                      {textPreview.truncated
-                        ? t("Showing {shown} of {total}", {
-                            shown: textPreview.shownCount,
-                            total: textPreview.fullCount,
-                          })
-                        : countText("records", { count: textPreview.fullCount })}
-                    </span>
-                  </div>
-                  <div className="max-h-80 min-h-40 overflow-auto rounded-md border bg-muted/30 p-3">
-                    <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">
-                      {canExportText
-                        ? textPreview.text
-                        : t("The selected Unit has no Employees to export.")}
-                    </pre>
+                    ))}
                   </div>
                 </div>
-              </TabsContent>
 
-              <TabsContent className="mt-0" value="template">
-                <ExportTemplateSettings
-                  dataDemoId="org-editor-export-template"
-                  employeeFields={visibleEmployeeFields}
-                  format={templateFormat}
-                  onAppendField={appendTemplateField}
-                  onFormatChange={(value) => {
-                    setTemplateFormat(value);
-                    setStatus(null);
-                  }}
-                  previewMeta={
-                    textPreview.truncated
-                      ? t("Showing {shown} of {total}", {
-                          shown: textPreview.shownCount,
-                          total: textPreview.fullCount,
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="org-editor-export-padding">{t("Padding")}</Label>
+                    <Input
+                      id="org-editor-export-padding"
+                      max={100}
+                      min={0}
+                      onChange={(event) =>
+                        updateImageSettings({
+                          padding: Number.parseInt(event.currentTarget.value || "0", 10),
                         })
-                      : countText("rows", { count: textPreview.fullCount })
-                  }
-                  previewText={
-                    canExportText
-                      ? textPreview.text
-                      : t("The selected Unit has no Employees to export.")
-                  }
-                  unitFields={exportUnitFields}
-                >
-                  <div className="grid max-w-md gap-2">
-                    <Label htmlFor="org-editor-export-row-mode">
-                      {t("When an Employee belongs to multiple Units")}
-                    </Label>
+                      }
+                      type="number"
+                      value={imageSettings.padding}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="org-editor-export-unit-radius">{t("Corner radius")}</Label>
+                    <Input
+                      id="org-editor-export-unit-radius"
+                      max={100}
+                      min={0}
+                      onChange={(event) =>
+                        updateImageSettings({
+                          unitBorderRadius: Number.parseInt(event.currentTarget.value || "5", 10),
+                        })
+                      }
+                      type="number"
+                      value={imageSettings.unitBorderRadius}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="org-editor-export-font">{t("Font")}</Label>
                     <Select
-                      onValueChange={(value) => {
-                        setRowMode(value as ExportRowMode);
-                        setStatus(null);
-                      }}
-                      value={rowMode}
+                      onValueChange={(value) => updateImageSettings({ fontFamily: value })}
+                      value={imageSettings.fontFamily}
                     >
-                      <SelectTrigger id="org-editor-export-row-mode">
+                      <SelectTrigger id="org-editor-export-font">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {exportRowModeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {t(option.title as UiTextKey)}
+                        {ORG_EDITOR_EXPORT_FONTS.map((font) => (
+                          <SelectItem key={font.family} value={font.family}>
+                            <span style={{ fontFamily: font.family }}>{font.label}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                </ExportTemplateSettings>
-              </TabsContent>
-            </Tabs>
-          </DialogBody>
-          <DialogFooter>
-            {status && (
-              <div
-                className={cn(
-                  "mr-auto text-sm",
-                  status.kind === "success" ? "text-muted-foreground" : "text-destructive",
-                )}
-              >
-                {t(status.text)}
-              </div>
-            )}
-            <Button
-              disabled={activeTab === "image" ? !canExportImage : !canExportText}
-              onClick={copy}
-              type="button"
-              variant="outline"
-            >
-              <HiOutlineClipboardDocument />
-              {t("Copy")}
-            </Button>
-            <Button
-              disabled={activeTab === "image" ? !canExportImage : !canExportText}
-              onClick={download}
-              type="button"
-            >
-              <HiOutlineArrowDownTray />
-              {t("Save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                </div>
 
-      <Dialog onOpenChange={setIsZoomPreviewOpen} open={isZoomPreviewOpen}>
-        <DialogContent className="flex h-[calc(100dvh-40px)] max-w-[calc(100vw-40px)] flex-col overflow-hidden p-0">
-          <DialogHeader>
-            <DialogTitle>{t("Image preview")}</DialogTitle>
-          </DialogHeader>
-          <DialogBody className="grid flex-1 place-items-center overflow-auto bg-[linear-gradient(45deg,#f1f5f9_25%,transparent_25%),linear-gradient(-45deg,#f1f5f9_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f1f5f9_75%),linear-gradient(-45deg,transparent_75%,#f1f5f9_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0]">
-            {previewUrl && (
-              <Image
-                alt={t("Expanded Unit export preview")}
-                className="max-h-full max-w-full object-contain"
-                height={1200}
-                src={previewUrl}
-                unoptimized
-                width={1800}
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem_auto]">
+                  <div className="grid gap-2">
+                    <Label htmlFor="org-editor-export-title">{t("Title")}</Label>
+                    <Input
+                      id="org-editor-export-title"
+                      onChange={(event) =>
+                        updateImageSettings({ title: event.currentTarget.value })
+                      }
+                      placeholder={t("No title")}
+                      value={imageSettings.title}
+                    />
+                  </div>
+                  <div className="grid gap-2 md:w-32">
+                    <Label htmlFor="org-editor-export-title-font-size">{t("Size")}</Label>
+                    <Input
+                      id="org-editor-export-title-font-size"
+                      max={48}
+                      min={12}
+                      onChange={(event) =>
+                        updateImageSettings({
+                          titleFontSize: Number.parseInt(event.currentTarget.value || "20", 10),
+                        })
+                      }
+                      type="number"
+                      value={imageSettings.titleFontSize}
+                    />
+                  </div>
+                  <div className="grid gap-2 md:w-fit">
+                    <Label>{t("Alignment")}</Label>
+                    <Tabs
+                      onValueChange={(value) =>
+                        updateImageSettings({ titleAlign: value as OrgEditorExportTitleAlign })
+                      }
+                      value={imageSettings.titleAlign}
+                    >
+                      <TabsList className="h-10">
+                        <TabsTrigger
+                          aria-label={t("Left")}
+                          className="size-8 px-0"
+                          title={t("Left")}
+                          value="left"
+                        >
+                          <HiOutlineBars3BottomLeft />
+                        </TabsTrigger>
+                        <TabsTrigger
+                          aria-label={t("Center")}
+                          className="size-8 px-0"
+                          title={t("Center")}
+                          value="center"
+                        >
+                          <HiOutlineBars3 />
+                        </TabsTrigger>
+                        <TabsTrigger
+                          aria-label={t("Right")}
+                          className="size-8 px-0"
+                          title={t("Right")}
+                          value="right"
+                        >
+                          <HiOutlineBars3BottomRight />
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 pt-2">
+                  <div className="grid gap-2">
+                    <Label>{t("Employee format")}</Label>
+                    <div className="flex min-w-0 flex-wrap gap-2">
+                      {visibleImageEmployeeFields.map((field) => (
+                        <Button
+                          key={field.key}
+                          onClick={() => appendImageEmployeeField(field.key)}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          {field.label}
+                        </Button>
+                      ))}
+                      <Button
+                        onClick={() => appendImageEmployeeField("isBoss")}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        isBoss
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="org-editor-export-employee-format">{t("Format")}</Label>
+                    <Textarea
+                      className="h-20 resize-none"
+                      id="org-editor-export-employee-format"
+                      onChange={(event) =>
+                        updateImageSettings({ employeeFormat: event.currentTarget.value })
+                      }
+                      value={imageSettings.employeeFormat}
+                    />
+                  </div>
+                  {hasImageBossToken && (
+                    <div className="grid max-w-sm gap-2">
+                      <Label htmlFor="org-editor-export-image-boss-label">
+                        {t("isBoss value")}
+                      </Label>
+                      <Input
+                        aria-invalid={!isImageBossLabelValid}
+                        id="org-editor-export-image-boss-label"
+                        onChange={(event) =>
+                          updateImageSettings({ imageBossLabel: event.currentTarget.value })
+                        }
+                        value={imageSettings.imageBossLabel}
+                      />
+                      {!isImageBossLabelValid && (
+                        <p className="text-xs text-destructive">
+                          {t("The boss value cannot be empty.")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            </TabsContent>
+
+            <TabsContent className="mt-0 grid gap-4" value="json">
+              <StructuredJsonSettings
+                errors={jsonValidation.errors}
+                onChange={(value) => {
+                  setJsonSettings(value);
+                  setStatus(null);
+                }}
+                tagOptions={tagOptions}
+                unitOptions={scopedUnits.map((currentUnit) => ({
+                  label: currentUnit.name,
+                  value: currentUnit.id,
+                }))}
+                value={jsonSettings}
               />
-            )}
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
-    </>
+              <div className="grid gap-2" data-demo-id="org-editor-export-json-preview">
+                <div className="flex items-center justify-end gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    {textPreview.truncated
+                      ? t("Showing {shown} of {total}", {
+                          shown: textPreview.shownCount,
+                          total: textPreview.fullCount,
+                        })
+                      : countText("records", { count: textPreview.fullCount })}
+                  </span>
+                </div>
+                <div className="max-h-80 min-h-40 overflow-auto rounded-md border bg-muted/30 p-3">
+                  <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">
+                    {canExportText
+                      ? textPreview.text
+                      : t("The selected Unit has no Employees to export.")}
+                  </pre>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent className="mt-0" value="template">
+              <ExportTemplateSettings
+                dataDemoId="org-editor-export-template"
+                employeeFields={visibleEmployeeFields}
+                format={templateFormat}
+                onAppendField={appendTemplateField}
+                onFormatChange={(value) => {
+                  setTemplateFormat(value);
+                  setStatus(null);
+                }}
+                previewMeta={
+                  textPreview.truncated
+                    ? t("Showing {shown} of {total}", {
+                        shown: textPreview.shownCount,
+                        total: textPreview.fullCount,
+                      })
+                    : countText("rows", { count: textPreview.fullCount })
+                }
+                previewText={
+                  canExportText
+                    ? textPreview.text
+                    : t("The selected Unit has no Employees to export.")
+                }
+                showPreviewLabel={false}
+                unitFields={exportUnitFields}
+              >
+                <ExportRowModeControl
+                  onValueChange={(value) => {
+                    setRowMode(value);
+                    setStatus(null);
+                  }}
+                  rowCountByMode={rowCountByMode}
+                  value={rowMode}
+                />
+              </ExportTemplateSettings>
+            </TabsContent>
+          </Tabs>
+        </DialogBody>
+        <DialogFooter>
+          {status && (
+            <div
+              className={cn(
+                "mr-auto text-sm",
+                status.kind === "success" ? "text-muted-foreground" : "text-destructive",
+              )}
+            >
+              {t(status.text)}
+            </div>
+          )}
+          <Button
+            disabled={activeTab === "image" ? !canExportImage : !canExportText}
+            onClick={copy}
+            type="button"
+            variant="outline"
+          >
+            <HiOutlineClipboardDocument />
+            {t("Copy")}
+          </Button>
+          <Button
+            disabled={activeTab === "image" ? !canExportImage : !canExportText}
+            onClick={download}
+            type="button"
+          >
+            <HiOutlineArrowDownTray />
+            {t("Save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

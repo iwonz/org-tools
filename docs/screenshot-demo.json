@@ -265,14 +265,14 @@
     "featured": false,
     "title": "Editor image export",
     "file": "feature-editor-image-export.png",
-    "description": "Open a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping tags, boss marker, and connections follow the live canvas without membership-type labels.",
+    "description": "Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping tags, localized boss marker, and connections follow the live canvas without membership-type labels or a secondary viewer.",
     "capabilities": [
-      "Expanded PNG preview",
+      "Inline PNG preview",
       "Complete tags",
       "Membership-neutral cards",
       "Hierarchy",
-      "Boss marker",
-      "Scope",
+      "Localized boss marker",
+      "Iconic scope",
       "Background presets"
     ]
   },
@@ -291,8 +291,14 @@
     "featured": false,
     "title": "Editor structured JSON export",
     "file": "feature-editor-json-export.png",
-    "description": "Export the selected Unit or subtree through the shared Employee-first JSON engine with configurable Unit and Tag groups.",
-    "capabilities": ["JSON", "Scoped Employees", "Scoped assignments", "Units and Tags"]
+    "description": "Export the selected Unit or subtree through the shared sortable JSON list with scalar, Unit, and Tag rows in the exact output order.",
+    "capabilities": [
+      "JSON",
+      "Drag-and-drop order",
+      "Scoped Employees",
+      "Scoped assignments",
+      "Units and Tags"
+    ]
   },
   {
     "id": "editor-image-settings",
@@ -300,11 +306,11 @@
     "featured": false,
     "title": "Editor image detail settings",
     "file": "feature-editor-image-settings.png",
-    "description": "Configure PNG title, font, spacing, alignment, boss label, and Employee card content below the aligned hierarchy preview.",
+    "description": "Configure PNG title, font, spacing, icon-only alignment, localized boss label, and Employee card content without avatar-data template tokens.",
     "capabilities": [
       "Title and font",
-      "Spacing and alignment",
-      "Boss label",
+      "Icon-only alignment",
+      "Localized boss label",
       "Employee card content"
     ]
   },
@@ -404,8 +410,14 @@
     "featured": false,
     "title": "JSON Unit and Tag exclusions",
     "file": "feature-download-json-exclusions.png",
-    "description": "Enable structured Unit and Tag arrays, rename their fields, and exclude exact Units or normalized Tag labels through searchable virtualized menus.",
-    "capabilities": ["Group toggles", "Field naming", "Unit exclusions", "Tag exclusions"]
+    "description": "Enable ordinary Unit and Tag rows in the sortable field list, rename and reorder nested fields, and exclude exact Units or normalized Tag labels through searchable virtualized menus.",
+    "capabilities": [
+      "Inline collections",
+      "Nested field order",
+      "Field naming",
+      "Unit exclusions",
+      "Tag exclusions"
+    ]
   },
   {
     "id": "download-json-settings",
@@ -413,8 +425,14 @@
     "featured": false,
     "title": "JSON Download settings",
     "file": "feature-download-json-settings.png",
-    "description": "Choose Employee fields and configure the fields of each nested Team object for JSON output.",
-    "capabilities": ["JSON", "Employee fields", "Nested Team fields", "Field order"]
+    "description": "Order scalar Employee fields and optional Unit and Tag rows in one list, then configure their JSON names and nested field order.",
+    "capabilities": [
+      "JSON",
+      "Unified field list",
+      "Drag-and-drop order",
+      "Nested Unit fields",
+      "Nested Tag fields"
+    ]
   },
   {
     "id": "download-json-preview",

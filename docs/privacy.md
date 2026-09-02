@@ -18,12 +18,14 @@ CORS. A failed or corrupt database is reported by a stable code and is never rep
 Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
 complete state or map an Employee array with optional nested Team assignments; the source, mapping,
 preview, and duplicate choices are discarded when the modal closes. Birthday validation is local
-and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without inferring one. Export validates and downloads
-the complete state only after an explicit user action. Organization records are never copied to
-browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs; remote avatars are
-never fetched. Crop encoding prefers WebP and falls back only to the browser's local PNG canvas
-encoder; neither path uploads the source or result. Profile and email navigation require direct user
-actions and referrer protection.
+and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without inferring one. Export
+validates and downloads the complete state only after an explicit user action. Structured JSON field
+ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
+dragging a field never transmits or persists organization data. Organization records are never
+copied to browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs;
+remote avatars are never fetched. Crop encoding prefers WebP and falls back only to the browser's
+local PNG canvas encoder; neither path uploads the source or result. Profile and email navigation
+require direct user actions and referrer protection.
 
 ## Local files and publication
 

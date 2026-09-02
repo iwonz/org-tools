@@ -22,6 +22,7 @@ type ExportTemplateSettingsProps = {
   previewDataDemoId?: string;
   previewMeta: string;
   previewText: string;
+  showPreviewLabel?: boolean;
   unitFields: ExportTemplateToken[];
 };
 
@@ -35,6 +36,7 @@ export function ExportTemplateSettings({
   previewDataDemoId,
   previewMeta,
   previewText,
+  showPreviewLabel = true,
   unitFields,
 }: ExportTemplateSettingsProps) {
   const t = useUiText();
@@ -88,8 +90,8 @@ export function ExportTemplateSettings({
         className="grid gap-2"
         data-demo-id={previewDataDemoId ?? `${dataDemoId ?? "export"}-preview`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Label>{t("Preview")}</Label>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {showPreviewLabel && <Label className="mr-auto">{t("Preview")}</Label>}
           <div className="text-xs text-muted-foreground">{previewMeta}</div>
         </div>
         <div className="max-h-80 min-h-40 overflow-auto rounded-md border bg-muted/30 p-3">

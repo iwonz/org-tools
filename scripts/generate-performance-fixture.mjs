@@ -111,7 +111,6 @@ const state = {
     analytics: { filters: emptyFilters, query: "" },
     calendar: { cloudExpanded: false, monthIndex: 6, year: 2026 },
     download: {
-      employeeFieldOrder: employeeFields,
       employeeFilters: emptyFilters,
       employeeQuery: "",
       excludedEmployeeIds: [],
@@ -126,6 +125,7 @@ const state = {
         },
       },
       jsonTagFieldOrder: ["label", "date"],
+      jsonTopLevelFieldOrder: [...employeeFields, "units", "tags"],
       jsonUnitFieldOrder: unitFields,
       rowMode: "allUnits",
       selectedEmployeeFieldKeys: ["username"],

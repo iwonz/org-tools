@@ -157,6 +157,34 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(obsolete)).toThrow("invalid durable UI state");
   });
 
+  test("requires one complete unified JSON top-level field order", () => {
+    const state = createBlankOrgToolsState();
+    state.ui.download.jsonTopLevelFieldOrder = [
+      "tags",
+      "username",
+      "units",
+      ...state.ui.download.jsonTopLevelFieldOrder.filter(
+        (field) => field !== "tags" && field !== "username" && field !== "units",
+      ),
+    ];
+    expect(parseOrgToolsState(state).ui.download.jsonTopLevelFieldOrder.slice(0, 3)).toEqual([
+      "tags",
+      "username",
+      "units",
+    ]);
+
+    const missing = structuredClone(state);
+    missing.ui.download.jsonTopLevelFieldOrder.pop();
+    expect(() => parseOrgToolsState(missing)).toThrow("invalid durable UI state");
+
+    const obsolete = structuredClone(state) as unknown as {
+      ui: { download: Record<string, unknown> };
+    };
+    obsolete.ui.download.employeeFieldOrder = obsolete.ui.download.jsonTopLevelFieldOrder;
+    delete obsolete.ui.download.jsonTopLevelFieldOrder;
+    expect(() => parseOrgToolsState(obsolete)).toThrow("invalid durable UI state");
+  });
+
   test("uses SHA-256 IDs for Employees and UUIDs for Units", () => {
     const { employeeId, unitId } = populatedStore();
     expect(isEmployeeId(employeeId)).toBe(true);

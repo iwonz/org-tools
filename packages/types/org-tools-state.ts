@@ -38,6 +38,10 @@ export type OrgToolsDownloadEmployeeFieldKey =
   | "phone"
   | "avatarBase64Url"
   | "birthday";
+export type OrgToolsDownloadJsonTopLevelFieldKey =
+  | OrgToolsDownloadEmployeeFieldKey
+  | "tags"
+  | "units";
 export type OrgToolsDownloadUnitFieldKey =
   | "unitId"
   | "unitName"
@@ -47,7 +51,6 @@ export type OrgToolsDownloadUnitFieldKey =
 export type OrgToolsDownloadTagFieldKey = "date" | "label";
 
 export type OrgToolsDownloadState = {
-  employeeFieldOrder: OrgToolsDownloadEmployeeFieldKey[];
   employeeFilters: OrgToolsEmployeeFilters;
   employeeQuery: string;
   excludedEmployeeIds: EmployeeId[];
@@ -64,6 +67,7 @@ export type OrgToolsDownloadState = {
       fields: Record<OrgToolsDownloadUnitFieldKey, string>;
     };
   };
+  jsonTopLevelFieldOrder: OrgToolsDownloadJsonTopLevelFieldKey[];
   jsonTagFieldOrder: OrgToolsDownloadTagFieldKey[];
   jsonUnitFieldOrder: OrgToolsDownloadUnitFieldKey[];
   rowMode: "allUnits" | "firstUnit";

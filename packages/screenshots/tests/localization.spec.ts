@@ -216,6 +216,31 @@ for (const [locale, messages] of [
     await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("4");
     await dialog.getByRole("button", { name: messages.Ui["Replace state"], exact: true }).click();
     await expect(dialog).toBeHidden();
+
+    await page.getByRole("tab", { name: messages.Ui.Editor, exact: true }).click();
+    const productUnit = page.locator("fieldset").filter({ hasText: "Product" }).first();
+    await productUnit.click({ button: "right", position: { x: 20, y: 20 } });
+    await page.locator('[data-demo-id="org-editor-export-action"]').click();
+    const editorExport = page.locator('[data-demo-id="org-editor-export-dialog"]');
+    await expect(editorExport).toBeVisible();
+    await expect(editorExport.getByLabel(messages.Ui["isBoss value"], { exact: true })).toHaveValue(
+      messages.Ui.Manager,
+    );
+    for (const scopeName of [messages.Ui["Entire subtree"], messages.Ui["Unit only"]]) {
+      const scope = editorExport.getByRole("tab", { name: scopeName, exact: true });
+      await expect(scope.locator("svg")).toHaveCount(1);
+      await expect(scope.locator("svg")).toBeVisible();
+    }
+    await editorExport.getByRole("tab", { name: "JSON", exact: true }).click();
+    await expect(
+      editorExport.getByRole("button", {
+        name: messages.Ui["Drag {name} to reorder"].replace("{name}", "username"),
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(editorExport).toBeHidden();
+
     await page.getByRole("button", { name: messages.Ui.Import, exact: true }).click();
     const employeeImportDialog = page.getByRole("dialog", {
       name: messages.Ui.Import,

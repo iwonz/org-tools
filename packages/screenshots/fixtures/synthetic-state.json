@@ -198,7 +198,7 @@
       "year": 2026
     },
     "download": {
-      "employeeFieldOrder": [
+      "jsonTopLevelFieldOrder": [
         "id",
         "firstName",
         "lastName",
@@ -209,7 +209,9 @@
         "email",
         "phone",
         "avatarBase64Url",
-        "birthday"
+        "birthday",
+        "units",
+        "tags"
       ],
       "employeeFilters": {
         "birthday": null,

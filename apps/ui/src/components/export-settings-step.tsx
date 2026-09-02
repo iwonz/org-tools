@@ -3,13 +3,13 @@
 import { observer } from "mobx-react-lite";
 import {
   HiOutlineArrowDownTray,
-  HiOutlineCheckCircle,
   HiOutlineClipboardDocument,
   HiOutlineCodeBracket,
   HiOutlineQueueList,
 } from "react-icons/hi2";
 
 import type { ExportExclusionOption } from "@/components/export-exclusion-select";
+import { ExportRowModeControl } from "@/components/export-row-mode-control";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
 import {
   StructuredJsonSettings,
@@ -24,14 +24,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
+import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
   type ExportFieldNameError,
   exportEmployeeFields,
-  exportRowModeOptions,
   exportUnitFields,
 } from "@/lib/export-format";
-import { cn } from "@/lib/utils";
 import type { ExportFieldKey, ExportRowMode, ExportTabMode } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -73,11 +71,11 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
   const rowMode = store.exportRowMode;
   const templateFormat = store.exportTemplateFormat;
   const jsonSettings: StructuredJsonSettingsValue = {
-    employeeFieldOrder: store.exportEmployeeFieldOrder,
     excludedJsonTagKeys: store.exportExcludedJsonTagKeys,
     excludedJsonUnitIds: store.exportExcludedJsonUnitIds,
     jsonFieldNames: store.exportJsonFieldNames,
     jsonTagFieldOrder: store.exportJsonTagFieldOrder,
+    jsonTopLevelFieldOrder: store.exportJsonTopLevelFieldOrder,
     jsonUnitFieldOrder: store.exportJsonUnitFieldOrder,
     selectedEmployeeFieldKeys: store.exportSelectedEmployeeFieldKeys,
     selectedJsonTagFieldKeys: store.exportSelectedJsonTagFieldKeys,
@@ -86,57 +84,6 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
   const formatCount = (count: number) =>
     countText(activeTab === "json" ? "records" : "rows", { count });
   const emptyPreview = t("Select Employees in the Download tab");
-
-  const rowModeFieldset = (
-    <fieldset className="grid pb-2" data-demo-id="export-row-mode">
-      <legend className="mb-2.5 text-sm font-medium">
-        {t("When an Employee belongs to multiple Units")}
-      </legend>
-      <div className="grid gap-2">
-        {exportRowModeOptions.map((option) => {
-          const checked = rowMode === option.value;
-          return (
-            <label
-              className={cn(
-                "grid cursor-pointer gap-2 rounded-md bg-muted/35 p-3 text-sm transition-colors hover:bg-accent/55 active:bg-accent-strong/65",
-                checked && "bg-accent-strong/65 text-foreground",
-              )}
-              key={option.value}
-            >
-              <span className="flex min-w-0 items-stretch gap-3">
-                <input
-                  checked={checked}
-                  className="sr-only"
-                  name="export-row-mode"
-                  onChange={() => store.setExportRowMode(option.value)}
-                  type="radio"
-                  value={option.value}
-                />
-                <span aria-hidden="true" className="grid min-h-11 shrink-0 place-items-center">
-                  {checked ? (
-                    <HiOutlineCheckCircle className="size-5 text-primary" />
-                  ) : (
-                    <span className="size-5 rounded-full border border-muted-foreground/40 bg-background" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex min-w-0 items-start justify-between gap-3">
-                    <span className="font-medium leading-snug">{t(option.title as UiTextKey)}</span>
-                    <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                      {countText("rows", { count: rowCountByMode[option.value] })}
-                    </span>
-                  </span>
-                  <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-                    {t(option.description as UiTextKey)}
-                  </span>
-                </span>
-              </span>
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
 
   const preview = (
     <div className="grid gap-2" data-demo-id="export-inline-preview">
@@ -216,7 +163,11 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
               previewText={canExport ? previewText : emptyPreview}
               unitFields={exportUnitFields}
             >
-              {rowModeFieldset}
+              <ExportRowModeControl
+                onValueChange={(value) => store.setExportRowMode(value)}
+                rowCountByMode={rowCountByMode}
+                value={rowMode}
+              />
             </ExportTemplateSettings>
           )}
         </div>

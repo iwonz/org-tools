@@ -28,6 +28,10 @@ The [complete visual capability catalog](docs/screenshots.md) documents all 38 m
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
 
+Data Download and Editor JSON export use one drag-sortable field list: scalar Employee fields,
+Units, and Tags appear in their exact output order. Editor Image export keeps a compact inline
+preview with localized boss text and no secondary image viewer.
+
 ## Run locally
 
 The durable runtime requires Node.js 22.13 or newer and pnpm 11.24.0.

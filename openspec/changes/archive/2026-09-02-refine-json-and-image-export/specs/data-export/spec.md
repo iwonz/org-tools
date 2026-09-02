@@ -1,9 +1,4 @@
-# data-export Specification
-
-## Purpose
-Define the local, generic structured-text and Editor image export boundary for Employees and Units.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Data export remains local and generic
 The application SHALL export selected Employees as structured JSON or separator templates using
@@ -84,16 +79,3 @@ same packing model as the live Editor.
 #### Scenario: Silent file download
 - **WHEN** a user downloads a file after copying or without a prior copy
 - **THEN** no downloaded-file success label appears and any prior copy confirmation is cleared
-
-### Requirement: Birthday output retains complete canonical data
-Data Download and Editor JSON or Template export SHALL emit an Employee birthday directly as its
-persisted canonical `DD.MM.YYYY` value or null. They MUST NOT drop the known year, convert the value
-to another date order, or replace the unknown-year sentinel.
-
-#### Scenario: Export a known birthday
-- **WHEN** birthday is selected for JSON or Template output and the Employee has a known year
-- **THEN** output contains the exact canonical complete birthday
-
-#### Scenario: Export an unknown-year birthday
-- **WHEN** birthday is selected and its persisted year is `1900`
-- **THEN** output contains the exact `DD.MM.1900` value without inferring a year

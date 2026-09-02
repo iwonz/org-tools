@@ -1,4 +1,9 @@
-import type { EmployeeId, OrgToolsDownloadState, UnitId } from "@org-tools/types";
+import type {
+  EmployeeId,
+  OrgToolsDownloadJsonTopLevelFieldKey,
+  OrgToolsDownloadState,
+  UnitId,
+} from "@org-tools/types";
 import { makeAutoObservable, observable } from "mobx";
 
 export type ExportTabMode = "json" | "template";
@@ -18,6 +23,7 @@ export type ExportEmployeeFieldKey =
   | "tags"
   | "tagDates";
 export type ExportJsonEmployeeFieldKey = Exclude<ExportEmployeeFieldKey, "tagDates" | "tags">;
+export type ExportJsonTopLevelFieldKey = OrgToolsDownloadJsonTopLevelFieldKey;
 export type ExportUnitFieldKey = "unitId" | "unitName" | "unitFullPath" | "position" | "isBoss";
 export type ExportJsonUnitFieldKey = ExportUnitFieldKey;
 export type ExportJsonTagFieldKey = "date" | "label";
@@ -36,11 +42,11 @@ export type ExportJsonFieldNames = {
 };
 export type ExportJsonSettingsState = Pick<
   OrgToolsDownloadState,
-  | "employeeFieldOrder"
   | "excludedJsonTagKeys"
   | "excludedJsonUnitIds"
   | "jsonFieldNames"
   | "jsonTagFieldOrder"
+  | "jsonTopLevelFieldOrder"
   | "jsonUnitFieldOrder"
   | "selectedEmployeeFieldKeys"
   | "selectedJsonTagFieldKeys"
@@ -116,11 +122,13 @@ export const createDefaultExportJsonFieldNames = (): ExportJsonFieldNames => ({
   },
 });
 export const defaultExportEmployeeFieldKeys: ExportJsonEmployeeFieldKey[] = ["username"];
-export const defaultExportEmployeeFieldOrder: ExportJsonEmployeeFieldKey[] = [
+export const defaultExportJsonTopLevelFieldOrder: ExportJsonTopLevelFieldKey[] = [
   ...defaultExportEmployeeFieldKeys,
   ...exportJsonEmployeeFieldKeys.filter(
     (fieldKey) => !defaultExportEmployeeFieldKeys.includes(fieldKey),
   ),
+  "units",
+  "tags",
 ];
 export const defaultExportJsonUnitFieldKeys: ExportJsonUnitFieldKey[] = [];
 export const defaultExportJsonUnitFieldOrder: ExportJsonUnitFieldKey[] = [
@@ -183,7 +191,7 @@ export class ExportSessionStore {
   tabMode: ExportTabMode = "json";
   rowMode: ExportRowMode = "allUnits";
   selectedEmployeeFieldKeys: ExportJsonEmployeeFieldKey[] = [...defaultExportEmployeeFieldKeys];
-  employeeFieldOrder: ExportJsonEmployeeFieldKey[] = [...defaultExportEmployeeFieldOrder];
+  jsonTopLevelFieldOrder: ExportJsonTopLevelFieldKey[] = [...defaultExportJsonTopLevelFieldOrder];
   selectedJsonUnitFieldKeys: ExportJsonUnitFieldKey[] = [...defaultExportJsonUnitFieldKeys];
   jsonUnitFieldOrder: ExportJsonUnitFieldKey[] = [...defaultExportJsonUnitFieldOrder];
   selectedJsonTagFieldKeys: ExportJsonTagFieldKey[] = [...defaultExportJsonTagFieldKeys];
@@ -199,12 +207,12 @@ export class ExportSessionStore {
     makeAutoObservable(
       this,
       {
-        employeeFieldOrder: observable.shallow,
         excludedEmployeeIds: observable.shallow,
         excludedJsonTagKeys: observable.shallow,
         excludedJsonUnitIds: observable.shallow,
         jsonFieldNames: observable.ref,
         jsonTagFieldOrder: observable.shallow,
+        jsonTopLevelFieldOrder: observable.shallow,
         jsonUnitFieldOrder: observable.shallow,
         selectedEmployeeFieldKeys: observable.shallow,
         selectedJsonTagFieldKeys: observable.shallow,
@@ -219,7 +227,7 @@ export class ExportSessionStore {
     this.tabMode = "json";
     this.rowMode = "allUnits";
     this.selectedEmployeeFieldKeys = [...defaultExportEmployeeFieldKeys];
-    this.employeeFieldOrder = [...defaultExportEmployeeFieldOrder];
+    this.jsonTopLevelFieldOrder = [...defaultExportJsonTopLevelFieldOrder];
     this.selectedJsonUnitFieldKeys = [...defaultExportJsonUnitFieldKeys];
     this.jsonUnitFieldOrder = [...defaultExportJsonUnitFieldOrder];
     this.selectedJsonTagFieldKeys = [...defaultExportJsonTagFieldKeys];
@@ -233,12 +241,14 @@ export class ExportSessionStore {
   }
 
   loadState(state: OrgToolsDownloadState): void {
-    const employeeFieldKeySet = new Set<ExportJsonEmployeeFieldKey>(exportJsonEmployeeFieldKeys);
+    const topLevelFieldKeySet = new Set<ExportJsonTopLevelFieldKey>(
+      defaultExportJsonTopLevelFieldOrder,
+    );
     const jsonUnitFieldKeySet = new Set<ExportJsonUnitFieldKey>(exportJsonUnitFieldKeys);
     const jsonTagFieldKeySet = new Set<ExportJsonTagFieldKey>(exportJsonTagFieldKeys);
-    const employeeOrder = state.employeeFieldOrder.filter(
-      (key): key is ExportJsonEmployeeFieldKey =>
-        employeeFieldKeySet.has(key as ExportJsonEmployeeFieldKey),
+    const topLevelOrder = state.jsonTopLevelFieldOrder.filter(
+      (key): key is ExportJsonTopLevelFieldKey =>
+        topLevelFieldKeySet.has(key as ExportJsonTopLevelFieldKey),
     );
     const jsonOrder = state.jsonUnitFieldOrder.filter((key): key is ExportJsonUnitFieldKey =>
       jsonUnitFieldKeySet.has(key as ExportJsonUnitFieldKey),
@@ -248,14 +258,15 @@ export class ExportSessionStore {
     );
     this.tabMode = state.tabMode;
     this.rowMode = state.rowMode;
-    this.employeeFieldOrder =
-      employeeOrder.length > 0 ? employeeOrder : [...defaultExportEmployeeFieldOrder];
+    this.jsonTopLevelFieldOrder =
+      topLevelOrder.length > 0 ? topLevelOrder : [...defaultExportJsonTopLevelFieldOrder];
     this.jsonUnitFieldOrder =
       jsonOrder.length > 0 ? jsonOrder : [...defaultExportJsonUnitFieldOrder];
     this.jsonTagFieldOrder =
       jsonTagOrder.length > 0 ? jsonTagOrder : [...defaultExportJsonTagFieldOrder];
-    this.selectedEmployeeFieldKeys = this.employeeFieldOrder.filter((key) =>
-      state.selectedEmployeeFieldKeys.includes(key),
+    this.selectedEmployeeFieldKeys = this.jsonTopLevelFieldOrder.filter(
+      (key): key is ExportJsonEmployeeFieldKey =>
+        key !== "tags" && key !== "units" && state.selectedEmployeeFieldKeys.includes(key),
     );
     this.selectedJsonUnitFieldKeys = this.jsonUnitFieldOrder.filter((key) =>
       state.selectedJsonUnitFieldKeys.includes(key),
@@ -283,12 +294,12 @@ export class ExportSessionStore {
 
   createState(): Pick<
     OrgToolsDownloadState,
-    | "employeeFieldOrder"
     | "excludedEmployeeIds"
     | "excludedJsonTagKeys"
     | "excludedJsonUnitIds"
     | "jsonFieldNames"
     | "jsonTagFieldOrder"
+    | "jsonTopLevelFieldOrder"
     | "jsonUnitFieldOrder"
     | "rowMode"
     | "selectedEmployeeFieldKeys"
@@ -299,7 +310,6 @@ export class ExportSessionStore {
     | "templateFormat"
   > {
     return {
-      employeeFieldOrder: [...this.employeeFieldOrder],
       excludedEmployeeIds: [...this.excludedEmployeeIds],
       excludedJsonTagKeys: [...this.excludedJsonTagKeys],
       excludedJsonUnitIds: [...this.excludedJsonUnitIds],
@@ -315,6 +325,7 @@ export class ExportSessionStore {
         },
       },
       jsonTagFieldOrder: [...this.jsonTagFieldOrder],
+      jsonTopLevelFieldOrder: [...this.jsonTopLevelFieldOrder],
       jsonUnitFieldOrder: [...this.jsonUnitFieldOrder],
       rowMode: this.rowMode,
       selectedEmployeeFieldKeys: [...this.selectedEmployeeFieldKeys],
@@ -331,7 +342,7 @@ export class ExportSessionStore {
   }
 
   setJsonSettings(state: ExportJsonSettingsState): void {
-    this.employeeFieldOrder = [...state.employeeFieldOrder];
+    this.jsonTopLevelFieldOrder = [...state.jsonTopLevelFieldOrder];
     this.excludedJsonTagKeys = [...state.excludedJsonTagKeys];
     this.excludedJsonUnitIds = [...state.excludedJsonUnitIds];
     this.jsonFieldNames = structuredClone(state.jsonFieldNames) as ExportJsonFieldNames;
@@ -396,7 +407,9 @@ export class ExportSessionStore {
   toggleEmployeeFieldKey(fieldKey: ExportJsonEmployeeFieldKey): void {
     this.selectedEmployeeFieldKeys = toggleFieldInOrder(
       this.selectedEmployeeFieldKeys,
-      this.employeeFieldOrder,
+      this.jsonTopLevelFieldOrder.filter(
+        (key): key is ExportJsonEmployeeFieldKey => key !== "tags" && key !== "units",
+      ),
       fieldKey,
     );
   }
@@ -439,21 +452,20 @@ export class ExportSessionStore {
     this.excludedJsonTagKeys = [...new Set(tagKeys)];
   }
 
-  moveEmployeeFieldKey(
-    fieldKey: ExportJsonEmployeeFieldKey,
-    targetFieldKey: ExportJsonEmployeeFieldKey,
+  moveJsonTopLevelFieldKey(
+    fieldKey: ExportJsonTopLevelFieldKey,
+    targetFieldKey: ExportJsonTopLevelFieldKey,
     placement: ExportFieldDropPlacement,
   ): void {
     const nextState = moveFieldInOrder({
       fieldKey,
-      fieldOrder: this.employeeFieldOrder,
+      fieldOrder: this.jsonTopLevelFieldOrder,
       placement,
-      selectedFieldKeys: this.selectedEmployeeFieldKeys,
+      selectedFieldKeys: this.jsonTopLevelFieldOrder,
       targetFieldKey,
     });
 
-    this.employeeFieldOrder = nextState.fieldOrder;
-    this.selectedEmployeeFieldKeys = nextState.selectedFieldKeys;
+    this.jsonTopLevelFieldOrder = nextState.fieldOrder;
   }
 
   moveJsonUnitFieldKey(

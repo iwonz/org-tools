@@ -213,12 +213,12 @@ Capabilities: Multi-selection, Boss assignment, Bulk tags, Edit, Copy, Delete.
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Open a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping tags, boss
-marker, and connections follow the live canvas without printing Static/Live membership type, then
-choose transparent, solid, or gradient backgrounds.
+Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping tags,
+localized boss marker, and connections follow the live canvas without printing Static/Live
+membership type, then choose transparent, solid, or gradient backgrounds in the same dialog.
 
-Capabilities: Expanded PNG preview, Complete tags, Membership-neutral cards, Hierarchy, Boss marker, Scope,
-Background presets.
+Capabilities: Inline PNG preview, Complete tags, Membership-neutral cards, Hierarchy, Localized boss
+marker, Iconic scope, Background presets.
 
 ### Editor text template export
 
@@ -232,16 +232,17 @@ Capabilities: Text template, Field tokens, Scope, Live preview.
 
 [![Editor structured JSON export](screenshots/feature-editor-json-export.png)](screenshots/feature-editor-json-export.png)
 
-Export the selected Unit or subtree through the shared Employee-first JSON engine with configurable Unit and Tag groups.
+Export the selected Unit or subtree through the shared sortable JSON field list with scalar, Unit,
+and Tag rows in the exact output order.
 
-Capabilities: JSON, Scoped Employees, Scoped assignments, Units and Tags.
+Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, Units and Tags.
 
 ### Editor image detail settings
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Configure PNG title, font, spacing, alignment, boss label, and Employee card content below the
-aligned hierarchy preview.
+Configure PNG title, font, spacing, icon-only alignment, localized boss label, and Employee card
+content below the aligned hierarchy preview without avatar-data template tokens.
 
 Capabilities: Title and font, Spacing and alignment, Boss label, Employee card content.
 
@@ -321,17 +322,19 @@ Capabilities: Team sources, Employee sources, Selected set, Search and filters, 
 
 [![JSON Unit and Tag exclusions](screenshots/feature-download-json-exclusions.png)](screenshots/feature-download-json-exclusions.png)
 
-Enable structured Unit and Tag arrays, rename their fields, and exclude exact Units or normalized Tag labels through searchable virtualized menus.
+Enable ordinary Unit and Tag rows in the sortable field list, rename and reorder their nested
+fields, and exclude exact Units or normalized Tag labels through searchable virtualized menus.
 
-Capabilities: Group toggles, Field naming, Unit exclusions, Tag exclusions.
+Capabilities: Inline collections, Nested field order, Field naming, Unit exclusions, Tag exclusions.
 
 ### JSON Download settings
 
 [![JSON Download settings](screenshots/feature-download-json-settings.png)](screenshots/feature-download-json-settings.png)
 
-Choose Employee fields and configure the names of the optional nested Unit and Tag groups for JSON output.
+Order scalar Employee fields and optional Unit and Tag rows in one list, then configure their JSON
+names and nested field order.
 
-Capabilities: JSON, Employee fields, Nested Unit fields, Nested Tag fields.
+Capabilities: JSON, Unified field list, Drag-and-drop order, Nested Unit fields, Nested Tag fields.
 
 ### JSON Download preview
 

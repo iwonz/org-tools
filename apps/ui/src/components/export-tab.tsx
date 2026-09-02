@@ -125,6 +125,7 @@ export const ExportTab = observer(() => {
   const selectedJsonUnitFieldKeys = store.exportSelectedJsonUnitFieldKeys;
   const selectedJsonTagFieldKeys = store.exportSelectedJsonTagFieldKeys;
   const jsonFieldNames = store.exportJsonFieldNames;
+  const jsonTopLevelFieldOrder = store.exportJsonTopLevelFieldOrder;
   const excludedJsonUnitIds = store.exportExcludedJsonUnitIds;
   const excludedJsonTagKeys = store.exportExcludedJsonTagKeys;
   const templateFormat = store.exportTemplateFormat;
@@ -344,6 +345,7 @@ export const ExportTab = observer(() => {
         excludedJsonTagKeys,
         excludedJsonUnitIds,
         jsonFieldNames,
+        jsonTopLevelFieldOrder,
         rows,
         selectedEmployeeFieldKeys,
         selectedJsonTagFieldKeys,
@@ -356,6 +358,7 @@ export const ExportTab = observer(() => {
       excludedJsonTagKeys,
       excludedJsonUnitIds,
       jsonFieldNames,
+      jsonTopLevelFieldOrder,
       rows,
       selectedEmployeeFieldKeys,
       selectedJsonTagFieldKeys,
@@ -370,6 +373,7 @@ export const ExportTab = observer(() => {
             excludedJsonTagKeys,
             excludedJsonUnitIds,
             jsonFieldNames,
+            jsonTopLevelFieldOrder,
             rows,
             selectedEmployeeFieldKeys,
             selectedJsonTagFieldKeys,
@@ -386,6 +390,7 @@ export const ExportTab = observer(() => {
       exportRecordCount,
       isExportSettingsDialogOpen,
       jsonFieldNames,
+      jsonTopLevelFieldOrder,
       rows,
       selectedEmployeeFieldKeys,
       selectedJsonTagFieldKeys,

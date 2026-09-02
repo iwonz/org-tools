@@ -11,7 +11,10 @@ import {
   getExportEmployeeFieldValue,
   validateExportFieldNames,
 } from "@/lib/export-format";
-import { createDefaultExportJsonFieldNames } from "@/stores/export-session-store";
+import {
+  createDefaultExportJsonFieldNames,
+  defaultExportJsonTopLevelFieldOrder,
+} from "@/stores/export-session-store";
 
 const EMPLOYEE_ID = "00000000-0000-4000-8000-000000000001";
 const ROOT_UNIT_ID = "00000000-0000-4000-8000-000000000002";
@@ -76,6 +79,7 @@ const createJsonOptions = () => ({
   excludedJsonTagKeys: [] as string[],
   excludedJsonUnitIds: [] as string[],
   jsonFieldNames: createDefaultExportJsonFieldNames(),
+  jsonTopLevelFieldOrder: defaultExportJsonTopLevelFieldOrder,
   selectedEmployeeFieldKeys: ["username", "email"] as const,
   selectedJsonTagFieldKeys: ["label", "date"] as const,
   selectedJsonUnitFieldKeys: ["unitId", "unitName", "unitFullPath", "position", "isBoss"] as const,
@@ -178,6 +182,31 @@ describe("structured JSON export", () => {
         username: "ada",
       },
     ]);
+  });
+
+  test("emits scalar and collection keys in the configured top-level and nested order", () => {
+    const options = createJsonOptions();
+    const reordered = [
+      "tags",
+      "email",
+      "units",
+      ...options.jsonTopLevelFieldOrder.filter(
+        (field) => field !== "tags" && field !== "email" && field !== "units",
+      ),
+    ] as typeof options.jsonTopLevelFieldOrder;
+    const record = createStructuredJsonRecords(createRows(), {
+      ...options,
+      jsonTopLevelFieldOrder: reordered,
+      selectedEmployeeFieldKeys: ["email"],
+      selectedJsonTagFieldKeys: ["date", "label"],
+      selectedJsonUnitFieldKeys: ["isBoss", "unitName"],
+    })[0];
+
+    expect(Object.keys(record ?? {})).toEqual(["tags", "email", "units"]);
+    const tags = record?.tags as Record<string, unknown>[] | undefined;
+    const units = record?.units as Record<string, unknown>[] | undefined;
+    expect(Object.keys(tags?.[0] ?? {})).toEqual(["date", "label"]);
+    expect(Object.keys(units?.[0] ?? {})).toEqual(["isBoss", "unitName"]);
   });
 
   test("omits disabled groups, keeps empty enabled groups, and excludes exact Units and normalized Tags", () => {

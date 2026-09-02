@@ -1233,10 +1233,27 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   const settings = page.getByRole("dialog").filter({ hasText: "Download settings" });
   await expect(settings.getByRole("tab", { name: "CSV", exact: true })).toHaveCount(0);
   await expect(settings.getByRole("tab", { name: "JSON", exact: true })).toBeVisible();
+  const tagsRow = settings.locator('[data-demo-id="json-top-level-field-tags"]');
+  const unitsRow = settings.locator('[data-demo-id="json-top-level-field-units"]');
+  await expect(tagsRow).toBeVisible();
+  await expect(unitsRow).toBeVisible();
+  await tagsRow.getByRole("checkbox", { name: "Tags", exact: true }).click();
+  await unitsRow.getByRole("checkbox", { name: "Units", exact: true }).click();
+  await tagsRow
+    .getByRole("button", { name: "Drag Tags to reorder", exact: true })
+    .dragTo(unitsRow, { targetPosition: { x: 8, y: 2 } });
   const downloadPromise = page.waitForEvent("download");
   await settings.getByRole("button", { name: "Download", exact: true }).click();
-  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-export.json");
+  const jsonDownload = await downloadPromise;
+  expect(jsonDownload.suggestedFilename()).toBe("org-tools-export.json");
+  const jsonPath = await jsonDownload.path();
+  const records = JSON.parse(await readFile(jsonPath ?? "", "utf8")) as Array<
+    Record<string, unknown>
+  >;
+  expect(Object.keys(records[0] ?? {})).toEqual(["username", "tags", "units"]);
   await settings.getByRole("tab", { name: "Template", exact: true }).click();
+  await expect(settings.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
+  await expect(settings.getByText("All Employee Units", { exact: true })).toBeVisible();
   const templatePromise = page.waitForEvent("download");
   await settings.getByRole("button", { name: "Download", exact: true }).click();
   expect((await templatePromise).suggestedFilename()).toBe("org-tools-export.txt");
@@ -1879,6 +1896,14 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   const exportDialog = page.getByRole("dialog", { name: "Export" });
   const preview = exportDialog.locator('[data-demo-id="org-editor-export-image"]');
   await expect(preview).toBeVisible();
+  await expect(exportDialog.getByRole("button", { name: "Open", exact: true })).toHaveCount(0);
+  await expect(exportDialog.getByText("Preview", { exact: true })).toHaveCount(0);
+  await expect(
+    exportDialog.getByRole("tab", { name: "Entire subtree", exact: true }).locator("svg"),
+  ).toHaveCount(1);
+  await expect(
+    exportDialog.getByRole("tab", { name: "Unit only", exact: true }).locator("svg"),
+  ).toHaveCount(1);
   await expect
     .poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalHeight))
     .toBeGreaterThan(1_000);
@@ -1903,6 +1928,19 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   expect(paintedText).not.toContain("Static");
   expect(paintedText).not.toContain("Dynamic");
 
+  await exportDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(exportDialog.getByLabel("isBoss value", { exact: true })).toHaveValue("Manager");
+  await expect(
+    exportDialog.getByRole("button", { name: "avatarBase64Url", exact: true }),
+  ).toHaveCount(0);
+  for (const alignment of ["Left", "Center", "Right"]) {
+    const control = exportDialog.getByRole("tab", { name: alignment, exact: true });
+    await expect(control.locator("svg")).toHaveCount(1);
+    await expect(control).toHaveText("");
+  }
+
   const downloadPromise = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
   const download = await downloadPromise;
@@ -1914,6 +1952,9 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   expect(metadata.height ?? 0).toBeGreaterThan(1_000);
 
   await exportDialog.getByRole("tab", { name: "JSON", exact: true }).click();
+  await expect(exportDialog.locator('[data-demo-id="json-top-level-field-units"]')).toBeVisible();
+  await expect(exportDialog.locator('[data-demo-id="json-top-level-field-tags"]')).toBeVisible();
+  await expect(exportDialog.getByText("Preview", { exact: true })).toHaveCount(0);
   const jsonPromise = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
   const jsonDownload = await jsonPromise;
@@ -1925,6 +1966,8 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   expect(records.length).toBeGreaterThan(0);
 
   await exportDialog.getByRole("tab", { name: "Template", exact: true }).click();
+  await expect(exportDialog.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
+  await expect(exportDialog.getByText("Preview", { exact: true })).toHaveCount(0);
   const templatePromise = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
   expect((await templatePromise).suggestedFilename()).toBe("Product.txt");

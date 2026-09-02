@@ -408,12 +408,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await replaceWithImageExportState(page);
   const dialog = await openEditorExport(page);
   await expect(dialog.locator('[data-demo-id="org-editor-export-image"]')).toBeVisible();
-  await dialog.getByRole("button", { name: "Open", exact: true }).click();
-  const imagePreviewDialog = page.getByRole("dialog", { name: "Image preview" });
-  await expect(imagePreviewDialog).toBeVisible();
   await capture(page, "editor-image-export");
-  await page.keyboard.press("Escape");
-  await expect(imagePreviewDialog).toBeHidden();
   await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });

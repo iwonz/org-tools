@@ -11,6 +11,7 @@ import type {
   OrgEditorSelectedItem,
   OrgEditorUnit,
   OrgToolsDownloadEmployeeFieldKey,
+  OrgToolsDownloadJsonTopLevelFieldKey,
   OrgToolsDownloadSelection,
   OrgToolsDownloadState,
   OrgToolsDownloadTagFieldKey,
@@ -56,6 +57,11 @@ const DOWNLOAD_EMPLOYEE_FIELD_KEYS = [
   "avatarBase64Url",
   "birthday",
 ] as const satisfies readonly OrgToolsDownloadEmployeeFieldKey[];
+const DOWNLOAD_JSON_TOP_LEVEL_FIELD_KEYS = [
+  ...DOWNLOAD_EMPLOYEE_FIELD_KEYS,
+  "units",
+  "tags",
+] as const satisfies readonly OrgToolsDownloadJsonTopLevelFieldKey[];
 const DOWNLOAD_TAG_FIELD_KEYS = [
   "label",
   "date",
@@ -428,6 +434,18 @@ const normalizeEnumArray = <Value extends string>(
   return value.every((item) => isString(item) && allowedSet.has(item)) ? (value as Value[]) : null;
 };
 
+const normalizeCompleteEnumOrder = <Value extends string>(
+  value: unknown,
+  required: readonly Value[],
+): Value[] | null => {
+  const normalized = normalizeEnumArray(value, required);
+  return normalized &&
+    normalized.length === required.length &&
+    new Set(normalized).size === required.length
+    ? normalized
+    : null;
+};
+
 const normalizeDownloadJsonFieldNames = (
   value: unknown,
 ): OrgToolsDownloadState["jsonFieldNames"] | null => {
@@ -457,7 +475,6 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
   if (
     !isRecord(value) ||
     !hasExactKeys(value, [
-      "employeeFieldOrder",
       "employeeFilters",
       "employeeQuery",
       "excludedEmployeeIds",
@@ -465,6 +482,7 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
       "excludedJsonUnitIds",
       "jsonFieldNames",
       "jsonTagFieldOrder",
+      "jsonTopLevelFieldOrder",
       "jsonUnitFieldOrder",
       "rowMode",
       "selectedEmployeeFieldKeys",
@@ -477,12 +495,12 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
       "templateFormat",
       "unitQuery",
     ]) ||
-    !Array.isArray(value.employeeFieldOrder) ||
     !isString(value.employeeQuery) ||
     !isEmployeeIdArray(value.excludedEmployeeIds) ||
     !isStringArray(value.excludedJsonTagKeys) ||
     !isUuidArray(value.excludedJsonUnitIds) ||
     !Array.isArray(value.jsonTagFieldOrder) ||
+    !Array.isArray(value.jsonTopLevelFieldOrder) ||
     !Array.isArray(value.jsonUnitFieldOrder) ||
     (value.rowMode !== "allUnits" && value.rowMode !== "firstUnit") ||
     !Array.isArray(value.selectedEmployeeFieldKeys) ||
@@ -500,12 +518,18 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
   const selectedFilters = normalizeEmployeeSearchFilters(value.selectedFilters);
   const jsonFieldNames = normalizeDownloadJsonFieldNames(value.jsonFieldNames);
   const selections = value.selections.map(normalizeDownloadSelection);
-  const employeeFieldOrder = normalizeEnumArray(
-    value.employeeFieldOrder,
-    DOWNLOAD_EMPLOYEE_FIELD_KEYS,
+  const jsonTopLevelFieldOrder = normalizeCompleteEnumOrder(
+    value.jsonTopLevelFieldOrder,
+    DOWNLOAD_JSON_TOP_LEVEL_FIELD_KEYS,
   );
-  const jsonTagFieldOrder = normalizeEnumArray(value.jsonTagFieldOrder, DOWNLOAD_TAG_FIELD_KEYS);
-  const jsonUnitFieldOrder = normalizeEnumArray(value.jsonUnitFieldOrder, DOWNLOAD_UNIT_FIELD_KEYS);
+  const jsonTagFieldOrder = normalizeCompleteEnumOrder(
+    value.jsonTagFieldOrder,
+    DOWNLOAD_TAG_FIELD_KEYS,
+  );
+  const jsonUnitFieldOrder = normalizeCompleteEnumOrder(
+    value.jsonUnitFieldOrder,
+    DOWNLOAD_UNIT_FIELD_KEYS,
+  );
   const selectedEmployeeFieldKeys = normalizeEnumArray(
     value.selectedEmployeeFieldKeys,
     DOWNLOAD_EMPLOYEE_FIELD_KEYS,
@@ -522,7 +546,7 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     !employeeFilters ||
     !selectedFilters ||
     !jsonFieldNames ||
-    !employeeFieldOrder ||
+    !jsonTopLevelFieldOrder ||
     !jsonTagFieldOrder ||
     !jsonUnitFieldOrder ||
     !selectedEmployeeFieldKeys ||
@@ -532,7 +556,6 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
   )
     return null;
   return {
-    employeeFieldOrder,
     employeeFilters,
     employeeQuery: value.employeeQuery,
     excludedEmployeeIds: [...value.excludedEmployeeIds],
@@ -540,6 +563,7 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     excludedJsonUnitIds: [...new Set(value.excludedJsonUnitIds)] as UnitId[],
     jsonFieldNames,
     jsonTagFieldOrder,
+    jsonTopLevelFieldOrder,
     jsonUnitFieldOrder,
     rowMode: value.rowMode,
     selectedEmployeeFieldKeys,
@@ -790,7 +814,7 @@ export const createEmptyEmployeeFiltersState = (): OrgToolsEmployeeFilters => ({
 });
 
 export const createBlankDownloadState = (): OrgToolsDownloadState => ({
-  employeeFieldOrder: [
+  jsonTopLevelFieldOrder: [
     "id",
     "firstName",
     "lastName",
@@ -802,6 +826,8 @@ export const createBlankDownloadState = (): OrgToolsDownloadState => ({
     "phone",
     "avatarBase64Url",
     "birthday",
+    "units",
+    "tags",
   ],
   employeeFilters: createEmptyEmployeeFiltersState(),
   employeeQuery: "",

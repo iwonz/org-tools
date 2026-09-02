@@ -419,11 +419,13 @@ export const orgEditorTemplateUnitFields: Array<{
   { key: "isBoss", label: "isBoss" },
 ];
 
-export const createDefaultOrgEditorImageExportSettings = (): OrgEditorImageExportSettings => ({
+export const createDefaultOrgEditorImageExportSettings = (
+  imageBossLabel = ORG_EDITOR_DEFAULT_BOSS_LABEL,
+): OrgEditorImageExportSettings => ({
   background: { type: "transparent" },
   employeeFormat: ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT,
   fontFamily: ORG_EDITOR_EXPORT_FONTS[0]?.family ?? "Inter",
-  imageBossLabel: ORG_EDITOR_DEFAULT_BOSS_LABEL,
+  imageBossLabel,
   padding: 20,
   title: "",
   titleAlign: "left",

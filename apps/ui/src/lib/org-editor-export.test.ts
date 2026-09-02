@@ -72,6 +72,9 @@ describe("Org Editor image export", () => {
       imageBossLabel: "Manager",
       unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
     });
+    expect(createDefaultOrgEditorImageExportSettings("Localized manager").imageBossLabel).toBe(
+      "Localized manager",
+    );
     expect(ORG_EDITOR_EXPORT_GRADIENTS.map(({ label }) => label)).toEqual([
       "Air",
       "Mint",

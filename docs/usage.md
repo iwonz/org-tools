@@ -62,10 +62,11 @@ control.
   history use complete Employee cards with the ordinary Tag, Edit, and Delete actions while
   retaining bounded scrolling and tag-history navigation.
 - **Data Download** selects Units or Employees and produces structured JSON or Template output.
-  JSON always produces one record per Employee. Unit and Tag arrays are independently enabled,
-  renamed, and filtered through searchable exclusion menus; Template retains All Units and First
-  Unit row modes. Unit paths use the fixed ` / ` separator. **Continue** stays disabled in the
-  shared header until at least one Employee is selected.
+  JSON always produces one record per Employee. Drag handles order scalar fields and the ordinary
+  Unit and Tag rows in one list; enabled Unit and Tag arrays expose their own reorderable fields,
+  names, and searchable exclusion menus. Template retains All Units and First Unit row modes through
+  the same control used by Editor export. Unit paths use the fixed ` / ` separator. **Continue**
+  stays disabled in the shared header until at least one Employee is selected.
 
 ## Import and Export
 
