@@ -31,6 +31,41 @@ const manualUnit = (name: string): OrgEditorUnitConfiguration => ({
 });
 
 describe("Employee transfer", () => {
+  test("chooses the first richest representative row while collecting all paths", () => {
+    const source = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        { firstName: "First" },
+        { contact: { email: "rich@example.test", phone: "555-0101" }, firstName: "Rich" },
+        { contact: { email: "later@example.test", phone: "555-0102" }, firstName: "Later" },
+        { lastName: "Last-only" },
+      ]),
+    );
+
+    expect(source.representativeRowIndex).toBe(1);
+    expect(JSON.parse(source.representativeJson)).toEqual({
+      contact: { email: "rich@example.test", phone: "555-0101" },
+      firstName: "Rich",
+    });
+    expect(source.paths).toEqual(["contact.email", "contact.phone", "firstName", "lastName"]);
+    expect(source.representativeTruncated).toBe(false);
+  });
+
+  test("bounds a large representative preview without dropping source rows", () => {
+    const source = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        { email: "large@example.test", firstName: "Large", note: "x".repeat(140_000) },
+      ]),
+    );
+
+    expect(new TextEncoder().encode(source.representativeJson).byteLength).toBeLessThanOrEqual(
+      128 * 1024,
+    );
+    expect(source.representativeTruncated).toBe(true);
+    expect(source.rows).toHaveLength(1);
+  });
+
   test("maps arbitrary source paths and applies new Employees and Teams atomically", () => {
     const store = new OrgStore();
     const source = parseEmployeeImportText(
@@ -60,7 +95,6 @@ describe("Employee transfer", () => {
     const next = applyEmployeeImport({
       bulkPolicy: "update",
       currentState: store.createOrgToolsState(),
-      importTeams: true,
       overrides: new Map(),
       preview,
     });
@@ -105,7 +139,6 @@ describe("Employee transfer", () => {
     const updated = applyEmployeeImport({
       bulkPolicy: "update",
       currentState: store.createOrgToolsState(),
-      importTeams: true,
       overrides: new Map(),
       preview,
     });
@@ -116,7 +149,6 @@ describe("Employee transfer", () => {
     const teamsOnly = applyEmployeeImport({
       bulkPolicy: "teamsOnly",
       currentState: store.createOrgToolsState(),
-      importTeams: true,
       overrides: new Map(),
       preview,
     });
@@ -127,7 +159,6 @@ describe("Employee transfer", () => {
     const skipped = applyEmployeeImport({
       bulkPolicy: "update",
       currentState: store.createOrgToolsState(),
-      importTeams: true,
       overrides: new Map([[employeeId, "skip"]]),
       preview,
     });

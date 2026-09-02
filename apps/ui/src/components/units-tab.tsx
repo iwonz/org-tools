@@ -64,8 +64,6 @@ import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { useOrgStore } from "@/stores/org-store-context";
 
-const UNIT_SEARCH_THRESHOLD = 20;
-
 type UnitEmployeeDragState = {
   employeeId: EmployeeId;
   sourceUnitId: UnitId;
@@ -212,12 +210,9 @@ export const UnitsTab = observer(() => {
   const employeeSearchFiltersKey = getEmployeeSearchFiltersKey(employeeSearchFilters);
   const hasEmployeeSearch =
     employeeSearchTokens.length > 0 || hasActiveEmployeeSearchFilters(employeeSearchFilters);
-  const showUnitSearch = (units?.deepUnits.length ?? 0) > UNIT_SEARCH_THRESHOLD;
   const visibleUnitIds = useMemo(() => {
-    if (!showUnitSearch) return null;
-
     return getVisibleUnitIdsForNameSearch(units?.indexes.unitSearchDocuments, unitSearchTokens);
-  }, [showUnitSearch, unitSearchTokens, units]);
+  }, [unitSearchTokens, units]);
   const hasVisibleUnits = visibleUnitIds === null || visibleUnitIds.size > 0;
   const sortedDirectEmployees = useMemo(() => {
     if (!selectedUnit) return [];
@@ -341,18 +336,16 @@ export const UnitsTab = observer(() => {
         style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
       >
         <div className="flex min-h-0 min-w-0 flex-col bg-muted/25" data-demo-id="units-tree-panel">
-          {showUnitSearch && (
-            <div className="flex shrink-0 items-start gap-2 p-3" data-demo-id="units-tree-header">
-              <UnitSearchInput
-                ariaLabel={t("Search Units by name")}
-                className="min-w-40 flex-1"
-                dataDemoId="units-search"
-                onValueChange={(unitQuery) => store.setUnitsUi({ unitQuery })}
-                placeholder={t("Search Units by name")}
-                value={unitSearchQuery}
-              />
-            </div>
-          )}
+          <div className="flex shrink-0 items-start gap-2 p-3" data-demo-id="units-tree-header">
+            <UnitSearchInput
+              ariaLabel={t("Search Units by name")}
+              className="min-w-40 flex-1"
+              dataDemoId="units-search"
+              onValueChange={(unitQuery) => store.setUnitsUi({ unitQuery })}
+              placeholder={t("Search Units by name")}
+              value={unitSearchQuery}
+            />
+          </div>
           <ScrollArea className="min-h-0 flex-1" scrollbars="none">
             {hasVisibleUnits ? (
               <ul className="grid min-w-max gap-1.5 p-3">

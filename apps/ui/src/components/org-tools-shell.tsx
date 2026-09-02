@@ -281,8 +281,13 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                       title={contextHeaderAction.label}
                       type="button"
                     >
-                      <ContextHeaderActionIcon className="size-4" />
+                      {contextHeaderAction.iconPlacement !== "trailing" && (
+                        <ContextHeaderActionIcon className="size-4" />
+                      )}
                       <span className="hidden sm:inline">{contextHeaderAction.label}</span>
+                      {contextHeaderAction.iconPlacement === "trailing" && (
+                        <ContextHeaderActionIcon className="size-4" />
+                      )}
                     </Button>
                     <span
                       className="pointer-events-none absolute right-0 top-11 z-30 hidden whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background group-focus-within:block group-hover:block sm:!hidden"

@@ -4,6 +4,7 @@ import type { OrgToolsState } from "@org-tools/types";
 import { useMemo, useState } from "react";
 import {
   HiOutlineArrowPath,
+  HiOutlineArrowRight,
   HiOutlineArrowUpTray,
   HiOutlineBuildingOffice2,
   HiOutlineCircleStack,
@@ -12,7 +13,6 @@ import {
 } from "react-icons/hi2";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogBody,
@@ -146,20 +146,22 @@ function MappingGrid({
 }) {
   const t = useUiText();
   return (
-    <div className="grid gap-2 sm:grid-cols-2" data-demo-id="employee-import-mapping">
+    <div className="grid gap-2" data-demo-id="employee-import-mapping">
       {EMPLOYEE_IMPORT_FIELDS.map((field) => {
         const required = field === "firstName" || field === "lastName" || field === "email";
         return (
-          <div className="grid min-w-0 gap-1" key={field}>
-            <Label className="text-xs" htmlFor={`employee-import-${field}`}>
-              {t(FIELD_LABELS[field])}
-              {required ? " *" : ""}
-            </Label>
+          <div
+            className="grid min-w-0 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.7fr)]"
+            key={field}
+          >
             <Select
               onValueChange={(value) => onChange(field, value === "__none__" ? null : value)}
               value={mapping[field] ?? "__none__"}
             >
-              <SelectTrigger id={`employee-import-${field}`}>
+              <SelectTrigger
+                aria-label={t("Source JSON path for {field}", { field: t(FIELD_LABELS[field]) })}
+                id={`employee-import-${field}`}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -171,6 +173,14 @@ function MappingGrid({
                 ))}
               </SelectContent>
             </Select>
+            <HiOutlineArrowRight
+              aria-hidden="true"
+              className="mx-auto hidden size-4 text-muted-foreground sm:block"
+            />
+            <div className="min-w-0 rounded-md bg-muted/45 px-3 py-2 text-sm">
+              {t(FIELD_LABELS[field])}
+              {required ? " *" : ""}
+            </div>
           </div>
         );
       })}
@@ -183,11 +193,13 @@ function MatchReview({
   onOverride,
   overrides,
   preview,
+  teamsMapped,
 }: {
   bulkPolicy: EmployeeImportPolicy;
   onOverride: (employeeId: string, policy: EmployeeImportPolicy | null) => void;
   overrides: ReadonlyMap<string, EmployeeImportPolicy>;
   preview: EmployeeImportPreview;
+  teamsMapped: boolean;
 }) {
   const t = useUiText();
   const [scrollTop, setScrollTop] = useState(0);
@@ -234,7 +246,7 @@ function MatchReview({
                   <SelectItem value="__bulk__">{t("Use bulk action")}</SelectItem>
                   <SelectItem value="update">{t("Update data")}</SelectItem>
                   <SelectItem value="skip">{t("Skip")}</SelectItem>
-                  <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>
+                  {teamsMapped && <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>}
                 </SelectContent>
               </Select>
               <span className="sr-only">{bulkPolicy}</span>
@@ -266,7 +278,6 @@ export function ImportDialog({
   const [mapping, setMapping] = useState<EmployeeImportMapping | null>(null);
   const [bulkPolicy, setBulkPolicy] = useState<EmployeeImportPolicy>("update");
   const [overrides, setOverrides] = useState<Map<string, EmployeeImportPolicy>>(new Map());
-  const [importTeams, setImportTeams] = useState(true);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
   const [isReading, setIsReading] = useState(false);
 
@@ -293,7 +304,6 @@ export function ImportDialog({
     setMapping(null);
     setBulkPolicy("update");
     setOverrides(new Map());
-    setImportTeams(true);
     setError(null);
     setIsReading(false);
   };
@@ -334,7 +344,6 @@ export function ImportDialog({
       const state = applyEmployeeImport({
         bulkPolicy,
         currentState,
-        importTeams,
         overrides,
         preview: previewResult.preview,
       });
@@ -354,7 +363,7 @@ export function ImportDialog({
       }}
       open={open}
     >
-      <DialogContent className="max-h-[92dvh] max-w-4xl" data-demo-id="import-dialog">
+      <DialogContent className="max-h-[92dvh] max-w-6xl" data-demo-id="import-dialog">
         <DialogHeader>
           <DialogTitle>{t("Import")}</DialogTitle>
           <DialogDescription>
@@ -418,24 +427,49 @@ export function ImportDialog({
                 reselect={Boolean(error)}
               />
               {mapping && employeeSource && (
-                <>
-                  <MappingGrid
-                    mapping={mapping}
-                    onChange={(field, path) => {
-                      setMapping({ ...mapping, [field]: path });
-                      setOverrides(new Map());
-                    }}
-                    paths={employeeSource.paths}
-                  />
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Checkbox
-                      checked={importTeams}
-                      id="employee-import-teams"
-                      onCheckedChange={(checked) => setImportTeams(checked === true)}
+                <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+                  <section
+                    className="grid min-w-0 content-start gap-2"
+                    data-demo-id="employee-import-source-preview"
+                  >
+                    <div>
+                      <Label>{t("Representative JSON record")}</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("Record {number} of {total} has the most mappable fields.", {
+                          number: employeeSource.representativeRowIndex + 1,
+                          total: employeeSource.rows.length,
+                        })}
+                      </p>
+                    </div>
+                    <div className="max-h-80 overflow-auto rounded-md border border-border bg-muted/25 p-3">
+                      <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">
+                        {employeeSource.representativeJson}
+                      </pre>
+                    </div>
+                    {employeeSource.representativeTruncated && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("Preview truncated at 128 KiB")}
+                      </p>
+                    )}
+                  </section>
+                  <section className="grid min-w-0 content-start gap-2">
+                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(9rem,0.7fr)] gap-8 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                      <span>{t("Source JSON path")}</span>
+                      <span>{t("Org Tools field")}</span>
+                    </div>
+                    <MappingGrid
+                      mapping={mapping}
+                      onChange={(field, path) => {
+                        setMapping({ ...mapping, [field]: path });
+                        setOverrides(new Map());
+                        if (field === "teams" && !path && bulkPolicy === "teamsOnly") {
+                          setBulkPolicy("update");
+                        }
+                      }}
+                      paths={employeeSource.paths}
                     />
-                    <Label htmlFor="employee-import-teams">{t("Import Teams")}</Label>
-                  </div>
-                </>
+                  </section>
+                </div>
               )}
               <ImportError error={error ?? previewResult.error} />
               {previewResult.preview && (
@@ -465,7 +499,9 @@ export function ImportDialog({
                           <SelectContent>
                             <SelectItem value="update">{t("Update data")}</SelectItem>
                             <SelectItem value="skip">{t("Skip")}</SelectItem>
-                            <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>
+                            {mapping?.teams && (
+                              <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -479,6 +515,7 @@ export function ImportDialog({
                         }}
                         overrides={overrides}
                         preview={previewResult.preview}
+                        teamsMapped={Boolean(mapping?.teams)}
                       />
                     </div>
                   )}

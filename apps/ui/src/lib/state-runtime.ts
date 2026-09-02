@@ -23,3 +23,7 @@ export type StatePutRequest =
   | { scope: "all"; state: OrgToolsState };
 
 export type StatePutApiRequest = StatePutRequest;
+
+export type StateCreateNewRequest = {
+  action: "create_new";
+};

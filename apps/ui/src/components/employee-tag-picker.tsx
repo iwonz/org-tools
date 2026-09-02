@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineTag } from "react-icons/hi2";
 import {
   EmployeeTagDatePopover,
@@ -36,11 +36,13 @@ export function EmployeeTagPickerPanel({
   onDatePopoverOpenChange,
   tagOptions,
   autoFocus = true,
+  footer,
 }: {
   autoFocus?: boolean;
   className?: string;
   dataDemoId?: string;
   employees: readonly EmployeeTagTarget[];
+  footer?: ReactNode | false;
   onApply: (updates: EmployeeTagUpdate[]) => void;
   onDatePopoverOpenChange?: (open: boolean) => void;
   tagOptions: readonly string[];
@@ -199,11 +201,14 @@ export function EmployeeTagPickerPanel({
           </div>
         )}
       </div>
-      <div className="text-xs text-muted-foreground">
-        {employees.length > 1
-          ? t("Selected Employees: {count}", { count: employees.length })
-          : t("Changes apply immediately")}
-      </div>
+      {footer !== false && (
+        <div className="text-xs text-muted-foreground">
+          {footer ??
+            (employees.length > 1
+              ? t("Selected Employees: {count}", { count: employees.length })
+              : t("Changes apply immediately"))}
+        </div>
+      )}
     </fieldset>
   );
 }

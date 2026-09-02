@@ -25,7 +25,7 @@ const primaryScreenshotModules = [
   "calendar",
   "download",
 ];
-const supportingScreenshotModules = [];
+const supportingScreenshotModules = ["recovery"];
 
 const blockedPathSegments = new Set([
   ".cache",

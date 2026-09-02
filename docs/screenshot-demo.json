@@ -27,6 +27,15 @@
     "capabilities": ["Complete state", "Direct download", "Unsaved live snapshot"]
   },
   {
+    "id": "database-create-new",
+    "module": "recovery",
+    "featured": false,
+    "title": "Database recovery confirmation",
+    "file": "feature-database-create-new.png",
+    "description": "Recover from an unavailable or corrupt local database by confirming a timestamped backup and a clean current-schema replacement.",
+    "capabilities": ["Explicit recovery", "Timestamped backup", "Current schema", "No silent reset"]
+  },
+  {
     "id": "theme",
     "module": "theme",
     "featured": true,
@@ -150,7 +159,7 @@
     "featured": false,
     "title": "Employee profile and assignments",
     "file": "feature-employees-form.png",
-    "description": "Edit identity, contact, gender, a complete Day/Month/Year birthday with an unknown-year choice, embedded avatar, tags, Team membership, boss state, and positions.",
+    "description": "Edit identity, contact, segmented gender, a compound Day/Month/Year birthday with an unknown-year choice, embedded avatar, draft tags, Team membership, boss state, and positions.",
     "capabilities": [
       "Identity and contact",
       "Complete birthday",
@@ -208,8 +217,8 @@
     "featured": false,
     "title": "Employee field mapping",
     "file": "feature-employee-import-mapping.png",
-    "description": "Map arbitrary flat or nested JSON fields into Employees and optionally include nested Team assignments.",
-    "capabilities": ["Field mapping", "Nested paths", "Team assignments", "Import preview"]
+    "description": "Inspect the richest bounded JSON record and map source paths left-to-right into Employee fields, Tags, and optional Team assignments.",
+    "capabilities": ["Representative preview", "Field mapping", "Nested paths", "Tags and Teams"]
   },
   {
     "id": "editor-search",
@@ -356,7 +365,7 @@
     "featured": false,
     "title": "Calendar day details",
     "file": "feature-calendar-day-details.png",
-    "description": "Open a dated-event date to inspect complete Employee cards, every event label, and right-aligned actions without a redundant section heading.",
+    "description": "Open a date to inspect Birthdays first and then one interactive heading plus complete Employee-card list for every dated Tag.",
     "capabilities": [
       "Interactive dates",
       "Conditional content",
@@ -386,8 +395,17 @@
     "featured": true,
     "title": "Template Data Download",
     "file": "demo-download.png",
-    "description": "Configure a separator-based template, row mode, field tokens, live preview, copy, and local download.",
+    "description": "Configure a separator-based template, row mode, inline token syntax, live preview, copy, and local download.",
     "capabilities": ["Template format", "Row mode", "Field tokens", "Preview", "Copy and download"]
+  },
+  {
+    "id": "download-template-tokens",
+    "module": "download",
+    "featured": false,
+    "title": "Template token suggestions",
+    "file": "feature-download-template-tokens.png",
+    "description": "Type @ in the shared Format field to filter localized token suggestions and insert the stable brace syntax at the caret.",
+    "capabilities": ["Caret menu", "Localized descriptions", "Keyboard selection", "Brace syntax"]
   },
   {
     "id": "download-source-selection",

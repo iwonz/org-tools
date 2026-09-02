@@ -1,6 +1,6 @@
 # Screenshots
 
-The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 38 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
+The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 40 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
 
 The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
 
@@ -31,6 +31,17 @@ Capabilities: Strict rejection, No mutation, Choose another file.
 Download the complete validated application state directly from the sidebar without an intermediate dialog.
 
 Capabilities: Complete state, Direct download, Unsaved live snapshot.
+
+## Recovery
+
+### Database recovery confirmation
+
+[![Database recovery confirmation](screenshots/feature-database-create-new.png)](screenshots/feature-database-create-new.png)
+
+Recover from an unavailable or corrupt local database by confirming a timestamped backup and a
+clean current-schema replacement.
+
+Capabilities: Explicit recovery, Timestamped backup, Current schema, No silent reset.
 
 ## Theme
 
@@ -125,8 +136,8 @@ Capabilities: Birthday filter, Gender filter, Position filter, Tag filter, Team 
 
 [![Employee profile and assignments](screenshots/feature-employees-form.png)](screenshots/feature-employees-form.png)
 
-Edit identity, contact, gender, a complete Day/Month/Year birthday with an unknown-year choice,
-embedded avatar, tags, Team membership, boss state, and positions.
+Edit identity, contact, segmented gender, a compound Day/Month/Year birthday with an unknown-year
+choice, embedded avatar, draft tags, Team membership, boss state, and positions.
 
 Capabilities: Identity and contact, Complete birthday, Unknown year, Embedded avatar, Tags, Team assignments.
 
@@ -161,8 +172,8 @@ Capabilities: Local file, Clipboard image, Crop and zoom, WebP with PNG fallback
 
 [![Employee field mapping](screenshots/feature-employee-import-mapping.png)](screenshots/feature-employee-import-mapping.png)
 
-Map arbitrary flat or nested JSON properties to current Employee fields and optional Team
-assignments while previewing the candidate.
+Inspect the first richest bounded JSON record and map arbitrary flat or nested source paths
+left-to-right into current Employee fields, Tags, and optional Team assignments.
 
 Capabilities: Field mapping, Nested paths, Team assignments, Import preview.
 
@@ -286,8 +297,8 @@ Capabilities: Monthly navigation, Birthdays, Dated tags, Today state, Tag cloud.
 
 [![Calendar day details](screenshots/feature-calendar-day-details.png)](screenshots/feature-calendar-day-details.png)
 
-Open a dated-event date to inspect complete Employee cards, every event label, and the ordinary
-right-aligned actions without a redundant section heading.
+Open a date to inspect Birthdays first and then one interactive heading plus complete Employee-card
+list for every dated Tag, all within one virtualized vertical scroll.
 
 Capabilities: Interactive dates, Conditional content, Dated-event cards, Tag history, Employee actions.
 
@@ -309,6 +320,15 @@ Capabilities: Tag cloud, Conditional history, Complete Employee cards, Employee 
 Configure a separator-based template, row mode, field tokens, live preview, copy, and local download.
 
 Capabilities: Template format, Row mode, Field tokens, Preview, Copy and download.
+
+### Template token suggestions
+
+[![Template token suggestions](screenshots/feature-download-template-tokens.png)](screenshots/feature-download-template-tokens.png)
+
+Type `@` in the shared Format field to filter localized token suggestions and insert the stable
+brace syntax at the caret.
+
+Capabilities: Caret menu, Localized descriptions, Keyboard selection, Brace syntax.
 
 ### Download source selection
 
@@ -353,10 +373,10 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
 - Confirm thematic icons precede text in buttons and tabs while disclosure, sorting, removal,
   status, and count affordances retain their semantic trailing positions.
-- Confirm Units has no empty hierarchy header, its path/search aligns to roster avatars, direct and
+- Confirm Units always exposes hierarchy-name search for a nonempty structure, its path/search aligns to roster avatars, direct and
   descendant Employees form one contiguous list, and its count sits below search without roster-section headings.
-- Confirm Calendar day details omit the Dated tags heading, group same-day labels by Employee, and
-  expose complete Employee cards with Tag, Edit, and Delete actions.
+- Confirm Calendar day details are one scroll with Birthdays first and each dated Tag as an
+  interactive heading followed by complete Employee cards with Tag, Edit, and Delete actions.
 - Confirm Calendar tag history omits the Current and upcoming heading and exposes complete Employee
   cards while retaining the conditional Past section.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
@@ -369,10 +389,15 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   editing chrome.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
-  and searchable exclusions, and previews remain bounded.
+  and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
+  whose `@` menu inserts the existing `{token}` syntax.
+- Confirm Employee Import shows a bounded richest-record preview beside left-to-right mapping rows,
+  imports Teams only through mapping, and keeps duplicate review virtualized.
+- Confirm an unavailable or corrupt database offers Retry and confirmed Create new without silently
+  replacing the existing database family.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
   browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 38 PNGs must retain identical hashes. Material differences require review and a deliberate update.
+- Regenerate immediately; all 40 PNGs must retain identical hashes. Material differences require review and a deliberate update.

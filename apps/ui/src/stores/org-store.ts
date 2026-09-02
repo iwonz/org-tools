@@ -31,7 +31,6 @@ import {
 } from "@/lib/org-file";
 import type {
   ExportFieldDropPlacement,
-  ExportFieldKey,
   ExportJsonEmployeeFieldKey,
   ExportJsonSettingsState,
   ExportJsonTagFieldKey,
@@ -531,9 +530,6 @@ export class OrgStore {
   }
   setExportTemplateFormat(value: string): void {
     this.exportSession.setTemplateFormat(value);
-  }
-  appendExportTemplateField(value: ExportFieldKey): void {
-    this.exportSession.appendTemplateField(value);
   }
   setExportJsonFieldName(
     group: "employee" | "tags" | "units",

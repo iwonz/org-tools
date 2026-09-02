@@ -361,10 +361,6 @@ export class ExportSessionStore {
     this.templateFormat = templateFormat;
   }
 
-  appendTemplateField(fieldKey: ExportFieldKey): void {
-    this.templateFormat = `${this.templateFormat}{${fieldKey}}`;
-  }
-
   setJsonFieldName(
     group: "employee" | "tags" | "units",
     fieldKey: ExportJsonEmployeeFieldKey | ExportJsonTagFieldKey | ExportJsonUnitFieldKey,

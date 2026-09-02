@@ -7,6 +7,7 @@ export type ContextHeaderAction = {
   dataDemoId: string;
   disabled?: boolean;
   icon: ComponentType<{ className?: string }>;
+  iconPlacement?: "leading" | "trailing";
   id: string;
   label: string;
   onClick: () => void;
@@ -23,6 +24,7 @@ export const useContextHeaderAction = (action: ContextHeaderAction | null) => {
   const dataDemoId = action?.dataDemoId;
   const disabled = action?.disabled;
   const icon = action?.icon;
+  const iconPlacement = action?.iconPlacement;
   const id = action?.id;
   const label = action?.label;
 
@@ -33,9 +35,10 @@ export const useContextHeaderAction = (action: ContextHeaderAction | null) => {
       dataDemoId,
       ...(disabled === undefined ? {} : { disabled }),
       icon,
+      ...(iconPlacement ? { iconPlacement } : {}),
       id,
       label,
       onClick: () => onClickRef.current?.(),
     });
-  }, [dataDemoId, disabled, icon, id, label, registerAction]);
+  }, [dataDemoId, disabled, icon, iconPlacement, id, label, registerAction]);
 };

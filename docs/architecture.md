@@ -55,7 +55,11 @@ before it replaces the Employee draft; no source image, crop, or fallback output
 ## Local SQLite runtime
 
 `/` renders the application directly. `GET /api/state` returns `{ revision, state }` and
-`PUT /api/state` accepts exact `organization`, `ui`, or `all` scoped updates. Every response uses
+`PUT /api/state` accepts exact `organization`, `ui`, or `all` scoped updates. A protected exact-body
+`POST /api/state` with `{"action":"create_new"}` is available only from the blocking startup error
+surface: after confirmation it closes the shared connection, moves the database plus existing
+rollback, WAL, and shared-memory sidecars to one timestamped backup family, and creates and validates
+a blank exact-schema database. A partial filesystem failure restores every moved original. Every response uses
 `Cache-Control: no-store`. Mutations require JSON, a loopback Host, and a matching same-origin
 Origin. CORS is not enabled.
 
@@ -103,13 +107,17 @@ history, collaborative cursors, or remote synchronization.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
   and write observation; the SQLite transport is imported only by `apps/ui`.
-- Import owns one transient `File`, mapping, and validated candidate. Global Export validates and
+- Import owns one transient `File`, representative record, mapping, and validated candidate. Employee
+  source paths and the first richest record are derived in one pass; a bounded JSON rendering and
+  left-to-right mapping stay transient. Global Export validates and
   downloads the complete current state only after an explicit action.
 - Data Download is a separate reporting pipeline for structured JSON and separator templates.
   JSON creates one record per Employee from one sortable top-level list of scalar Employee fields
   and optional Unit and Tag arrays. Unit and Tag rows use the same geometry as scalar fields, retain
   independently sortable nested fields, and support naming plus exact exclusions. Template retains
-  All Units and First Unit row modes through one control shared with Editor export.
+  All Units and First Unit row modes through one control shared with Editor export. Both Template
+  surfaces use one multiline Format input whose caret menu converts `@query` into existing `{token}`
+  syntax; suggestion state is transient.
 
 Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
 headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row
@@ -133,13 +141,14 @@ precede their labels and collapse to an accessible icon-only control with a tool
 screens. Floating non-modal surfaces use one neutral border and restrained shadow; hover and active
 states change tone without changing geometry.
 
-The Units split workflow omits its tree-search header entirely below the search threshold, aligns
-selected-path and roster search controls with Employee avatars, and derives its compact roster count
+The Units split workflow always shows its indexed hierarchy-name search for a nonempty structure,
+aligns selected-path and roster search controls with Employee avatars, and derives its compact roster count
 from current membership below search. Direct and descendant Employees keep their existing group
 order inside one contiguous virtualized roster without repeated section headings or counts. Calendar
 day and dated-tag details reuse the virtualized
 Employee card and action composition without redundant current/future or dated-event headings. Day
-events group by Employee while preserving each label as an explicit tag-history action. A selected
+events form one virtualized vertical stream: Birthdays first, then each localized Tag heading and
+its stable Employee list. A selected
 dated tag is stored by normalized key so edits and deletions re-derive current events instead of
 retaining a stale group snapshot.
 

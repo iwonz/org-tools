@@ -1,14 +1,15 @@
 "use client";
 
 import type { DatedTagEvent, DatedTagGroup, Employee } from "@org-tools/types";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import { useLocale } from "next-intl";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { HiOutlineCalendarDays, HiOutlineTag, HiOutlineUserGroup } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeCardActions } from "@/components/employee-card-actions";
-import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
+import { EmployeeCard, EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { MiddleDot } from "@/components/middle-dot";
 import { TopLevelEmptyState } from "@/components/source-empty-state";
@@ -31,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
+import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { cn } from "@/lib/utils";
@@ -218,64 +220,96 @@ function TagEventSection({
   );
 }
 
-function DayDatedEventSection({
+function CalendarDayDialogList({
   actions,
+  birthdayEmployees,
   events,
+  locale,
   onTagClick,
   onUnitContextClick,
   unitContextsByEmployeeId,
 }: {
   actions: (employee: Employee) => ReactNode;
+  birthdayEmployees: Employee[];
   events: DatedTagEvent[];
+  locale: string;
   onTagClick: (normalizedLabel: string) => void;
   onUnitContextClick: (unitContext: EmployeeUnitContext) => void;
   unitContextsByEmployeeId: ReadonlyMap<Employee["id"], EmployeeUnitContext[]>;
 }) {
-  const eventsByEmployeeId = new Map<Employee["id"], DatedTagEvent[]>();
-  for (const event of events) {
-    const employeeEvents = eventsByEmployeeId.get(event.employee.id);
-    if (employeeEvents) {
-      employeeEvents.push(event);
-    } else {
-      eventsByEmployeeId.set(event.employee.id, [event]);
+  const t = useUiText();
+  const rows = useMemo(
+    () => buildCalendarDayDialogRows({ birthdayEmployees, events, locale }),
+    [birthdayEmployees, events, locale],
+  );
+  const parentRef = useRef<HTMLDivElement | null>(null);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    estimateSize: (index) => (rows[index]?.kind === "header" ? 42 : 132),
+    getItemKey: (index) => rows[index]?.key ?? `calendar-day-row:${index}`,
+    getScrollElement: () => parentRef.current,
+    overscan: 8,
+  });
+  const measureRows = useCallback(() => {
+    for (const element of parentRef.current?.querySelectorAll<HTMLElement>("[data-index]") ?? []) {
+      virtualizer.measureElement(element);
     }
-  }
-  const employees = [...eventsByEmployeeId.values()].map(([event]) => event?.employee);
+  }, [virtualizer]);
+  useLayoutEffect(() => {
+    virtualizer.measure();
+    const frame = window.requestAnimationFrame(measureRows);
+    return () => window.cancelAnimationFrame(frame);
+  }, [measureRows, virtualizer]);
 
   return (
-    <EmployeeCardList
-      actions={actions}
-      cardDataDemoId="calendar-day-dated-event-employee-card"
-      className="min-h-48 flex-1 p-0"
-      dataDemoId="calendar-dated-tag-list"
-      employees={employees.filter((employee): employee is Employee => Boolean(employee))}
-      onUnitContextClick={onUnitContextClick}
-      resetKey={events
-        .map((event) => `${event.employee.id}:${event.label}:${event.date}`)
-        .join("|")}
-      subtitle={(employee) => (
-        <>
-          <EmployeeIdentity className="mt-0" employee={employee} />
-          <div className="mt-2 flex min-w-0 flex-wrap gap-1.5">
-            {(eventsByEmployeeId.get(employee.id) ?? []).map((event) => (
-              <Button
-                className="h-7 gap-1.5 px-2 text-xs"
-                data-demo-id="calendar-day-dated-event-label"
-                key={`${event.employee.id}:${event.label}`}
-                onClick={() => onTagClick(event.label.toLocaleLowerCase("en-US"))}
-                size="sm"
-                type="button"
-                variant="secondary"
-              >
-                <HiOutlineTag aria-hidden className="size-3.5" />
-                {event.label}
-              </Button>
-            ))}
-          </div>
-        </>
-      )}
-      unitContextsByEmployeeId={unitContextsByEmployeeId}
-    />
+    <div
+      className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
+      data-demo-id="calendar-day-event-list"
+      ref={parentRef}
+    >
+      <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          if (!row) return null;
+          return (
+            <div
+              className="absolute left-0 top-0 w-full"
+              data-index={virtualRow.index}
+              key={row.key}
+              ref={virtualizer.measureElement}
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
+            >
+              {row.kind === "header" ? (
+                row.normalizedLabel ? (
+                  <button
+                    className="flex w-full items-center gap-2 bg-muted/35 px-3.5 py-2.5 text-left text-sm font-semibold outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    data-demo-id="calendar-day-tag-heading"
+                    onClick={() => onTagClick(row.normalizedLabel as string)}
+                    type="button"
+                  >
+                    <HiOutlineTag className="size-4" />
+                    {row.label}
+                  </button>
+                ) : (
+                  <h3 className="flex items-center gap-2 bg-muted/35 px-3.5 py-2.5 text-sm font-semibold">
+                    <HiOutlineUserGroup className="size-4" />
+                    {t("Birthdays")}
+                  </h3>
+                )
+              ) : (
+                <EmployeeCard
+                  actions={actions}
+                  dataDemoId="calendar-day-employee-card"
+                  employee={row.employee}
+                  onUnitContextClick={onUnitContextClick}
+                  unitContexts={unitContextsByEmployeeId.get(row.employee.id) ?? []}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -457,63 +491,28 @@ export const CalendarTab = observer(() => {
             </DialogTitle>
           </DialogHeader>
           <DialogBody
-            className={cn(
-              "grid min-h-0 flex-1 gap-4 overflow-auto",
-              dialogDay &&
-                dialogDay.birthdayEmployees.length > 0 &&
-                dialogDay.events.length > 0 &&
-                "md:grid-cols-2",
-            )}
+            className="flex min-h-0 flex-1 overflow-hidden p-0"
             data-demo-id="calendar-day-dialog-body"
           >
-            {dialogDay && dialogDay.birthdayEmployees.length > 0 && (
-              <section
-                className="flex min-h-0 flex-col gap-2"
-                data-demo-id="calendar-birthdays-section"
-              >
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <HiOutlineUserGroup />
-                  {t("Birthdays")}
-                </h3>
-                <EmployeeCardList
-                  actions={(employee) => (
-                    <EmployeeCardActions
-                      employee={employee}
-                      onApplyTags={store.updateEmployeeTags}
-                      onDelete={setDeletingEmployee}
-                      onEdit={setEditingEmployee}
-                      tagOptions={store.units?.indexes.tagOptions ?? []}
-                      tagPickerDataDemoId="calendar-employee-tag-picker"
-                    />
-                  )}
-                  className="min-h-48 flex-1 p-0"
-                  dataDemoId="calendar-birthday-list"
-                  employees={dialogDay.birthdayEmployees}
-                  onUnitContextClick={(context) => store.selectUnitFromEmployeeCard(context.unitId)}
-                  resetKey={`calendar:${dialogDay.key}:birthdays`}
-                  unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
-                />
-              </section>
-            )}
-            {dialogDay && dialogDay.events.length > 0 && (
-              <section className="flex min-h-0 flex-col" data-demo-id="calendar-dated-tags-section">
-                <DayDatedEventSection
-                  actions={(employee) => (
-                    <EmployeeCardActions
-                      employee={employee}
-                      onApplyTags={store.updateEmployeeTags}
-                      onDelete={setDeletingEmployee}
-                      onEdit={setEditingEmployee}
-                      tagOptions={store.units?.indexes.tagOptions ?? []}
-                      tagPickerDataDemoId="calendar-day-dated-event-tag-picker"
-                    />
-                  )}
-                  events={dialogDay.events}
-                  onTagClick={setDialogTagKey}
-                  onUnitContextClick={(context) => store.selectUnitFromEmployeeCard(context.unitId)}
-                  unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
-                />
-              </section>
+            {dialogDay && (
+              <CalendarDayDialogList
+                actions={(employee) => (
+                  <EmployeeCardActions
+                    employee={employee}
+                    onApplyTags={store.updateEmployeeTags}
+                    onDelete={setDeletingEmployee}
+                    onEdit={setEditingEmployee}
+                    tagOptions={store.units?.indexes.tagOptions ?? []}
+                    tagPickerDataDemoId="calendar-day-employee-tag-picker"
+                  />
+                )}
+                birthdayEmployees={dialogDay.birthdayEmployees}
+                events={dialogDay.events}
+                locale={locale}
+                onTagClick={setDialogTagKey}
+                onUnitContextClick={(context) => store.selectUnitFromEmployeeCard(context.unitId)}
+                unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
+              />
             )}
           </DialogBody>
         </DialogContent>

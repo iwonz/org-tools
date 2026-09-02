@@ -3,6 +3,7 @@
 import type {
   EditableEmployeeFields,
   Employee,
+  EmployeeId,
   OrgEditorUnit,
   OrgEditorUnitId,
   UiOrgStructure,
@@ -16,16 +17,15 @@ import {
   HiOutlineArrowUpTray,
   HiOutlineBriefcase,
   HiOutlineBuildingOffice2,
+  HiOutlineChevronDown,
   HiOutlineClipboard,
   HiOutlineTag,
   HiOutlineTrash,
   HiOutlineUserCircle,
 } from "react-icons/hi2";
 import { AvatarCropDialog } from "@/components/avatar-crop-dialog";
-import {
-  EmployeeTagDatePopover,
-  EmployeeTagDateText,
-} from "@/components/employee-tag-date-popover";
+import { EmployeeTagDateText } from "@/components/employee-tag-date-popover";
+import { EmployeeTagPickerPanel } from "@/components/employee-tag-picker";
 import { MultiTagSelect, type MultiTagSelectOption } from "@/components/multi-tag-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -61,7 +62,8 @@ import {
   parseEmployeeBirthday,
   UNKNOWN_BIRTH_YEAR,
 } from "@/lib/birthday";
-import { findEmployeeTag, normalizeEmployeeTags, sortEmployeeTags } from "@/lib/employee-tags";
+import { normalizeEmployeeTags, sortEmployeeTagLabels } from "@/lib/employee-tags";
+import { cn } from "@/lib/utils";
 
 export type EditorEmployeeAssignment = {
   isBoss: boolean;
@@ -170,10 +172,9 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
     () => new Map(unitOptions.map((option) => [option.id, option])),
     [unitOptions],
   );
-  const employeeTagOptions = useMemo<Array<MultiTagSelectOption<string>>>(() => {
+  const employeeTagOptions = useMemo(() => {
     const tags = normalizeEmployeeTags([...props.tagOptions, ...fields.tags]);
-
-    return sortEmployeeTags(tags).map((tag) => ({ id: tag.label, label: tag.label }));
+    return sortEmployeeTagLabels(tags.map((tag) => tag.label));
   }, [fields.tags, props.tagOptions]);
   const birthdayYearOptions = useMemo(() => {
     const currentYear = new Date().getUTCFullYear();
@@ -439,9 +440,13 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                   />
                 </Field>
                 <Field label={t("Birthday")}>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 overflow-hidden rounded-md border border-input bg-background focus-within:border-signal/55 focus-within:ring-2 focus-within:ring-ring/20">
                     <Select onValueChange={setBirthdayDay} value={birthdayDay}>
-                      <SelectTrigger aria-label={t("Day")}>
+                      <SelectTrigger
+                        aria-label={t("Day")}
+                        className="rounded-none border-0 bg-transparent shadow-none focus-visible:border-0 focus-visible:ring-0"
+                        data-demo-id="employee-birthday-day"
+                      >
                         <SelectValue placeholder={t("Day")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -467,7 +472,11 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                       </SelectContent>
                     </Select>
                     <Select onValueChange={updateBirthdayMonth} value={birthdayMonth}>
-                      <SelectTrigger aria-label={t("Month")}>
+                      <SelectTrigger
+                        aria-label={t("Month")}
+                        className="rounded-none border-0 border-l border-input bg-transparent shadow-none focus-visible:border-l focus-visible:ring-0"
+                        data-demo-id="employee-birthday-month"
+                      >
                         <SelectValue placeholder={t("Month")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -483,7 +492,11 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                       </SelectContent>
                     </Select>
                     <Select onValueChange={updateBirthdayYear} value={birthdayYear}>
-                      <SelectTrigger aria-label={t("Year")}>
+                      <SelectTrigger
+                        aria-label={t("Year")}
+                        className="rounded-none border-0 border-l border-input bg-transparent shadow-none focus-visible:border-l focus-visible:ring-0"
+                        data-demo-id="employee-birthday-year"
+                      >
                         <SelectValue placeholder={t("Year")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -500,25 +513,43 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                     </Select>
                   </div>
                 </Field>
-                <Field htmlFor="employee-gender" label={t("Gender")}>
-                  <Select
-                    onValueChange={(gender) =>
-                      setFields((currentFields) => ({
-                        ...currentFields,
-                        gender: gender as EditableEmployeeFields["gender"],
-                      }))
-                    }
-                    value={fields.gender}
+                <Field label={t("Gender")}>
+                  <fieldset
+                    aria-label={t("Gender")}
+                    className="grid grid-cols-3 overflow-hidden rounded-md border border-input bg-background focus-within:border-signal/55 focus-within:ring-2 focus-within:ring-ring/20"
+                    data-demo-id="employee-gender"
                   >
-                    <SelectTrigger data-demo-id="employee-gender" id="employee-gender">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">{t("Male")}</SelectItem>
-                      <SelectItem value="female">{t("Female")}</SelectItem>
-                      <SelectItem value="unspecified">{t("Not specified")}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    {(
+                      [
+                        ["male", t("Male")],
+                        ["female", t("Female")],
+                        ["unspecified", t("Not specified")],
+                      ] as const
+                    ).map(([gender, label], index) => (
+                      <label
+                        className={cn(
+                          "cursor-pointer px-2 py-2.5 text-center text-sm transition-colors",
+                          index > 0 && "border-l border-input",
+                          fields.gender === gender
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-accent/45",
+                        )}
+                        key={gender}
+                      >
+                        <input
+                          checked={fields.gender === gender}
+                          className="sr-only"
+                          name="employee-gender"
+                          onChange={() =>
+                            setFields((currentFields) => ({ ...currentFields, gender }))
+                          }
+                          type="radio"
+                          value={gender}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </fieldset>
                 </Field>
               </section>
 
@@ -609,72 +640,55 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                   <HiOutlineTag className="size-4" />
                   {t("Tags")}
                 </div>
-                <MultiTagSelect
-                  ariaLabel={t("Select Employee tags")}
-                  emptyState={t("No tags found")}
-                  onChange={(labels) =>
-                    setFields((currentFields) => ({
-                      ...currentFields,
-                      tags: normalizeEmployeeTags(
-                        labels.map(
-                          (label) =>
-                            findEmployeeTag(currentFields.tags, label) ?? { date: null, label },
-                        ),
-                      ),
-                    }))
-                  }
-                  onCreateOption={(tag) =>
-                    setFields((currentFields) => ({
-                      ...currentFields,
-                      tags: normalizeEmployeeTags([
-                        ...currentFields.tags,
-                        { date: null, label: tag },
-                      ]),
-                    }))
-                  }
-                  options={employeeTagOptions}
-                  placeholder={t("Select or create tags")}
-                  selectedIds={fields.tags.map(({ label }) => label)}
-                />
-                {fields.tags.length > 0 && (
-                  <div className="grid gap-2">
-                    {sortEmployeeTags(fields.tags).map((tag) => (
-                      <div
-                        className="flex items-center gap-2 rounded-md border px-3 py-2"
-                        key={tag.label.toLocaleLowerCase("en-US")}
-                      >
-                        <span className="min-w-0 flex-1 text-sm font-medium">
-                          <EmployeeTagDateText date={tag.date} label={tag.label} />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      aria-label={t("Select Employee tags")}
+                      className="flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent/20 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
+                      data-demo-id="employee-draft-tag-picker-trigger"
+                      type="button"
+                    >
+                      {fields.tags.length === 0 ? (
+                        <span className="min-w-0 flex-1 text-muted-foreground">
+                          {t("Select or create tags")}
                         </span>
-                        <EmployeeTagDatePopover
-                          date={tag.date}
-                          label={tag.label}
-                          onChange={(date) =>
-                            setFields((currentFields) => ({
-                              ...currentFields,
-                              tags: currentFields.tags.map((currentTag) =>
-                                currentTag.label.toLocaleLowerCase("en-US") ===
-                                tag.label.toLocaleLowerCase("en-US")
-                                  ? { ...currentTag, date }
-                                  : currentTag,
-                              ),
-                            }))
-                          }
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ) : (
+                        fields.tags.map((tag) => (
+                          <span
+                            className="max-w-full break-words whitespace-normal rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground"
+                            key={tag.label.toLocaleLowerCase("en-US")}
+                          >
+                            <EmployeeTagDateText date={tag.date} label={tag.label} />
+                          </span>
+                        ))
+                      )}
+                      <HiOutlineChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="p-0" sideOffset={6}>
+                    <EmployeeTagPickerPanel
+                      dataDemoId="employee-draft-tag-picker"
+                      employees={[{ id: "draft-employee" as EmployeeId, tags: fields.tags }]}
+                      footer={false}
+                      onApply={(updates) => {
+                        const update = updates[0];
+                        if (!update) return;
+                        setFields((currentFields) => ({ ...currentFields, tags: update.tags }));
+                      }}
+                      tagOptions={employeeTagOptions}
+                    />
+                  </PopoverContent>
+                </Popover>
               </section>
 
               {(mode === "editor" || unitOptions.length > 0) && (
                 <section className="grid gap-3">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <HiOutlineBuildingOffice2 className="size-4" />
-                    {mode === "global" ? t("Units") : t("Org Editor Units")}
+                    {t("Units")}
                   </div>
                   <MultiTagSelect
-                    ariaLabel={mode === "global" ? t("Select Units") : t("Select canvas Units")}
+                    ariaLabel={t("Select Units")}
                     emptyState={t("No Units found")}
                     onChange={setSelectedUnitIds}
                     options={unitOptions}
@@ -726,9 +740,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                     </div>
                   )}
                   {editorTargetMissing && (
-                    <div className="text-sm text-destructive">
-                      {t("Select at least one Org Editor Unit.")}
-                    </div>
+                    <div className="text-sm text-destructive">{t("Select at least one Unit.")}</div>
                   )}
                 </section>
               )}

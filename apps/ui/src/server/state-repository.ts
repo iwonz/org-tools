@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync, type StatementSync } from "node:sqlite";
 import type { OrgToolsState } from "@org-tools/types";
@@ -217,9 +217,17 @@ type StateRepositoryGlobal = typeof globalThis & {
   __orgToolsStateRepository?: { path: string; repository: StateRepository };
 };
 
+const sharedRepository = () => globalThis as StateRepositoryGlobal;
+
+const closeSharedStateRepository = (): void => {
+  const shared = sharedRepository();
+  shared.__orgToolsStateRepository?.repository.close();
+  delete shared.__orgToolsStateRepository;
+};
+
 export const getStateRepository = (): StateRepository => {
   const { databasePath } = resolveStateRuntimeConfig();
-  const shared = globalThis as StateRepositoryGlobal;
+  const shared = sharedRepository();
   if (shared.__orgToolsStateRepository?.path === databasePath) {
     return shared.__orgToolsStateRepository.repository;
   }
@@ -229,11 +237,77 @@ export const getStateRepository = (): StateRepository => {
   return repository;
 };
 
+const recoveryTimestamp = (date: Date): string =>
+  date.toISOString().replaceAll(":", "-").replaceAll(".", "-");
+
+const DATABASE_SIDECARS = ["", "-journal", "-wal", "-shm"] as const;
+
+export const recreateStateRepository = (now = new Date()): StateDocument => {
+  const { databasePath } = resolveStateRuntimeConfig();
+  closeSharedStateRepository();
+
+  if (databasePath === ":memory:") {
+    const repository = new StateRepository(databasePath);
+    sharedRepository().__orgToolsStateRepository = { path: databasePath, repository };
+    return repository.read();
+  }
+
+  const backupBase = `${databasePath}.backup-${recoveryTimestamp(now)}`;
+  const moved: Array<{ backupPath: string; sourcePath: string }> = [];
+  let replacementStarted = false;
+  try {
+    for (const suffix of DATABASE_SIDECARS) {
+      const sourcePath = `${databasePath}${suffix}`;
+      if (!existsSync(sourcePath)) continue;
+      const backupPath = `${backupBase}${suffix}`;
+      if (existsSync(backupPath)) {
+        throw new StateRepositoryError(
+          "database_unavailable",
+          "Database recovery backup already exists.",
+        );
+      }
+      renameSync(sourcePath, backupPath);
+      moved.push({ backupPath, sourcePath });
+    }
+
+    replacementStarted = true;
+    const repository = new StateRepository(databasePath);
+    const document = repository.read();
+    sharedRepository().__orgToolsStateRepository = { path: databasePath, repository };
+    return document;
+  } catch (error) {
+    closeSharedStateRepository();
+    if (replacementStarted) {
+      for (const suffix of [...DATABASE_SIDECARS].reverse()) {
+        const partialPath = `${databasePath}${suffix}`;
+        if (existsSync(partialPath)) unlinkSync(partialPath);
+      }
+    }
+    let restoreError: unknown;
+    for (const entry of moved.reverse()) {
+      try {
+        renameSync(entry.backupPath, entry.sourcePath);
+      } catch (candidate) {
+        restoreError ??= candidate;
+      }
+    }
+    if (restoreError) {
+      throw new StateRepositoryError(
+        "database_unavailable",
+        "Database recovery failed and the original files could not be fully restored.",
+        { cause: restoreError },
+      );
+    }
+    if (error instanceof StateRepositoryError) throw error;
+    throw new StateRepositoryError("database_unavailable", "Database recovery failed.", {
+      cause: error,
+    });
+  }
+};
+
 export const resetStateRepositoryForTests = (): void => {
   if (process.env.NODE_ENV !== "test") {
     throw new Error("The state repository can be reset only in tests.");
   }
-  const shared = globalThis as StateRepositoryGlobal;
-  shared.__orgToolsStateRepository?.repository.close();
-  delete shared.__orgToolsStateRepository;
+  closeSharedStateRepository();
 };

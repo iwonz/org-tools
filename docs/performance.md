@@ -44,12 +44,16 @@ virtualized DOM.
 ## Import and output
 
 Import reads at most 25 MiB. State mode parses one detached complete state and validates references
-in indexed passes. Employee mode discovers paths from a bounded sample, derives IDs and match indexes
-in O(n), validates canonical complete birthdays in the same pass, keeps per-row overrides sparse,
-and virtualizes the matched review. Apply validates one
+in indexed passes. Employee mode discovers the union of mappable paths and the first richest record
+in one O(n) pass, renders at most 128 KiB of that record, derives IDs and match indexes in O(n),
+validates canonical complete birthdays in the same pass, keeps per-row overrides sparse, and
+virtualizes the matched review. Apply validates one
 candidate before replacement. Global Export computes only the complete state after the explicit
 action. Data Download derives only selected sources, caps preview work at 50 records or rows and
 128 KiB, and builds complete JSON or Template output in yielding batches only for Copy or Download.
+The source and selected panes retain equal width on desktop and equal height on narrow screens; their
+geometry does not depend on the current source tab. Template token filtering is bounded by the small
+static token catalog and never serializes organization data.
 Dragging a scalar, Unit, Tag, or nested collection field changes only its bounded order array and
 rebuilds the bounded preview once per completed drop. Unit and Tag exclusions use normalized `Set`
 lookups; searchable selectors virtualize their options and show only an exclusion count in the

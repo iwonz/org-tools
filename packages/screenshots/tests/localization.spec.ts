@@ -64,6 +64,19 @@ const expectLeadingThematicIcon = async (control: Locator, accessibleName: strin
   ).toEqual({ firstChild: "svg", iconIndex: 0, labelIndex: 1 });
 };
 
+const expectTrailingThematicIcon = async (control: Locator, accessibleName: string) => {
+  await expect(control).toHaveAccessibleName(accessibleName);
+  expect(
+    await control.evaluate((element) => ({
+      firstChild: element.firstElementChild?.tagName.toLowerCase() ?? null,
+      iconIndex: [...element.children].findIndex((child) => child.tagName.toLowerCase() === "svg"),
+      labelIndex: [...element.children].findIndex(
+        (child) => child.tagName.toLowerCase() === "span",
+      ),
+    })),
+  ).toEqual({ firstChild: "span", iconIndex: 1, labelIndex: 0 });
+};
+
 test("detects Russian from browser preferences on first use", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await setBrowserLanguages(page, ["de-DE", "ru-RU", "en-US"]);
@@ -196,6 +209,31 @@ for (const [locale, messages] of [
   ["en", enMessages],
   ["ru", ruMessages],
 ] as const satisfies ReadonlyArray<readonly ["en" | "ru", Messages]>) {
+  test(`localizes explicit database recovery in ${locale}`, async ({ page }) => {
+    const assertLocalRequests = await expectLocalRequestsOnly(page);
+    await seedLocale(page, locale);
+    await page.route("**/api/state", async (route) => {
+      await route.fulfill({
+        body: JSON.stringify({ error: { code: "database_unavailable" } }),
+        contentType: "application/json",
+        status: 200,
+      });
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByText(messages.Ui["Database unavailable"], { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: messages.Ui.Retry, exact: true })).toBeVisible();
+    await page.getByRole("button", { name: messages.Ui["Create new"], exact: true }).click();
+    const recovery = page.locator('[data-demo-id="database-create-new-dialog"]');
+    await expect(recovery).toContainText(messages.Ui["Create a new database?"]);
+    await expect(recovery).toContainText(
+      messages.Ui["The current database files will be kept as a timestamped backup."],
+    );
+    await recovery.getByRole("button", { name: messages.Ui.Cancel, exact: true }).click();
+    await assertLocalRequests();
+  });
+
   test(`keeps export, import, and localized error workflows local in ${locale}`, async ({
     page,
   }, testInfo) => {
@@ -266,7 +304,13 @@ for (const [locale, messages] of [
       name: "localized-employees.json",
     });
     await expect(
-      employeeImportDialog.getByText(messages.Ui["Import Teams"], { exact: true }),
+      employeeImportDialog.getByText(messages.Ui["Representative JSON record"], { exact: true }),
+    ).toBeVisible();
+    await expect(
+      employeeImportDialog.getByText(messages.Ui["Source JSON path"], { exact: true }),
+    ).toBeVisible();
+    await expect(
+      employeeImportDialog.getByText(messages.Ui["Org Tools field"], { exact: true }),
     ).toBeVisible();
     await expect(
       employeeImportDialog.getByRole("button", {
@@ -316,7 +360,7 @@ for (const [locale, messages] of [
     await page.locator('[data-demo-id="export-source-tab-employees"]').click();
     await page.locator('[data-demo-id="export-toggle-employee"]').first().click();
     const continueButton = page.getByRole("button", { name: messages.Ui.Continue, exact: true });
-    await expectLeadingThematicIcon(continueButton, messages.Ui.Continue);
+    await expectTrailingThematicIcon(continueButton, messages.Ui.Continue);
     await continueButton.click();
     const downloadSettings = page.getByRole("dialog").filter({
       hasText: messages.Ui["Download settings"],

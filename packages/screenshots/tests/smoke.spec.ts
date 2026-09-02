@@ -289,6 +289,56 @@ test("shows one centered icon-only loader while loading initial state", async ({
   await assertLocalRequests();
 });
 
+test("offers explicit database recovery and creates a fresh current-schema state", async ({
+  page,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  const recoveredState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  let recoveryRequest: unknown = null;
+
+  await page.route("**/api/state", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        body: JSON.stringify({ error: { code: "database_unavailable" } }),
+        contentType: "application/json",
+        status: 200,
+      });
+      return;
+    }
+    if (route.request().method() === "POST") {
+      recoveryRequest = route.request().postDataJSON();
+      await route.fulfill({
+        body: JSON.stringify({ revision: 1, state: recoveredState }),
+        contentType: "application/json",
+        status: 200,
+      });
+      return;
+    }
+    await route.fulfill({
+      body: JSON.stringify({ revision: 1, state: recoveredState }),
+      contentType: "application/json",
+      status: 200,
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Database unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Create new", exact: true }).click();
+  const confirmation = page.locator('[data-demo-id="database-create-new-dialog"]');
+  await expect(confirmation).toContainText(
+    "The current database files will be kept as a timestamped backup.",
+  );
+  await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByText("Database unavailable", { exact: true })).toBeVisible();
+  expect(recoveryRequest).toBeNull();
+  await page.getByRole("button", { name: "Create new", exact: true }).click();
+  await confirmation.getByRole("button", { name: "Create new", exact: true }).click();
+  await expect(page.locator('[data-demo-id="app-shell"]')).toBeVisible();
+  expect(recoveryRequest).toEqual({ action: "create_new" });
+  await assertLocalRequests();
+});
+
 test("registers responsive workflow actions in the shared header", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -320,20 +370,43 @@ test("registers responsive workflow actions in the shared header", async ({ page
   ).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Download", exact: true }).click();
+  const sourcePanel = page.locator('[data-demo-id="export-source-panel"]');
+  const selectedPanel = page.locator('[data-demo-id="export-selected-panel"]');
+  const initialDesktopBoxes = await Promise.all([
+    sourcePanel.boundingBox(),
+    selectedPanel.boundingBox(),
+  ]);
+  expect(initialDesktopBoxes[0]?.width).toBeCloseTo(initialDesktopBoxes[1]?.width ?? 0, 0);
   const continueButton = page.locator('[data-demo-id="export-continue-button"]');
   await expect(continueButton).toBeDisabled();
   await expectContainedBy(header, continueButton);
-  await expectIconBeforeText(continueButton);
+  await expectTextBeforeTrailingIcon(continueButton);
   await page
     .getByRole("button", { name: "Add Unit Employees to download", exact: true })
     .first()
     .click();
   await expect(continueButton).toBeEnabled();
+  const sourceSearch = page.locator('[data-demo-id="export-unit-search"]');
+  const selectedSearch = page.locator('[data-demo-id="export-selected-search"]');
+  await expect(selectedSearch).toBeVisible();
+  expect((await sourceSearch.boundingBox())?.y).toBeCloseTo(
+    (await selectedSearch.boundingBox())?.y ?? 0,
+    0,
+  );
+  const beforeSourceSwitch = await sourcePanel.boundingBox();
+  await page.locator('[data-demo-id="export-source-tab-employees"]').click();
+  const afterSourceSwitch = await sourcePanel.boundingBox();
+  expect(afterSourceSwitch).toMatchObject({
+    height: beforeSourceSwitch?.height,
+    width: beforeSourceSwitch?.width,
+  });
   await expect(
     page.locator('[data-demo-id="export-surface"] [data-demo-id="export-continue-button"]'),
   ).toHaveCount(0);
 
   await page.setViewportSize({ width: 390, height: 720 });
+  const mobileBoxes = await Promise.all([sourcePanel.boundingBox(), selectedPanel.boundingBox()]);
+  expect(mobileBoxes[0]?.height).toBeCloseTo(mobileBoxes[1]?.height ?? 0, 0);
   await expect(actionSlot).toBeVisible();
   await expect(continueButton.locator("span")).toBeHidden();
   await expect(continueButton).toHaveAccessibleName("Continue");
@@ -1100,6 +1173,29 @@ test("imports complete states and mapped Employee arrays", async ({ page }) => {
     mimeType: "application/json",
     name: "employees.json",
   });
+  await expect(
+    employeeImport.locator('[data-demo-id="employee-import-source-preview"]'),
+  ).toContainText('"birthday": "29.02.1900"');
+  await expect(employeeImport.getByText("Source JSON path", { exact: true })).toBeVisible();
+  await expect(employeeImport.getByText("Org Tools field", { exact: true })).toBeVisible();
+  await expect(employeeImport.getByText("Import Teams", { exact: true })).toHaveCount(0);
+  await page.setViewportSize({ height: 844, width: 390 });
+  const employeeImportBody = employeeImport.locator('[data-slot="dialog-body"]');
+  const mobileImportLayout = await employeeImportBody.evaluate((element) => {
+    const preview = element.querySelector('[data-demo-id="employee-import-source-preview"]');
+    const mapping = element.querySelector('[data-demo-id="employee-import-mapping"]');
+    if (!(preview instanceof HTMLElement) || !(mapping instanceof HTMLElement)) {
+      throw new Error("Employee Import layout is unavailable.");
+    }
+    return {
+      bodyWidth: element.clientWidth,
+      mappingTop: mapping.getBoundingClientRect().top,
+      previewBottom: preview.getBoundingClientRect().bottom,
+      scrollWidth: element.scrollWidth,
+    };
+  });
+  expect(mobileImportLayout.scrollWidth).toBeLessThanOrEqual(mobileImportLayout.bodyWidth);
+  expect(mobileImportLayout.mappingTop).toBeGreaterThanOrEqual(mobileImportLayout.previewBottom);
   await expect(employeeImport.getByText("1 new", { exact: true })).toBeVisible();
   await employeeImport.getByRole("button", { name: "Import Employees", exact: true }).click();
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
@@ -1254,6 +1350,12 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   await settings.getByRole("tab", { name: "Template", exact: true }).click();
   await expect(settings.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
   await expect(settings.getByText("All Employee Units", { exact: true })).toBeVisible();
+  const formatInput = settings.getByLabel("Format", { exact: true });
+  await formatInput.fill("@full");
+  const suggestions = settings.locator('[data-demo-id="template-token-suggestions"]');
+  await expect(suggestions).toContainText("{fullName}");
+  await formatInput.press("Enter");
+  await expect(formatInput).toHaveValue("{fullName}");
   const templatePromise = page.waitForEvent("download");
   await settings.getByRole("button", { name: "Download", exact: true }).click();
   expect((await templatePromise).suggestedFilename()).toBe("org-tools-export.txt");
@@ -1361,7 +1463,10 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
     "border-right-width",
     "0px",
   );
-  await expect(page.locator('[data-demo-id="units-tree-header"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="units-tree-header"]')).toHaveCount(1);
+  await expect(
+    page.locator('[data-demo-id="units-tree-header"]').getByRole("searchbox"),
+  ).toBeVisible();
   await expectNoHorizontalRule(page.locator('[data-demo-id="units-employee-header"]'));
   const firstUnitRow = page.locator('[data-demo-id="unit-tree-item"]').first();
   await expect(firstUnitRow).toHaveCSS("border-width", "0px");
@@ -1370,13 +1475,15 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   await expectFullBleedProductSurface(unitsSurface);
   await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-tree-panel"]'));
   await expectContainedBy(unitsSurface, page.locator('[data-demo-id="units-employee-panel"]'));
-  const [surfaceBox, firstUnitBox] = await Promise.all([
-    unitsSurface.boundingBox(),
+  const [treeHeaderBox, firstUnitBox] = await Promise.all([
+    page.locator('[data-demo-id="units-tree-header"]').boundingBox(),
     firstUnitRow.boundingBox(),
   ]);
-  expect(surfaceBox).not.toBeNull();
+  expect(treeHeaderBox).not.toBeNull();
   expect(firstUnitBox).not.toBeNull();
-  expect((firstUnitBox?.y ?? 0) - (surfaceBox?.y ?? 0)).toBeLessThanOrEqual(16);
+  expect(
+    (firstUnitBox?.y ?? 0) - ((treeHeaderBox?.y ?? 0) + (treeHeaderBox?.height ?? 0)),
+  ).toBeLessThanOrEqual(16);
 
   const unitEmployeeSearch = page.locator('[data-demo-id="units-employee-search"]');
   const unitBreadcrumbs = page.locator('[data-demo-id="units-selected-path"]');
@@ -1514,11 +1621,12 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   ).toHaveCount(0);
   await createDialog.getByLabel("First name", { exact: true }).fill("Taylor");
   await createDialog.getByLabel("Last name", { exact: true }).fill("Tester");
-  const genderSelect = createDialog.getByRole("combobox", { name: "Gender", exact: true });
-  await expect(genderSelect).toContainText("Not specified");
-  await genderSelect.click();
-  await expect(page.getByRole("option")).toHaveText(["Male", "Female", "Not specified"]);
-  await page.getByRole("option", { name: "Female", exact: true }).click();
+  const genderSwitcher = createDialog.locator('[data-demo-id="employee-gender"]');
+  const unspecifiedGender = genderSwitcher.getByRole("radio", { name: "Not specified" });
+  await expect(unspecifiedGender).toBeChecked();
+  await unspecifiedGender.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(genderSwitcher.getByRole("radio", { name: "Female" })).toBeChecked();
   await createDialog.getByRole("combobox", { name: "Day", exact: true }).click();
   await page.getByRole("option", { name: "12", exact: true }).click();
   await createDialog.getByRole("combobox", { name: "Month", exact: true }).click();
@@ -1531,9 +1639,7 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   const createdEmployee = page.locator("article").filter({ hasText: "Taylor Tester" });
   await createdEmployee.getByRole("button", { name: "Edit", exact: true }).click();
   const editDialog = page.getByRole("dialog", { name: "Edit Employee" });
-  await expect(editDialog.getByRole("combobox", { name: "Gender", exact: true })).toContainText(
-    "Female",
-  );
+  await expect(editDialog.getByRole("radio", { name: "Female" })).toBeChecked();
   await expect(editDialog.getByRole("combobox", { name: "Day", exact: true })).toContainText("12");
   await expect(editDialog.getByRole("combobox", { name: "Month", exact: true })).toContainText(
     "March",
@@ -1968,6 +2074,13 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await exportDialog.getByRole("tab", { name: "Template", exact: true }).click();
   await expect(exportDialog.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
   await expect(exportDialog.getByText("Preview", { exact: true })).toHaveCount(0);
+  const editorFormatInput = exportDialog.getByLabel("Format", { exact: true });
+  await editorFormatInput.fill("@unitn");
+  await expect(exportDialog.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
+    "{unitName}",
+  );
+  await editorFormatInput.press("Enter");
+  await expect(editorFormatInput).toHaveValue("{unitName}");
   const templatePromise = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
   expect((await templatePromise).suggestedFilename()).toBe("Product.txt");
@@ -2178,11 +2291,11 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await expect(
     birthdayDialog.getByText("Birthdays and dated tags for this day", { exact: true }),
   ).toHaveCount(0);
-  await expect(page.locator('[data-demo-id="calendar-birthday-list"]')).toHaveCSS(
+  await expect(page.locator('[data-demo-id="calendar-day-event-list"]')).toHaveCSS(
     "padding-left",
     "0px",
   );
-  await expect(page.locator('[data-demo-id="calendar-birthday-list"]')).toHaveCSS(
+  await expect(page.locator('[data-demo-id="calendar-day-event-list"]')).toHaveCSS(
     "padding-right",
     "0px",
   );
@@ -2208,23 +2321,27 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await expect(datedTagDayDialog.getByText("Dated tags", { exact: true })).toHaveCount(0);
   await expect(datedTagDayDialog).toContainText("Morgan Park");
   const datedEmployeeCards = datedTagDayDialog.locator(
-    '[data-demo-id="calendar-day-dated-event-employee-card"]',
+    '[data-demo-id="calendar-day-employee-card"]',
   );
-  await expect(datedEmployeeCards).toHaveCount(1);
+  await expect(datedEmployeeCards).toHaveCount(2);
   const datedEmployeeCard = datedEmployeeCards.first();
   await expect(datedEmployeeCard.locator("[data-employee-card-actions] button")).toHaveCount(3);
   await expect(datedEmployeeCard.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
   await expect(
     datedEmployeeCard.getByRole("button", { name: "Delete", exact: true }),
   ).toBeVisible();
-  await expect(
-    datedEmployeeCard.locator('[data-demo-id="calendar-day-dated-event-label"]'),
-  ).toHaveText(["Operations", "Planning"]);
+  await expect(datedTagDayDialog.locator('[data-demo-id="calendar-day-tag-heading"]')).toHaveText([
+    "Operations",
+    "Planning",
+  ]);
   await expect(
     datedTagDayDialog.locator('[data-demo-id="calendar-birthdays-section"]'),
   ).toHaveCount(0);
   await expect(datedTagDayDialog.getByText("Birthdays", { exact: true })).toHaveCount(0);
-  await datedEmployeeCard.getByRole("button", { name: "Planning", exact: true }).click();
+  await datedTagDayDialog
+    .locator('[data-demo-id="calendar-day-tag-heading"]')
+    .filter({ hasText: "Planning" })
+    .click();
   const planningTagDialog = page.getByRole("dialog", { name: "Planning" });
   await expect(planningTagDialog).toContainText("Morgan Park");
   await expect(planningTagDialog.getByText("Current and upcoming", { exact: true })).toHaveCount(0);
@@ -2427,7 +2544,8 @@ test("edits and clears a dated tag from quick and full Employee editors", async 
   await page.locator('[data-demo-id="employee-edit-button"]').first().click();
   let employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
   await expect(employeeDialog.locator('input[type="date"]')).toHaveCount(0);
-  await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
+  await employeeDialog.locator('[data-demo-id="employee-draft-tag-picker-trigger"]').click();
+  await page.getByRole("button", { name: "Date for tag Remote" }).click();
   let employeeTagDatePopover = page.locator('[data-demo-id="tag-date-popover"]');
   await expect(employeeTagDatePopover.locator('[data-day="2026-08-15"]')).toHaveAttribute(
     "data-selected",
@@ -2439,7 +2557,8 @@ test("edits and clears a dated tag from quick and full Employee editors", async 
   await page.locator('[data-demo-id="employee-edit-button"]').first().click();
   employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
   await expect(employeeDialog.locator('input[type="date"]')).toHaveCount(0);
-  await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
+  await employeeDialog.locator('[data-demo-id="employee-draft-tag-picker-trigger"]').click();
+  await page.getByRole("button", { name: "Date for tag Remote" }).click();
   employeeTagDatePopover = page.locator('[data-demo-id="tag-date-popover"]');
   await expect(employeeTagDatePopover.locator("[data-selected]")).toHaveCount(0);
   await expect(
@@ -2478,7 +2597,8 @@ test("adds a tag and applies one date through the bulk Org Editor menu", async (
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await page.locator('[data-demo-id="employee-edit-button"]').nth(3).click();
   const employeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
-  await employeeDialog.getByRole("button", { name: "Date for tag Remote" }).click();
+  await employeeDialog.locator('[data-demo-id="employee-draft-tag-picker-trigger"]').click();
+  await page.getByRole("button", { name: "Date for tag Remote" }).click();
   await expect(
     page.locator('[data-demo-id="tag-date-calendar"] [data-day="2026-08-18"]'),
   ).toHaveAttribute("data-selected", "true");

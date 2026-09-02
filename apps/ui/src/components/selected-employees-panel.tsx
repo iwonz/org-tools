@@ -42,6 +42,7 @@ type SelectedEmployeesPanelProps = {
   resetKey: string;
   selectedEmployeeCount: number;
   searchDataDemoId?: string;
+  searchAfterSummary?: boolean;
   showSummary?: boolean;
   summaryItems?: ReactNode[];
   title: string;
@@ -82,6 +83,7 @@ export function SelectedEmployeesPanel({
   resetKey,
   selectedEmployeeCount,
   searchDataDemoId,
+  searchAfterSummary = false,
   showSummary = true,
   summaryItems,
   title,
@@ -105,79 +107,82 @@ export function SelectedEmployeesPanel({
   const showHeader = !hideHeaderWhenEmpty || hasSearchContent;
   const showSearchState = hasSearchContent && hasSearch;
 
+  const searchControl = hasSearchContent ? (
+    <EmployeeSearchInput
+      ariaLabel={t("Search Employees")}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
+      onValueChange={onQueryChange}
+      placeholder={t("Search Employees")}
+      positionOptions={employeePositionOptions}
+      tagOptions={employeeTagOptions}
+      {...(unitStructure ? { unitStructure } : {})}
+      value={query}
+      {...(positionButtonDemoId ? { positionButtonDemoId } : {})}
+      {...(positionPopoverDemoId ? { positionPopoverDemoId } : {})}
+      {...(searchDataDemoId ? { dataDemoId: searchDataDemoId } : {})}
+    />
+  ) : null;
+
+  const summaryControl = (
+    <div className="flex min-h-8 flex-wrap items-center justify-between gap-3">
+      {showSummary && (
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">{title}</div>
+          <div className="mt-0.5 flex flex-wrap items-center text-xs text-muted-foreground">
+            {resolvedSummaryItems.map((summaryItem, index) => (
+              <span className="contents" key={String(index)}>
+                {index > 0 && <MiddleDot />}
+                <span>{summaryItem}</span>
+              </span>
+            ))}
+            {showSearchState && (
+              <>
+                <MiddleDot />
+                <span>{resolvedMatchCountLabel(visibleEmployees.length)}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      <div
+        className={cn("flex flex-wrap items-center gap-2", !showSummary && "ml-auto justify-end")}
+      >
+        <Button
+          data-demo-id={clearDataDemoId}
+          disabled={!canClear}
+          onClick={onClear}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <HiOutlineTrash />
+          <span>{t("Clear")}</span>
+        </Button>
+        {showSearchState && visibleEmployees.length > 0 && (
+          <Button
+            data-demo-id={visibleRemoveDataDemoId}
+            onClick={onRemoveVisibleEmployees}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <HiOutlineUserMinus />
+            <span>{resolvedVisibleRemoveLabel}</span>
+            <MiddleDot />
+            <span>{resolvedVisibleRemoveSuffix(visibleEmployees.length)}</span>
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className={className} data-demo-id={panelDataDemoId}>
       {showHeader && (
         <div className={cn("grid shrink-0 gap-3 p-3", headerClassName)}>
-          {hasSearchContent && (
-            <EmployeeSearchInput
-              ariaLabel={t("Search Employees")}
-              filters={filters}
-              onFiltersChange={onFiltersChange}
-              onValueChange={onQueryChange}
-              placeholder={t("Search Employees")}
-              positionOptions={employeePositionOptions}
-              tagOptions={employeeTagOptions}
-              {...(unitStructure ? { unitStructure } : {})}
-              value={query}
-              {...(positionButtonDemoId ? { positionButtonDemoId } : {})}
-              {...(positionPopoverDemoId ? { positionPopoverDemoId } : {})}
-              {...(searchDataDemoId ? { dataDemoId: searchDataDemoId } : {})}
-            />
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {showSummary && (
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{title}</div>
-                <div className="mt-0.5 flex flex-wrap items-center text-xs text-muted-foreground">
-                  {resolvedSummaryItems.map((summaryItem, index) => (
-                    <span className="contents" key={String(index)}>
-                      {index > 0 && <MiddleDot />}
-                      <span>{summaryItem}</span>
-                    </span>
-                  ))}
-                  {showSearchState && (
-                    <>
-                      <MiddleDot />
-                      <span>{resolvedMatchCountLabel(visibleEmployees.length)}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-            <div
-              className={cn(
-                "flex flex-wrap items-center gap-2",
-                !showSummary && "ml-auto justify-end",
-              )}
-            >
-              <Button
-                data-demo-id={clearDataDemoId}
-                disabled={!canClear}
-                onClick={onClear}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <HiOutlineTrash />
-                <span>{t("Clear")}</span>
-              </Button>
-              {showSearchState && visibleEmployees.length > 0 && (
-                <Button
-                  data-demo-id={visibleRemoveDataDemoId}
-                  onClick={onRemoveVisibleEmployees}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <HiOutlineUserMinus />
-                  <span>{resolvedVisibleRemoveLabel}</span>
-                  <MiddleDot />
-                  <span>{resolvedVisibleRemoveSuffix(visibleEmployees.length)}</span>
-                </Button>
-              )}
-            </div>
-          </div>
+          {searchAfterSummary ? summaryControl : searchControl}
+          {searchAfterSummary ? searchControl : summaryControl}
         </div>
       )}
       <EmployeeCardList

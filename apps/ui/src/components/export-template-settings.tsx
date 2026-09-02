@@ -2,9 +2,9 @@
 
 import type { ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
+import { TemplateFormatInput } from "@/components/template-format-input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import type { UiTextKey } from "@/i18n/messages";
 import { useUiText } from "@/i18n/use-ui-text";
 
 export type ExportTemplateToken = {
@@ -17,7 +17,6 @@ type ExportTemplateSettingsProps = {
   dataDemoId?: string;
   employeeFields: ExportTemplateToken[];
   format: string;
-  onAppendField: (fieldKey: string) => void;
   onFormatChange: (value: string) => void;
   previewDataDemoId?: string;
   previewMeta: string;
@@ -31,7 +30,6 @@ export function ExportTemplateSettings({
   dataDemoId,
   employeeFields,
   format,
-  onAppendField,
   onFormatChange,
   previewDataDemoId,
   previewMeta,
@@ -40,51 +38,40 @@ export function ExportTemplateSettings({
   unitFields,
 }: ExportTemplateSettingsProps) {
   const t = useUiText();
+  const descriptionKeys: Record<string, UiTextKey> = {
+    avatarBase64Url: "Template token: embedded avatar",
+    birthday: "Template token: complete birthday",
+    email: "Template token: email address",
+    firstName: "Template token: first name",
+    fullName: "Template token: full name",
+    gender: "Template token: gender",
+    id: "Template token: Employee identifier",
+    isBoss: "Template token: manager status",
+    lastName: "Template token: last name",
+    phone: "Template token: phone number",
+    position: "Template token: Unit position",
+    profileUrl: "Template token: profile link",
+    tagDates: "Template token: dated Tags",
+    tags: "Template token: Tag labels",
+    unitFullPath: "Template token: full Unit path",
+    unitId: "Template token: Unit identifier",
+    unitName: "Template token: Unit name",
+    username: "Template token: username",
+  };
+  const tokens = [...employeeFields, ...unitFields].map((field) => ({
+    description: t(descriptionKeys[field.key] ?? "Template token value"),
+    key: field.key,
+  }));
   return (
     <div className="grid min-w-0 gap-3" data-demo-id={dataDemoId}>
-      <div className="grid min-w-0 gap-3">
-        <section className="grid gap-2">
-          <Label>{t("Employee fields")}</Label>
-          <div className="flex min-w-0 flex-wrap gap-2">
-            {employeeFields.map((field) => (
-              <Button
-                key={field.key}
-                onClick={() => onAppendField(field.key)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {field.label}
-              </Button>
-            ))}
-          </div>
-        </section>
-        <section className="grid gap-2">
-          <Label>{t("Units")}</Label>
-          <div className="flex min-w-0 flex-wrap gap-2">
-            {unitFields.map((field) => (
-              <Button
-                key={field.key}
-                onClick={() => onAppendField(field.key)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {field.label}
-              </Button>
-            ))}
-          </div>
-        </section>
-      </div>
-      <div className="grid min-w-0 gap-2">
-        <Label htmlFor={`${dataDemoId ?? "export"}-template-format`}>{t("Format")}</Label>
-        <Textarea
-          className="h-24 w-full min-w-0 resize-none overflow-x-hidden"
-          id={`${dataDemoId ?? "export"}-template-format`}
-          onChange={(event) => onFormatChange(event.currentTarget.value)}
-          value={format}
-        />
-      </div>
+      <TemplateFormatInput
+        dataDemoId={`${dataDemoId ?? "export"}-format`}
+        id={`${dataDemoId ?? "export"}-template-format`}
+        label={t("Format")}
+        onChange={onFormatChange}
+        tokens={tokens}
+        value={format}
+      />
       {children}
       <div
         className="grid gap-2"

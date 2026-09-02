@@ -52,9 +52,11 @@ month are known; `29.02.1900` is valid unknown-year data. `MM-DD`, ISO dates, ti
 dates, and locale-dependent text are rejected without conversion.
 
 Employee Import accepts a top-level array of objects up to 25 MiB. Source properties may be flat or
-nested; the mapping screen maps property paths to current Employee fields, tags, and Teams. First
-name, last name, and email mappings are mandatory. When mapped, tags must be `{ label, date }`
-objects and Teams must use the exact shape above. Team import is optional. Existing Teams match by
+nested. One linear read discovers their paths and selects the first record with the greatest number
+of mappable paths; at most 128 KiB of that record is shown beside left-to-right source-path → fixed-field
+mapping rows. First name, last name, and email mappings are mandatory. When mapped, tags must be
+`{ label, date }` objects and Teams must use the exact shape above. An empty Teams mapping means no
+Team import and removes the Teams-only duplicate policy. Existing Teams match by
 ID and then normalized full path; missing paths become manual Teams. Imported assignments are
 additive and preserve unrelated membership.
 

@@ -23,7 +23,7 @@ requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 38 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 40 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
@@ -31,6 +31,9 @@ recurring day and month are known.
 Data Download and Editor JSON export use one drag-sortable field list: scalar Employee fields,
 Units, and Tags appear in their exact output order. Editor Image export keeps a compact inline
 preview with localized boss text and no secondary image viewer.
+Template formats in Data Download and Editor export accept `@` to insert documented `{token}` values
+at the caret. If a local SQLite database cannot open, explicit recovery preserves its file family as
+a timestamped backup before creating a blank current-schema database.
 
 ## Run locally
 

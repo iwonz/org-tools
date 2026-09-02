@@ -81,8 +81,9 @@ Autosave control, or persistence status. Sidebar collapse and all other durable 
 SHALL be represented in the current state.
 The 64 px context header SHALL reserve one right-aligned workflow action for populated or empty
 Teams and Employees and for populated Download. The action SHALL keep its localized accessible name
-and leading thematic icon at ordinary widths and SHALL become icon-only without overflow at
-narrow widths. Workflows SHALL NOT repeat that action inside their content or empty state.
+and thematic icon at ordinary widths and SHALL become icon-only without overflow at narrow widths.
+The icon SHALL lead by default; Download Continue SHALL explicitly place its arrow after the label.
+Workflows SHALL NOT repeat that action inside their content or empty state.
 
 #### Scenario: Initial blank sidebar
 - **WHEN** a new blank state renders at desktop width
@@ -106,7 +107,7 @@ narrow widths. Workflows SHALL NOT repeat that action inside their content or em
 
 #### Scenario: Workflow context actions
 - **WHEN** Teams, Employees, or populated Download is active
-- **THEN** the context header exposes exactly one localized primary action whose thematic icon precedes the visible label
+- **THEN** the context header exposes exactly one localized primary action, with a leading icon for Add actions and a trailing arrow for Download Continue
 - **AND** the workflow body and empty state contain no duplicate of that action
 
 #### Scenario: Narrow workflow context action
@@ -179,15 +180,20 @@ popover, tooltip, and drag overlay layers MAY use at most one restrained separat
 
 ### Requirement: Text controls use leading thematic icons
 Every text-bearing button and tab that includes a thematic action or destination icon SHALL render
-that icon before its visible label in DOM and visual order. Icon-only controls and controls without
-an icon SHALL remain unchanged. A disclosure chevron, sort direction, removal mark, status badge,
-or count MAY remain after the label when its trailing position communicates its distinct affordance
-or state. Icon order SHALL NOT change the control's accessible name, geometry, responsive behavior,
-or interaction states.
+that icon before its visible label in DOM and visual order, except the explicitly configured
+Download Continue action whose directional arrow SHALL follow the label. Icon-only controls and
+controls without an icon SHALL remain unchanged. A disclosure chevron, sort direction, removal
+mark, status badge, or count MAY remain after the label when its trailing position communicates its
+distinct affordance or state. Icon order SHALL NOT change the control's accessible name, geometry,
+responsive behavior, or interaction states.
 
 #### Scenario: Thematic button or tab icon
 - **WHEN** a text-bearing button or tab includes a thematic action or destination icon
-- **THEN** exactly that thematic icon appears before the visible label without duplicating its accessible name
+- **THEN** exactly that thematic icon appears before the visible label without duplicating its accessible name, unless the control is Download Continue
+
+#### Scenario: Download Continue action
+- **WHEN** the Download workflow exposes its Continue header action
+- **THEN** its directional arrow appears after the visible label while retaining the same geometry and accessible name
 
 #### Scenario: Trailing affordance
 - **WHEN** a button includes a disclosure, sorting, removal, badge, or count affordance after its label
@@ -242,14 +248,14 @@ retain localized copy, accessible names, close behavior, and focus management.
   shift, or additional elevation
 
 ### Requirement: Global transfer actions use focused modal workflows
-Import and Export SHALL each open one responsive modal with State and Employees tabs, thematic icons
-before labels, stable control geometry, and no navigation or shell movement. Import SHALL expose
-file selection, mapping, options, review, and Apply inside the modal; Export SHALL expose the selected
-format and one Download action.
+Import SHALL open one responsive modal with State and Employees tabs, thematic icons before labels,
+stable control geometry, and no navigation or shell movement. It SHALL expose file selection,
+representative preview, mapping, options, review, and Apply inside the modal. Global Export SHALL
+continue to download the complete State directly without opening a modal.
 
-#### Scenario: Open transfer modal
-- **WHEN** a sidebar Import or Export action is activated in compact or expanded mode
-- **THEN** focus moves into the corresponding modal and returns to the trigger on close
+#### Scenario: Open Import modal
+- **WHEN** a sidebar Import action is activated in compact or expanded mode
+- **THEN** focus moves into its modal and returns to the trigger on close
 
 #### Scenario: Narrow transfer modal
 - **WHEN** the viewport is 390 px wide
@@ -258,6 +264,21 @@ format and one Download action.
 #### Scenario: Large match review
 - **WHEN** Employee Import contains thousands of existing matches
 - **THEN** one bounded scroll area renders virtualized rows with visible per-row policy controls
+
+### Requirement: Download source and selection panes remain geometrically stable
+At 768 px and wider, Data Download SHALL render source and selected-Employee panes at equal width.
+Their source tabs and selected summary SHALL share the first horizontal row, and their two searches
+SHALL share the next horizontal row. Switching Units and Employees MUST NOT change panel geometry.
+Below 768 px the panes SHALL stack and each occupy half of the available workflow height without
+horizontal overflow.
+
+#### Scenario: Switch desktop source
+- **WHEN** a user switches between Units and Employees at a maintained desktop width
+- **THEN** both panes remain 50 percent wide and both search controls keep the same vertical position
+
+#### Scenario: Use Download on a narrow screen
+- **WHEN** Download renders below 768 px
+- **THEN** source and selection panes stack as equal-height regions and every control remains reachable
 
 ### Requirement: Units detail panes use one compact alignment
 The Units hierarchy SHALL begin directly at the workflow content boundary without an empty spacer

@@ -1,5 +1,10 @@
-import { parseStatePutRequest, readJsonValue, withStateApi } from "@/server/state-api";
-import { getStateRepository } from "@/server/state-repository";
+import {
+  parseStateCreateNewRequest,
+  parseStatePutRequest,
+  readJsonValue,
+  withStateApi,
+} from "@/server/state-api";
+import { getStateRepository, recreateStateRepository } from "@/server/state-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +16,16 @@ export const PUT = (request: Request) =>
     async () => {
       const update = parseStatePutRequest(await readJsonValue(request));
       return getStateRepository().write(update);
+    },
+    { mutation: true },
+  );
+
+export const POST = (request: Request) =>
+  withStateApi(
+    request,
+    async () => {
+      parseStateCreateNewRequest(await readJsonValue(request));
+      return recreateStateRepository();
     },
     { mutation: true },
   );

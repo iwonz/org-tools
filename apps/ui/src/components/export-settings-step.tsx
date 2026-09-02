@@ -30,7 +30,7 @@ import {
   exportEmployeeFields,
   exportUnitFields,
 } from "@/lib/export-format";
-import type { ExportFieldKey, ExportRowMode, ExportTabMode } from "@/stores/org-store";
+import type { ExportRowMode, ExportTabMode } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type ExportSettingsStepProps = {
@@ -148,9 +148,6 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
               dataDemoId="export-content-template"
               employeeFields={exportEmployeeFields}
               format={templateFormat}
-              onAppendField={(fieldKey) =>
-                store.appendExportTemplateField(fieldKey as ExportFieldKey)
-              }
               onFormatChange={(value) => store.setExportTemplateFormat(value)}
               previewMeta={
                 previewTruncated

@@ -97,6 +97,7 @@ function ExportHeaderAction({ disabled, onClick }: { disabled: boolean; onClick:
     dataDemoId: "export-continue-button",
     disabled,
     icon: HiOutlineArrowRight,
+    iconPlacement: "trailing",
     id: "continue-export",
     label: t("Continue"),
     onClick,
@@ -504,14 +505,8 @@ export const ExportTab = observer(() => {
       <ExportHeaderAction disabled={!hasSelectedEmployees} onClick={continueToSettings} />
       <ProductSurface className="relative min-h-0 flex-1" data-demo-id="export-surface">
         <div
-          className="grid h-full min-h-0 overflow-hidden"
+          className="grid h-full min-h-0 grid-rows-2 overflow-hidden md:grid-cols-2 md:grid-rows-1"
           data-demo-id="export-selection-grid"
-          style={{
-            gridTemplateColumns:
-              sourceSection === "employees"
-                ? "minmax(24rem, 42%) minmax(0, 1fr)"
-                : "fit-content(70%) minmax(30%, 1fr)",
-          }}
         >
           <aside
             className="flex min-h-0 min-w-0 flex-col bg-muted/25"
@@ -523,7 +518,7 @@ export const ExportTab = observer(() => {
               value={sourceSection}
             >
               <TabsList
-                className="mx-2.5 mt-2.5 h-auto w-fit shrink-0"
+                className="mx-2.5 mt-2.5 h-[38px] w-fit shrink-0"
                 data-demo-id="export-source-tabs"
               >
                 <TabsTrigger
@@ -707,7 +702,8 @@ export const ExportTab = observer(() => {
             emptyState={<ExportSelectedEmployeesEmptyState />}
             filters={selectedFilters}
             hasSearch={hasSelectedEmployeeSearch}
-            headerClassName="bg-muted/15 p-4"
+            headerClassName="gap-2.5 bg-muted/15 p-2.5"
+            searchAfterSummary
             onClear={() => {
               store.clearExportSelection();
               setStatus(null);

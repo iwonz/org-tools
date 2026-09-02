@@ -2,6 +2,7 @@ import type { Employee } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
 import { createUiOrgStructure } from "@/lib/build-ui-org-structure";
+import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees, isCalendarLeapYear } from "@/lib/calendar-events";
 
 const employee = (id: string): Employee => ({
@@ -59,5 +60,32 @@ describe("calendar event dates", () => {
     );
     expect(structure.indexes.datedTagGroups).toHaveLength(1);
     expect(structure.indexes.datedTagGroups[0]?.events).toHaveLength(2);
+  });
+
+  test("builds Birthdays and localized Tag groups as one stable row stream", () => {
+    const first = { ...employee("00000000-0000-4000-8000-000000000001"), fullName: "Avery One" };
+    const second = {
+      ...employee("00000000-0000-4000-8000-000000000002"),
+      fullName: "Blake Two",
+    };
+    const rows = buildCalendarDayDialogRows({
+      birthdayEmployees: [second],
+      events: [
+        { date: "2026-09-03", employee: second, label: "Release" },
+        { date: "2026-09-03", employee: first, label: "Anniversary" },
+        { date: "2026-09-03", employee: first, label: "Release" },
+      ],
+      locale: "en",
+    });
+
+    expect(rows.map((row) => row.key)).toEqual([
+      "birthdays",
+      `birthdays:${second.id}`,
+      "tag:anniversary",
+      `tag:anniversary:${first.id}`,
+      "tag:release",
+      `tag:release:${first.id}`,
+      `tag:release:${second.id}`,
+    ]);
   });
 });

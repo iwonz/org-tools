@@ -38,15 +38,17 @@ control.
 ## Product modules
 
 - **Units** manages the hierarchy, manual and Live membership, bosses, positions, and Employee
-  movement. The hierarchy starts directly below the shared header; selected-path and search controls
+  movement. Its name search remains available for every nonempty hierarchy; selected-path and search controls
   align with roster avatars, and direct plus descendant Employees appear in one contiguous list.
   The current roster count appears below search without redundant roster-section headings or counts.
   **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, complete birthdays, embedded avatar, tags, contact fields,
-  and Unit assignments with compound filters. Birthday uses styled Day, Month, and Year selectors;
+  and Unit assignments with compound filters. Gender is a native-radio segmented switcher. Birthday
+  keeps Day, Month, and Year selects inside one compound field;
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
-  header.
+  header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
+  rest of the form.
 - **Editor** manages the current Unit structure on an adaptive snapped grid, including search,
   history, layout, bulk commands, Image, JSON, and Template output. There is no alternate View or
   structure selector: Units and Editor always operate on the same organization. Closing Search
@@ -57,23 +59,28 @@ control.
   oversized labels wrap inside their compact chip. Static/Live membership type is not printed.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
-  actions. Day and tag dialogs omit redundant descriptions, the dated-event and current/future
-  headings, and empty Birthday, dated-event, or Past sections. Both day details and dated-tag
+  actions. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each
+  interactive Tag heading and its full Employee-card list. Day and tag dialogs omit redundant
+  descriptions, generic dated-event/current-future headings, special event subtitles, and empty
+  Birthday, dated-event, or Past sections. Both day details and dated-tag
   history use complete Employee cards with the ordinary Tag, Edit, and Delete actions while
   retaining bounded scrolling and tag-history navigation.
-- **Data Download** selects Units or Employees and produces structured JSON or Template output.
+- **Data Download** uses equal source and selected-Employee panes whose geometry stays fixed when
+  switching sources, then produces structured JSON or Template output.
   JSON always produces one record per Employee. Drag handles order scalar fields and the ordinary
   Unit and Tag rows in one list; enabled Unit and Tag arrays expose their own reorderable fields,
   names, and searchable exclusion menus. Template retains All Units and First Unit row modes through
-  the same control used by Editor export. Unit paths use the fixed ` / ` separator. **Continue**
+  the same control used by Editor export. In either Template surface, typing `@` in Format opens a
+  localized caret menu and inserts the stable `{token}` syntax. Unit paths use the fixed ` / ` separator. **Continue**
   stays disabled in the shared header until at least one Employee is selected.
 
 ## Import and Export
 
 **Import** opens a modal with **All state** and **Employees**. All state accepts the exact current
 state shape up to 25 MiB and replaces it atomically after confirmation. Employees accepts a JSON
-array, maps flat or nested properties, requires first name, last name, and email, and can import
-nested Team assignments. A mapped birthday must be a real `DD.MM.YYYY` value; `1900` means the birth
+array, shows a bounded preview of the first record with the most mappable properties, maps source
+paths left-to-right into fixed fields, requires first name, last name, and email, and imports nested
+Team assignments only when Teams is mapped. A mapped birthday must be a real `DD.MM.YYYY` value; `1900` means the birth
 year is unknown, including for `29.02.1900`. Existing deterministic identities can be updated, skipped, or limited to
 Teams in bulk with per-Employee overrides. Invalid input never changes current data.
 
@@ -91,8 +98,10 @@ identity rule. Editing identity fields updates all references atomically; a dupl
 
 If a SQLite write fails, current data remains in memory. Org Tools retries a bounded number of times,
 shows a localized Retry action, and enables the native leave warning while a write is pending. A
-corrupt current row or unknown database schema blocks startup with Retry; it is never reset
-automatically. Browser tabs converge through deterministic logical stamps while server writes remain
+corrupt current row or unknown database schema blocks startup with **Retry** and **Create new**; it
+is never reset automatically. Create new requires confirmation, preserves the database and existing
+sidecars as one timestamped backup family, and opens a validated blank current database. If recovery
+fails partway, the originals are restored. Browser tabs converge through deterministic logical stamps while server writes remain
 serialized.
 
 See [State transfer format](import-formats.md), [Privacy](privacy.md), and

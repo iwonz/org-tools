@@ -53,32 +53,33 @@ sorting, searching, identity, and Live filtering based only on the label.
 - **THEN** the Employee matches exactly as an undated assignment of the same label would
 
 ### Requirement: Calendar day dialogs omit absent dated-tag content
-The application SHALL render Birthday and dated-event content of a Calendar day dialog only when
-the selected day has at least one corresponding event. The dated-event content SHALL omit a visible
-Dated tags heading and SHALL render one complete shared Employee card per Employee with ordinary
-right-aligned Tag, Edit, and Delete actions. Multiple events for one Employee on the selected day
-MUST remain visible as separate navigable labels inside that Employee's card. Omitting either content
-group SHALL NOT hide the other group or reserve an empty column.
+The application SHALL render only populated content in one vertical Calendar day-dialog flow. A
+nonempty Birthday section SHALL appear first. Dated events SHALL be grouped by normalized tag label,
+with one interactive localized tag heading followed by complete shared Employee cards with ordinary
+identity, Unit, Tag, Edit, and Delete content. Activating a tag heading SHALL open its existing tag
+history. Groups SHALL sort by localized label, Employees SHALL use stable name order, and an Employee
+with multiple labels on the day SHALL appear once in every corresponding tag group. The dialog SHALL
+use one mixed section-header/Employee-row virtualizer and one body scroll, without a special event
+subtitle inside an Employee card or an empty reserved section.
 
 #### Scenario: Birthday-only day
 - **WHEN** a user opens a Calendar day that has birthdays and no dated-tag events
-- **THEN** the dialog shows the birthdays section across the available body width
+- **THEN** the dialog shows one Birthday heading followed by complete Employee cards
 - **AND** no dated-tag heading, empty message, or empty second column is rendered
 
 #### Scenario: Dated-tag-only day
 - **WHEN** a user opens a Calendar day that has dated-tag events and no birthdays
-- **THEN** the dialog shows full Employee cards with right-aligned Tag, Edit, and Delete actions across the available body width
-- **AND** no Dated tags or Birthday heading, empty message, or empty first column is rendered
+- **THEN** each tag appears as an interactive heading above its complete actionable Employee cards
+- **AND** no Birthday heading, special event subtitle, or empty first column is rendered
 
 #### Scenario: Day with birthdays and dated tags
-- **WHEN** a user opens a Calendar day that has birthdays and dated-tag events
-- **THEN** the dialog shows both populated content groups and every event label for that day
-- **AND** the dated-event group has no visible Dated tags heading
+- **WHEN** a user opens a Calendar day that has birthdays and multiple dated tags
+- **THEN** Birthdays appear first and every localized tag group follows from top to bottom in one scroll
 
 #### Scenario: Multiple labels for one Employee
 - **WHEN** one Employee has multiple dated tags on the selected day
-- **THEN** one Employee card contains every corresponding label
-- **AND** activating any label opens that label's dated-tag history
+- **THEN** that Employee appears under each corresponding tag heading
+- **AND** activating either heading opens that label's dated-tag history
 
 ### Requirement: Calendar tag dialogs omit absent event periods
 The application SHALL render the Past section of a dated-tag dialog only when the selected tag has

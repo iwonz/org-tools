@@ -82,7 +82,27 @@ const requestState = async (request?: StatePutRequest): Promise<StateDocument> =
   return parseDocument(body);
 };
 
+const createNewState = async (): Promise<StateDocument> => {
+  const response = await fetch("/api/state", {
+    body: JSON.stringify({ action: "create_new" }),
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new StateTransportError("database_unavailable");
+  }
+  const error = readError(body);
+  if (error) throw new StateTransportError(error.code);
+  if (!response.ok) throw new StateTransportError("database_unavailable");
+  return parseDocument(body);
+};
+
 const transport = {
+  createNew: createNewState,
   load: () => requestState(),
   write: (request: StatePutRequest) => requestState(request),
 };

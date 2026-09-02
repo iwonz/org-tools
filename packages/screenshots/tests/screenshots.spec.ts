@@ -248,6 +248,20 @@ test("captures direct state export", async ({ page }) => {
   expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
 });
 
+test("captures explicit database recovery", async ({ page }) => {
+  await page.route("**/api/state", async (route) => {
+    await route.fulfill({
+      body: JSON.stringify({ error: { code: "database_unavailable" } }),
+      contentType: "application/json",
+      status: 200,
+    });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Create new", exact: true }).click();
+  await expect(page.locator('[data-demo-id="database-create-new-dialog"]')).toBeVisible();
+  await capture(page, "database-create-new");
+});
+
 test("captures both themes and both language states", async ({ page }) => {
   await openSyntheticState(page);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
@@ -326,7 +340,7 @@ test("captures the complete Employee workflow", async ({ page }) => {
   await page.keyboard.press("Escape");
   await page.locator('[data-demo-id="employee-edit-button"]').first().click();
   let dialog = page.getByRole("dialog", { name: "Edit Employee" });
-  await expect(dialog.getByRole("combobox", { name: "Gender", exact: true })).toBeVisible();
+  await expect(dialog.getByRole("radio", { name: "Not specified", exact: true })).toBeVisible();
   await capture(page, "employees-form");
   await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
@@ -447,9 +461,7 @@ test("captures Calendar overview, day details, and dated-tag history", async ({ 
   await page.locator('[data-calendar-date="2026-07-10"]').click();
   const dayDialog = page.getByRole("dialog", { name: /July 10, 2026/u });
   await expect(dayDialog).toBeVisible();
-  await expect(
-    dayDialog.locator('[data-demo-id="calendar-day-dated-event-employee-card"]'),
-  ).toBeVisible();
+  await expect(dayDialog.locator('[data-demo-id="calendar-day-employee-card"]')).toBeVisible();
   await capture(page, "calendar-day-details");
   await page.keyboard.press("Escape");
   await page
@@ -492,6 +504,16 @@ test("captures source selection and every data Download format", async ({ page }
   });
   await settings.getByRole("tab", { name: "Template", exact: true }).click();
   await expect(settings.locator('[data-demo-id="export-content-template-preview"]')).toBeVisible();
+  await settingsBody.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  const formatInput = settings.getByLabel("Format", { exact: true });
+  await formatInput.fill("@full");
+  await expect(settings.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
+    "{fullName}",
+  );
+  await capture(page, "download-template-tokens");
+  await formatInput.press("Enter");
   await settingsBody.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });

@@ -1,7 +1,12 @@
 import type { OrgToolsState } from "@org-tools/types";
 
 import { parseOrgToolsState, parseOrgToolsUiState } from "@/lib/org-file";
-import type { StateApiError, StateApiErrorCode, StatePutApiRequest } from "@/lib/state-runtime";
+import type {
+  StateApiError,
+  StateApiErrorCode,
+  StateCreateNewRequest,
+  StatePutApiRequest,
+} from "@/lib/state-runtime";
 import { StateConfigurationError } from "@/server/state-config";
 import { StateRepositoryError } from "@/server/state-repository";
 
@@ -101,6 +106,13 @@ export const parseStatePutRequest = (input: unknown): StatePutApiRequest => {
     throw new StateApiRequestError("invalid_state", "State update is invalid.", 400);
   }
   throw new StateApiRequestError("invalid_input", "State update shape is invalid.", 400);
+};
+
+export const parseStateCreateNewRequest = (input: unknown): StateCreateNewRequest => {
+  if (!isRecord(input) || !hasExactKeys(input, ["action"]) || input.action !== "create_new") {
+    throw new StateApiRequestError("invalid_input", "State recovery shape is invalid.", 400);
+  }
+  return { action: "create_new" };
 };
 
 export const jsonResponse = (value: unknown, init?: ResponseInit): Response => {

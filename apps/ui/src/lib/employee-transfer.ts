@@ -20,6 +20,7 @@ import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { parseOrgToolsState } from "@/lib/org-file";
 
 export const MAX_EMPLOYEE_IMPORT_BYTES = 25 * 1024 * 1024;
+export const MAX_EMPLOYEE_IMPORT_PREVIEW_BYTES = 128 * 1024;
 
 export type EmployeeTransferTeam = {
   id: UnitId;
@@ -51,6 +52,9 @@ export type EmployeeImportSource = {
   fileName: string;
   fileSizeBytes: number;
   paths: string[];
+  representativeJson: string;
+  representativeRowIndex: number;
+  representativeTruncated: boolean;
   rows: Record<string, unknown>[];
 };
 
@@ -63,10 +67,23 @@ export type EmployeeImportRow = {
 };
 
 export type EmployeeImportPreview = {
+  importsTeams: boolean;
   mappedFields: Set<Exclude<EmployeeImportField, "teams">>;
   matchedCount: number;
   newCount: number;
   rows: EmployeeImportRow[];
+};
+
+const boundedJsonPreview = (value: unknown) => {
+  const json = JSON.stringify(value, null, 2);
+  const bytes = new TextEncoder().encode(json);
+  if (bytes.byteLength <= MAX_EMPLOYEE_IMPORT_PREVIEW_BYTES) {
+    return { json, truncated: false };
+  }
+  return {
+    json: new TextDecoder().decode(bytes.slice(0, MAX_EMPLOYEE_IMPORT_PREVIEW_BYTES)),
+    truncated: true,
+  };
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -158,14 +175,28 @@ export const parseEmployeeImportText = (
     throw new LocalizedError(uiMessage("Employee import must be a JSON array of objects."));
   }
   const paths = new Set<string>();
-  for (const row of input.slice(0, 100)) collectPaths(row, paths);
+  let representativeRowIndex = 0;
+  let representativePathCount = -1;
+  for (let index = 0; index < input.length; index += 1) {
+    const rowPaths = new Set<string>();
+    collectPaths(input[index] as Record<string, unknown>, rowPaths);
+    for (const path of rowPaths) paths.add(path);
+    if (rowPaths.size > representativePathCount) {
+      representativeRowIndex = index;
+      representativePathCount = rowPaths.size;
+    }
+  }
   if (input.length > 0 && paths.size === 0) {
     throw new LocalizedError(uiMessage("Employee import does not contain mappable fields."));
   }
+  const representative = boundedJsonPreview(input[representativeRowIndex] ?? {});
   return {
     fileName,
     fileSizeBytes,
     paths: [...paths].sort((first, second) => first.localeCompare(second, "en")),
+    representativeJson: representative.json,
+    representativeRowIndex,
+    representativeTruncated: representative.truncated,
     rows: input,
   };
 };
@@ -298,7 +329,13 @@ export const deriveEmployeeImportPreview = (
     );
   }
   const matchedCount = rows.reduce((count, row) => count + Number(row.matched), 0);
-  return { mappedFields, matchedCount, newCount: rows.length - matchedCount, rows };
+  return {
+    importsTeams: mapping.teams !== null,
+    mappedFields,
+    matchedCount,
+    newCount: rows.length - matchedCount,
+    rows,
+  };
 };
 
 const unitPathKey = (path: readonly string[]): string =>
@@ -332,13 +369,11 @@ const cloneUnit = (unit: OrgEditorUnit): OrgEditorUnit => ({
 export const applyEmployeeImport = ({
   bulkPolicy,
   currentState,
-  importTeams,
   overrides,
   preview,
 }: {
   bulkPolicy: EmployeeImportPolicy;
   currentState: OrgToolsState;
-  importTeams: boolean;
   overrides: ReadonlyMap<EmployeeId, EmployeeImportPolicy>;
   preview: EmployeeImportPreview;
 }): OrgToolsState => {
@@ -371,7 +406,7 @@ export const applyEmployeeImport = ({
   }
 
   const units = state.organization.structure.units.map(cloneUnit);
-  if (importTeams) {
+  if (preview.importsTeams) {
     const unitById = new Map(units.map((unit) => [unit.id, unit]));
     const pathById = createUnitPaths(units);
     const idByPath = new Map<string, UnitId>();

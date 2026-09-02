@@ -353,11 +353,6 @@ export function OrgEditorExportDialog({
     updateImageSettings({ background });
   };
 
-  const appendTemplateField = (fieldKey: string) => {
-    setTemplateFormat((currentFormat) => `${currentFormat}{${fieldKey}}`);
-    setStatus(null);
-  };
-
   const appendImageEmployeeField = (fieldKey: string) => {
     updateImageSettings({ employeeFormat: `${imageSettings.employeeFormat}{${fieldKey}}` });
   };
@@ -814,7 +809,6 @@ export function OrgEditorExportDialog({
                 dataDemoId="org-editor-export-template"
                 employeeFields={visibleEmployeeFields}
                 format={templateFormat}
-                onAppendField={appendTemplateField}
                 onFormatChange={(value) => {
                   setTemplateFormat(value);
                   setStatus(null);

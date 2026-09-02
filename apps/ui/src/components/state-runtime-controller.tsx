@@ -6,7 +6,7 @@ import { observer } from "mobx-react-lite";
 import { useTheme } from "next-themes";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { HiOutlineCircleStack } from "react-icons/hi2";
+import { HiOutlineArrowPath, HiOutlineCircleStack, HiOutlinePlus } from "react-icons/hi2";
 
 import { useAppLocale } from "@/components/locale-provider";
 import {
@@ -14,6 +14,16 @@ import {
   type StateRuntimeContextValue,
   type StateRuntimeMode,
 } from "@/components/state-runtime-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useUiText } from "@/i18n/use-ui-text";
 import { AutomaticStateWriter } from "@/lib/automatic-state-writer";
@@ -31,6 +41,7 @@ import { normalizeUiTheme } from "@/lib/theme";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type StateRuntimeTransport = {
+  createNew?: () => Promise<StateDocument>;
   load: () => Promise<StateDocument>;
   write: (request: StatePutRequest) => Promise<StateDocument>;
 };
@@ -102,6 +113,8 @@ export const StateRuntimeController = observer(
     const [ready, setReady] = useState(false);
     const [pending, setPending] = useState(false);
     const [error, setError] = useState<StateRuntimeContextValue["error"]>(null);
+    const [createNewOpen, setCreateNewOpen] = useState(false);
+    const [creatingNew, setCreatingNew] = useState(false);
     const originIdRef = useRef(crypto.randomUUID());
     const stampRef = useRef<StateStamp>({ counter: -1, originId: "" });
     const channelRef = useRef<BroadcastChannel | null>(null);
@@ -381,6 +394,25 @@ export const StateRuntimeController = observer(
       writerRef.current?.retry();
     }, [installState, mode, ready, transport]);
 
+    const createNew = useCallback(() => {
+      if (!transport?.createNew || creatingNew) return;
+      setCreatingNew(true);
+      void transport
+        .createNew()
+        .then((document) => {
+          installState(document.state, { counter: document.revision, originId: "server" });
+          setError(null);
+          setCreateNewOpen(false);
+          setReady(true);
+        })
+        .catch((createError) => {
+          const code = errorCodeFrom(createError);
+          setError(code === "invalid_input" ? "invalid_state" : code);
+          setCreateNewOpen(false);
+        })
+        .finally(() => setCreatingNew(false));
+    }, [creatingNew, installState, transport]);
+
     const context = useMemo<StateRuntimeContextValue>(
       () => ({ error, mode, pending, retry }),
       [error, mode, pending, retry],
@@ -396,10 +428,41 @@ export const StateRuntimeController = observer(
                 ? t("Stored state is corrupt")
                 : t("Database unavailable")}
             </h1>
-            <Button className="mt-6" onClick={retry} type="button">
-              {t("Retry")}
-            </Button>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button onClick={retry} type="button" variant="secondary">
+                <HiOutlineArrowPath />
+                {t("Retry")}
+              </Button>
+              <Button onClick={() => setCreateNewOpen(true)} type="button" variant="destructive">
+                <HiOutlinePlus />
+                {t("Create new")}
+              </Button>
+            </div>
           </section>
+          <AlertDialog onOpenChange={setCreateNewOpen} open={createNewOpen}>
+            <AlertDialogContent data-demo-id="database-create-new-dialog">
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("Create a new database?")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("The current database files will be kept as a timestamped backup.")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={creatingNew}>{t("Cancel")}</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={creatingNew}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    createNew();
+                  }}
+                >
+                  <HiOutlinePlus />
+                  {creatingNew ? t("Creating…") : t("Create new")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </main>
       );
     }

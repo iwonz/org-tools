@@ -14,10 +14,13 @@ The local server exchanges data only between the browser and the loopback same-o
 SQLite stores one singleton state in the configured local file. The API rejects non-loopback Hosts,
 cross-origin mutations, non-JSON mutations, malformed scopes, and invalid state. It does not enable
 CORS. A failed or corrupt database is reported by a stable code and is never replaced silently.
+Only an explicit confirmed Create new action may replace it: the runtime first closes SQLite and
+retains the database plus any existing sidecars under timestamped backup names. A partial recovery
+restores the original file family.
 
 Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
-complete state or map an Employee array with optional nested Team assignments; the source, mapping,
-preview, and duplicate choices are discarded when the modal closes. Birthday validation is local
+complete state or map an Employee array with optional nested Team assignments; the source, bounded
+richest-record preview, mapping, and duplicate choices are discarded when the modal closes. Birthday validation is local
 and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without inferring one. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
