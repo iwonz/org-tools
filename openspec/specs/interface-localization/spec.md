@@ -80,20 +80,15 @@ Runtime error codes SHALL map to catalog entries and raw internal messages MUST 
 - **THEN** no untranslated key, raw internal error, or unexpected foreign-language product copy is
   visible or announced
 
-### Requirement: The canonical Editor View uses destination terminology
-The interface SHALL label the canonical Editor View with the existing localized Units destination
-term in English and Russian. Related visible copy for copying from the canonical View, Employee
-membership, and destructive warnings SHALL use the same localized product term without changing
-machine-facing `main` values or user-authored custom View names.
+### Requirement: Employee transfer is completely localized
+Both bundled locales SHALL provide matching non-empty messages for transfer tabs, source mapping,
+Team options, counts, duplicate policies, per-row actions, validation, progress, confirmation, and
+accessibility names. User data and source field paths SHALL remain verbatim.
 
-#### Scenario: English canonical View copy
-- **WHEN** the Editor and related workflows render in English
-- **THEN** the canonical View and related user-facing phrases use `Units` rather than `Main`
+#### Scenario: Russian Employee Import
+- **WHEN** Russian is active and the user opens every Employee Import step
+- **THEN** all owned visible and accessibility copy is Russian except allowed technical terms and user data
 
-#### Scenario: Russian canonical View copy
-- **WHEN** the Editor and related workflows render in Russian
-- **THEN** the canonical View and related user-facing phrases use the Russian Units destination term rather than the former dedicated Main label
-
-#### Scenario: Machine contracts remain stable
-- **WHEN** state is imported, exported, persisted, or synchronized
-- **THEN** canonical View kind and field values remain unchanged and only localized display copy differs
+#### Scenario: English Employee Export
+- **WHEN** English is active and the user opens Employee Export
+- **THEN** all owned visible and accessibility copy is English

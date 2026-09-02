@@ -12,7 +12,6 @@ export type StateImportCandidate = {
   fileSizeBytes: number;
   state: OrgToolsState;
   unitCount: number;
-  viewCount: number;
 };
 
 export const parseStateImportText = (
@@ -43,11 +42,7 @@ export const parseStateImportText = (
       fileName,
       fileSizeBytes,
       state,
-      unitCount: state.organization.views.reduce(
-        (count, view) => count + view.document.units.length,
-        0,
-      ),
-      viewCount: state.organization.views.length,
+      unitCount: state.organization.structure.units.length,
     };
   } catch {
     throw new LocalizedError(uiMessage("Only a complete Org Tools state can be imported."));

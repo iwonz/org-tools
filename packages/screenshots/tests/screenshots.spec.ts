@@ -114,9 +114,8 @@ async function openSyntheticTab(page: Page, tab: string) {
 
 async function replaceWithImageExportState(page: Page) {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const mainView = state.organization.views.find((view) => view.kind === "main");
-  const product = mainView?.document.units.find((unit) => unit.name === "Product");
-  const platform = mainView?.document.units.find((unit) => unit.name === "Platform");
+  const product = state.organization.structure.units.find((unit) => unit.name === "Product");
+  const platform = state.organization.structure.units.find((unit) => unit.name === "Platform");
   const employee = state.organization.employees.find((candidate) =>
     product?.employeeIds.includes(candidate.id),
   );
@@ -180,14 +179,6 @@ test("captures valid and invalid state imports", async ({ page }) => {
   await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
     "4 Employees",
   );
-  await expect(
-    dialog.getByText(
-      "Import replaces all organization data and interface settings in the current state.",
-      {
-        exact: true,
-      },
-    ),
-  ).toBeVisible();
   await capture(page, "import");
 
   await page.keyboard.press("Escape");
@@ -203,17 +194,61 @@ test("captures valid and invalid state imports", async ({ page }) => {
   ).toBeVisible();
   await expect(dialog.getByText("Choose another file", { exact: true })).toBeVisible();
   await capture(page, "import-invalid-state");
+
+  await page.keyboard.press("Escape");
+  await replaceWithSyntheticState(page);
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Import", exact: true });
+  await dialog.getByRole("tab", { name: "Employees", exact: true }).click();
+  let fileChooserPromise = page.waitForEvent("filechooser");
+  await dialog.getByText("Choose file", { exact: true }).click();
+  await (await fileChooserPromise).setFiles({
+    buffer: Buffer.from(
+      JSON.stringify([
+        {
+          contact: { email: "riley.brooks@example.test", phone: "+1 555-0120" },
+          firstName: "Riley",
+          lastName: "Brooks",
+          teams: [],
+        },
+      ]),
+    ),
+    mimeType: "application/json",
+    name: "new-employees.json",
+  });
+  await expect(dialog.getByText("1 new", { exact: true })).toBeVisible();
+  await capture(page, "employee-import-mapping");
+
+  await page.keyboard.press("Escape");
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const existingEmployee = state.organization.employees[0];
+  if (!existingEmployee) throw new Error("Synthetic Employee is unavailable.");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Import", exact: true });
+  await dialog.getByRole("tab", { name: "Employees", exact: true }).click();
+  fileChooserPromise = page.waitForEvent("filechooser");
+  await dialog.getByText("Choose file", { exact: true }).click();
+  await (await fileChooserPromise).setFiles({
+    buffer: Buffer.from(JSON.stringify([{ ...existingEmployee, teams: [] }])),
+    mimeType: "application/json",
+    name: "existing-employees.json",
+  });
+  await expect(dialog.getByText("1 existing", { exact: true })).toBeVisible();
+  await capture(page, "employee-import-duplicates");
 });
 
-test("captures direct state export", async ({ page }) => {
+test("captures state and Employee export", async ({ page }) => {
   await openSyntheticState(page);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
-  const action = page.getByRole("button", { name: "Export state", exact: true });
+  const action = page.getByRole("button", { name: "Export", exact: true });
   await action.hover();
-  await capture(page, "export");
-  const downloadPromise = page.waitForEvent("download");
   await action.click();
-  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
+  const dialog = page.getByRole("dialog", { name: "Export", exact: true });
+  await capture(page, "export");
+  await dialog.getByRole("tab", { name: "Employees", exact: true }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download", exact: true }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-employees.json");
 });
 
 test("captures both themes and both language states", async ({ page }) => {
@@ -350,21 +385,6 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
   await capture(page, "editor");
 
-  await page.locator('[data-demo-id="org-view-create-button"]').click();
-  let dialog = page.getByRole("dialog", { name: "New View" });
-  await expect(dialog.locator('[data-demo-id="org-view-source-switcher"]')).toBeVisible();
-  await capture(page, "editor-views");
-  await dialog.getByRole("tab", { name: "Blank", exact: true }).click();
-  await dialog.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toBeVisible();
-  await expect(page.locator('[data-demo-id="org-view-delete-button"]')).toBeVisible();
-  await page.getByRole("combobox", { name: "Active View", exact: true }).click();
-  await expect(page.getByRole("option", { name: "View 1", exact: true })).toBeVisible();
-  await capture(page, "editor-view-management");
-  await page.keyboard.press("Escape");
-  await page.getByRole("combobox", { name: "Active View", exact: true }).click();
-  await page.getByRole("option", { name: "Units", exact: true }).click();
-
   await page.locator('[data-demo-id="org-editor-search-button"]').click();
   await page.locator('[data-demo-id="org-editor-search-input"]').fill("Avery");
   await expect(page.locator('[data-demo-id="org-editor-search-results"]')).toContainText(
@@ -389,7 +409,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await page.keyboard.press("Escape");
 
   await replaceWithImageExportState(page);
-  dialog = await openEditorExport(page);
+  const dialog = await openEditorExport(page);
   await expect(dialog.locator('[data-demo-id="org-editor-export-image"]')).toBeVisible();
   await dialog.getByRole("button", { name: "Open", exact: true }).click();
   const imagePreviewDialog = page.getByRole("dialog", { name: "Image preview" });

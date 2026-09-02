@@ -93,8 +93,6 @@ export const getAdaptiveOrgEditorGridSize = (scale: number) => {
 
 export const createOrgEditorUnitId = () => createUuid();
 
-export const createOrgEditorEmployeeId = () => createUuid();
-
 const employeeRowLayoutSourceByUnitId = new Map<
   OrgEditorUnitId,
   { heightByEmployeeId: ReadonlyMap<EmployeeId, number>; orderedEmployeeIds: readonly EmployeeId[] }
@@ -269,8 +267,6 @@ export const findOrgEditorEmployeeRowIndex = (
 
 export const createDefaultOrgEditorState = (): OrgEditorState => {
   return {
-    employeeOverrides: [],
-    employees: [],
     layoutMode: ORG_EDITOR_DEFAULT_LAYOUT_MODE,
     selectedItems: [],
     units: [],

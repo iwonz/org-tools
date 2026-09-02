@@ -12,7 +12,7 @@ import type {
   UnitId,
 } from "@org-tools/types";
 import { makeAutoObservable, observable, reaction } from "mobx";
-
+import { LocalizedError, uiMessage } from "@/i18n/messages";
 import { type AnalyticsResult, buildAnalytics } from "@/lib/analytics";
 import { buildOrganizationStructureWithResolution } from "@/lib/build-organization-structure";
 import { createOrganizationEmployeeId, normalizeEditableEmployeeFields } from "@/lib/employee-data";
@@ -27,7 +27,6 @@ import {
 import {
   createBlankOrgToolsState,
   createEmptyEmployeeFiltersState,
-  materializeOrgViews,
   parseOrgToolsState,
 } from "@/lib/org-file";
 import type {
@@ -42,7 +41,6 @@ import type {
 } from "@/stores/export-session-store";
 import { ExportSessionStore } from "@/stores/export-session-store";
 import { OrgEditorStore, type OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
-import { OrgViewsStore } from "@/stores/org-views-store";
 
 type AnalyticsIdleHandle = { id: number; type: "idle" | "timeout" };
 
@@ -99,7 +97,6 @@ const areTagsEqual = (firstTags: readonly EmployeeTag[], secondTags: readonly Em
 export class OrgStore {
   organizationEmployees: OrganizationEmployee[] = [];
   uiOrgStructure: UiOrgStructure | null = null;
-  activeViewOrgStructure: UiOrgStructure | null = null;
   theme: UiTheme = "system";
   activeTab: UiActiveTab = "orgEditor";
   selectedUnitId: UnitId | null = null;
@@ -129,9 +126,7 @@ export class OrgStore {
   employeeUnitContextsByEmployeeId = new Map<EmployeeId, EmployeeUnitContext[]>();
   employeeUnitMembershipsByEmployeeId = new Map<EmployeeId, EmployeeUnitMembership>();
   exportSession = new ExportSessionStore();
-  exportSourceViewId = "";
-  orgViews = new OrgViewsStore((viewId, kind) => this.handleViewDocumentChange(viewId, kind));
-  fallbackEditor = new OrgEditorStore();
+  orgEditor = new OrgEditorStore(() => this.handleStructureDocumentChange());
   analyticsResult: AnalyticsResult | null = null;
   analyticsBuildStatus: AnalyticsBuildStatus = "idle";
   analyticsBuildFrameId: number | null = null;
@@ -147,7 +142,6 @@ export class OrgStore {
     makeAutoObservable(
       this,
       {
-        activeViewOrgStructure: observable.ref,
         analyticsBuildFrameId: false,
         analyticsBuildIdleHandle: false,
         analyticsBuildToken: false,
@@ -162,9 +156,8 @@ export class OrgStore {
         calendarUi: observable.ref,
         downloadUi: observable.ref,
         exportSession: observable.ref,
-        fallbackEditor: observable.ref,
+        orgEditor: observable.ref,
         isApplyingState: false,
-        orgViews: observable.ref,
         uiOrgStructure: observable.ref,
         organizationEmployees: observable.shallow,
       },
@@ -186,16 +179,7 @@ export class OrgStore {
   }
 
   private get organizationObservation() {
-    return [
-      this.organizationEmployees,
-      this.orgViews.viewRecords,
-      ...this.orgViews.views.flatMap((view) => {
-        const editor = this.orgViews.editorByViewId.get(view.id);
-        return editor
-          ? [editor.employeeOverrides, editor.employees, editor.layoutMode, editor.units]
-          : [];
-      }),
-    ];
+    return [this.organizationEmployees, this.orgEditor.layoutMode, this.orgEditor.units];
   }
 
   private get uiObservation() {
@@ -204,7 +188,6 @@ export class OrgStore {
       this.locale,
       this.sidebarCollapsed,
       this.expandedUnitIds,
-      this.orgViews.activeViewId,
       this.selectedUnitId,
       this.theme,
       this.unitsUi,
@@ -226,10 +209,8 @@ export class OrgStore {
       this.exportSession.templateFormat,
       this.exportSession.selections,
       this.exportSession.excludedEmployeeIds,
-      ...this.orgViews.views.flatMap((view) => {
-        const editor = this.orgViews.editorByViewId.get(view.id);
-        return editor ? [editor.selectedItems, editor.viewport] : [];
-      }),
+      this.orgEditor.selectedItems,
+      this.orgEditor.viewport,
     ];
   }
 
@@ -248,28 +229,8 @@ export class OrgStore {
     return this.uiOrgStructure.indexes.unitsById.get(this.selectedUnitId) ?? this.rootUnit;
   }
 
-  get orgEditor() {
-    return this.orgViews.activeEditor ?? this.fallbackEditor;
-  }
-
   get mainOrgEditor() {
-    return this.orgViews.mainEditor ?? this.fallbackEditor;
-  }
-
-  get orgViewList() {
-    return this.orgViews.views;
-  }
-
-  get activeOrgView() {
-    return this.orgViews.activeView;
-  }
-
-  get activeOrgViewId() {
-    return this.orgViews.activeViewId;
-  }
-
-  get mainOrgViewId() {
-    return this.orgViews.mainView?.id ?? "";
+    return this.orgEditor;
   }
 
   get exportTabMode() {
@@ -333,35 +294,25 @@ export class OrgStore {
       ...employee,
       tags: employee.tags.map((tag) => ({ ...tag })),
     }));
-    const nextViews = new OrgViewsStore((viewId, kind) =>
-      this.handleViewDocumentChange(viewId, kind),
-    );
+    const nextEditor = new OrgEditorStore(() => this.handleStructureDocumentChange());
     const previousIsApplyingState = this.isApplyingState;
     this.isApplyingState = true;
     try {
-      nextViews.load(materializeOrgViews(state), state.ui.activeViewId);
-      const mainEditor = nextViews.mainEditor;
-      if (!mainEditor) throw new Error("The Main View is unavailable.");
-      const mainResult = buildOrganizationStructureWithResolution(
+      nextEditor.loadState({
+        layoutMode: state.organization.structure.layoutMode,
+        selectedItems: state.ui.editor.selectedItems,
+        units: state.organization.structure.units,
+        viewport: state.ui.editor.viewport,
+      });
+      const result = buildOrganizationStructureWithResolution(
         nextEmployees,
-        mainEditor.createState(),
+        nextEditor.createState(),
       );
-      const activeEditor = nextViews.activeEditor;
-      if (!activeEditor) throw new Error("The active View is unavailable.");
-      const activeResult =
-        nextViews.activeView?.kind === "main"
-          ? mainResult
-          : buildOrganizationStructureWithResolution(nextEmployees, activeEditor.createState());
-
-      mainEditor.synchronizeLiveResolution(mainResult.liveEmployeeIdsByUnitId);
-      if (activeEditor !== mainEditor) {
-        activeEditor.synchronizeLiveResolution(activeResult.liveEmployeeIdsByUnitId);
-      }
+      nextEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
 
       this.organizationEmployees = nextEmployees;
-      this.orgViews = nextViews;
-      this.uiOrgStructure = mainResult.structure;
-      this.activeViewOrgStructure = activeResult.structure;
+      this.orgEditor = nextEditor;
+      this.uiOrgStructure = result.structure;
       this.theme = state.ui.theme;
       this.locale = state.ui.locale;
       this.activeTab = state.ui.activeTab;
@@ -370,7 +321,10 @@ export class OrgStore {
       this.expandedUnitIds = [...state.ui.expandedUnitIds];
       this.unitsUi = structuredClone(state.ui.units);
       this.employeesUi = structuredClone(state.ui.employees);
-      this.editorUi = structuredClone(state.ui.editor);
+      this.editorUi = {
+        searchOpen: state.ui.editor.searchOpen,
+        searchQuery: state.ui.editor.searchQuery,
+      };
       this.analyticsUi = structuredClone(state.ui.analytics);
       this.calendarUi = { ...state.ui.calendar };
       this.downloadUi = {
@@ -382,10 +336,6 @@ export class OrgStore {
       };
       this.sourceFileName = sourceFileName;
       this.sourceFileSizeBytes = sourceFileSizeBytes;
-      this.exportSourceViewId = nextViews.mainView?.id ?? "";
-      if (nextViews.editorByViewId.has(state.ui.download.sourceViewId)) {
-        this.exportSourceViewId = state.ui.download.sourceViewId;
-      }
       this.refreshEmployeeUnitContexts();
       this.exportSession.loadState(state.ui.download);
       this.resetAnalyticsCache();
@@ -439,110 +389,21 @@ export class OrgStore {
     this.activeTab = activeTab;
   }
 
-  selectExportOrgView(viewId: string): void {
-    if (!this.orgViews.editorByViewId.has(viewId)) return;
-    this.exportSourceViewId = viewId;
-    this.resetExportSessionState();
-  }
-
-  selectUnitFromOrgView(viewId: string, unitId: UnitId): void {
-    if (this.orgViews.views.find((view) => view.id === viewId)?.kind === "main") {
-      this.selectUnitFromEmployeeCard(unitId);
-      return;
-    }
-
-    this.selectOrgView(viewId);
-    if (!this.orgEditor.units.some((unit) => unit.id === unitId)) return;
-    this.orgEditor.setSelectedItems([{ type: "unit", unitId }]);
-    this.activeTab = "orgEditor";
-  }
-
-  selectOrgView(viewId: string): void {
-    this.orgViews.selectView(viewId);
-    this.rebuildActiveViewModel();
-  }
-
-  createOrgView(name: string, source: "blank" | "main"): string {
-    const viewId = this.orgViews.createView(name, source);
-    this.rebuildActiveViewModel();
-    return viewId;
-  }
-
-  renameOrgView(viewId: string, name: string): void {
-    this.orgViews.renameView(viewId, name);
-  }
-
-  deleteOrgView(viewId: string): void {
-    const deleteExportSource = this.exportSourceViewId === viewId;
-    this.orgViews.deleteView(viewId);
-    if (deleteExportSource && !this.orgViews.editorByViewId.has(viewId)) {
-      this.exportSourceViewId = this.mainOrgViewId;
-      this.resetExportSessionState();
-    }
-    this.rebuildActiveViewModel();
-  }
-
-  getOrgViewStructure(viewId: string): UiOrgStructure | null {
-    if (this.orgViews.views.find((view) => view.id === viewId)?.kind === "main") {
-      return this.uiOrgStructure;
-    }
-    if (viewId === this.activeOrgViewId) return this.activeViewOrgStructure;
-
-    const editor = this.orgViews.editorByViewId.get(viewId);
-    if (!editor) return null;
-
-    const result = buildOrganizationStructureWithResolution(
-      this.organizationEmployees,
-      editor.createState(),
-    );
-    return result.structure;
-  }
-
-  private handleViewDocumentChange(viewId: string, kind: "custom" | "main"): void {
+  private handleStructureDocumentChange(): void {
     if (this.isApplyingState) return;
-    if (kind === "main") this.rebuildMainModel();
-    if (viewId === this.activeOrgViewId) this.rebuildActiveViewModel();
+    this.rebuildMainModel();
   }
 
   private rebuildMainModel(): void {
-    const mainEditor = this.orgViews.mainEditor;
-    if (!mainEditor) {
-      this.uiOrgStructure = null;
-      return;
-    }
-
     const result = buildOrganizationStructureWithResolution(
       this.organizationEmployees,
-      mainEditor.createState(),
+      this.orgEditor.createState(),
     );
-    mainEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
+    this.orgEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
     this.uiOrgStructure = result.structure;
-    if (this.activeOrgView?.kind === "main") {
-      this.activeViewOrgStructure = result.structure;
-    }
     this.refreshEmployeeUnitContexts();
     this.resetAnalyticsCache();
     this.scheduleAnalyticsPrecompute();
-  }
-
-  private rebuildActiveViewModel(): void {
-    if (this.activeOrgView?.kind === "main") {
-      this.activeViewOrgStructure = this.uiOrgStructure;
-      return;
-    }
-
-    const editor = this.orgViews.activeEditor;
-    if (!editor) {
-      this.activeViewOrgStructure = null;
-      return;
-    }
-
-    const result = buildOrganizationStructureWithResolution(
-      this.organizationEmployees,
-      editor.createState(),
-    );
-    editor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
-    this.activeViewOrgStructure = result.structure;
   }
 
   resetAnalyticsCache(): void {
@@ -795,9 +656,13 @@ export class OrgStore {
 
   createEmployee(fields: EditableEmployeeFields, unitMemberships: UnitAssignment[]): EmployeeId {
     const now = new Date().toISOString();
-    const id = createOrganizationEmployeeId();
+    const normalizedFields = normalizeEditableEmployeeFields(fields);
+    const id = createOrganizationEmployeeId(normalizedFields);
+    if (this.organizationEmployees.some((employee) => employee.id === id)) {
+      throw new LocalizedError(uiMessage("An Employee with this name and email already exists."));
+    }
     const employee: OrganizationEmployee = {
-      ...normalizeEditableEmployeeFields(fields),
+      ...normalizedFields,
       createdAt: now,
       id,
       updatedAt: now,
@@ -886,12 +751,24 @@ export class OrgStore {
     unitMemberships: UnitAssignment[],
   ): void {
     const now = new Date().toISOString();
+    const normalizedFields = normalizeEditableEmployeeFields(fields);
+    const nextEmployeeId = createOrganizationEmployeeId(normalizedFields);
+    if (
+      nextEmployeeId !== employeeId &&
+      this.organizationEmployees.some((employee) => employee.id === nextEmployeeId)
+    ) {
+      throw new LocalizedError(uiMessage("An Employee with this name and email already exists."));
+    }
+    if (nextEmployeeId !== employeeId) {
+      this.orgEditor.rekeyEmployeeReferences(employeeId, nextEmployeeId, false);
+      this.exportSession.rekeyEmployee(employeeId, nextEmployeeId);
+    }
     this.organizationEmployees = this.organizationEmployees.map((employee) =>
       employee.id === employeeId
-        ? { ...employee, ...normalizeEditableEmployeeFields(fields), updatedAt: now }
+        ? { ...employee, ...normalizedFields, id: nextEmployeeId, updatedAt: now }
         : employee,
     );
-    this.applyOrganizationEmployeeAssignments(employeeId, unitMemberships);
+    this.applyOrganizationEmployeeAssignments(nextEmployeeId, unitMemberships);
     this.rebuildMainModel();
   }
 
@@ -914,82 +791,44 @@ export class OrgStore {
   }
 
   deleteOrganizationEmployee(employeeId: EmployeeId): void {
-    const employee = this.organizationEmployees.find((candidate) => candidate.id === employeeId);
-    if (!employee) return;
-
-    const liveEmployeeIdsByViewId = new Map<string, ReadonlyMap<UnitId, readonly EmployeeId[]>>();
-    for (const view of this.orgViewList) {
-      if (view.kind !== "custom") continue;
-
-      const editor = this.orgViews.editorByViewId.get(view.id);
-      if (!editor?.units.some((unit) => unit.liveFilter !== null)) continue;
-      liveEmployeeIdsByViewId.set(
-        view.id,
-        buildOrganizationStructureWithResolution(this.organizationEmployees, editor.createState())
-          .liveEmployeeIdsByUnitId,
-      );
-    }
-
-    this.orgViews.materializeEmployeeBeforeDelete(employee, liveEmployeeIdsByViewId);
+    if (!this.organizationEmployees.some((candidate) => candidate.id === employeeId)) return;
     this.mainOrgEditor.purgeEmployeeReferences(employeeId);
     this.organizationEmployees = this.organizationEmployees.filter(
       (candidate) => candidate.id !== employeeId,
     );
     this.exportSession.purgeEmployee(employeeId);
     this.rebuildMainModel();
-    this.rebuildActiveViewModel();
   }
 
   createOrgToolsState(): OrgToolsState {
-    const views = this.orgViews.createState();
-    if (!views.some((view) => view.kind === "main")) {
-      throw new Error("The Main View is unavailable.");
-    }
-
     return parseOrgToolsState({
-      organization: this.createOrganizationState(views),
-      ui: this.createDurableUiState(views),
+      organization: this.createOrganizationState(),
+      ui: this.createDurableUiState(),
     });
   }
 
-  createOrganizationState(views = this.orgViews.createState()): OrgToolsState["organization"] {
+  createOrganizationState(): OrgToolsState["organization"] {
     return {
       employees: this.organizationEmployees.map((employee) => ({
         ...employee,
         tags: employee.tags.map((tag) => ({ ...tag })),
       })),
-      views: views.map((view) => ({
-        createdAt: view.createdAt,
-        document: {
-          employeeOverrides: view.state.employeeOverrides.map((employee) => ({
-            ...employee,
-            tags: employee.tags.map((tag) => ({ ...tag })),
-          })),
-          employees: view.state.employees.map((employee) => ({
-            ...employee,
-            tags: employee.tags.map((tag) => ({ ...tag })),
-          })),
-          layoutMode: view.state.layoutMode,
-          units: view.state.units.map((unit) => ({
-            ...unit,
-            employeeIds: [...unit.employeeIds],
-            employeePositions: unit.employeePositions.map((position) => ({ ...position })),
-            liveFilter: unit.liveFilter ? structuredClone(unit.liveFilter) : null,
-          })),
-        },
-        id: view.id,
-        kind: view.kind,
-        name: view.name,
-        updatedAt: view.updatedAt,
-      })),
+      structure: {
+        layoutMode: this.orgEditor.layoutMode,
+        units: this.orgEditor.units.map((unit) => ({
+          ...unit,
+          employeeIds: [...unit.employeeIds],
+          employeePositions: unit.employeePositions.map((position) => ({ ...position })),
+          liveFilter: unit.liveFilter ? structuredClone(unit.liveFilter) : null,
+        })),
+      },
     };
   }
 
-  createDurableUiState(views = this.orgViews.createState()): OrgToolsState["ui"] {
+  createDurableUiState(): OrgToolsState["ui"] {
     const exportState = this.exportSession.createState();
     return {
       activeTab: this.activeTab,
-      activeViewId: this.activeOrgViewId,
       analytics: structuredClone(this.analyticsUi),
       calendar: { ...this.calendarUi },
       download: {
@@ -998,10 +837,13 @@ export class OrgStore {
         employeeQuery: this.downloadUi.employeeQuery,
         selectedFilters: structuredClone(this.downloadUi.selectedFilters),
         selectedQuery: this.downloadUi.selectedQuery,
-        sourceViewId: this.exportSourceViewId,
         unitQuery: this.downloadUi.unitQuery,
       },
-      editor: { ...this.editorUi },
+      editor: {
+        ...this.editorUi,
+        selectedItems: this.orgEditor.selectedItems.map((item) => ({ ...item })),
+        viewport: { ...this.orgEditor.viewport },
+      },
       employees: structuredClone(this.employeesUi),
       expandedUnitIds: [...this.expandedUnitIds],
       locale: this.locale,
@@ -1009,11 +851,6 @@ export class OrgStore {
       sidebarCollapsed: this.sidebarCollapsed,
       theme: this.theme,
       units: structuredClone(this.unitsUi),
-      views: views.map((view) => ({
-        selectedItems: view.state.selectedItems.map((item) => ({ ...item })),
-        viewId: view.id,
-        viewport: { ...view.state.viewport },
-      })),
     };
   }
 
@@ -1029,7 +866,7 @@ export class OrgStore {
       this.expandedUnitIds = [...ui.expandedUnitIds];
       this.unitsUi = structuredClone(ui.units);
       this.employeesUi = structuredClone(ui.employees);
-      this.editorUi = structuredClone(ui.editor);
+      this.editorUi = { searchOpen: ui.editor.searchOpen, searchQuery: ui.editor.searchQuery };
       this.analyticsUi = structuredClone(ui.analytics);
       this.calendarUi = { ...ui.calendar };
       this.downloadUi = {
@@ -1040,17 +877,8 @@ export class OrgStore {
         unitQuery: ui.download.unitQuery,
       };
       this.exportSession.loadState(ui.download);
-      this.exportSourceViewId = this.orgViews.editorByViewId.has(ui.download.sourceViewId)
-        ? ui.download.sourceViewId
-        : this.mainOrgViewId;
-      this.orgViews.selectView(ui.activeViewId);
-      for (const viewUi of ui.views) {
-        const editor = this.orgViews.editorByViewId.get(viewUi.viewId);
-        if (!editor) continue;
-        editor.setViewport({ ...viewUi.viewport });
-        editor.setSelectedItems(viewUi.selectedItems.map((item) => ({ ...item })));
-      }
-      this.rebuildActiveViewModel();
+      this.orgEditor.setViewport({ ...ui.editor.viewport });
+      this.orgEditor.setSelectedItems(ui.editor.selectedItems.map((item) => ({ ...item })));
     } finally {
       this.isApplyingState = previousIsApplyingState;
     }

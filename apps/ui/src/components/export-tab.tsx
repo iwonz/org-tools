@@ -32,13 +32,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ProductSurface } from "@/components/ui/product-surface";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitTree } from "@/components/unit-tree";
 import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
@@ -115,11 +108,7 @@ export const ExportTab = observer(() => {
   const t = useUiText();
   const countText = useCountText();
   const getUnitEmployeeSummary = useUnitEmployeeSummary();
-  const exportViewId = store.exportSourceViewId;
-  const units = useMemo<UiOrgStructure | null>(
-    () => store.getOrgViewStructure(exportViewId),
-    [exportViewId, store],
-  );
+  const units: UiOrgStructure | null = store.units;
   const [status, setStatus] = useState<UiTextKey | null>(null);
   const [isExportSettingsDialogOpen, setIsExportSettingsDialogOpen] = useState(false);
   const [sourceSection, setSourceSection] = useState<ExportSourceSection>("units");
@@ -502,30 +491,6 @@ export const ExportTab = observer(() => {
             className="flex min-h-0 min-w-0 flex-col bg-muted/25"
             data-demo-id="export-source-panel"
           >
-            {store.orgViewList.length > 1 && (
-              <div className="p-3 pb-0">
-                <Select
-                  onValueChange={(viewId) => {
-                    store.selectExportOrgView(viewId);
-                    setExpandedExportUnitIds(new Set());
-                    store.clearExportSelection();
-                    setStatus(null);
-                  }}
-                  value={exportViewId}
-                >
-                  <SelectTrigger aria-label={t("View to export")} className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {store.orgViewList.map((view) => (
-                      <SelectItem key={view.id} value={view.id}>
-                        {view.kind === "main" ? t("Main") : view.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             <Tabs
               className="min-h-0 flex-1"
               onValueChange={(value) => setSourceSection(value as ExportSourceSection)}
@@ -622,7 +587,7 @@ export const ExportTab = observer(() => {
               {units.roots.length === 0 && (
                 <TabsContent className="min-h-0" value="units">
                   <SourceEmptyState icon={<HiOutlineFolder className="size-5" />}>
-                    {t("This View does not have any Units yet")}
+                    {t("The structure does not have any Units yet")}
                   </SourceEmptyState>
                 </TabsContent>
               )}
@@ -676,7 +641,7 @@ export const ExportTab = observer(() => {
                     store.setDownloadUi({ employeeQuery: nextEmployeeQuery })
                   }
                   onUnitContextClick={(unitContext) => {
-                    store.selectUnitFromOrgView(exportViewId, unitContext.unitId);
+                    store.selectUnitFromEmployeeCard(unitContext.unitId);
                   }}
                   positionButtonDemoId="export-employee-position-filter"
                   positionOptions={employeePositionOptions}
@@ -729,7 +694,7 @@ export const ExportTab = observer(() => {
             }
             onRemoveVisibleEmployees={removeVisibleSelectedEmployees}
             onUnitContextClick={(unitContext) => {
-              store.selectUnitFromOrgView(exportViewId, unitContext.unitId);
+              store.selectUnitFromEmployeeCard(unitContext.unitId);
             }}
             panelDataDemoId="export-selected-panel"
             positionButtonDemoId="export-selected-position-filter"

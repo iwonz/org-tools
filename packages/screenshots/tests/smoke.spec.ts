@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import type { OrgToolsState } from "@org-tools/types";
@@ -16,6 +17,19 @@ import {
 } from "./helpers.js";
 
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
+
+const createTestEmployeeId = (fields: {
+  email: string | null;
+  firstName: string;
+  lastName: string;
+}) =>
+  createHash("sha256")
+    .update(
+      [fields.firstName, fields.lastName, fields.email]
+        .map((value) => (value ?? "").normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase())
+        .join("\u001f"),
+    )
+    .digest("hex");
 
 async function expectNoHorizontalRule(locator: Locator) {
   expect(
@@ -87,23 +101,25 @@ async function expectTextBeforeTrailingIcon(locator: Locator) {
 
 async function createLongRosterState(): Promise<OrgToolsState> {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const mainView = state.organization.views.find((view) => view.kind === "main");
-  const product = mainView?.document.units.find((unit) => unit.name === "Product");
-  const platform = mainView?.document.units.find((unit) => unit.name === "Platform");
+  const product = state.organization.structure.units.find((unit) => unit.name === "Product");
+  const platform = state.organization.structure.units.find((unit) => unit.name === "Platform");
   const avatar = state.organization.employees[0]?.avatarBase64Url ?? null;
   if (!product || !platform) throw new Error("Synthetic hierarchy is unavailable.");
 
   const addedEmployees = Array.from({ length: 10 }, (_, index) => {
     const suffix = String(index + 1).padStart(2, "0");
+    const email = `synthetic.person.${suffix}@example.test`;
+    const firstName = "Synthetic";
+    const lastName = `Person ${suffix}`;
     return {
       avatarBase64Url: index % 3 === 0 ? avatar : null,
       birthday: null,
       createdAt: "2026-01-15T12:00:00.000Z",
-      email: `synthetic.person.${suffix}@example.test`,
-      firstName: "Synthetic",
+      email,
+      firstName,
       gender: "unspecified" as const,
-      id: `50000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-      lastName: `Person ${suffix}`,
+      id: createTestEmployeeId({ email, firstName, lastName }),
+      lastName,
       phone: `+1-202-555-01${String(10 + index).padStart(2, "0")}`,
       profileUrl: null,
       tags: [
@@ -764,7 +780,7 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
   await expect(exportLabel).toBeHidden();
   await expect(sidebarToggle).toBeHidden();
   await expect(page.locator('[data-demo-id="import-action"]')).toHaveAccessibleName("Import");
-  await expect(page.locator('[data-demo-id="export-state"]')).toHaveAccessibleName("Export state");
+  await expect(page.locator('[data-demo-id="export-state"]')).toHaveAccessibleName("Export");
   expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -1018,29 +1034,31 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   );
 });
 
-test("imports only complete states through a compact confirmation", async ({ page }) => {
+test("imports complete states and mapped Employee arrays", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
 
-  await expect(page.locator('[data-demo-id="import-file-input"]')).toHaveAttribute(
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  const importDialog = page.getByRole("dialog", { name: "Import", exact: true });
+  await expect(importDialog.locator('input[type="file"]')).toHaveAttribute(
     "accept",
     ".json,application/json",
   );
   const canceledChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await importDialog.getByText("Choose file", { exact: true }).click();
   await (await canceledChooserPromise).setFiles([]);
-  await expect(page.getByRole("dialog", { name: "Import state" })).toHaveCount(0);
+  await expect(importDialog).toBeVisible();
+  await importDialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const dialog = await openImportDialog(page, syntheticStatePath);
   await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-header"]'));
   await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-footer"]'));
-  await expect(dialog.getByRole("tab")).toHaveCount(0);
+  await expect(dialog.getByRole("tab")).toHaveCount(2);
   await expect(dialog.getByRole("radio")).toHaveCount(0);
   await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
     "4 Employees",
   );
   await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("2 Units");
-  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("1 View");
   await expect(dialog.getByRole("button", { name: "Replace state" })).toBeEnabled();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
@@ -1061,6 +1079,30 @@ test("imports only complete states through a compact confirmation", async ({ pag
   );
   await invalidDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  const employeeImport = page.getByRole("dialog", { name: "Import", exact: true });
+  await employeeImport.getByRole("tab", { name: "Employees", exact: true }).click();
+  const employeeChooserPromise = page.waitForEvent("filechooser");
+  await employeeImport.getByText("Choose file", { exact: true }).click();
+  await (await employeeChooserPromise).setFiles({
+    buffer: Buffer.from(
+      JSON.stringify([
+        {
+          contact: { email: "riley.brooks@example.test" },
+          firstName: "Riley",
+          lastName: "Brooks",
+          teams: [],
+        },
+      ]),
+    ),
+    mimeType: "application/json",
+    name: "employees.json",
+  });
+  await expect(employeeImport.getByText("1 new", { exact: true })).toBeVisible();
+  await employeeImport.getByRole("button", { name: "Import Employees", exact: true }).click();
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await expect(page.getByText("Riley Brooks", { exact: true })).toBeVisible();
   await assertLocalRequests();
 });
 
@@ -1079,15 +1121,31 @@ test("atomically imports, directly exports, automatically writes, and reloads st
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
   await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
 
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export", exact: true });
   const exportPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export state", exact: true }).click();
+  await exportDialog.getByRole("button", { name: "Download", exact: true }).click();
   const exported = await exportPromise;
   expect(exported.suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.getByRole("dialog", { name: "Export state" })).toHaveCount(0);
+  await expect(exportDialog).toBeHidden();
   const exportedPath = await exported.path();
   const exportedState = JSON.parse(await readFile(exportedPath ?? "", "utf8")) as OrgToolsState;
   expect(Object.keys(exportedState).sort()).toEqual(["organization", "ui"]);
   expect(exportedState.organization.employees).toHaveLength(4);
+
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const employeeExportDialog = page.getByRole("dialog", { name: "Export", exact: true });
+  await employeeExportDialog.getByRole("tab", { name: "Employees", exact: true }).click();
+  const employeeExportPromise = page.waitForEvent("download");
+  await employeeExportDialog.getByRole("button", { name: "Download", exact: true }).click();
+  const employeeExport = await employeeExportPromise;
+  expect(employeeExport.suggestedFilename()).toBe("org-tools-employees.json");
+  const employeeExportPath = await employeeExport.path();
+  const employeeRecords = JSON.parse(await readFile(employeeExportPath ?? "", "utf8")) as Array<{
+    teams: Array<{ isBoss: boolean; name: string; path: string[]; position: string | null }>;
+  }>;
+  expect(employeeRecords).toHaveLength(4);
+  expect(employeeRecords.some((record) => record.teams.length > 0)).toBe(true);
 
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -1148,10 +1206,13 @@ test("keeps CSV as a Download output while Import accepts JSON only", async ({ p
   await openBlankState(page);
   await replaceWithSyntheticState(page);
 
-  await expect(page.locator('[data-demo-id="import-file-input"]')).toHaveAttribute(
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  const importDialog = page.getByRole("dialog", { name: "Import", exact: true });
+  await expect(importDialog.locator('input[type="file"]').first()).toHaveAttribute(
     "accept",
     ".json,application/json",
   );
+  await importDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("tab", { name: "Download", exact: true }).click();
   await page
     .getByRole("button", { name: "Add Unit Employees to download", exact: true })
@@ -1572,14 +1633,7 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await expect(canvas).toHaveAttribute("data-grid-base-size", "24");
   await expect(canvas).toHaveAttribute("data-grid-size", "24");
   expect(Number(await canvas.getAttribute("data-grid-screen-size"))).toBe(24);
-  await expect(topActions.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(1);
-  const viewSelect = page.locator('[data-demo-id="org-view-select-trigger"]');
-  await expect(viewSelect).toHaveAttribute("role", "combobox");
-  await expect(viewSelect.locator("svg")).toBeVisible();
-  expect(await getBackgroundColor(viewSelect)).not.toBe("rgba(0, 0, 0, 0)");
-  await viewSelect.click();
-  await expect(page.getByRole("option", { name: "Units", exact: true })).toBeVisible();
-  await page.getByRole("option", { name: "Units", exact: true }).click();
+  await expect(topActions.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
   expect(
     await topActions.evaluate(
       (element) => element.lastElementChild?.getAttribute("data-demo-id") ?? null,
@@ -1593,7 +1647,7 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
           buttons.map((button) => window.getComputedStyle(button).borderWidth),
         ),
     ),
-  ).toEqual(new Set(["0px", "1px"]));
+  ).toEqual(new Set(["0px"]));
 
   const editorCommand = page.locator('[data-demo-id="org-editor-align-button"]');
   const collapseCommand = page.locator('[data-demo-id="org-editor-toggle-all-units-button"]');
@@ -1832,70 +1886,6 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await assertLocalRequests();
 });
 
-test("keeps empty custom Views manageable and deletes them safely", async ({ page }) => {
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankState(page);
-  await replaceWithSyntheticState(page);
-
-  const viewTrigger = page.locator('[data-demo-id="org-view-select-trigger"]');
-  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText("Units");
-  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toHaveCount(0);
-  await expect(page.locator('[data-demo-id="org-view-delete-button"]')).toHaveCount(0);
-
-  await page.locator('[data-demo-id="org-view-create-button"]').click();
-  const createDialog = page.getByRole("dialog", { name: "New View" });
-  await createDialog.getByLabel("Name", { exact: true }).fill("Disposable View");
-  await createDialog.getByRole("tab", { name: "Blank", exact: true }).click();
-  await createDialog.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(createDialog).toBeHidden();
-
-  await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
-  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toHaveAccessibleName(
-    "Rename View",
-  );
-  const deleteButton = page.locator('[data-demo-id="org-view-delete-button"]');
-  await expect(deleteButton).toHaveAccessibleName("Delete View");
-  await deleteButton.click();
-  let deleteDialog = page.getByRole("alertdialog", { name: "Delete View?" });
-  await expect(deleteDialog).toContainText("Units will not change.");
-  await deleteDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText(
-    "Disposable View",
-  );
-
-  await deleteButton.click();
-  deleteDialog = page.getByRole("alertdialog", { name: "Delete View?" });
-  await deleteDialog.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(deleteDialog).toBeHidden();
-  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText("Units");
-  await viewTrigger.click();
-  await expect(page.getByRole("option", { name: "Disposable View", exact: true })).toHaveCount(0);
-  await page.keyboard.press("Escape");
-
-  await expect
-    .poll(async () => {
-      const response = await page.request.get("/api/state");
-      const state = (await response.json()) as {
-        state: {
-          organization: { views: Array<{ id: string; kind: "custom" | "main"; name: string }> };
-          ui: { activeViewId: string };
-        };
-      };
-      const mainViewId = state.state.organization.views.find((view) => view.kind === "main")?.id;
-      return {
-        activeIsMain: state.state.ui.activeViewId === mainViewId,
-        disposableViews: state.state.organization.views.filter(
-          (view) => view.name === "Disposable View",
-        ).length,
-      };
-    })
-    .toEqual({
-      activeIsMain: true,
-      disposableViews: 0,
-    });
-  await assertLocalRequests();
-});
-
 test("coalesces large Editor previews and commits each gesture once", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -1904,7 +1894,12 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   const timestamp = "2026-08-31T12:00:00.000Z";
   const uuid = (group: string, index: number) =>
     `00000000-0000-${group}-8000-${index.toString(16).padStart(12, "0")}`;
-  const employeeId = (index: number) => uuid("4000", index + 1);
+  const employeeId = (index: number) =>
+    createTestEmployeeId({
+      email: `employee-${index + 1}@example.test`,
+      firstName: "Employee",
+      lastName: String(index + 1).padStart(5, "0"),
+    });
   const unitId = (index: number) => uuid("4001", index + 1);
   state.organization.employees = Array.from({ length: 20_000 }, (_, index) => ({
     avatarBase64Url: null,
@@ -1921,11 +1916,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     updatedAt: timestamp,
     username: `employee-${index + 1}`,
   }));
-  const mainView = state.organization.views.find((view) => view.kind === "main");
-  if (!mainView) throw new Error("Synthetic state is missing Main.");
-  mainView.document.employeeOverrides = [];
-  mainView.document.employees = [];
-  mainView.document.units = Array.from({ length: 4_000 }, (_, index) => {
+  state.organization.structure.units = Array.from({ length: 4_000 }, (_, index) => {
     const firstEmployeeIndex = index * 5;
     const employeeIds = Array.from({ length: 5 }, (_, offset) =>
       employeeId(firstEmployeeIndex + offset),
@@ -1949,12 +1940,11 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
       y: Math.floor(index / 50) * 240,
     };
   });
-  state.organization.views = [mainView];
   state.ui.activeTab = "orgEditor";
-  state.ui.activeViewId = mainView.id;
   state.ui.expandedUnitIds = [];
   state.ui.selectedUnitId = null;
-  state.ui.views = [{ selectedItems: [], viewId: mainView.id, viewport: { scale: 1, x: 0, y: 0 } }];
+  state.ui.editor.selectedItems = [];
+  state.ui.editor.viewport = { scale: 1, x: 0, y: 0 };
   const dialog = await openImportDialog(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
@@ -2026,14 +2016,17 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
   const template = state.organization.employees[0];
   if (!template) throw new Error("Synthetic Employee template is unavailable.");
   for (let index = 1; index <= 12; index += 1) {
+    const email = `sample-${index}@example.test`;
+    const firstName = `Sample${String(index).padStart(2, "0")}`;
+    const lastName = "Employee";
     state.organization.employees.push({
       ...template,
       avatarBase64Url: null,
       birthday: null,
-      email: `sample-${index}@example.test`,
-      firstName: `Sample${String(index).padStart(2, "0")}`,
-      id: `50000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-      lastName: "Employee",
+      email,
+      firstName,
+      id: createTestEmployeeId({ email, firstName, lastName }),
+      lastName,
       profileUrl: null,
       tags: [],
       username: `sample-${index}`,

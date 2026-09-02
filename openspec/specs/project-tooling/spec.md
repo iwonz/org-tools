@@ -90,12 +90,14 @@ tracked database artifacts, local paths, organization data, obsolete project rou
 - **THEN** validation fails before publication
 
 ### Requirement: Documentation and automation are publication-ready
-The repository SHALL include an English README with exactly ten deterministic featured screenshot
-previews, a comprehensive grouped screenshot catalog, contributor and security guidance, license,
-tests, specifications, detailed documentation, CI, and generated PNGs. The reviewed Russian catalog
-SHALL be the only source file containing Cyrillic product copy. The public state contract SHALL be
-unversioned, current-only, complete, and validated without discriminators, partial scopes, generic
-mapping, legacy migration, project metadata, or compatibility readers.
+The repository SHALL document the current-only SHA-256 Employee identity, State/Employees transfer,
+one current Editor structure, local runtimes, privacy, and scale behavior. It SHALL include an
+English README with exactly ten deterministic featured screenshot previews, a comprehensive grouped
+screenshot catalog, contributor and security guidance, license, tests, specifications, detailed
+documentation, CI, and generated PNGs. The reviewed Russian catalog SHALL be the only source file
+containing Cyrillic product copy. The public state contract SHALL be unversioned, current-only,
+complete, and validated without discriminators, partial scopes, legacy migration, project metadata,
+or compatibility readers. Employee mapping is supported only by the explicit Employee transfer mode.
 
 #### Scenario: README visual showcase
 - **WHEN** a visitor opens README
@@ -114,9 +116,13 @@ mapping, legacy migration, project metadata, or compatibility readers.
   screenshots, OpenSpec, and public-safety checks pass against isolated synthetic state
 
 #### Scenario: Current-schema policy
-- **WHEN** the public state interface changes
-- **THEN** obsolete types, readers, migrations, fixtures, docs, and tests are removed in the same
-  change rather than retained
+- **WHEN** the state and Employee transfer contracts change
+- **THEN** old View shapes, UUID Employee readers, direct Export, state-only Import, fixtures, docs,
+  and tests are removed together
+
+#### Scenario: Large transfer validation
+- **WHEN** performance coverage maps and reviews 20,000 Employees
+- **THEN** it verifies linear derivation, sparse overrides, virtualized rows, and one atomic Apply
 
 #### Scenario: Screenshot generation
 - **WHEN** screenshot generation runs against both production runtimes
@@ -226,12 +232,21 @@ runners without deprecation annotations.
 The repository SHALL document the current browser-memory and loopback SQLite runtimes, state
 transfer, privacy, performance, usage, and screenshot workflows without obsolete integration
 guidance. The deterministic gallery SHALL contain exactly 38 PNGs covering the existing product
-scenarios. The README SHALL retain exactly ten featured Import, Export, theme, language, Teams,
-Employees, Editor, Analytics, Calendar, and Download frames.
+scenarios, replacing obsolete custom View frames with current State/Employees Import and Export,
+mapping, Team options, and duplicate policy workflows. The README SHALL retain exactly ten featured
+Import, Export, theme, language, Teams, Employees, Editor, Analytics, Calendar, and Download frames.
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
 - **THEN** it deterministically replaces exactly 38 declared PNGs covering only current product workflows
+
+#### Scenario: Transfer gallery
+- **WHEN** screenshot generation completes
+- **THEN** featured Import and Export show their mode selectors and supporting frames explain Employee mapping and duplicate resolution
+
+#### Scenario: Editor gallery
+- **WHEN** Editor frames are generated
+- **THEN** none contains a View selector or View management action
 
 #### Scenario: Featured README
 - **WHEN** a visitor opens README

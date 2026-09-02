@@ -123,31 +123,7 @@ async function probeBrowser(origin) {
   if (!currentResponse.ok || !validateStateDocument(currentDocument)) {
     throw new Error("Could not read the development diagnostic state.");
   }
-  const mainView = fixture.organization.views.find((view) => view.kind === "main");
-  const mainViewUi = fixture.ui.views.find((view) => view.viewId === mainView?.id);
-  if (!mainView || !mainViewUi) throw new Error("The development fixture has no Main View.");
-  const customViewId = "88888888-8888-4888-8888-888888888888";
-  fixture.organization.views.push({
-    createdAt: mainView.createdAt,
-    document: {
-      employeeOverrides: [],
-      employees: [],
-      layoutMode: mainView.document.layoutMode,
-      units: [],
-    },
-    id: customViewId,
-    kind: "custom",
-    name: "Console audit",
-    updatedAt: mainView.updatedAt,
-  });
   fixture.ui.activeTab = "orgEditor";
-  fixture.ui.activeViewId = customViewId;
-  fixture.ui.download.sourceViewId = customViewId;
-  fixture.ui.views.push({
-    selectedItems: [],
-    viewId: customViewId,
-    viewport: { ...mainViewUi.viewport },
-  });
   const seedResponse = await fetch(`${origin}/api/state`, {
     body: JSON.stringify({
       scope: "all",
@@ -169,7 +145,7 @@ async function probeBrowser(origin) {
     const page = await context.newPage();
     const diagnostics = createBrowserDiagnostics({
       runtime: "development",
-      scenario: "inactive View data download",
+      scenario: "current structure and data download",
     });
     diagnostics.attach(page);
     const externalRequests = [];
@@ -199,8 +175,6 @@ async function probeBrowser(origin) {
       state: "visible",
       timeout: startupTimeoutMs,
     });
-    await page.getByRole("combobox", { name: "Active View" }).click();
-    await page.getByRole("option", { name: "Units", exact: true }).click();
     await page.getByRole("tab", { name: "Download", exact: true }).click();
     await page.getByRole("tabpanel", { name: "Download", exact: true }).waitFor({
       state: "visible",

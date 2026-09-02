@@ -13,7 +13,6 @@ describe("state transfer", () => {
       fileName: "state.json",
       state,
       unitCount: 0,
-      viewCount: 1,
     });
   });
 

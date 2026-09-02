@@ -3,7 +3,6 @@
 import type {
   EditableEmployeeFields,
   Employee,
-  OrgEditorEmployee,
   OrgEditorUnit,
   OrgEditorUnitId,
   UiOrgStructure,
@@ -79,7 +78,7 @@ type GlobalEmployeeDialogProps = CommonProps & {
 };
 
 type EditorEmployeeDialogProps = CommonProps & {
-  employee?: Employee | OrgEditorEmployee | null;
+  employee?: Employee | null;
   initialUnitIds?: OrgEditorUnitId[];
   mode: "editor";
   onSave: (fields: EditableEmployeeFields, assignments: EditorEmployeeAssignment[]) => void;
@@ -91,9 +90,7 @@ const EMPTY_EDITOR_UNITS: OrgEditorUnit[] = [];
 const EMPTY_EDITOR_UNIT_IDS: OrgEditorUnitId[] = [];
 type AssignableUnitId = UnitId | OrgEditorUnitId;
 
-const getInitialFields = (
-  employee: Employee | OrgEditorEmployee | null | undefined,
-): EditableEmployeeFields => ({
+const getInitialFields = (employee: Employee | null | undefined): EditableEmployeeFields => ({
   birthday: employee?.birthday ?? null,
   avatarBase64Url: employee?.avatarBase64Url ?? null,
   email: employee?.email ?? null,

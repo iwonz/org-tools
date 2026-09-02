@@ -46,11 +46,10 @@ control.
   assignments with compound filters. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header.
-- **Editor** manages the protected built-in Units View and independent custom Views on an adaptive
-  snapped grid, including search, history, layout, bulk commands, templates, and PNG output. The
-  View chooser is a standard styled Select. Every custom View, including an empty one, can be
-  renamed or deleted after confirmation; deletion returns to Units and never changes canonical
-  organization data. Closing Search clears its query. Unit cards keep the same opaque background
+- **Editor** manages the current Unit structure on an adaptive snapped grid, including search,
+  history, layout, bulk commands, templates, and PNG output. There is no alternate View or structure
+  selector: Units and Editor always operate on the same organization. Closing Search clears its
+  query. Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights, and
   hierarchy connections while retaining configurable output styling. Every tag is written in full;
@@ -66,14 +65,21 @@ control.
 
 ## Import and Export
 
-**Import** opens a JSON chooser and then a compact confirmation with filename, size, Employee count,
-Unit count, and View count. The file must be at most 25 MiB and match the exact current state shape.
-**Replace state** applies the validated candidate atomically. Invalid JSON, old shapes, partial data,
-and arbitrary JSON leave current data unchanged and can be replaced from the same dialog.
+**Import** opens a modal with **All state** and **Employees**. All state accepts the exact current
+state shape up to 25 MiB and replaces it atomically after confirmation. Employees accepts a JSON
+array, maps flat or nested properties, requires first name, last name, and email, and can import
+nested Team assignments. Existing deterministic identities can be updated, skipped, or limited to
+Teams in bulk with per-Employee overrides. Invalid input never changes current data.
 
-**Export state** validates the current live state and immediately downloads
-`org-tools-state.json`. It has no format dialog or success notification. Data Download artifacts are
-reporting outputs and cannot be imported as application state.
+**Export** opens the same two choices. All state downloads `org-tools-state.json`. Employees
+downloads `org-tools-employees.json` as a flat Employee array with nested Team assignments. Both
+include current unsaved-in-flight memory after validation. Data Download artifacts remain separate
+reporting outputs and cannot be imported as application state or Employee transfer.
+
+Employee IDs are deterministic 64-character SHA-256 values derived from normalized first name, last
+name, and email. Unicode NFKC normalization, trimmed and collapsed whitespace, lowercase, U+001F
+separators, UTF-8, and the complete digest make create, edit, Import, and Export use exactly the same
+identity rule. Editing identity fields updates all references atomically; a duplicate is rejected.
 
 ## Failure recovery
 

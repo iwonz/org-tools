@@ -28,7 +28,7 @@ describe("singleton state repository", () => {
     const repository = new StateRepository(databasePath);
     const initial = repository.read();
     expect(initial.revision).toBe(1);
-    expect(initial.state.organization.views).toHaveLength(1);
+    expect(initial.state.organization.structure.units).toHaveLength(0);
     expect(
       repository
         .unsafeStatementForTests(

@@ -41,18 +41,17 @@ export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): 
   if (!response.ok()) throw new Error(JSON.stringify(await response.json()));
   const document = (await response.json()) as { revision: number; state: OrgToolsState };
   const state = document.state;
-  const main = state.organization.views.find((view) => view.kind === "main");
-  if (!main) throw new Error("Main View is unavailable.");
-  main.document.employeeOverrides = [];
-  main.document.employees = [];
-  main.document.units = [];
+  state.organization.structure.units = [];
   state.organization.employees = [];
-  state.organization.views = [main];
   state.ui.activeTab = "orgEditor";
-  state.ui.activeViewId = main.id;
   state.ui.analytics = { filters: emptyEmployeeFilters(), query: "" };
   state.ui.calendar = { cloudExpanded: false, monthIndex: 6, year: 2026 };
-  state.ui.editor = { searchOpen: false, searchQuery: "" };
+  state.ui.editor = {
+    searchOpen: false,
+    searchQuery: "",
+    selectedItems: [],
+    viewport: { scale: 1, x: 0, y: 0 },
+  };
   state.ui.employees = { filters: emptyEmployeeFilters(), query: "" };
   state.ui.expandedUnitIds = [];
   state.ui.locale = locale;
@@ -70,9 +69,7 @@ export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): 
   state.ui.download.selectedFilters = emptyEmployeeFilters();
   state.ui.download.selectedQuery = "";
   state.ui.download.selections = [];
-  state.ui.download.sourceViewId = main.id;
   state.ui.download.unitQuery = "";
-  state.ui.views = [{ selectedItems: [], viewId: main.id, viewport: { scale: 1, x: 0, y: 0 } }];
   const write = await page.request.put("/api/state", {
     data: { scope: "all", state },
     headers: { Origin: origin },
@@ -129,12 +126,13 @@ export async function replaceWithSyntheticState(page: Page): Promise<void> {
 }
 
 export async function openImportDialog(page: Page, file: ImportFilePayload | string) {
-  const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Import", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Import", exact: true });
+  await expect(dialog).toBeVisible();
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await dialog.getByText("Choose file", { exact: true }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(file);
-  const dialog = page.getByRole("dialog", { name: "Import state" });
-  await expect(dialog).toBeVisible();
   return dialog;
 }
 

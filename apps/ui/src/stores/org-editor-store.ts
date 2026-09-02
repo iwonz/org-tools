@@ -1,13 +1,7 @@
 import type {
-  EditableEmployeeFields,
-  Employee,
   EmployeeId,
   EmployeeLiveFilterRule,
-  EmployeeTag,
   OrgEditorCanvasViewport,
-  OrgEditorEmployee,
-  OrgEditorEmployeeId,
-  OrgEditorEmployeeOverride,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
@@ -17,8 +11,6 @@ import type {
 } from "@org-tools/types";
 import { makeAutoObservable, observable } from "mobx";
 
-import { normalizeEditableEmployeeFields } from "@/lib/employee-data";
-import { normalizeEmployeeTags } from "@/lib/employee-tags";
 import {
   cloneEmployeeLiveFilterRule,
   validateEmployeeLiveFilterRule,
@@ -26,7 +18,6 @@ import {
 import { normalizeLivePositionOverrides } from "@/lib/live-unit-position";
 import {
   createDefaultOrgEditorState,
-  createOrgEditorEmployeeId,
   createOrgEditorSelectedItemKey,
   createOrgEditorUnitFromScratch,
   getOrgEditorUnitBounds,
@@ -48,8 +39,6 @@ type OrgEditorClipboard = {
 };
 
 export type OrgEditorHistorySnapshot = {
-  employeeOverrides: OrgEditorEmployeeOverride[];
-  employees: OrgEditorEmployee[];
   layoutMode: OrgEditorLayoutMode;
   units: OrgEditorUnit[];
 };
@@ -96,11 +85,6 @@ type OrgEditorExternalCommand = {
 };
 
 type OrgEditorCommand = OrgEditorExternalCommand | OrgEditorSnapshotCommand;
-
-export type OrgEditorEmployeeTagUpdate = {
-  employee: Employee;
-  tags: EmployeeTag[];
-};
 
 type OrgEditorUnitPosition = {
   unitId: OrgEditorUnitId;
@@ -177,21 +161,7 @@ const cloneViewport = (viewport: OrgEditorCanvasViewport): OrgEditorCanvasViewpo
   ...viewport,
 });
 
-const cloneEmployee = (employee: OrgEditorEmployee): OrgEditorEmployee => ({
-  ...employee,
-  tags: employee.tags.map((tag) => ({ ...tag })),
-});
-
-const cloneEmployeeOverride = (
-  employeeOverride: OrgEditorEmployeeOverride,
-): OrgEditorEmployeeOverride => ({
-  ...employeeOverride,
-  tags: employeeOverride.tags.map((tag) => ({ ...tag })),
-});
-
 const cloneHistorySnapshot = (snapshot: OrgEditorHistorySnapshot): OrgEditorHistorySnapshot => ({
-  employeeOverrides: snapshot.employeeOverrides.map(cloneEmployeeOverride),
-  employees: snapshot.employees.map(cloneEmployee),
   layoutMode: snapshot.layoutMode,
   units: snapshot.units.map(cloneUnit),
 });
@@ -200,12 +170,6 @@ const ensureStateHasCanvasShape = (state: OrgEditorState): OrgEditorState => {
   const fallbackState = createDefaultOrgEditorState();
 
   return {
-    employeeOverrides: Array.isArray(state.employeeOverrides)
-      ? state.employeeOverrides.map(cloneEmployeeOverride)
-      : fallbackState.employeeOverrides,
-    employees: Array.isArray(state.employees)
-      ? state.employees.map(cloneEmployee)
-      : fallbackState.employees,
     selectedItems: Array.isArray(state.selectedItems)
       ? state.selectedItems.map(cloneSelectedItem)
       : fallbackState.selectedItems,
@@ -410,14 +374,6 @@ const areEmployeeIdsEqual = (firstIds: EmployeeId[], secondIds: EmployeeId[]) =>
   return firstIds.every((employeeId, index) => employeeId === secondIds[index]);
 };
 
-const areEmployeeTagsEqual = (firstValues: EmployeeTag[], secondValues: EmployeeTag[]) => {
-  if (firstValues.length !== secondValues.length) return false;
-  return firstValues.every((value, index) => {
-    const other = secondValues[index];
-    return value.label === other?.label && value.date === other.date;
-  });
-};
-
 const areEmployeePositionsEqual = (
   firstPositions: OrgEditorEmployeePosition[],
   secondPositions: OrgEditorEmployeePosition[],
@@ -460,71 +416,14 @@ const areUnitsEqual = (firstUnits: OrgEditorUnit[], secondUnits: OrgEditorUnit[]
   });
 };
 
-const areEmployeesEqual = (
-  firstEmployees: OrgEditorEmployee[],
-  secondEmployees: OrgEditorEmployee[],
-) => {
-  if (firstEmployees.length !== secondEmployees.length) return false;
-
-  return firstEmployees.every((firstEmployee, index) => {
-    const secondEmployee = secondEmployees[index];
-
-    return (
-      secondEmployee !== undefined &&
-      firstEmployee.id === secondEmployee.id &&
-      firstEmployee.firstName === secondEmployee.firstName &&
-      firstEmployee.lastName === secondEmployee.lastName &&
-      firstEmployee.username === secondEmployee.username &&
-      firstEmployee.email === secondEmployee.email &&
-      firstEmployee.phone === secondEmployee.phone &&
-      firstEmployee.profileUrl === secondEmployee.profileUrl &&
-      firstEmployee.avatarBase64Url === secondEmployee.avatarBase64Url &&
-      firstEmployee.birthday === secondEmployee.birthday &&
-      areEmployeeTagsEqual(firstEmployee.tags, secondEmployee.tags) &&
-      firstEmployee.createdAt === secondEmployee.createdAt &&
-      firstEmployee.updatedAt === secondEmployee.updatedAt
-    );
-  });
-};
-
-const areEmployeeOverridesEqual = (
-  firstOverrides: OrgEditorEmployeeOverride[],
-  secondOverrides: OrgEditorEmployeeOverride[],
-) => {
-  if (firstOverrides.length !== secondOverrides.length) return false;
-
-  return firstOverrides.every((firstOverride, index) => {
-    const secondOverride = secondOverrides[index];
-
-    return (
-      secondOverride !== undefined &&
-      firstOverride.employeeId === secondOverride.employeeId &&
-      firstOverride.firstName === secondOverride.firstName &&
-      firstOverride.lastName === secondOverride.lastName &&
-      firstOverride.username === secondOverride.username &&
-      firstOverride.email === secondOverride.email &&
-      firstOverride.phone === secondOverride.phone &&
-      firstOverride.profileUrl === secondOverride.profileUrl &&
-      firstOverride.avatarBase64Url === secondOverride.avatarBase64Url &&
-      firstOverride.birthday === secondOverride.birthday &&
-      areEmployeeTagsEqual(firstOverride.tags, secondOverride.tags) &&
-      firstOverride.updatedAt === secondOverride.updatedAt
-    );
-  });
-};
-
 const areHistorySnapshotsEqual = (
   firstSnapshot: OrgEditorHistorySnapshot,
   secondSnapshot: OrgEditorHistorySnapshot,
 ) =>
   firstSnapshot.layoutMode === secondSnapshot.layoutMode &&
-  areEmployeeOverridesEqual(firstSnapshot.employeeOverrides, secondSnapshot.employeeOverrides) &&
-  areEmployeesEqual(firstSnapshot.employees, secondSnapshot.employees) &&
   areUnitsEqual(firstSnapshot.units, secondSnapshot.units);
 
 export class OrgEditorStore {
-  employeeOverrides: OrgEditorEmployeeOverride[] = [];
-  employees: OrgEditorEmployee[] = [];
   units: OrgEditorUnit[] = [];
   selectedItems: OrgEditorSelectedItem[] = [];
   viewport: OrgEditorCanvasViewport = createDefaultOrgEditorState().viewport;
@@ -545,8 +444,6 @@ export class OrgEditorStore {
         clipboard: observable.ref,
         commandDepth: false,
         onDocumentChange: false,
-        employeeOverrides: observable.shallow,
-        employees: observable.shallow,
         redoStack: observable.shallow,
         resolvedLiveEmployeeIdsByUnitId: observable.shallow,
         selectedItems: observable.shallow,
@@ -621,8 +518,6 @@ export class OrgEditorStore {
 
   createState(): OrgEditorState {
     return {
-      employeeOverrides: this.employeeOverrides.map(cloneEmployeeOverride),
-      employees: this.employees.map(cloneEmployee),
       selectedItems: this.selectedItems.map(cloneSelectedItem),
       units: this.units.map(cloneUnit),
       viewport: cloneViewport(this.viewport),
@@ -633,8 +528,6 @@ export class OrgEditorStore {
   loadState(state: OrgEditorState): void {
     const nextState = ensureStateHasCanvasShape(state);
 
-    this.employeeOverrides = nextState.employeeOverrides;
-    this.employees = nextState.employees;
     this.units = nextState.units;
     this.viewport = nextState.viewport;
     this.layoutMode = nextState.layoutMode;
@@ -651,8 +544,6 @@ export class OrgEditorStore {
 
   createCommandSnapshot(): OrgEditorHistorySnapshot {
     return {
-      employeeOverrides: this.employeeOverrides.map(cloneEmployeeOverride),
-      employees: this.employees.map(cloneEmployee),
       layoutMode: this.layoutMode,
       units: this.units.map(cloneUnit),
     };
@@ -746,8 +637,6 @@ export class OrgEditorStore {
   }
 
   private applyHistorySnapshot(snapshot: OrgEditorHistorySnapshot): void {
-    this.employeeOverrides = snapshot.employeeOverrides.map(cloneEmployeeOverride);
-    this.employees = snapshot.employees.map(cloneEmployee);
     this.units = snapshot.units.map(cloneUnit);
     this.layoutMode = snapshot.layoutMode;
     this.selectedItems = filterSelectedItemsForUnits(this.selectedItems, this.units);
@@ -1221,179 +1110,9 @@ export class OrgEditorStore {
     });
   }
 
-  createEmployee(
-    fields: EditableEmployeeFields,
-    assignments: OrgEditorEmployeeAssignment[],
-  ): OrgEditorEmployeeId {
-    return this.runCommand("Create Employee", () => {
-      const now = new Date().toISOString();
-      const employee: OrgEditorEmployee = {
-        ...normalizeEditableEmployeeFields(fields),
-        createdAt: now,
-        id: createOrgEditorEmployeeId(),
-        updatedAt: now,
-      };
-
-      this.employees = [...this.employees, employee];
-      this.applyEmployeeAssignments(employee.id, assignments);
-
-      return employee.id;
-    });
-  }
-
-  updateEmployee(
-    employeeId: OrgEditorEmployeeId,
-    fields: EditableEmployeeFields,
-    assignments: OrgEditorEmployeeAssignment[],
-  ): void {
-    this.runCommand("Update Employee", () => {
-      const now = new Date().toISOString();
-      const normalizedFields = normalizeEditableEmployeeFields(fields);
-
-      this.employees = this.employees.map((employee) =>
-        employee.id === employeeId
-          ? {
-              ...employee,
-              ...normalizedFields,
-              tags: normalizedFields.tags.map((tag) => ({ ...tag })),
-              updatedAt: now,
-            }
-          : employee,
-      );
-      this.applyEmployeeAssignments(employeeId, assignments);
-    });
-  }
-
-  updateSourceEmployee(
-    employeeId: EmployeeId,
-    fields: EditableEmployeeFields,
-    assignments: OrgEditorEmployeeAssignment[],
-  ): void {
-    this.runCommand("Update Employee", () => {
-      const normalizedFields = normalizeEditableEmployeeFields(fields);
-      const employeeOverride: OrgEditorEmployeeOverride = {
-        ...normalizedFields,
-        employeeId,
-        tags: normalizedFields.tags.map((tag) => ({ ...tag })),
-        updatedAt: new Date().toISOString(),
-      };
-
-      this.employeeOverrides = [
-        ...this.employeeOverrides.filter(
-          (currentOverride) => currentOverride.employeeId !== employeeId,
-        ),
-        employeeOverride,
-      ];
-      this.applyEmployeeAssignments(employeeId, assignments);
-    });
-  }
-
-  updateEmployeeTags(updates: readonly OrgEditorEmployeeTagUpdate[]): void {
-    this.runCommand("Update Employee tags", () => {
-      const updateByEmployeeId = new Map<EmployeeId, OrgEditorEmployeeTagUpdate>();
-
-      for (const update of updates) {
-        updateByEmployeeId.set(update.employee.id, {
-          employee: update.employee,
-          tags: normalizeEmployeeTags(update.tags),
-        });
-      }
-      if (updateByEmployeeId.size === 0) return;
-
-      const now = new Date().toISOString();
-      const localEmployeeIdSet = new Set<EmployeeId>(this.employees.map((employee) => employee.id));
-      let changed = false;
-
-      this.employees = this.employees.map((employee) => {
-        const update = updateByEmployeeId.get(employee.id);
-        if (!update || areEmployeeTagsEqual(employee.tags, update.tags)) return employee;
-
-        changed = true;
-        return {
-          ...employee,
-          tags: update.tags.map((tag) => ({ ...tag })),
-          updatedAt: now,
-        };
-      });
-
-      const employeeOverrideById = new Map(
-        this.employeeOverrides.map((employeeOverride) => [
-          employeeOverride.employeeId,
-          employeeOverride,
-        ]),
-      );
-
-      for (const [employeeId, update] of updateByEmployeeId) {
-        if (localEmployeeIdSet.has(employeeId)) continue;
-
-        const employeeOverride = employeeOverrideById.get(employeeId);
-        if (
-          employeeOverride
-            ? areEmployeeTagsEqual(employeeOverride.tags, update.tags)
-            : areEmployeeTagsEqual(update.employee.tags, update.tags)
-        ) {
-          continue;
-        }
-
-        changed = true;
-        employeeOverrideById.set(employeeId, {
-          avatarBase64Url: employeeOverride?.avatarBase64Url ?? update.employee.avatarBase64Url,
-          birthday: employeeOverride?.birthday ?? update.employee.birthday,
-          email: employeeOverride?.email ?? update.employee.email,
-          employeeId,
-          firstName: employeeOverride?.firstName ?? update.employee.firstName ?? "",
-          gender: employeeOverride?.gender ?? update.employee.gender,
-          lastName: employeeOverride?.lastName ?? update.employee.lastName ?? "",
-          phone: employeeOverride?.phone ?? update.employee.phone,
-          profileUrl: employeeOverride?.profileUrl ?? update.employee.profileUrl,
-          tags: update.tags.map((tag) => ({ ...tag })),
-          updatedAt: now,
-          username: employeeOverride?.username ?? update.employee.username,
-        });
-      }
-
-      if (changed) this.employeeOverrides = [...employeeOverrideById.values()];
-    });
-  }
-
   setEmployeeAssignments(employeeId: EmployeeId, assignments: OrgEditorEmployeeAssignment[]): void {
     this.runCommand("Update Employee assignments", () => {
       this.applyEmployeeAssignments(employeeId, assignments);
-    });
-  }
-
-  deleteEmployee(employeeId: OrgEditorEmployeeId): void {
-    this.runCommand("Delete Employee", () => {
-      if (!this.employees.some((employee) => employee.id === employeeId)) return;
-
-      const affectedUnitIds: OrgEditorUnitId[] = [];
-      this.employees = this.employees.filter((employee) => employee.id !== employeeId);
-      this.units = this.units.map((unit) => {
-        if (
-          !unit.employeeIds.includes(employeeId) &&
-          unit.bossEmployeeId !== employeeId &&
-          !unit.employeePositions.some((position) => position.employeeId === employeeId)
-        ) {
-          return unit;
-        }
-
-        affectedUnitIds.push(unit.id);
-        return {
-          ...unit,
-          bossEmployeeId: unit.bossEmployeeId === employeeId ? null : unit.bossEmployeeId,
-          employeeIds: unit.employeeIds.filter(
-            (currentEmployeeId) => currentEmployeeId !== employeeId,
-          ),
-          employeePositions: unit.employeePositions.filter(
-            (employeePosition) => employeePosition.employeeId !== employeeId,
-          ),
-          updatedAt: new Date().toISOString(),
-        };
-      });
-      this.selectedItems = this.selectedItems.filter(
-        (item) => item.type !== "employee" || item.employeeId !== employeeId,
-      );
-      this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, affectedUnitIds));
     });
   }
 
@@ -1427,6 +1146,48 @@ export class OrgEditorStore {
       );
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, affectedUnitIds));
     });
+  }
+
+  rekeyEmployeeReferences(
+    previousEmployeeId: EmployeeId,
+    nextEmployeeId: EmployeeId,
+    notify = true,
+  ): void {
+    if (previousEmployeeId === nextEmployeeId) return;
+    const replace = (employeeId: EmployeeId) =>
+      employeeId === previousEmployeeId ? nextEmployeeId : employeeId;
+    this.units = this.units.map((unit) => ({
+      ...unit,
+      bossEmployeeId:
+        unit.bossEmployeeId === previousEmployeeId ? nextEmployeeId : unit.bossEmployeeId,
+      employeeIds: unit.employeeIds.map(replace),
+      employeePositions: unit.employeePositions.map((position) => ({
+        ...position,
+        employeeId: replace(position.employeeId),
+      })),
+    }));
+    this.selectedItems = this.selectedItems.map((item) =>
+      item.type === "employee" && item.employeeId === previousEmployeeId
+        ? { ...item, employeeId: nextEmployeeId }
+        : item,
+    );
+    if (this.clipboard) {
+      this.clipboard = {
+        ...this.clipboard,
+        employeeIds: this.clipboard.employeeIds.map(replace),
+        units: this.clipboard.units.map((unit) => ({
+          ...unit,
+          bossEmployeeId:
+            unit.bossEmployeeId === previousEmployeeId ? nextEmployeeId : unit.bossEmployeeId,
+          employeeIds: unit.employeeIds.map(replace),
+          employeePositions: unit.employeePositions.map((position) => ({
+            ...position,
+            employeeId: replace(position.employeeId),
+          })),
+        })),
+      };
+    }
+    if (notify) this.onDocumentChange?.();
   }
 
   private applyEmployeeAssignments(

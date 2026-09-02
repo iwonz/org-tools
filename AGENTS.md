@@ -19,6 +19,10 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
   session storage, local storage, or service workers. Theme and locale are the only allowed browser
   metadata.
 - Employee avatars are bounded embedded PNG, JPEG, or WebP data URLs. Never fetch remote avatars.
+- Employee IDs are the full SHA-256 of the normalized first-name, last-name, and email tuple. Keep
+  this identity rule identical across create, edit, validation, Import, Export, fixtures, and tests.
+- The organization has one current Unit structure. Do not reintroduce alternate Views, View-local
+  Employees, or selectors for structural documents.
 - Profile and email navigation must require an explicit user action and use referrer protections.
 - Source comments, fixtures, tests, specifications, and documentation are English. Cyrillic product
   copy is allowed only in `apps/ui/messages/ru.json`; all other public engineering text remains

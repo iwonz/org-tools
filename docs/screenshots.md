@@ -10,7 +10,7 @@ The local server suite resets the singleton SQLite state before each workflow. T
 
 [![State import confirmation](screenshots/demo-import.png)](screenshots/demo-import.png)
 
-Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current state.
+Review the selected filename, size, Employee, and Unit counts before atomically replacing the current state.
 
 Capabilities: Strict state validation, Summary counts, Atomic replacement.
 
@@ -24,13 +24,13 @@ Capabilities: Strict rejection, No mutation, Choose another file.
 
 ## Export
 
-### Direct state Export
+### State and Employee Export
 
-[![Direct state Export](screenshots/demo-export.png)](screenshots/demo-export.png)
+[![State and Employee Export](screenshots/demo-export.png)](screenshots/demo-export.png)
 
-Download the complete current state in one click, including current in-memory changes.
+Choose complete state or a flat Employee array with nested Team assignments for a local JSON download.
 
-Capabilities: One-click JSON, Complete state, Includes current changes.
+Capabilities: Complete state, Employee array, Nested Team assignments.
 
 ## Theme
 
@@ -154,6 +154,26 @@ WebP is preferred and the browser's PNG encoder is the compatibility fallback.
 
 Capabilities: Local file, Clipboard image, Crop and zoom, WebP with PNG fallback.
 
+## Employee transfer
+
+### Employee field mapping
+
+[![Employee field mapping](screenshots/feature-employee-import-mapping.png)](screenshots/feature-employee-import-mapping.png)
+
+Map arbitrary flat or nested JSON properties to current Employee fields and optional Team
+assignments while previewing the candidate.
+
+Capabilities: Field mapping, Nested paths, Team assignments, Import preview.
+
+### Employee duplicate resolution
+
+[![Employee duplicate resolution](screenshots/feature-employee-import-duplicates.png)](screenshots/feature-employee-import-duplicates.png)
+
+Resolve deterministic identity matches with one bulk policy and sparse per-Employee overrides before
+atomic import.
+
+Capabilities: Deterministic identity, Bulk policy, Per-Employee override, Atomic import.
+
 ## Editor
 
 ### Visual organization Editor
@@ -164,14 +184,6 @@ Arrange opaque Unit cards on the adaptive snap grid with frame-bounded gestures,
 
 Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse.
 
-### Custom View management
-
-[![Custom View management](screenshots/feature-editor-views.png)](screenshots/feature-editor-views.png)
-
-Switch Views and create an empty or Units-derived independent organization canvas.
-
-Capabilities: Built-in Units View, Custom Views, Copy from Units, Empty View.
-
 ### Editor search
 
 [![Editor search](screenshots/feature-editor-search.png)](screenshots/feature-editor-search.png)
@@ -179,15 +191,6 @@ Capabilities: Built-in Units View, Custom Views, Copy from Units, Empty View.
 Reveal the right-growing search field, locate Units and Employees without leaving the canvas, and clear the query when Search closes.
 
 Capabilities: Unit search, Employee search, Canvas navigation.
-
-### Custom View selection and actions
-
-[![Custom View selection and actions](screenshots/feature-editor-view-management.png)](screenshots/feature-editor-view-management.png)
-
-Switch between the built-in Units View and an empty independent custom View while retaining
-accessible rename and confirmed delete actions.
-
-Capabilities: View selection, Built-in Units View, Empty custom View, Rename, Confirmed Delete.
 
 ### Unit context commands
 
@@ -339,7 +342,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
 ## Review checklist
 
-- Confirm Import and direct state Export are clear and contain no project, file, Save, or autosave controls.
+- Confirm Import and Export expose only All state and Employees, with mapped Employee fields,
+  deterministic duplicate choices, and no project, file, Save, or autosave controls.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
@@ -353,8 +357,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   cards while retaining the conditional Past section.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
   both themes.
-- Confirm the Editor labels its canonical View with the localized Units term, never exposes Rename
-  or Delete for it, and keeps both actions available for an empty custom View.
+- Confirm the Editor operates directly on the one current Unit structure and exposes no View
+  selector, create, rename, or delete controls.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
   heights, and connection endpoints without card overlap, membership-type labels, or transient

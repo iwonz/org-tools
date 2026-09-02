@@ -55,7 +55,6 @@ const createEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   lastName: "Lovelace",
   phone: "+1 555-0101",
   profileUrl: "https://example.test/profiles/ada",
-  scope: "organization",
   tags: [
     { date: null, label: "Research" },
     { date: "2026-12-10", label: "Computing" },

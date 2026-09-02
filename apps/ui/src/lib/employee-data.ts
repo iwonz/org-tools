@@ -1,13 +1,7 @@
-import type {
-  EditableEmployeeFields,
-  Employee,
-  EmployeeGender,
-  EmployeeId,
-  OrgEditorEmployee,
-  OrgEditorEmployeeOverride,
-} from "@org-tools/types";
+import type { EditableEmployeeFields, EmployeeGender, EmployeeId } from "@org-tools/types";
 
 import { LocalizedError, uiMessage } from "@/i18n/messages";
+import { createEmployeeId } from "@/lib/employee-id";
 import { normalizeEmployeeTags } from "@/lib/employee-tags";
 
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -29,7 +23,9 @@ export const createUuid = (): string => {
   });
 };
 
-export const createOrganizationEmployeeId = (): EmployeeId => createUuid();
+export const createOrganizationEmployeeId = (
+  fields: Pick<EditableEmployeeFields, "email" | "firstName" | "lastName">,
+): EmployeeId => createEmployeeId(fields);
 
 export const EMPLOYEE_GENDERS = ["male", "female", "unspecified"] as const;
 
@@ -135,52 +131,4 @@ export const normalizeEditableEmployeeFields = (
     throw new LocalizedError(uiMessage("Employee must have a name, username, or email."));
   }
   return normalized;
-};
-
-export const createEmployeeFromOrgEditorEmployee = (employee: OrgEditorEmployee): Employee => ({
-  avatarBase64Url: employee.avatarBase64Url,
-  birthday: employee.birthday,
-  email: employee.email,
-  firstName: employee.firstName,
-  fullName:
-    `${employee.firstName} ${employee.lastName}`.trim() ||
-    employee.username ||
-    employee.email ||
-    "Employee",
-  gender: employee.gender,
-  id: employee.id,
-  lastName: employee.lastName,
-  phone: employee.phone,
-  profileUrl: employee.profileUrl,
-  scope: "view",
-  tags: employee.tags.map((tag) => ({ ...tag })),
-  unitIds: [],
-  unitPositions: [],
-  username: employee.username,
-});
-
-export const applyOrgEditorEmployeeOverride = (
-  employee: Employee,
-  employeeOverride: OrgEditorEmployeeOverride,
-): Employee => {
-  const fullName =
-    `${employeeOverride.firstName} ${employeeOverride.lastName}`.trim() ||
-    employeeOverride.username ||
-    employeeOverride.email ||
-    employee.fullName;
-
-  return {
-    ...employee,
-    avatarBase64Url: employeeOverride.avatarBase64Url,
-    birthday: employeeOverride.birthday,
-    email: employeeOverride.email,
-    firstName: employeeOverride.firstName,
-    fullName,
-    gender: employeeOverride.gender,
-    lastName: employeeOverride.lastName,
-    phone: employeeOverride.phone,
-    profileUrl: employeeOverride.profileUrl,
-    tags: employeeOverride.tags.map((tag) => ({ ...tag })),
-    username: employeeOverride.username,
-  };
 };

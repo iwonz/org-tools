@@ -15,8 +15,10 @@ SQLite stores one singleton state in the configured local file. The API rejects 
 cross-origin mutations, non-JSON mutations, malformed scopes, and invalid state. It does not enable
 CORS. A failed or corrupt database is reported by a stable code and is never replaced silently.
 
-Import reads one explicitly selected JSON file into a bounded transient candidate. Export and Data
-Download begin only after explicit user actions. Organization records are never copied to browser
+Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
+complete state or map an Employee array with optional nested Team assignments; the source, mapping,
+preview, and duplicate choices are discarded when the modal closes. Export selects complete state
+or Employees only after an explicit user action. Organization records are never copied to browser
 storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs; remote avatars are
 never fetched. Crop encoding prefers WebP and falls back only to the browser's local PNG canvas
 encoder; neither path uploads the source or result. Profile and email navigation require direct user

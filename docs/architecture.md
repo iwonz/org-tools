@@ -6,7 +6,7 @@ Org Tools has two deliveries over the same React, MobX, and strict `OrgToolsStat
   the same-origin singleton state API backed by SQLite.
 - `apps/pages` is a static Next.js export at `/org-tools`. It imports browser-safe UI only and keeps
   organization state in the memory of currently open tabs.
-- `packages/types` defines the state, Employee, Unit, View, editor, and output contracts.
+- `packages/types` defines the state, Employee, Unit, editor, and output contracts.
 - `packages/screenshots` contains production browser checks, the shared strict browser-diagnostic
   collector, and the deterministic gallery.
 
@@ -18,23 +18,32 @@ The public JSON value has exactly two top-level properties:
 type OrgToolsState = {
   organization: {
     employees: OrganizationEmployee[];
-    views: OrgToolsViewDocument[];
+    structure: {
+      layoutMode: OrgEditorLayoutMode;
+      units: OrgEditorUnit[];
+    };
   };
   ui: OrgToolsUiState;
 };
 ```
 
 There is no kind, content discriminator, version, compatibility alias, or partial transfer scope.
-View documents contain structural editor data. Viewport and selection live in the bounded `ui.views`
-projection so ordinary interface writes do not serialize the Employee catalog or Unit graph. The UI
-projection also contains locale, theme, sidebar mode, active section and View, filters, searches,
+The organization has one current Unit structure. Viewport and selection live in the bounded
+`ui.editor` projection so ordinary interface writes do not serialize the Employee catalog or Unit
+graph. The UI projection also contains locale, theme, sidebar mode, active section, filters, searches,
 calendar period, Analytics settings, and Data Download settings. Open surfaces, notifications, and
 unfinished forms are transient.
 
-Import parses one detached value, validates exact keys, identifiers, dates, URLs, embedded avatars,
-references, graph invariants, and UI references, then performs one atomic store replacement. Export
-validates and downloads the current live value as `org-tools-state.json`. Old JSON shapes and
-arbitrary JSON are rejected.
+State Import parses one detached value, validates exact keys, identifiers, dates, URLs, embedded
+avatars, references, graph invariants, and UI references, then performs one atomic replacement.
+Employee Import maps a flat or nested array, deterministically matches identity, and optionally
+upserts portable Team assignments. Export selects the complete state or a flat Employee array with
+nested Team assignments. Old state shapes are rejected.
+
+An Employee ID is the full SHA-256 of normalized first name, last name, and email separated by
+U+001F. Normalization uses Unicode NFKC, trimmed and collapsed whitespace, and locale-independent
+lowercase before UTF-8 hashing. Create, edit, and Employee Import use the same synchronous
+browser-safe implementation; identity edits re-key every structural and UI reference atomically.
 
 Avatar input is decoded from an explicit local PNG, JPEG, or WebP source. Canvas preparation and the
 512 by 512 crop request WebP first, accept a browser-selected PNG, and explicitly retry PNG when the
@@ -86,13 +95,14 @@ history, collaborative cursors, or remote synchronization.
 
 ## Store and UI boundaries
 
-- `OrgStore` owns the organization catalog, Views, derived structures, durable UI projection, and
+- `OrgStore` owns the organization catalog, current Unit structure, derived indexes, durable UI projection, and
   separate organization/UI change sequences.
-- `OrgViewsStore` owns structural View documents and editor stores.
+- `OrgEditorStore` owns the single structural document, history, selection, viewport, and commands.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
   and write observation; the SQLite transport is imported only by `apps/ui`.
-- Import owns one transient `File` and validated candidate. Export performs a direct download.
+- Import owns one transient `File`, mapping, and validated candidate. Export projects only the
+  selected mode after an explicit action.
 - Data Download remains a separate reporting pipeline for CSV, JSON, templates, and PNG.
 
 Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
@@ -102,7 +112,7 @@ Employee; an oversized label wraps in full inside one taller chip, and the resul
 drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
 Employee summary, and boss treatment while excluding Static/Live membership type, transient
 selection, hover, handles, and menus. Image titles, backgrounds, fonts, scope, radius, and Employee
-templates remain output-only settings and do not mutate the View document.
+templates remain output-only settings and do not mutate the current structure.
 
 Both runtimes expose the same Import, Export, language, and theme actions and retain identical
 compact/expanded sidebar geometry.
@@ -123,17 +133,15 @@ events group by Employee while preserving each label as an explicit tag-history 
 dated tag is stored by normalized key so edits and deletions re-derive current events instead of
 retaining a stale group snapshot.
 
-The Editor keeps pointer and wheel previews outside the MobX View document. One animation-frame
+The Editor keeps pointer and wheel previews outside the MobX structure document. One animation-frame
 scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce
 performs the single snapped command and persistence observation. A geometry-keyed spatial index
 limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
 document geometry changes.
 
-The Editor presents the canonical main-kind View with the same localized label as the Units
-destination. That View remains protected from rename and deletion. Management actions remain
-available for every custom View, including an empty canvas. Confirmed custom View deletion removes
-its document and derived selection/viewport UI, returns an active Editor to the canonical View, and
-falls a deleted Data Download source back to that canonical View before the next strict snapshot.
+The Editor always presents the current Unit structure. It has no View selector, View-local Employee
+copies, alternate structure documents, or View lifecycle. Data Download uses the same current
+structure directly.
 
 ## Builds and development
 

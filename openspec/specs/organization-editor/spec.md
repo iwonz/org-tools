@@ -1,22 +1,23 @@
 # organization-editor Specification
 
 ## Purpose
-Define the retained editor surfaces, View isolation, and birthday-driven product behavior.
+Define the current organization Editor, its retained interactions, and birthday-driven product behavior.
 ## Requirements
 ### Requirement: The generic editor retains six product surfaces
 The application SHALL provide localized Units, Employees, Editor, Analytics, Calendar, and Download
 surfaces in that visual and keyboard order, with Editor active for a blank workspace, no visible
 wordmark or brand icon, and consistent actionable top-level empty states. A populated Employees
 surface SHALL show the total catalog count below search and SHALL additionally show the visible match
-count only while search or filters are active. The populated Org Editor SHALL place View management,
-layout, hierarchy, and search controls in one compact top-left toolbar surface and viewport controls
-in one compact bottom-left toolbar surface. The Editor canvas SHALL retain a distinct neutral-gray
-background while the sidebar, context header, and ordinary workflows use the layered shell system.
-Selected Team nodes SHALL retain the same opaque background as their resting state and communicate
-selection only through the existing semantic boundary. The View selector SHALL use the shared styled
-Select surface and indicator. Arrange and hierarchy commands SHALL use normal text weight and place
-their thematic icon before the label. Closing Editor Search SHALL clear its query, and an empty query
-SHALL render no explanatory result surface.
+count only while search or filters are active. The populated Editor SHALL place layout, hierarchy,
+and search controls in one compact top-left toolbar surface and viewport controls in one compact
+bottom-left toolbar surface. It SHALL NOT show a View selector, View name, create, rename, or delete
+actions. Editor and Units SHALL always operate on the same current Unit structure. The Editor canvas
+SHALL retain a distinct neutral-gray background while the sidebar, context header, and ordinary
+workflows use the layered shell system. Selected Team nodes SHALL retain the same opaque background
+as their resting state and communicate selection only through the existing semantic boundary.
+Arrange and hierarchy commands SHALL use normal text weight and place their thematic icon before the
+label. Closing Editor Search SHALL clear its query, and an empty query SHALL render no explanatory
+result surface.
 
 #### Scenario: Product navigation order
 - **WHEN** the product shell renders in either locale
@@ -31,13 +32,8 @@ SHALL render no explanatory result surface.
 - **THEN** the surface omits its data chrome and offers one relevant action through the header or shared empty layout
 
 #### Scenario: Empty Org Editor
-- **WHEN** the active View contains no Units
-- **THEN** layout and zoom controls are absent, an add-to-canvas action is available, and View management remains only when multiple Views require it
-
-#### Scenario: Localized active View label
-- **WHEN** the Org Editor displays the built-in Main View in either supported locale
-- **THEN** the localized label remains fully visible on one line inside the shared styled View selector without overlapping adjacent controls
-- **AND** longer user-authored View names remain contained with a single-line ellipsis
+- **WHEN** the current structure contains no Units
+- **THEN** layout and zoom controls are absent and one add-to-canvas action is available without View management
 
 #### Scenario: Sidebar application shell
 - **WHEN** the product shell renders in light or dark theme
@@ -60,8 +56,8 @@ SHALL render no explanatory result surface.
 - **THEN** the count line keeps the localized total Employee count and adds the localized visible match count
 
 #### Scenario: Editor control surfaces
-- **WHEN** the active View contains Units
-- **THEN** View selection and actions, layout, arrange, hierarchy, and Search appear in one compact
+- **WHEN** current Units exist
+- **THEN** layout, arrange, hierarchy, and Search appear in one compact
   top-left surface with an adaptive tonal background, radius, and padding
 - **AND** zoom out, zoom in, scale reset, and primary-Team focus appear in one compact bottom-left surface with the same treatment
 - **AND** individual resting controls and both toolbar groups add no decorative border or shadow
@@ -84,6 +80,19 @@ SHALL render no explanatory result surface.
 - **WHEN** the Org Editor is visible in light or dark theme
 - **THEN** its canvas uses a neutral-gray canvas background distinct from the root application surface
 - **AND** Team nodes, selection, connectors, search, and viewport controls remain legible
+
+### Requirement: The Editor owns one current structure
+The Editor SHALL preserve Live Units, undo/redo, drag-and-drop, layout, adaptive grid, transient
+gesture previews, viewport, selection, search, templates, and PNG output for one current structure.
+Custom Views, local View Employees, overrides, View switching, and View management SHALL NOT exist.
+
+#### Scenario: Edit current structure
+- **WHEN** a Unit or global Employee assignment is edited in Editor
+- **THEN** Units, Analytics, Calendar, and Download observe the same current organization change
+
+#### Scenario: Durable Editor UI
+- **WHEN** selection or viewport changes
+- **THEN** the single `ui.editor` projection stores it without serializing organization data
 
 ### Requirement: Editor coordinates follow an adaptive snap grid
 The Org Editor SHALL use one 24-unit document-space base grid for visible grid lines and every
@@ -131,54 +140,13 @@ change rather than scanning every Unit on each interaction frame.
 - **AND** release performs one snapped overlap-resolved command and one organization write
 
 #### Scenario: Indexed large canvas
-- **WHEN** a View contains 4,000 Units and the viewport changes
+- **WHEN** the current structure contains 4,000 Units and the viewport changes
 - **THEN** visible Unit and connection candidates come from the intersecting spatial buckets without a full-collection scan per frame
-
-### Requirement: Main and custom Views remain independent
-The editor SHALL preserve the canonical Main View, custom Views, Live Units, undo/redo, drag-and-drop, layout, and viewport isolation.
-
-#### Scenario: Custom View edit
-- **WHEN** a global Employee or Unit is edited only in a custom View
-- **THEN** the Main View remains unchanged
-
-### Requirement: Canonical and custom Views have a safe management lifecycle
-The Editor SHALL present its canonical View with the same localized product term as the Units
-destination while retaining the internal main-kind contract. The canonical View MUST NOT expose
-Rename or Delete. Every active custom View SHALL expose Rename and Delete whether its canvas is
-populated or empty. Delete SHALL require explicit confirmation, remove only that custom View, select
-the canonical View when the deleted View was active, remove deleted per-View UI state, and replace a
-deleted Download source with the canonical View without changing canonical organization data.
-
-#### Scenario: Canonical View presentation and protection
-- **WHEN** the canonical View is active in either supported locale
-- **THEN** its selector label uses the localized Units destination term
-- **AND** Rename and Delete controls are absent
-
-#### Scenario: Empty custom View management
-- **WHEN** an empty custom View is active
-- **THEN** accessible Rename and Delete controls remain available in the View toolbar
-
-#### Scenario: Cancel custom View deletion
-- **WHEN** the user opens Delete for a custom View and cancels the confirmation
-- **THEN** the View, its document, active selection, durable UI, and Download source remain unchanged
-
-#### Scenario: Confirm custom View deletion
-- **WHEN** the user confirms deletion of an active custom View
-- **THEN** exactly that View and its per-View UI are removed and the canonical View becomes active
-- **AND** canonical Employees, Units, and other custom Views remain unchanged
-
-#### Scenario: Delete the active Download source
-- **WHEN** a custom View selected as the Download source is deleted
-- **THEN** the Download source becomes the canonical View and no strict state contains the deleted View ID
-
-#### Scenario: Attempt canonical View deletion
-- **WHEN** a deletion request targets the canonical View outside the toolbar
-- **THEN** the store rejects the mutation without changing organization or UI state
 
 ### Requirement: Calendar and analytics use normalized birthdays
 The application SHALL use nullable `MM-DD` birthdays for Calendar and birthday analytics, SHALL
 navigate a selected month and year across year boundaries, SHALL project February 29 birthdays to
-February 28 in non-leap years, SHALL include exact-date global Main Employee tag events, SHALL fit a
+February 28 in non-leap years, SHALL include exact-date Employee tag events, SHALL fit a
 31-day grid and bounded tag cloud without page scroll at the maintained 1280 by 720 desktop
 viewport, and SHALL render Analytics as six content-sized groups in one full-bleed workflow with
 compact gaps and one uniform soft tonal surface per group. Groups SHALL add no outer
@@ -226,14 +194,14 @@ actions while keeping every event label available for tag-history navigation.
 - **THEN** the Calendar opens that label's current, future, and conditional past event history
 
 ### Requirement: Calendar provides a bounded dated-tag cloud
-The Calendar SHALL show all dated tag labels from global Main Employees as localized chips with event counts in at most two rows, disclose overflow without expanding the page, and open a virtualized dialog for the selected label.
+The Calendar SHALL show all dated tag labels from current Employees as localized chips with event counts in at most two rows, disclose overflow without expanding the page, and open a virtualized dialog for the selected label.
 
 #### Scenario: Open a tag from the cloud
 - **WHEN** a user activates a dated-tag cloud chip
 - **THEN** current and future events appear in ascending date order and past events appear separately in descending date order with localized dates and Employees
 
 #### Scenario: Calendar empty state
-- **WHEN** no global Main Employee has either a birthday or a dated tag
+- **WHEN** no current Employee has either a birthday or a dated tag
 - **THEN** the shared Calendar empty state is shown instead of the cloud and grid
 
 ### Requirement: Calendar dated-tag counts use uniform separators
@@ -258,8 +226,8 @@ hidden tags, text overflow, or unused tag-row space.
 - **WHEN** Employee tags or the active locale changes the packed chip rows
 - **THEN** measurements are invalidated and every downstream canvas geometry consumer uses the updated offsets without overlap
 
-#### Scenario: Large View virtualization
-- **WHEN** a large View contains variable-height Employee rows
+#### Scenario: Large structure virtualization
+- **WHEN** a large current structure contains variable-height Employee rows
 - **THEN** only visible rows render while hit testing and connector anchors remain aligned with their Employees
 
 #### Scenario: Export Employee tags to PNG

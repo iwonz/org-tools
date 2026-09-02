@@ -5,14 +5,14 @@ Calendar, and local data downloads.
 
 [Open Org Tools on GitHub Pages](https://iwonz.github.io/org-tools/) — the complete browser-only
 application. Its organization state exists only in memory, can synchronize between currently open
-tabs, and enters or leaves through explicit Import and Export. It has no backend, accounts,
+tabs, and enters or leaves through explicit complete-state or Employee Import and Export. It has no backend, accounts,
 telemetry, remote logging, or background requests.
 
 ## Screenshots
 
 | Import | State Export |
 | :---: | :---: |
-| [![State import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct state export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
+| [![State import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![State and Employee export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
 | Theme | Language |
 | [![Dark theme menu](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) | [![Russian language menu](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) |
 | Teams | Employees |

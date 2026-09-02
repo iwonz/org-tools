@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,9 +11,20 @@ const timestamp = "2026-01-15T12:00:00.000Z";
 
 const uuid = (group, index) =>
   `00000000-0000-${group}-8000-${index.toString(16).padStart(12, "0")}`;
-const employeeId = (index) => uuid("4000", index + 1);
 const unitId = (index) => uuid("4001", index + 1);
-const mainViewId = "00000000-0000-4002-8000-000000000001";
+const normalizeIdentityPart = (value) =>
+  value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
+const employeeId = (index) => {
+  const serial = String(index + 1).padStart(5, "0");
+  return createHash("sha256")
+    .update(
+      ["Employee", serial, `employee${serial}@example.test`]
+        .map(normalizeIdentityPart)
+        .join("\u001f"),
+      "utf8",
+    )
+    .digest("hex");
+};
 
 const employees = Array.from({ length: employeeCount }, (_, index) => {
   const serial = String(index + 1).padStart(5, "0");
@@ -94,25 +106,10 @@ const employeeFields = [
 const state = {
   organization: {
     employees,
-    views: [
-      {
-        createdAt: timestamp,
-        document: {
-          employeeOverrides: [],
-          employees: [],
-          layoutMode: "topDown",
-          units,
-        },
-        id: mainViewId,
-        kind: "main",
-        name: "Main",
-        updatedAt: timestamp,
-      },
-    ],
+    structure: { layoutMode: "topDown", units },
   },
   ui: {
     activeTab: "orgEditor",
-    activeViewId: mainViewId,
     analytics: { filters: emptyFilters, query: "" },
     calendar: { cloudExpanded: false, monthIndex: 6, year: 2026 },
     download: {
@@ -132,13 +129,17 @@ const state = {
       selectedJsonUnitFieldKeys: unitFields,
       selectedQuery: "",
       selections: [],
-      sourceViewId: mainViewId,
       tabMode: "csv",
       templateFormat: "{email}, ",
       unitFullPathSeparator: " / ",
       unitQuery: "",
     },
-    editor: { searchOpen: false, searchQuery: "" },
+    editor: {
+      searchOpen: false,
+      searchQuery: "",
+      selectedItems: [],
+      viewport: { scale: 1, x: 0, y: 0 },
+    },
     employees: { filters: emptyFilters, query: "" },
     expandedUnitIds: [],
     locale: "en",
@@ -146,7 +147,6 @@ const state = {
     sidebarCollapsed: true,
     theme: "light",
     units: { employeeFilters: emptyFilters, employeeQuery: "", unitQuery: "" },
-    views: [{ selectedItems: [], viewId: mainViewId, viewport: { scale: 1, x: 0, y: 0 } }],
   },
 };
 

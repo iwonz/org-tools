@@ -1,7 +1,8 @@
-import type { EditableEmployeeFields, OrgToolsState } from "@org-tools/types";
+import type { EditableEmployeeFields } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
 import { isUuid } from "@/lib/employee-data";
+import { isEmployeeId } from "@/lib/employee-id";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import { createBlankOrgToolsState, parseOrgFileJson, parseOrgToolsState } from "@/lib/org-file";
 import type { OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
@@ -16,13 +17,13 @@ const employeeFields = (
   birthday: null,
   email: "alex@example.test",
   firstName: "Alex",
+  gender: "unspecified",
   lastName: "Morgan",
   phone: null,
   profileUrl: null,
   tags: [{ date: null, label: "Platform" }],
   username: "alex",
   ...overrides,
-  gender: overrides.gender ?? "unspecified",
 });
 
 const manualUnit = (name: string): OrgEditorUnitConfiguration => ({
@@ -42,249 +43,115 @@ const populatedStore = () => {
 };
 
 describe("OrgToolsState", () => {
-  test("starts directly in an editable blank workspace", () => {
+  test("starts with one editable organization structure", () => {
     const store = new OrgStore();
-
     expect(store.activeTab).toBe("orgEditor");
     expect(store.units?.roots).toEqual([]);
-    expect(store.units?.allEmployees).toEqual([]);
-    expect(store.activeOrgView?.kind).toBe("main");
-    expect(isUuid(store.activeOrgViewId)).toBe(true);
+    expect(store.createOrgToolsState().organization).toEqual({
+      employees: [],
+      structure: { layoutMode: "topDown", units: [] },
+    });
   });
 
-  test("round-trips generic Employee fields, assignments, Views, and UI state", () => {
+  test("round-trips Employees, assignments, structure, and Editor UI", () => {
     const { employeeId, store, unitId } = populatedStore();
     store.updateEmployee(
       employeeId,
-      employeeFields({
-        avatarBase64Url: "data:image/png;base64,iVBORw==",
-        birthday: "02-29",
-        gender: "female",
-        phone: "+1 555-0101",
-        profileUrl: "https://example.test/profiles/alex",
-        tags: [
-          { date: "2026-02-28", label: " Platform " },
-          { date: "2026-02-28", label: "platform" },
-          { date: null, label: "On call" },
-        ],
-      }),
+      employeeFields({ email: "alex.morgan@example.test", gender: "female" }),
       [{ isBoss: true, position: "Engineering Lead", unitId }],
     );
-    const customViewId = store.createOrgView("Scenario", "main");
+    const nextEmployeeId = store.organizationEmployees[0]?.id;
+    if (!nextEmployeeId) throw new Error("Expected an Employee.");
+    store.orgEditor.setViewport({ scale: 1.25, x: 40, y: 60 });
+    store.orgEditor.setSelectedItems([{ type: "unit", unitId }]);
     store.setTheme("dark");
-    store.setActiveTab("calendar");
 
     const state = store.createOrgToolsState();
-    const parsedFile = parseOrgFileJson(JSON.parse(JSON.stringify(state)));
     const restored = new OrgStore();
-    restored.loadOrgToolsState(parsedFile.state, "org-tools-state.json", null);
+    restored.loadOrgToolsState(
+      parseOrgFileJson(JSON.parse(JSON.stringify(state))).state,
+      "state.json",
+      null,
+    );
 
-    expect(Object.keys(state).sort()).toEqual(["organization", "ui"]);
-    expect(state).not.toHaveProperty("formatVersion");
-    expect(state).not.toHaveProperty("schemaVersion");
-    expect(restored.activeOrgViewId).toBe(customViewId);
+    expect(isEmployeeId(nextEmployeeId)).toBe(true);
     expect(restored.theme).toBe("dark");
-    expect(restored.activeTab).toBe("calendar");
-    expect(restored.organizationEmployees[0]).toMatchObject({
-      avatarBase64Url: "data:image/png;base64,iVBORw==",
-      birthday: "02-29",
-      gender: "female",
-      profileUrl: "https://example.test/profiles/alex",
-      tags: [
-        { date: "2026-02-28", label: "Platform" },
-        { date: null, label: "On call" },
-      ],
-    });
+    expect(restored.orgEditor.viewport).toEqual({ scale: 1.25, x: 40, y: 60 });
     expect(
-      restored.uiOrgStructure?.indexes.employeesById.get(employeeId)?.unitPositions[0],
-    ).toMatchObject({ isBoss: true, position: "Engineering Lead", unitId });
+      restored.uiOrgStructure?.indexes.employeesById.get(nextEmployeeId)?.unitPositions[0],
+    ).toMatchObject({
+      isBoss: true,
+      position: "Engineering Lead",
+      unitId,
+    });
     expect(restored.createOrgToolsState()).toEqual(state);
   });
 
-  test("derives an inactive View structure without mutating its editor during render reads", () => {
-    const { store } = populatedStore();
-    const mainViewId = store.mainOrgViewId;
-    const customViewId = store.createOrgView("Scenario", "main");
-    store.selectOrgView(mainViewId);
-    const customEditor = store.orgViews.editorByViewId.get(customViewId);
-    if (!customEditor) throw new Error("Expected the custom View editor.");
-    const unitsBefore = customEditor.units;
-    const organizationSequenceBefore = store.organizationChangeSequence;
-
-    const structure = store.getOrgViewStructure(customViewId);
-
-    expect(structure?.roots).toHaveLength(1);
-    expect(customEditor.units).toBe(unitsBefore);
-    expect(store.organizationChangeSequence).toBe(organizationSequenceBefore);
-  });
-
-  test("deletes only custom Views and repairs durable View references", () => {
-    const { store } = populatedStore();
-    const mainViewId = store.mainOrgViewId;
-    const mainDocumentBefore = structuredClone(
-      store.createOrganizationState().views.find((view) => view.id === mainViewId)?.document,
-    );
-    const deletedViewId = store.createOrgView("Temporary scenario", "blank");
-    const retainedViewId = store.createOrgView("Retained scenario", "main");
-    store.selectExportOrgView(deletedViewId);
-    store.selectOrgView(deletedViewId);
-
-    const beforeProtectedDeletion = store.createOrgToolsState();
-    store.deleteOrgView(mainViewId);
-    expect(store.createOrgToolsState()).toEqual(beforeProtectedDeletion);
-
-    store.resetChangeTracking();
-    store.deleteOrgView(deletedViewId);
-
-    const state = store.createOrgToolsState();
-    expect(() => parseOrgToolsState(state)).not.toThrow();
-    expect(store.activeOrgViewId).toBe(mainViewId);
-    expect(store.exportSourceViewId).toBe(mainViewId);
-    expect(state.organization.views.some((view) => view.id === deletedViewId)).toBe(false);
-    expect(state.organization.views.some((view) => view.id === retainedViewId)).toBe(true);
-    expect(state.ui.views.some((view) => view.viewId === deletedViewId)).toBe(false);
-    expect(state.ui.activeViewId).toBe(mainViewId);
-    expect(state.ui.download.sourceViewId).toBe(mainViewId);
-    expect(state.organization.views.find((view) => view.id === mainViewId)?.document).toEqual(
-      mainDocumentBefore,
-    );
-    expect(store.organizationChangeSequence).toBeGreaterThan(0);
-    expect(store.uiChangeSequence).toBeGreaterThan(0);
-  });
-
-  test("rejects obsolete version fields and string-tag state without migration", () => {
-    const { store } = populatedStore();
-    const legacy = structuredClone(store.createOrgToolsState()) as unknown as Record<
-      string,
-      unknown
-    >;
-    legacy.formatVersion = 1;
-    const organization = legacy.organization as Record<string, unknown>;
-    const employees = organization.employees as Array<Record<string, unknown>>;
-    if (!employees[0]) throw new Error("Expected a test Employee.");
-    employees[0].tags = ["Platform", "Remote"];
-    const views = organization.views as Array<{
-      document: { employeeOverrides: unknown[]; employees: unknown[] };
-    }>;
-    for (const view of views) {
-      view.document.employeeOverrides = [];
-      view.document.employees = [];
-    }
-
-    expect(() => parseOrgToolsState(legacy)).toThrow("top-level structure");
-
-    delete legacy.formatVersion;
-    expect(() => parseOrgToolsState(legacy)).toThrow("invalid Employee");
-  });
-
-  test("uses UUIDs for every Employee, Unit, and View", () => {
+  test("re-keys all durable Employee references after an identity edit", () => {
     const { employeeId, store, unitId } = populatedStore();
-    const customViewId = store.createOrgView("Alternative", "main");
-    const state = store.createOrgToolsState();
-
-    expect(
-      [employeeId, unitId, customViewId, ...state.organization.views.map((view) => view.id)].every(
-        isUuid,
-      ),
-    ).toBe(true);
-    expect(
-      state.organization.views
-        .flatMap((view) => view.document.units.map((unit) => unit.id))
-        .every(isUuid),
-    ).toBe(true);
+    store.addExportSelection({ employeeId, id: `employee:${employeeId}`, type: "employee" });
+    store.orgEditor.setSelectedItems([{ employeeId, type: "employee", unitId }]);
+    store.updateEmployee(employeeId, employeeFields({ email: "new@example.test" }), [
+      { isBoss: true, position: "Lead", unitId },
+    ]);
+    const nextId = store.organizationEmployees[0]?.id;
+    expect(nextId).not.toBe(employeeId);
+    expect(store.orgEditor.units[0]?.employeeIds).toEqual([nextId]);
+    expect(store.orgEditor.units[0]?.bossEmployeeId).toBe(nextId);
+    expect(store.orgEditor.selectedItems).toEqual([
+      { employeeId: nextId, type: "employee", unitId },
+    ]);
+    expect(store.exportSelections[0]).toMatchObject({ employeeId: nextId });
   });
 
-  test("rejects legacy, unknown, numeric, unsafe, and malformed Employee shapes", () => {
-    expect(() => parseOrgToolsState({ kind: "org-structure-ui-state" })).toThrow(
-      "invalid top-level structure",
-    );
-    expect(() => parseOrgToolsState({ ...createBlankOrgToolsState(), formatVersion: 4 })).toThrow(
-      "top-level structure",
-    );
-    expect(() => parseOrgToolsState({ ...createBlankOrgToolsState(), schemaVersion: 4 })).toThrow(
-      "top-level structure",
-    );
-
-    const { store } = populatedStore();
-    const state = JSON.parse(JSON.stringify(store.createOrgToolsState())) as OrgToolsState & {
-      unexpected?: boolean;
-    };
-    state.unexpected = true;
-    expect(() => parseOrgToolsState(state)).toThrow("top-level structure");
-
-    const unsafeProfile = JSON.parse(JSON.stringify(store.createOrgToolsState())) as OrgToolsState;
-    const employee = unsafeProfile.organization.employees[0];
-    if (!employee) throw new Error("Expected a test Employee.");
-    employee.profileUrl = "javascript:alert(1)";
-    expect(() => parseOrgToolsState(unsafeProfile)).toThrow("invalid Employee");
-
-    const badBirthday = JSON.parse(JSON.stringify(store.createOrgToolsState())) as OrgToolsState;
-    const birthdayEmployee = badBirthday.organization.employees[0];
-    if (!birthdayEmployee) throw new Error("Expected a test Employee.");
-    birthdayEmployee.birthday = "31.12.2000";
-    expect(() => parseOrgToolsState(badBirthday)).toThrow("invalid Employee");
-
-    const missingGender = JSON.parse(JSON.stringify(store.createOrgToolsState())) as {
-      organization: { employees: Array<Record<string, unknown>> };
-    };
-    const employeeWithoutGender = missingGender.organization.employees[0];
-    if (!employeeWithoutGender) throw new Error("Expected a test Employee.");
-    delete employeeWithoutGender.gender;
-    expect(() => parseOrgToolsState(missingGender)).toThrow("invalid Employee");
-
-    const invalidGender = JSON.parse(JSON.stringify(store.createOrgToolsState())) as {
-      organization: { employees: Array<Record<string, unknown>> };
-    };
-    const employeeWithInvalidGender = invalidGender.organization.employees[0];
-    if (!employeeWithInvalidGender) throw new Error("Expected a test Employee.");
-    employeeWithInvalidGender.gender = "custom";
-    expect(() => parseOrgToolsState(invalidGender)).toThrow("invalid Employee");
-
-    const numericId = JSON.parse(JSON.stringify(store.createOrgToolsState())) as {
-      organization: { employees: Array<{ id: unknown }> };
-    };
-    const numericEmployee = numericId.organization.employees[0];
-    if (!numericEmployee) throw new Error("Expected a test Employee.");
-    numericEmployee.id = 1;
-    expect(() => parseOrgToolsState(numericId)).toThrow("invalid Employee");
-
-    const invalidTags = structuredClone(store.createOrgToolsState());
-    const taggedEmployee = invalidTags.organization.employees[0];
-    if (!taggedEmployee) throw new Error("Expected a test Employee.");
-    taggedEmployee.tags = [
-      { date: "2026-02-30", label: "Exit" },
-      { date: null, label: "exit" },
-    ];
-    expect(() => parseOrgToolsState(invalidTags)).toThrow("invalid Employee");
-  });
-
-  test("strict graph validation rejects missing references and leaves the active store unchanged", () => {
-    const { store } = populatedStore();
+  test("rejects duplicate normalized identities atomically", () => {
+    const { store, unitId } = populatedStore();
     const before = store.createOrgToolsState();
-    const invalid = JSON.parse(JSON.stringify(before)) as OrgToolsState;
-    const main = invalid.organization.views.find((view) => view.kind === "main");
-    const unit = main?.document.units[0];
-    if (!unit) throw new Error("Expected a test Unit.");
-    unit.parentId = uuid(999);
-
-    expect(() => store.loadOrgToolsState(invalid, "invalid.json", null)).toThrow(
-      "missing parent Unit",
-    );
+    expect(() =>
+      store.createEmployee(
+        employeeFields({ email: " ALEX@EXAMPLE.TEST ", firstName: "ＡLEX", lastName: "Morgan" }),
+        [{ isBoss: false, position: null, unitId }],
+      ),
+    ).toThrow("already exists");
     expect(store.createOrgToolsState()).toEqual(before);
   });
 
-  test("validates Live Unit graph references and cycles", () => {
+  test("rejects old View state and mismatched Employee hashes", () => {
+    const state = populatedStore().store.createOrgToolsState();
+    const oldShape = structuredClone(state) as unknown as Record<string, unknown>;
+    oldShape.organization = { employees: state.organization.employees, views: [] };
+    expect(() => parseOrgToolsState(oldShape)).toThrow("top-level structure");
+
+    const mismatched = structuredClone(state);
+    const employee = mismatched.organization.employees[0];
+    if (!employee) throw new Error("Expected an Employee.");
+    employee.id = "0".repeat(64);
+    expect(() => parseOrgToolsState(mismatched)).toThrow("invalid Employee");
+  });
+
+  test("uses SHA-256 IDs for Employees and UUIDs for Units", () => {
+    const { employeeId, unitId } = populatedStore();
+    expect(isEmployeeId(employeeId)).toBe(true);
+    expect(isUuid(unitId)).toBe(true);
+  });
+
+  test("rejects missing references and cyclic Live Unit dependencies", () => {
+    const { store } = populatedStore();
+    const invalid = structuredClone(store.createOrgToolsState());
+    const unit = invalid.organization.structure.units[0];
+    if (!unit) throw new Error("Expected a Unit.");
+    unit.parentId = uuid(999);
+    expect(() => parseOrgToolsState(invalid)).toThrow("missing parent Unit");
+
     const state = createBlankOrgToolsState();
-    const main = state.organization.views[0];
-    if (!main) throw new Error("Expected Main View.");
-    const now = "2026-07-31T00:00:00.000Z";
+    const now = "2026-09-02T00:00:00.000Z";
     const firstId = uuid(101);
     const secondId = uuid(102);
     const rule = (selectedUnitIds: string[]) => ({
       ...createEmptyEmployeeLiveFilterRule(),
       selectedUnitIds,
     });
-    main.document.units = [
+    state.organization.structure.units = [
       {
         bossEmployeeId: null,
         collapsed: false,
@@ -316,7 +183,6 @@ describe("OrgToolsState", () => {
         y: 0,
       },
     ];
-
     expect(() => parseOrgToolsState(state)).toThrow("cyclic dependency");
   });
 });

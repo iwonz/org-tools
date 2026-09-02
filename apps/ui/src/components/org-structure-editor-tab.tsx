@@ -5,14 +5,11 @@ import type {
   EmployeeId,
   EmployeeSearchDocument,
   OrgEditorCanvasViewport,
-  OrgEditorEmployee,
-  OrgEditorEmployeeId,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
   OrgEditorUnit,
   OrgEditorUnitId,
-  Unit,
   UnitId,
 } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
@@ -65,7 +62,7 @@ import { EmployeeTags } from "@/components/employee-tags";
 import { HighlightedText } from "@/components/highlighted-text";
 import { MiddleDot } from "@/components/middle-dot";
 import { OrgEditorExportDialog } from "@/components/org-editor-export-dialog";
-import { OrgViewToolbar } from "@/components/org-view-toolbar";
+import { OrgEditorHistoryToolbar } from "@/components/org-editor-history-toolbar";
 import {
   createEmptyEmployeeSearchFilters,
   filterEmployeesBySearch,
@@ -75,16 +72,6 @@ import {
   UnitSearchInput,
 } from "@/components/search-controls";
 import { SourceEmptyState, TopLevelEmptyState } from "@/components/source-empty-state";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -101,27 +88,21 @@ import { UnitDialog } from "@/components/unit-dialog";
 import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
-import { createEmployeeFromOrgEditorEmployee } from "@/lib/employee-data";
 import {
   countEmployeeIdsInSelection,
   countEmployeeIdsNotInSelection,
 } from "@/lib/employee-selection";
-import {
-  type EmployeeTagUpdate,
-  getEmployeeTagOptionsFromSearchDocuments,
-} from "@/lib/employee-tags";
+import type { EmployeeTagUpdate } from "@/lib/employee-tags";
 import {
   buildEmployeeUnitContextIndex,
   buildEmployeeUnitMembershipIndex,
   type EmployeeUnitContext,
   type EmployeeUnitMembership,
 } from "@/lib/employee-unit-contexts";
-import { cloneEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import type { OrgEditorSourceIndex } from "@/lib/org-editor";
 import {
   buildOrgEditorUnitEmployeeSummaryById,
   createOrgEditorSelectedItemKey,
-  createOrgEditorUnitsFromOrgUnit,
   findOrgEditorEmployeeRowIndex,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
@@ -145,10 +126,6 @@ import {
   setOrgEditorUnitEmployeeRowHeights,
 } from "@/lib/org-editor";
 import { createLatestFrameScheduler, createSpatialIndex } from "@/lib/org-editor-interaction";
-import {
-  createEmployeeSearchDocument,
-  getPositionOptionsFromSearchDocuments,
-} from "@/lib/search-index";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { cn } from "@/lib/utils";
@@ -158,8 +135,10 @@ import { useOrgStore } from "@/stores/org-store-context";
 type CanvasPoint = { x: number; y: number };
 type CanvasRect = { height: number; width: number; x: number; y: number };
 type ScreenPoint = { x: number; y: number };
-type ImportDialogMode = "unit" | null;
 type AddEmployeesSourceSection = "employees" | "units";
+
+const EMPTY_EMPLOYEE_MAP = new Map<EmployeeId, Employee>();
+const EMPTY_SEARCH_DOCUMENT_MAP = new Map<EmployeeId, EmployeeSearchDocument>();
 type AddEmployeesTarget = {
   type: "newUnit";
   point: CanvasPoint;
@@ -1278,100 +1257,6 @@ function OrgEditorNode({
   );
 }
 
-function ImportUnitDialog({
-  onImport,
-  onOpenChange,
-  open,
-  roots,
-  units,
-}: {
-  onImport: (unit: Unit) => void;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
-  roots: Unit[];
-  units: NonNullable<ReturnType<typeof useOrgStore>["units"]>;
-}) {
-  const getUnitEmployeeSummary = useUnitEmployeeSummary();
-  const t = useUiText();
-  const [query, setQuery] = useState("");
-  const [expandedUnitIds, setExpandedUnitIds] = useState<Set<UnitId>>(
-    () => new Set(roots.map((root) => root.id)),
-  );
-  const deferredQuery = useDeferredValue(query);
-  const queryTokens = useMemo(() => getSearchTokens(deferredQuery), [deferredQuery]);
-  const visibleUnitIds = useMemo(
-    () => getVisibleUnitIdsForNameSearch(units.indexes.unitSearchDocuments, queryTokens),
-    [queryTokens, units.indexes.unitSearchDocuments],
-  );
-  const hasVisibleUnits = visibleUnitIds === null || visibleUnitIds.size > 0;
-
-  const toggleUnit = (unitId: UnitId) => {
-    setExpandedUnitIds((currentUnitIds) => {
-      const nextUnitIds = new Set(currentUnitIds);
-
-      if (nextUnitIds.has(unitId)) {
-        nextUnitIds.delete(unitId);
-      } else {
-        nextUnitIds.add(unitId);
-      }
-
-      return nextUnitIds;
-    });
-  };
-
-  return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="flex h-[min(760px,calc(100dvh-32px))] max-w-3xl flex-col overflow-hidden p-0">
-        <DialogHeader>
-          <DialogTitle>{t("Add from Main")}</DialogTitle>
-        </DialogHeader>
-        <DialogBody className="flex flex-1 flex-col gap-3 overflow-hidden">
-          <UnitSearchInput
-            ariaLabel={t("Search Units by name")}
-            onValueChange={setQuery}
-            placeholder={t("Search Units by name")}
-            value={query}
-          />
-          <ScrollArea className="min-h-0 flex-1" scrollbars="none">
-            {hasVisibleUnits ? (
-              <ul className="grid min-w-max gap-2">
-                <UnitTree
-                  actions={(unit) => (
-                    <Button
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onImport(unit);
-                      }}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      <HiOutlinePlus />
-                      {t("Add")}
-                    </Button>
-                  )}
-                  employeesById={units.indexes.employeesById}
-                  expandedUnitIds={expandedUnitIds}
-                  onToggle={toggleUnit}
-                  queryTokens={queryTokens}
-                  roots={roots}
-                  subtitle={getUnitEmployeeSummary}
-                  variant="compact"
-                  visibleUnitIds={visibleUnitIds}
-                />
-              </ul>
-            ) : (
-              <SourceEmptyState icon={<HiOutlineFolder className="size-5" />}>
-                {t("No Units found")}
-              </SourceEmptyState>
-            )}
-          </ScrollArea>
-        </DialogBody>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function AddEmployeesDialog({
   employeeSearchDocumentByEmployeeId,
   employeeUnitMembershipsByEmployeeId,
@@ -1712,7 +1597,6 @@ export const OrgStructureEditorTab = observer(() => {
   const store = useOrgStore();
   const units = store.units;
   const editor = store.orgEditor;
-  const isMainView = store.activeOrgView?.kind === "main";
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const lastEmployeeSelectionRef = useRef<{
@@ -1721,19 +1605,12 @@ export const OrgStructureEditorTab = observer(() => {
   } | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [contextMenu, setContextMenu] = useState<OrgEditorContextMenu | null>(null);
-  const [pendingCanvasActionPoint, setPendingCanvasActionPoint] = useState<CanvasPoint | null>(
-    null,
-  );
-  const [importDialogMode, setImportDialogMode] = useState<ImportDialogMode>(null);
   const [addEmployeesTarget, setAddEmployeesTarget] = useState<AddEmployeesTarget | null>(null);
   const [unitDialog, setUnitDialog] = useState<UnitDialogState | null>(null);
   const [employeeDialogState, setEmployeeDialogState] = useState<{
     employee: Employee | null;
     initialUnitIds: OrgEditorUnitId[];
   } | null>(null);
-  const [deletingEditorEmployee, setDeletingEditorEmployee] = useState<OrgEditorEmployee | null>(
-    null,
-  );
   const [exportUnitId, setExportUnitId] = useState<OrgEditorUnitId | null>(null);
   const { searchOpen, searchQuery } = store.editorUi;
   const [searchPinnedUnitId, setSearchPinnedUnitId] = useState<OrgEditorUnitId | null>(null);
@@ -1844,31 +1721,8 @@ export const OrgStructureEditorTab = observer(() => {
     [editor.selectedItems],
   );
   const selectedUnitIds = editor.selectedUnitIds;
-  const activeEditorStructure = store.activeViewOrgStructure ?? units;
-  const editorEmployeeById = useMemo<Map<EmployeeId, OrgEditorEmployee>>(
-    () => new Map(editor.employees.map((employee) => [employee.id, employee] as const)),
-    [editor.employees],
-  );
-  const editorRuntimeEmployees = useMemo(
-    () =>
-      editor.employees.map(
-        (employee) =>
-          activeEditorStructure?.indexes.employeesById.get(employee.id) ??
-          createEmployeeFromOrgEditorEmployee(employee),
-      ),
-    [activeEditorStructure, editor.employees],
-  );
-  const globalEmployeesForEditor = useMemo(
-    () =>
-      (activeEditorStructure?.allEmployees ?? []).filter(
-        (employee) => !editorEmployeeById.has(employee.id),
-      ),
-    [activeEditorStructure, editorEmployeeById],
-  );
-  const availableEmployees = useMemo(
-    () => [...globalEmployeesForEditor, ...editorRuntimeEmployees],
-    [editorRuntimeEmployees, globalEmployeesForEditor],
-  );
+  const activeEditorStructure = units;
+  const availableEmployees = activeEditorStructure?.allEmployees ?? [];
   const employeeUnitMembershipsByEmployeeId = useMemo(
     () =>
       buildEmployeeUnitMembershipIndex(
@@ -1881,52 +1735,11 @@ export const OrgStructureEditorTab = observer(() => {
     () => buildEmployeeUnitContextIndex(availableEmployees),
     [availableEmployees],
   );
-  const employeeById = useMemo(() => {
-    const nextEmployeeById = new Map<EmployeeId, Employee>(
-      globalEmployeesForEditor.map((employee) => [employee.id, employee] as const),
-    );
-
-    for (const employee of editorRuntimeEmployees) {
-      nextEmployeeById.set(employee.id, employee);
-    }
-
-    return nextEmployeeById;
-  }, [editorRuntimeEmployees, globalEmployeesForEditor]);
-  const editorEmployeeSearchDocuments = useMemo(
-    () => editorRuntimeEmployees.map(createEmployeeSearchDocument),
-    [editorRuntimeEmployees],
-  );
-  const globalEmployeeSearchDocuments = useMemo(
-    () => globalEmployeesForEditor.map(createEmployeeSearchDocument),
-    [globalEmployeesForEditor],
-  );
-  const employeeSearchDocumentByEmployeeId = useMemo(() => {
-    const documents = new Map<EmployeeId, EmployeeSearchDocument>(
-      globalEmployeeSearchDocuments.map((document) => [document.employeeId, document]),
-    );
-
-    for (const document of editorEmployeeSearchDocuments) {
-      documents.set(document.employeeId, document);
-    }
-
-    return documents;
-  }, [editorEmployeeSearchDocuments, globalEmployeeSearchDocuments]);
-  const positionOptions = useMemo(
-    () =>
-      getPositionOptionsFromSearchDocuments([
-        ...globalEmployeeSearchDocuments,
-        ...editorEmployeeSearchDocuments,
-      ]),
-    [editorEmployeeSearchDocuments, globalEmployeeSearchDocuments],
-  );
-  const tagOptions = useMemo(
-    () =>
-      getEmployeeTagOptionsFromSearchDocuments([
-        ...globalEmployeeSearchDocuments,
-        ...editorEmployeeSearchDocuments,
-      ]),
-    [editorEmployeeSearchDocuments, globalEmployeeSearchDocuments],
-  );
+  const employeeById = activeEditorStructure?.indexes.employeesById ?? EMPTY_EMPLOYEE_MAP;
+  const employeeSearchDocumentByEmployeeId =
+    activeEditorStructure?.indexes.employeeSearchDocumentByEmployeeId ?? EMPTY_SEARCH_DOCUMENT_MAP;
+  const positionOptions = activeEditorStructure?.indexes.positionOptions ?? [];
+  const tagOptions = activeEditorStructure?.indexes.tagOptions ?? [];
   const resolvedLiveEmployeeIdsByUnitId = editor.resolvedLiveEmployeeIdsByUnitId;
   const displayUnits = useMemo(
     () =>
@@ -2730,8 +2543,6 @@ export const OrgStructureEditorTab = observer(() => {
 
   if (!units) return null;
 
-  const getCanvasActionPoint = () => pendingCanvasActionPoint ?? getCanvasCenterPoint();
-
   const openCreateUnit = (point: CanvasPoint, parentId: OrgEditorUnitId | null = null) => {
     setUnitDialog({ parentId, point, unitId: null });
     setContextMenu(null);
@@ -2744,72 +2555,6 @@ export const OrgStructureEditorTab = observer(() => {
       unitId: unit.id,
     });
     setContextMenu(null);
-  };
-
-  const openImportDialog = (mode: Exclude<ImportDialogMode, null>, point: CanvasPoint | null) => {
-    setPendingCanvasActionPoint(point);
-    setImportDialogMode(mode);
-    setContextMenu(null);
-  };
-
-  const importUnit = (unit: Unit) => {
-    const point = getCanvasActionPoint();
-
-    const importedUnits = createOrgEditorUnitsFromOrgUnit({
-      employeesById: units.indexes.employeesById,
-      layoutMode: editor.layoutMode,
-      origin: { x: point.x - getOrgEditorUnitWidth({ name: unit.name }) / 2, y: point.y - 80 },
-      rootUnit: unit,
-    });
-    const sourceUnits: Unit[] = [];
-    const collectSourceUnits = (sourceUnit: Unit) => {
-      sourceUnits.push(sourceUnit);
-      for (const childUnit of sourceUnit.children) collectSourceUnits(childUnit);
-    };
-    collectSourceUnits(unit);
-    const importedUnitIdBySourceUnitId = new Map(
-      sourceUnits.flatMap((sourceUnit, index) => {
-        const importedUnit = importedUnits[index];
-        return importedUnit ? [[sourceUnit.id, importedUnit.id] as const] : [];
-      }),
-    );
-    const mainEditorUnitById = new Map(
-      store.mainOrgEditor.units.map((mainUnit) => [mainUnit.id, mainUnit] as const),
-    );
-    const importedUnitsWithRules = importedUnits.map((importedUnit, index) => {
-      const sourceUnit = sourceUnits[index];
-      const mainUnit = sourceUnit ? mainEditorUnitById.get(sourceUnit.id) : null;
-      if (!mainUnit?.liveFilter) return importedUnit;
-
-      return {
-        ...importedUnit,
-        bossEmployeeId: mainUnit.bossEmployeeId,
-        employeeIds: [],
-        employeePositions: mainUnit.employeePositions.map((employeePosition) => ({
-          ...employeePosition,
-        })),
-        liveFilter: {
-          ...cloneEmployeeLiveFilterRule(mainUnit.liveFilter),
-          selectedUnitIds: mainUnit.liveFilter.selectedUnitIds.map(
-            (unitId) => importedUnitIdBySourceUnitId.get(unitId) ?? unitId,
-          ),
-        },
-      };
-    });
-    const addedUnits = editor.addUnits(
-      importedUnitsWithRules,
-      importedUnitsWithRules[0] ? [importedUnitsWithRules[0].id] : [],
-    );
-    const rootImportedUnit = importedUnitsWithRules[0]
-      ? (addedUnits.find((addedUnit) => addedUnit.id === importedUnitsWithRules[0]?.id) ??
-        importedUnitsWithRules[0])
-      : null;
-
-    if (rootImportedUnit) {
-      centerUnitInViewport(rootImportedUnit, renderViewportRef.current.scale);
-    }
-    setImportDialogMode(null);
-    setPendingCanvasActionPoint(null);
   };
 
   const openCreateChildUnit = (unitId: OrgEditorUnitId) => {
@@ -2858,55 +2603,24 @@ export const OrgStructureEditorTab = observer(() => {
     bossEmployeeId?: EmployeeId | null,
     employeePositions: OrgEditorEmployeePosition[] = [],
   ) => {
-    if (isMainView) {
-      editor.addEmployeesToUnit(unitId, employeeIds);
-      if (bossEmployeeId !== undefined) {
-        editor.setUnitBoss(unitId, bossEmployeeId ?? null);
-      }
-      for (const employeePosition of employeePositions) {
-        const employee = units?.indexes.employeesById.get(employeePosition.employeeId);
-        if (!employee) continue;
-        const assignments = employee.unitPositions
-          .filter((position) => position.unitId !== unitId)
-          .map((position) => ({
-            isBoss: position.isBoss,
-            position: position.position,
-            unitId: position.unitId,
-          }));
-        assignments.push({
-          isBoss: bossEmployeeId === employeePosition.employeeId,
-          position: employeePosition.position,
-          unitId,
-        });
-        editor.setEmployeeAssignments(employeePosition.employeeId, assignments);
-      }
-      return;
-    }
-
     editor.addEmployeesToUnit(unitId, employeeIds);
-    if (bossEmployeeId !== undefined) editor.setUnitBoss(unitId, bossEmployeeId);
+    if (bossEmployeeId !== undefined) editor.setUnitBoss(unitId, bossEmployeeId ?? null);
     for (const employeePosition of employeePositions) {
-      editor.setEmployeeAssignments(employeePosition.employeeId, [
-        ...editor.units
-          .filter(
-            (candidateUnit) =>
-              candidateUnit.id !== unitId &&
-              candidateUnit.employeeIds.includes(employeePosition.employeeId),
-          )
-          .map((candidateUnit) => ({
-            isBoss: candidateUnit.bossEmployeeId === employeePosition.employeeId,
-            position:
-              candidateUnit.employeePositions.find(
-                (position) => position.employeeId === employeePosition.employeeId,
-              )?.position ?? null,
-            unitId: candidateUnit.id,
-          })),
-        {
-          isBoss: bossEmployeeId === employeePosition.employeeId,
-          position: employeePosition.position,
-          unitId,
-        },
-      ]);
+      const employee = units?.indexes.employeesById.get(employeePosition.employeeId);
+      if (!employee) continue;
+      const assignments = employee.unitPositions
+        .filter((position) => position.unitId !== unitId)
+        .map((position) => ({
+          isBoss: position.isBoss,
+          position: position.position,
+          unitId: position.unitId,
+        }));
+      assignments.push({
+        isBoss: bossEmployeeId === employeePosition.employeeId,
+        position: employeePosition.position,
+        unitId,
+      });
+      editor.setEmployeeAssignments(employeePosition.employeeId, assignments);
     }
   };
 
@@ -3445,9 +3159,9 @@ export const OrgStructureEditorTab = observer(() => {
                     {t("Add to canvas")}
                   </Button>
                 }
-                description={t("Add a Team or Employees to begin arranging this View.")}
+                description={t("Add a Team or Employees to begin arranging the structure.")}
                 icon={<HiOutlineBuildingOffice2 className="size-6" />}
-                title={t("This View does not have any Units yet")}
+                title={t("The structure does not have any Units yet")}
               />
             </div>
           )}
@@ -3480,14 +3194,6 @@ export const OrgStructureEditorTab = observer(() => {
                 <HiOutlinePlus />
                 {t("Add Unit")}
               </OrgEditorMenuButton>
-              {!isMainView && units.roots.length > 0 && (
-                <OrgEditorMenuButton
-                  onClick={() => openImportDialog("unit", contextMenu.canvasPoint)}
-                >
-                  <HiOutlineFolder />
-                  {t("Add from Main")}
-                </OrgEditorMenuButton>
-              )}
               <OrgEditorMenuButton
                 onClick={() => {
                   setAddEmployeesTarget({
@@ -3552,17 +3258,7 @@ export const OrgStructureEditorTab = observer(() => {
                   <OrgEditorEmployeeTagSubmenu
                     employees={contextTagEmployees}
                     onApply={(updates) => {
-                      if (isMainView) {
-                        store.updateEmployeeTagsFromEditor(updates);
-                        return;
-                      }
-
-                      editor.updateEmployeeTags(
-                        updates.flatMap((update) => {
-                          const employee = employeeById.get(update.employeeId);
-                          return employee ? [{ employee, tags: update.tags }] : [];
-                        }),
-                      );
+                      store.updateEmployeeTagsFromEditor(updates);
                     }}
                     tagOptions={tagOptions}
                   />
@@ -3579,22 +3275,6 @@ export const OrgStructureEditorTab = observer(() => {
                     <HiOutlinePencilSquare />
                     {t("Edit")}
                   </OrgEditorMenuButton>
-                  {contextEmployee.scope === "view" && (
-                    <OrgEditorMenuButton
-                      onClick={() => {
-                        const employee = editorEmployeeById.get(contextMenu.employeeId);
-
-                        if (employee) {
-                          setDeletingEditorEmployee(employee);
-                        }
-                        setContextMenu(null);
-                      }}
-                      variant="destructive"
-                    >
-                      <HiOutlineTrash />
-                      {t("Delete Employee")}
-                    </OrgEditorMenuButton>
-                  )}
                 </>
               )}
               {contextEmployeeUnit?.liveFilter === null && (
@@ -3725,7 +3405,7 @@ export const OrgStructureEditorTab = observer(() => {
           )}
         </div>
 
-        {(editor.units.length > 0 || store.orgViewList.length > 1) && (
+        {editor.units.length > 0 && (
           <div
             className={cn(
               "absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-start gap-1",
@@ -3733,10 +3413,9 @@ export const OrgStructureEditorTab = observer(() => {
             )}
             data-demo-id="org-editor-actions"
           >
-            <OrgViewToolbar
+            <OrgEditorHistoryToolbar
               canRedo={editor.canRedo}
               canUndo={editor.canUndo}
-              emptyCanvas={editor.units.length === 0}
               onRedo={editor.redo}
               onUndo={editor.undo}
             />
@@ -3834,19 +3513,7 @@ export const OrgStructureEditorTab = observer(() => {
           </div>
         )}
       </section>
-      {!isMainView && units.roots.length > 0 && (
-        <ImportUnitDialog
-          onImport={importUnit}
-          onOpenChange={(open) => {
-            setImportDialogMode(open ? "unit" : null);
-            if (!open) setPendingCanvasActionPoint(null);
-          }}
-          open={importDialogMode === "unit"}
-          roots={units.roots}
-          units={units}
-        />
-      )}
-      {unitDialog && (store.activeViewOrgStructure ?? units) && (
+      {unitDialog && units && (
         <UnitDialog
           editorUnits={editor.units}
           initialUnit={editedUnit}
@@ -3866,7 +3533,7 @@ export const OrgStructureEditorTab = observer(() => {
           }}
           open
           parentName={unitDialogParentName}
-          structure={store.activeViewOrgStructure ?? units}
+          structure={units}
         />
       )}
       <AddEmployeesDialog
@@ -3906,27 +3573,10 @@ export const OrgStructureEditorTab = observer(() => {
           mode="editor"
           onOpenChange={(open) => !open && setEmployeeDialogState(null)}
           onSave={(fields, assignments) => {
-            if (isMainView) {
-              if (!employeeDialogState.employee) {
-                store.createEmployee(fields, assignments);
-              } else {
-                store.updateEmployee(employeeDialogState.employee.id, fields, assignments);
-              }
-              return;
-            }
-
-            if (employeeDialogState.employee) {
-              if (employeeDialogState.employee.scope === "view") {
-                editor.updateEmployee(
-                  employeeDialogState.employee.id as OrgEditorEmployeeId,
-                  fields,
-                  assignments,
-                );
-              } else if (employeeDialogState.employee.scope === "organization") {
-                editor.updateSourceEmployee(employeeDialogState.employee.id, fields, assignments);
-              }
+            if (!employeeDialogState.employee) {
+              store.createEmployee(fields, assignments);
             } else {
-              editor.createEmployee(fields, assignments);
+              store.updateEmployee(employeeDialogState.employee.id, fields, assignments);
             }
           }}
           open={Boolean(employeeDialogState)}
@@ -3934,37 +3584,6 @@ export const OrgStructureEditorTab = observer(() => {
           units={editor.units}
         />
       )}
-      <AlertDialog
-        onOpenChange={(open) => !open && setDeletingEditorEmployee(null)}
-        open={Boolean(deletingEditorEmployee)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("Delete Employee?")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deletingEditorEmployee
-                ? t("{name} will be removed from every Unit in the Org Editor.", {
-                    name: `${deletingEditorEmployee.firstName} ${deletingEditorEmployee.lastName}`,
-                  })
-                : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => {
-                if (deletingEditorEmployee) {
-                  editor.deleteEmployee(deletingEditorEmployee.id);
-                }
-                setDeletingEditorEmployee(null);
-              }}
-            >
-              {t("Delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <OrgEditorExportDialog
         employeeById={employeeById}
         layoutMode={editor.layoutMode}

@@ -6,8 +6,6 @@ import type {
   EmployeeTag,
   OrganizationEmployee,
   OrgEditorCanvasViewport,
-  OrgEditorEmployee,
-  OrgEditorEmployeeOverride,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
@@ -17,27 +15,18 @@ import type {
   OrgToolsEmployeeFilters,
   OrgToolsState,
   OrgToolsUiState,
-  OrgToolsViewDocument,
-  OrgView,
   UiActiveTab,
   UiTheme,
   UnitId,
 } from "@org-tools/types";
 
-import {
-  createUuid,
-  isEmployeeGender,
-  isUuid,
-  normalizeEditableEmployeeFields,
-} from "@/lib/employee-data";
+import { isEmployeeGender, isUuid, normalizeEditableEmployeeFields } from "@/lib/employee-data";
+import { createEmployeeId, isEmployeeId } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import { createDefaultOrgEditorState } from "@/lib/org-editor";
 
-export type LoadedOrgFile = {
-  kind: "orgToolsState";
-  state: OrgToolsState;
-};
+export type LoadedOrgFile = { kind: "orgToolsState"; state: OrgToolsState };
 
 const EMPLOYEE_FIELD_KEYS = [
   "avatarBase64Url",
@@ -72,9 +61,10 @@ const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(isString);
 const isUuidArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(isUuid);
+const isEmployeeIdArray = (value: unknown): value is EmployeeId[] =>
+  Array.isArray(value) && value.every(isEmployeeId);
 const isTimestamp = (value: unknown): value is string =>
   isString(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value;
-
 const isTheme = (value: unknown): value is UiTheme =>
   value === "light" || value === "dark" || value === "system";
 const isLocale = (value: unknown): value is AppLocale => value === "en" || value === "ru";
@@ -102,7 +92,7 @@ const normalizeTagRecords = (value: unknown): EmployeeTag[] | null => {
       return null;
     }
     const label = item.label.trim();
-    const normalizedLabel = label.toLocaleLowerCase("en-US");
+    const normalizedLabel = label.toLowerCase();
     if (!normalizedLabel) return null;
     if (dateByNormalizedLabel.has(normalizedLabel)) {
       if (dateByNormalizedLabel.get(normalizedLabel) !== item.date) return null;
@@ -130,9 +120,8 @@ const normalizeEmployeeFields = (value: Record<string, unknown>): EditableEmploy
   ) {
     return null;
   }
-
   try {
-    const fields = normalizeEditableEmployeeFields({
+    return normalizeEditableEmployeeFields({
       avatarBase64Url: value.avatarBase64Url,
       birthday: value.birthday,
       email: value.email,
@@ -144,10 +133,29 @@ const normalizeEmployeeFields = (value: Record<string, unknown>): EditableEmploy
       tags,
       username: value.username,
     });
-    return fields;
   } catch {
     return null;
   }
+};
+
+export const normalizeOrganizationEmployee = (value: unknown): OrganizationEmployee | null => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [...EMPLOYEE_FIELD_KEYS, "createdAt", "id", "updatedAt"])
+  ) {
+    return null;
+  }
+  const fields = normalizeEmployeeFields(value);
+  if (
+    !fields ||
+    !isEmployeeId(value.id) ||
+    value.id !== createEmployeeId(fields) ||
+    !isTimestamp(value.createdAt) ||
+    !isTimestamp(value.updatedAt)
+  ) {
+    return null;
+  }
+  return { ...fields, createdAt: value.createdAt, id: value.id, updatedAt: value.updatedAt };
 };
 
 const normalizeLiveFilterRule = (value: unknown): EmployeeLiveFilterRule | null => {
@@ -171,7 +179,6 @@ const normalizeLiveFilterRule = (value: unknown): EmployeeLiveFilterRule | null 
   ) {
     return null;
   }
-
   let birthday: EmployeeLiveFilterRule["birthday"];
   if (value.birthday === null) {
     birthday = null;
@@ -189,49 +196,17 @@ const normalizeLiveFilterRule = (value: unknown): EmployeeLiveFilterRule | null 
   } else {
     return null;
   }
-
   return {
     birthday,
     includeWithoutTags: value.includeWithoutTags,
     includeWithoutUnits: value.includeWithoutUnits,
     query: value.query.trim(),
-    selectedPositions: [
-      ...new Set(value.selectedPositions.map((position) => position.trim())),
-    ].filter(Boolean),
-    selectedTags: [...new Set(value.selectedTags.map((tag) => tag.trim()))].filter(Boolean),
+    selectedPositions: [...new Set(value.selectedPositions.map((item) => item.trim()))].filter(
+      Boolean,
+    ),
+    selectedTags: [...new Set(value.selectedTags.map((item) => item.trim()))].filter(Boolean),
     selectedUnitIds: [...value.selectedUnitIds],
   };
-};
-
-const normalizeEditorEmployee = (value: unknown): OrgEditorEmployee | null => {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, [...EMPLOYEE_FIELD_KEYS, "createdAt", "id", "updatedAt"])
-  ) {
-    return null;
-  }
-  const fields = normalizeEmployeeFields(value);
-  if (
-    !fields ||
-    !isUuid(value.id) ||
-    !isTimestamp(value.createdAt) ||
-    !isTimestamp(value.updatedAt)
-  ) {
-    return null;
-  }
-  return { ...fields, createdAt: value.createdAt, id: value.id, updatedAt: value.updatedAt };
-};
-
-const normalizeEmployeeOverride = (value: unknown): OrgEditorEmployeeOverride | null => {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, [...EMPLOYEE_FIELD_KEYS, "employeeId", "updatedAt"])
-  ) {
-    return null;
-  }
-  const fields = normalizeEmployeeFields(value);
-  if (!fields || !isUuid(value.employeeId) || !isTimestamp(value.updatedAt)) return null;
-  return { ...fields, employeeId: value.employeeId, updatedAt: value.updatedAt };
 };
 
 const normalizeEmployeePositions = (value: unknown): OrgEditorEmployeePosition[] | null => {
@@ -241,7 +216,7 @@ const normalizeEmployeePositions = (value: unknown): OrgEditorEmployeePosition[]
     if (
       !isRecord(position) ||
       !hasExactKeys(position, ["employeeId", "position"]) ||
-      !isUuid(position.employeeId) ||
+      !isEmployeeId(position.employeeId) ||
       !isNullableString(position.position)
     ) {
       return null;
@@ -274,10 +249,10 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     ]) ||
     !isUuid(value.id) ||
     !(value.parentId === null || isUuid(value.parentId)) ||
-    !(value.bossEmployeeId === null || isUuid(value.bossEmployeeId)) ||
+    !(value.bossEmployeeId === null || isEmployeeId(value.bossEmployeeId)) ||
     typeof value.collapsed !== "boolean" ||
     !isTimestamp(value.createdAt) ||
-    !isUuidArray(value.employeeIds) ||
+    !isEmployeeIdArray(value.employeeIds) ||
     !isString(value.name) ||
     !value.name.trim() ||
     !Number.isInteger(value.order) ||
@@ -288,13 +263,11 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
   ) {
     return null;
   }
-
   const employeePositions = normalizeEmployeePositions(value.employeePositions);
   if (!employeePositions) return null;
   const liveFilter = value.liveFilter === null ? null : normalizeLiveFilterRule(value.liveFilter);
   if (value.liveFilter !== null && !liveFilter) return null;
   if (liveFilter && value.employeeIds.length > 0) return null;
-
   return {
     bossEmployeeId: value.bossEmployeeId,
     collapsed: value.collapsed,
@@ -320,7 +293,7 @@ const normalizeSelectedItem = (value: unknown): OrgEditorSelectedItem | null => 
   if (
     value.type === "employee" &&
     hasExactKeys(value, ["employeeId", "type", "unitId"]) &&
-    isUuid(value.employeeId)
+    isEmployeeId(value.employeeId)
   ) {
     return { employeeId: value.employeeId, type: "employee", unitId: value.unitId };
   }
@@ -339,81 +312,6 @@ const normalizeViewport = (value: unknown): OrgEditorCanvasViewport | null => {
     return null;
   }
   return { scale: value.scale, x: value.x, y: value.y };
-};
-
-const normalizeEditorDocument = (value: unknown): OrgToolsViewDocument["document"] | null => {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, ["employeeOverrides", "employees", "layoutMode", "units"]) ||
-    !Array.isArray(value.employeeOverrides) ||
-    !Array.isArray(value.employees) ||
-    !isLayoutMode(value.layoutMode) ||
-    !Array.isArray(value.units)
-  ) {
-    return null;
-  }
-
-  const employeeOverrides = value.employeeOverrides.map(normalizeEmployeeOverride);
-  const employees = value.employees.map(normalizeEditorEmployee);
-  const units = value.units.map(normalizeEditorUnit);
-  if (
-    employeeOverrides.some((item) => !item) ||
-    employees.some((item) => !item) ||
-    units.some((item) => !item)
-  ) {
-    return null;
-  }
-
-  return {
-    employeeOverrides: employeeOverrides as OrgEditorEmployeeOverride[],
-    employees: employees as OrgEditorEmployee[],
-    layoutMode: value.layoutMode,
-    units: units as OrgEditorUnit[],
-  };
-};
-
-const normalizeOrganizationEmployee = (value: unknown): OrganizationEmployee | null => {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, [...EMPLOYEE_FIELD_KEYS, "createdAt", "id", "updatedAt"])
-  ) {
-    return null;
-  }
-  const fields = normalizeEmployeeFields(value);
-  if (
-    !fields ||
-    !isUuid(value.id) ||
-    !isTimestamp(value.createdAt) ||
-    !isTimestamp(value.updatedAt)
-  ) {
-    return null;
-  }
-  return { ...fields, createdAt: value.createdAt, id: value.id, updatedAt: value.updatedAt };
-};
-
-const normalizeOrgViewDocument = (value: unknown): OrgToolsViewDocument | null => {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, ["createdAt", "document", "id", "kind", "name", "updatedAt"]) ||
-    !isString(value.name) ||
-    !value.name.trim() ||
-    !isTimestamp(value.createdAt) ||
-    !isTimestamp(value.updatedAt) ||
-    !isUuid(value.id) ||
-    (value.kind !== "main" && value.kind !== "custom")
-  ) {
-    return null;
-  }
-  const document = normalizeEditorDocument(value.document);
-  if (!document) return null;
-  return {
-    createdAt: value.createdAt,
-    document,
-    id: value.id,
-    kind: value.kind,
-    name: value.name.trim(),
-    updatedAt: value.updatedAt,
-  };
 };
 
 const normalizeEmployeeSearchFilters = (value: unknown): OrgToolsEmployeeFilters | null => {
@@ -477,7 +375,7 @@ const normalizeDownloadSelection = (value: unknown): OrgToolsDownloadSelection |
   if (
     value.type === "employee" &&
     hasExactKeys(value, ["employeeId", "id", "type"]) &&
-    isUuid(value.employeeId)
+    isEmployeeId(value.employeeId)
   ) {
     return { employeeId: value.employeeId, id: value.id, type: "employee" };
   }
@@ -501,7 +399,6 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
       "flatUnitFieldOrder",
       "jsonUnitFieldOrder",
       "rowMode",
-      "sourceViewId",
       "selectedEmployeeFieldKeys",
       "selectedFilters",
       "selectedFlatUnitFieldKeys",
@@ -515,11 +412,10 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     ]) ||
     !isStringArray(value.employeeFieldOrder) ||
     !isString(value.employeeQuery) ||
-    !isUuidArray(value.excludedEmployeeIds) ||
+    !isEmployeeIdArray(value.excludedEmployeeIds) ||
     !isStringArray(value.flatUnitFieldOrder) ||
     !isStringArray(value.jsonUnitFieldOrder) ||
     (value.rowMode !== "allUnits" && value.rowMode !== "firstUnit") ||
-    !isUuid(value.sourceViewId) ||
     !isStringArray(value.selectedEmployeeFieldKeys) ||
     !isStringArray(value.selectedFlatUnitFieldKeys) ||
     !isStringArray(value.selectedJsonUnitFieldKeys) ||
@@ -537,9 +433,8 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
   const selectedFilters = normalizeEmployeeSearchFilters(value.selectedFilters);
   const fieldNames = normalizeStringRecord(value.fieldNames);
   const selections = value.selections.map(normalizeDownloadSelection);
-  if (!employeeFilters || !selectedFilters || !fieldNames || selections.some((item) => !item)) {
+  if (!employeeFilters || !selectedFilters || !fieldNames || selections.some((item) => !item))
     return null;
-  }
   return {
     employeeFieldOrder: [...value.employeeFieldOrder],
     employeeFilters,
@@ -549,7 +444,6 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     flatUnitFieldOrder: [...value.flatUnitFieldOrder],
     jsonUnitFieldOrder: [...value.jsonUnitFieldOrder],
     rowMode: value.rowMode,
-    sourceViewId: value.sourceViewId,
     selectedEmployeeFieldKeys: [...value.selectedEmployeeFieldKeys],
     selectedFilters,
     selectedFlatUnitFieldKeys: [...value.selectedFlatUnitFieldKeys],
@@ -567,53 +461,32 @@ const assertUniqueIds = (ids: readonly string[], message: string): void => {
   if (new Set(ids).size !== ids.length) throw new Error(message);
 };
 
-const validateEditorStateGraph = (
-  view: OrgView,
-  organizationEmployeeIds: ReadonlySet<EmployeeId>,
-  allLocalEmployeeIds: Set<EmployeeId>,
-  allUnitIds: Set<UnitId>,
-): void => {
-  const localEmployeeIdList = view.state.employees.map((employee) => employee.id);
-  assertUniqueIds(localEmployeeIdList, `View "${view.name}" has duplicate Employee IDs.`);
-  const localEmployeeIds = new Set(localEmployeeIdList);
-  for (const employeeId of localEmployeeIds) {
-    if (organizationEmployeeIds.has(employeeId) || allLocalEmployeeIds.has(employeeId)) {
-      throw new Error(`View "${view.name}" reuses an Employee ID.`);
-    }
-    allLocalEmployeeIds.add(employeeId);
-  }
-
-  const overrideIds = view.state.employeeOverrides.map((override) => override.employeeId);
-  assertUniqueIds(overrideIds, `View "${view.name}" has duplicate Employee overrides.`);
-  if (overrideIds.some((employeeId) => !organizationEmployeeIds.has(employeeId))) {
-    throw new Error(`View "${view.name}" overrides a missing organization Employee.`);
-  }
-  if (view.kind === "main" && (localEmployeeIds.size > 0 || overrideIds.length > 0)) {
-    throw new Error("The Main View cannot contain local Employees or Employee overrides.");
-  }
-
-  const availableEmployeeIds = new Set([...organizationEmployeeIds, ...localEmployeeIds]);
-  const unitIdList = view.state.units.map((unit) => unit.id);
-  assertUniqueIds(unitIdList, `View "${view.name}" has duplicate Unit IDs.`);
-  const unitIds = new Set(unitIdList);
-  for (const unitId of unitIds) {
-    if (allUnitIds.has(unitId)) throw new Error(`View "${view.name}" reuses a Unit ID.`);
-    allUnitIds.add(unitId);
-  }
-
-  for (const unit of view.state.units) {
+const validateStateGraph = (state: OrgToolsState): void => {
+  const employees = state.organization.employees;
+  const employeeIds = new Set(employees.map((employee) => employee.id));
+  assertUniqueIds(
+    employees.map((employee) => employee.id),
+    "State has duplicate Employee IDs.",
+  );
+  const units = state.organization.structure.units;
+  const unitIds = new Set(units.map((unit) => unit.id));
+  assertUniqueIds(
+    units.map((unit) => unit.id),
+    "State has duplicate Unit IDs.",
+  );
+  for (const unit of units) {
     if (unit.parentId !== null && !unitIds.has(unit.parentId)) {
       throw new Error(`Unit "${unit.name}" references a missing parent Unit.`);
     }
     assertUniqueIds(unit.employeeIds, `Unit "${unit.name}" has duplicate Employee assignments.`);
     const positionIds = unit.employeePositions.map((position) => position.employeeId);
     assertUniqueIds(positionIds, `Unit "${unit.name}" has duplicate position assignments.`);
-    const referencedEmployeeIds = [
+    const referenced = [
       ...unit.employeeIds,
       ...positionIds,
       ...(unit.bossEmployeeId ? [unit.bossEmployeeId] : []),
     ];
-    if (referencedEmployeeIds.some((employeeId) => !availableEmployeeIds.has(employeeId))) {
+    if (referenced.some((employeeId) => !employeeIds.has(employeeId))) {
       throw new Error(`Unit "${unit.name}" references a missing Employee.`);
     }
     if (!unit.liveFilter) {
@@ -635,13 +508,12 @@ const validateEditorStateGraph = (
       }
     }
   }
-
   const visited = new Set<UnitId>();
   const visiting = new Set<UnitId>();
-  const unitById = new Map(view.state.units.map((unit) => [unit.id, unit]));
+  const unitById = new Map(units.map((unit) => [unit.id, unit]));
   const visitParent = (unitId: UnitId): void => {
     if (visited.has(unitId)) return;
-    if (visiting.has(unitId)) throw new Error(`View "${view.name}" has a cyclic Unit hierarchy.`);
+    if (visiting.has(unitId)) throw new Error("State has a cyclic Unit hierarchy.");
     visiting.add(unitId);
     const parentId = unitById.get(unitId)?.parentId;
     if (parentId) visitParent(parentId);
@@ -649,83 +521,20 @@ const validateEditorStateGraph = (
     visited.add(unitId);
   };
   for (const unitId of unitIds) visitParent(unitId);
-  getLiveUnitTopologicalOrder(view.state.units);
-
-  for (const item of view.state.selectedItems) {
-    if (!unitIds.has(item.unitId)) {
-      throw new Error(`View "${view.name}" selects a missing Unit.`);
-    }
-    if (item.type === "employee" && !availableEmployeeIds.has(item.employeeId)) {
-      throw new Error(`View "${view.name}" selects a missing Employee.`);
-    }
+  getLiveUnitTopologicalOrder(units);
+  if (state.ui.selectedUnitId !== null && !unitIds.has(state.ui.selectedUnitId)) {
+    throw new Error("Selected Unit does not exist.");
   }
-};
-
-export const materializeOrgViews = (state: OrgToolsState): OrgView[] => {
-  const viewUiById = new Map(state.ui.views.map((view) => [view.viewId, view]));
-  return state.organization.views.map((view) => {
-    const viewUi = viewUiById.get(view.id);
-    if (!viewUi) throw new Error(`View "${view.name}" is missing durable UI state.`);
-    return {
-      createdAt: view.createdAt,
-      id: view.id,
-      kind: view.kind,
-      name: view.name,
-      state: {
-        ...structuredClone(view.document),
-        selectedItems: structuredClone(viewUi.selectedItems),
-        viewport: { ...viewUi.viewport },
-      },
-      updatedAt: view.updatedAt,
-    };
-  });
-};
-
-const validateStateGraph = (state: OrgToolsState): void => {
-  const views = materializeOrgViews(state);
-  const organizationEmployeeIds = new Set(
-    state.organization.employees.map((employee) => employee.id),
-  );
-  assertUniqueIds(
-    state.organization.employees.map((employee) => employee.id),
-    "State has duplicate Employee IDs.",
-  );
-  const viewIds = views.map((view) => view.id);
-  assertUniqueIds(viewIds, "State has duplicate View IDs.");
-  assertUniqueIds(
-    state.ui.views.map((view) => view.viewId),
-    "State has duplicate View UI records.",
-  );
-  if (state.ui.views.length !== viewIds.length) {
-    throw new Error("Every View must have exactly one durable UI record.");
-  }
-  if (!viewIds.includes(state.ui.activeViewId)) throw new Error("Active View does not exist.");
-  if (!viewIds.includes(state.ui.download.sourceViewId)) {
-    throw new Error("Data Download source View does not exist.");
-  }
-  if (views.filter((view) => view.kind === "main").length !== 1) {
-    throw new Error("State must contain exactly one Main View.");
-  }
-
-  const names = new Set<string>();
-  const allLocalEmployeeIds = new Set<EmployeeId>();
-  const allUnitIds = new Set<UnitId>();
-  for (const view of views) {
-    const name = view.name.toLocaleLowerCase("en-US");
-    if (names.has(name)) throw new Error("View names must be unique ignoring case.");
-    names.add(name);
-    validateEditorStateGraph(view, organizationEmployeeIds, allLocalEmployeeIds, allUnitIds);
-  }
-
-  const mainView = views.find((view) => view.kind === "main");
-  const mainUnitIds = new Set(mainView?.state.units.map((unit) => unit.id) ?? []);
-  if (state.ui.selectedUnitId !== null && !mainUnitIds.has(state.ui.selectedUnitId)) {
-    throw new Error("Selected Unit does not exist in the Main View.");
-  }
-  if (state.ui.expandedUnitIds.some((unitId) => !mainUnitIds.has(unitId))) {
-    throw new Error("Expanded Units must exist in the Main View.");
+  if (state.ui.expandedUnitIds.some((unitId) => !unitIds.has(unitId))) {
+    throw new Error("Expanded Units do not exist.");
   }
   assertUniqueIds(state.ui.expandedUnitIds, "Expanded Unit IDs must be unique.");
+  for (const item of state.ui.editor.selectedItems) {
+    if (!unitById.has(item.unitId)) throw new Error("Editor selects a missing Unit.");
+    if (item.type === "employee" && !employeeIds.has(item.employeeId)) {
+      throw new Error("Editor selects a missing Employee.");
+    }
+  }
 };
 
 const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
@@ -733,7 +542,6 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
     !isRecord(value) ||
     !hasExactKeys(value, [
       "activeTab",
-      "activeViewId",
       "analytics",
       "calendar",
       "download",
@@ -745,16 +553,13 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
       "sidebarCollapsed",
       "theme",
       "units",
-      "views",
     ]) ||
     !isActiveTab(value.activeTab) ||
-    !isUuid(value.activeViewId) ||
     !isUuidArray(value.expandedUnitIds) ||
     !isLocale(value.locale) ||
     !(value.selectedUnitId === null || isUuid(value.selectedUnitId)) ||
     typeof value.sidebarCollapsed !== "boolean" ||
-    !isTheme(value.theme) ||
-    !Array.isArray(value.views)
+    !isTheme(value.theme)
   ) {
     return null;
   }
@@ -772,9 +577,10 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
     (value.calendar.year as number) < 1 ||
     (value.calendar.year as number) > 9999 ||
     !isRecord(value.editor) ||
-    !hasExactKeys(value.editor, ["searchOpen", "searchQuery"]) ||
+    !hasExactKeys(value.editor, ["searchOpen", "searchQuery", "selectedItems", "viewport"]) ||
     typeof value.editor.searchOpen !== "boolean" ||
     !isString(value.editor.searchQuery) ||
+    !Array.isArray(value.editor.selectedItems) ||
     !isRecord(value.employees) ||
     !hasExactKeys(value.employees, ["filters", "query"]) ||
     !isString(value.employees.query) ||
@@ -789,36 +595,19 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
   const employeeFilters = normalizeEmployeeSearchFilters(value.employees.filters);
   const unitEmployeeFilters = normalizeEmployeeSearchFilters(value.units.employeeFilters);
   const download = normalizeDownloadState(value.download);
-  const views = value.views.map((view) => {
-    if (
-      !isRecord(view) ||
-      !hasExactKeys(view, ["selectedItems", "viewId", "viewport"]) ||
-      !isUuid(view.viewId) ||
-      !Array.isArray(view.selectedItems)
-    ) {
-      return null;
-    }
-    const selectedItems = view.selectedItems.map(normalizeSelectedItem);
-    const viewport = normalizeViewport(view.viewport);
-    if (selectedItems.some((item) => !item) || !viewport) return null;
-    return {
-      selectedItems: selectedItems as OrgEditorSelectedItem[],
-      viewId: view.viewId,
-      viewport,
-    };
-  });
+  const selectedItems = value.editor.selectedItems.map(normalizeSelectedItem);
+  const viewport = normalizeViewport(value.editor.viewport);
   if (
     !analyticsFilters ||
     !employeeFilters ||
     !unitEmployeeFilters ||
     !download ||
-    views.some((view) => !view)
-  ) {
+    !viewport ||
+    selectedItems.some((item) => !item)
+  )
     return null;
-  }
   return {
     activeTab: value.activeTab,
-    activeViewId: value.activeViewId,
     analytics: { filters: analyticsFilters, query: value.analytics.query },
     calendar: {
       cloudExpanded: value.calendar.cloudExpanded,
@@ -826,7 +615,12 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
       year: value.calendar.year as number,
     },
     download,
-    editor: { searchOpen: value.editor.searchOpen, searchQuery: value.editor.searchQuery },
+    editor: {
+      searchOpen: value.editor.searchOpen,
+      searchQuery: value.editor.searchQuery,
+      selectedItems: selectedItems as OrgEditorSelectedItem[],
+      viewport,
+    },
     employees: { filters: employeeFilters, query: value.employees.query },
     expandedUnitIds: [...value.expandedUnitIds],
     locale: value.locale,
@@ -838,7 +632,6 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
       employeeQuery: value.units.employeeQuery,
       unitQuery: value.units.unitQuery,
     },
-    views: views as OrgToolsUiState["views"],
   };
 };
 
@@ -850,33 +643,32 @@ export const parseOrgToolsUiState = (input: unknown): OrgToolsUiState => {
 
 export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (!isRecord(input)) throw new Error("State must be a JSON object.");
-  const value = input;
   if (
-    !hasExactKeys(value, ["organization", "ui"]) ||
-    !isRecord(value.organization) ||
-    !hasExactKeys(value.organization, ["employees", "views"]) ||
-    !Array.isArray(value.organization.employees) ||
-    !Array.isArray(value.organization.views)
+    !hasExactKeys(input, ["organization", "ui"]) ||
+    !isRecord(input.organization) ||
+    !hasExactKeys(input.organization, ["employees", "structure"]) ||
+    !Array.isArray(input.organization.employees) ||
+    !isRecord(input.organization.structure) ||
+    !hasExactKeys(input.organization.structure, ["layoutMode", "units"]) ||
+    !isLayoutMode(input.organization.structure.layoutMode) ||
+    !Array.isArray(input.organization.structure.units)
   ) {
     throw new Error("State has an invalid top-level structure.");
   }
-
-  const employees = value.organization.employees.map(normalizeOrganizationEmployee);
-  if (employees.some((employee) => !employee)) {
+  const employees = input.organization.employees.map(normalizeOrganizationEmployee);
+  if (employees.some((employee) => !employee))
     throw new Error("State contains an invalid Employee.");
-  }
-  const views = value.organization.views.map(normalizeOrgViewDocument);
-  if (views.some((view) => !view)) {
-    throw new Error("State contains an invalid View or editor document.");
-  }
-  const ui = parseOrgToolsUiState(value.ui);
-
+  const units = input.organization.structure.units.map(normalizeEditorUnit);
+  if (units.some((unit) => !unit)) throw new Error("State contains an invalid Unit structure.");
   const state: OrgToolsState = {
     organization: {
       employees: employees as OrganizationEmployee[],
-      views: views as OrgToolsViewDocument[],
+      structure: {
+        layoutMode: input.organization.structure.layoutMode,
+        units: units as OrgEditorUnit[],
+      },
     },
-    ui,
+    ui: parseOrgToolsUiState(input.ui),
   };
   validateStateGraph(state);
   return state;
@@ -900,7 +692,7 @@ export const createEmptyEmployeeFiltersState = (): OrgToolsEmployeeFilters => ({
   selectedUnitIds: [],
 });
 
-export const createBlankDownloadState = (sourceViewId: string): OrgToolsDownloadState => ({
+export const createBlankDownloadState = (): OrgToolsDownloadState => ({
   employeeFieldOrder: [
     "id",
     "firstName",
@@ -944,7 +736,6 @@ export const createBlankDownloadState = (sourceViewId: string): OrgToolsDownload
   flatUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
   jsonUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
   rowMode: "allUnits",
-  sourceViewId,
   selectedEmployeeFieldKeys: ["username"],
   selectedFilters: createEmptyEmployeeFiltersState(),
   selectedFlatUnitFieldKeys: ["unitName", "unitFullPath"],
@@ -961,40 +752,28 @@ export const createBlankOrgToolsState = (
   theme: UiTheme = "system",
   locale: AppLocale = "en",
 ): OrgToolsState => {
-  const now = new Date().toISOString();
-  const mainViewId = createUuid();
   const editor = createDefaultOrgEditorState();
   const currentDate = new Date();
   return {
     organization: {
       employees: [],
-      views: [
-        {
-          createdAt: now,
-          document: {
-            employeeOverrides: editor.employeeOverrides,
-            employees: editor.employees,
-            layoutMode: editor.layoutMode,
-            units: editor.units,
-          },
-          id: mainViewId,
-          kind: "main",
-          name: "Main",
-          updatedAt: now,
-        },
-      ],
+      structure: { layoutMode: editor.layoutMode, units: editor.units },
     },
     ui: {
       activeTab: "orgEditor",
-      activeViewId: mainViewId,
       analytics: { filters: createEmptyEmployeeFiltersState(), query: "" },
       calendar: {
         cloudExpanded: false,
         monthIndex: currentDate.getMonth(),
         year: currentDate.getFullYear(),
       },
-      download: createBlankDownloadState(mainViewId),
-      editor: { searchOpen: false, searchQuery: "" },
+      download: createBlankDownloadState(),
+      editor: {
+        searchOpen: false,
+        searchQuery: "",
+        selectedItems: editor.selectedItems,
+        viewport: editor.viewport,
+      },
       employees: { filters: createEmptyEmployeeFiltersState(), query: "" },
       expandedUnitIds: [],
       locale,
@@ -1006,13 +785,6 @@ export const createBlankOrgToolsState = (
         employeeQuery: "",
         unitQuery: "",
       },
-      views: [
-        {
-          selectedItems: editor.selectedItems,
-          viewId: mainViewId,
-          viewport: editor.viewport,
-        },
-      ],
     },
   };
 };

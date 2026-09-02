@@ -35,7 +35,6 @@ const employee: Employee = {
   lastName: "Stone",
   phone: "+1 555-0111",
   profileUrl: null,
-  scope: "organization",
   tags: [],
   unitIds: [],
   unitPositions: [],

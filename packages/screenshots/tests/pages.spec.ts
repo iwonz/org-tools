@@ -7,10 +7,11 @@ import { localeStorageKey, syntheticStatePath } from "./helpers.js";
 const useEnglish = (key: string) => window.localStorage.setItem(key, "en");
 
 async function importSyntheticState(page: import("@playwright/test").Page) {
-  const chooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Import", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Import", exact: true });
+  const chooserPromise = page.waitForEvent("filechooser");
+  await dialog.getByText("Choose file", { exact: true }).click();
   await (await chooserPromise).setFiles(syntheticStatePath);
-  const dialog = page.getByRole("dialog", { name: "Import state" });
   await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
     "4 Employees",
   );
@@ -43,21 +44,12 @@ test("runs the complete state editor at the repository base path without APIs or
   await importSyntheticState(page);
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
 
-  const viewTrigger = page.locator('[data-demo-id="org-view-select-trigger"]');
-  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText("Units");
-  await page.locator('[data-demo-id="org-view-create-button"]').click();
-  const createViewDialog = page.getByRole("dialog", { name: "New View" });
-  await createViewDialog.getByLabel("Name", { exact: true }).fill("Pages temporary View");
-  await createViewDialog.getByRole("tab", { name: "Blank", exact: true }).click();
-  await createViewDialog.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.locator('[data-demo-id="org-view-delete-button"]')).toBeVisible();
-  await page.locator('[data-demo-id="org-view-delete-button"]').click();
-  const deleteViewDialog = page.getByRole("alertdialog", { name: "Delete View?" });
-  await deleteViewDialog.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText("Units");
+  await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
 
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export", exact: true });
   const stateExportPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export state", exact: true }).click();
+  await exportDialog.getByRole("button", { name: "Download", exact: true }).click();
   const stateExport = await stateExportPromise;
   expect(stateExport.suggestedFilename()).toBe("org-tools-state.json");
   const savedPath = await stateExport.path();
@@ -182,8 +174,10 @@ test("crops and exports a PNG avatar when WebP canvas encoding is unavailable", 
   await employeeDialog.getByLabel("First name", { exact: true }).fill("Fallback");
   await employeeDialog.getByRole("button", { name: "Create", exact: true }).click();
 
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export", exact: true });
   const exportPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export state", exact: true }).click();
+  await exportDialog.getByRole("button", { name: "Download", exact: true }).click();
   const exportPath = await (await exportPromise).path();
   const exportedState = JSON.parse(await readFile(exportPath ?? "", "utf8")) as {
     organization: { employees: Array<{ avatarBase64Url: string | null }> };

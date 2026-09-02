@@ -1,9 +1,10 @@
 "use client";
 
+import type { OrgToolsState } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
 import { useTheme } from "next-themes";
 import type { ComponentType, ReactNode } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   HiOutlineBuildingOffice2,
   HiOutlineCalendarDays,
@@ -28,14 +29,14 @@ import { ImportDialog } from "@/components/import-dialog";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useAppLocale } from "@/components/locale-provider";
 import { OrgStructureEditorTab } from "@/components/org-structure-editor-tab";
+import { StateExportDialog } from "@/components/state-export-dialog";
 import { useStateRuntime } from "@/components/state-runtime-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitsTab } from "@/components/units-tab";
-import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
+import type { UiMessageDescriptor } from "@/i18n/messages";
 import { type UiTextKey, useMessageText, useUiText } from "@/i18n/use-ui-text";
-import { downloadState } from "@/lib/state-transfer";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -78,8 +79,10 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
   const runtime = useStateRuntime();
   const { setLocale } = useAppLocale();
   const { setTheme } = useTheme();
-  const importFileInputRef = useRef<HTMLInputElement>(null);
-  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importState, setImportState] = useState<OrgToolsState | null>(null);
+  const [exportState, setExportState] = useState<OrgToolsState | null>(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
   const [contextHeaderAction, setContextHeaderAction] = useState<ContextHeaderAction | null>(null);
   const sidebarCollapsed = store.sidebarCollapsed;
@@ -106,15 +109,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
     "hidden min-w-0 overflow-hidden truncate whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 ease-out motion-reduce:transition-none lg:inline-block",
     sidebarCollapsed ? "lg:max-w-0 lg:opacity-0" : "lg:max-w-[10rem] lg:opacity-100",
   );
-
-  const exportState = () => {
-    setError(null);
-    try {
-      downloadState(store.createOrgToolsState());
-    } catch (saveError) {
-      setError(describeError(saveError));
-    }
-  };
 
   return (
     <ContextHeaderActionContext.Provider value={registerContextHeaderAction}>
@@ -201,28 +195,13 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
               </TabsList>
             </nav>
             <div className="flex shrink-0 flex-col gap-1 p-2 pb-3" data-demo-id="sidebar-actions">
-              <input
-                accept=".json,application/json"
-                aria-hidden="true"
-                className="sr-only"
-                data-demo-id="import-file-input"
-                onChange={(event) => {
-                  const file = event.currentTarget.files?.[0];
-                  event.currentTarget.value = "";
-                  if (file) setImportFile(file);
-                }}
-                ref={importFileInputRef}
-                tabIndex={-1}
-                type="file"
-              />
               <Button
                 aria-label={t("Import")}
                 className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
                 data-demo-id="import-action"
                 onClick={() => {
-                  if (!importFileInputRef.current) return;
-                  importFileInputRef.current.value = "";
-                  importFileInputRef.current.click();
+                  setImportState(store.createOrgToolsState());
+                  setImportOpen(true);
                 }}
                 title={t("Import")}
                 type="button"
@@ -239,11 +218,14 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                 <SidebarTooltip collapsed={sidebarCollapsed}>{t("Import")}</SidebarTooltip>
               </Button>
               <Button
-                aria-label={t("Export state")}
+                aria-label={t("Export")}
                 className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
                 data-demo-id="export-state"
-                onClick={exportState}
-                title={t("Export state")}
+                onClick={() => {
+                  setExportState(store.createOrgToolsState());
+                  setExportOpen(true);
+                }}
+                title={t("Export")}
                 type="button"
                 variant="ghost"
               >
@@ -253,9 +235,9 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                   data-icon="document-arrow-down"
                 />
                 <span className={sidebarLabelClassName} data-sidebar-label="">
-                  {t("Export state")}
+                  {t("Export")}
                 </span>
-                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Export state")}</SidebarTooltip>
+                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Export")}</SidebarTooltip>
               </Button>
               <div className="group relative">
                 <LanguageToggle
@@ -376,20 +358,32 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
           </Button>
         </div>
       )}
-      <ImportDialog
-        onCommit={(candidate) => {
-          store.loadOrgToolsState(candidate.state, candidate.fileName, candidate.fileSizeBytes);
-          setTheme(candidate.state.ui.theme);
-          setLocale(candidate.state.ui.locale);
-          setError(null);
-          setImportFile(null);
-        }}
-        initialFile={importFile}
-        onOpenChange={(open) => {
-          if (!open) setImportFile(null);
-        }}
-        open={importFile !== null}
-      />
+      {importState && (
+        <ImportDialog
+          currentState={importState}
+          onCommit={(state, fileName, fileSizeBytes) => {
+            store.loadOrgToolsState(state, fileName, fileSizeBytes);
+            setTheme(state.ui.theme);
+            setLocale(state.ui.locale);
+            setError(null);
+          }}
+          onOpenChange={(open) => {
+            setImportOpen(open);
+            if (!open) setImportState(null);
+          }}
+          open={importOpen}
+        />
+      )}
+      {exportState && (
+        <StateExportDialog
+          onOpenChange={(open) => {
+            setExportOpen(open);
+            if (!open) setExportState(null);
+          }}
+          open={exportOpen}
+          state={exportState}
+        />
+      )}
     </ContextHeaderActionContext.Provider>
   );
 });

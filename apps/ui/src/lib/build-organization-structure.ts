@@ -13,10 +13,6 @@ import type {
 } from "@org-tools/types";
 
 import { createUiOrgStructure, createUnitPath } from "@/lib/build-ui-org-structure";
-import {
-  applyOrgEditorEmployeeOverride,
-  createEmployeeFromOrgEditorEmployee,
-} from "@/lib/employee-data";
 import { buildEmployeeUnitMembershipIndex } from "@/lib/employee-unit-contexts";
 import { resolveLiveUnitMemberships } from "@/lib/live-unit-filter";
 import { getEffectiveLiveEmployeePosition } from "@/lib/live-unit-position";
@@ -37,7 +33,6 @@ const createOrganizationEmployee = (employee: OrganizationEmployee): Employee =>
   lastName: employee.lastName,
   phone: employee.phone,
   profileUrl: employee.profileUrl,
-  scope: "organization",
   tags: employee.tags.map((tag) => ({ ...tag })),
   unitIds: [],
   unitPositions: [],
@@ -75,10 +70,7 @@ export type OrganizationStructureBuildResult = {
   structure: UiOrgStructure;
 };
 
-/**
- * Builds the shared derived model for the Units tab, the main Org View and
- * custom Org Views. Only the active document should be built.
- */
+/** Builds the shared derived model for the current organization structure. */
 export const buildOrganizationStructureWithResolution = (
   organizationEmployees: readonly OrganizationEmployee[],
   state: OrgEditorState,
@@ -91,24 +83,6 @@ export const buildOrganizationStructureWithResolution = (
     }
 
     employeesById.set(organizationEmployee.id, createOrganizationEmployee(organizationEmployee));
-  }
-
-  for (const employeeOverride of state.employeeOverrides) {
-    const employee = employeesById.get(employeeOverride.employeeId);
-
-    if (!employee) continue;
-    employeesById.set(
-      employeeOverride.employeeId,
-      applyOrgEditorEmployeeOverride(employee, employeeOverride),
-    );
-  }
-
-  for (const localEmployee of state.employees) {
-    if (employeesById.has(localEmployee.id)) {
-      throw new Error(`Duplicate employee id: ${localEmployee.id}.`);
-    }
-
-    employeesById.set(localEmployee.id, createEmployeeFromOrgEditorEmployee(localEmployee));
   }
 
   const editorUnitById = new Map<UnitId, OrgEditorUnit>();

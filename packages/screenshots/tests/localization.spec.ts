@@ -41,31 +41,15 @@ const chooseImportFile = async (
   messages: Messages,
   file: ImportFilePayload | string,
 ) => {
-  const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: messages.Ui.Import, exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: messages.Ui.Import, exact: true });
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await dialog.getByText(messages.Ui["Choose file"], { exact: true }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(file);
-  const dialog = page.getByRole("dialog", { name: messages.Ui["Import state"] });
   await expect(dialog).toBeVisible();
   return dialog;
 };
-
-const readSelectValueLayout = async (value: Locator) =>
-  value.evaluate((element) => {
-    const trigger = element.closest('[data-slot="select-trigger"]');
-    if (!(trigger instanceof HTMLElement) || !(element instanceof HTMLElement)) {
-      throw new Error("Expected the Select value to be inside its trigger.");
-    }
-
-    const triggerBounds = trigger.getBoundingClientRect();
-    const valueBounds = element.getBoundingClientRect();
-    return {
-      fitsHorizontally: element.scrollWidth <= element.clientWidth + 1,
-      isContained:
-        valueBounds.top >= triggerBounds.top - 1 && valueBounds.bottom <= triggerBounds.bottom + 1,
-      whiteSpace: window.getComputedStyle(element).whiteSpace,
-    };
-  });
 
 const expectLeadingThematicIcon = async (control: Locator, accessibleName: string) => {
   await expect(control).toHaveAccessibleName(accessibleName);
@@ -154,12 +138,11 @@ test("switches the interface in place and persists the choice", async ({ page },
     sidebar.getByRole("button", { name: ruMessages.Ui.Import, exact: true }),
   ).toBeVisible();
   await expect(
-    sidebar.getByRole("button", { name: ruMessages.Ui["Export state"], exact: true }),
+    sidebar.getByRole("button", { name: ruMessages.Ui.Export, exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("tab", { name: ruMessages.Ui["Data Download"], exact: true }),
   ).toBeVisible();
-  await expect(header).not.toContainText(ruMessages.Ui.Main);
   await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
   await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
   await page.screenshot({
@@ -168,8 +151,15 @@ test("switches the interface in place and persists the choice", async ({ page },
     path: testInfo.outputPath("russian-shell.png"),
   });
 
+  await page.getByRole("button", { name: ruMessages.Ui.Export, exact: true }).click();
+  const stateExportDialog = page.getByRole("dialog", {
+    name: ruMessages.Ui.Export,
+    exact: true,
+  });
   const stateDownloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: ruMessages.Ui["Export state"], exact: true }).click();
+  await stateExportDialog
+    .getByRole("button", { name: ruMessages.Ui.Download, exact: true })
+    .click();
   expect((await stateDownloadPromise).suggestedFilename()).toBe("org-tools-state.json");
 
   await page.getByRole("tab", { name: ruMessages.Ui.Employees, exact: true }).click();
@@ -193,70 +183,15 @@ test("switches the interface in place and persists the choice", async ({ page },
   await unitDialog.getByRole("button", { name: ruMessages.Ui.Save, exact: true }).click();
   await expect(unitDialog).toBeHidden();
 
-  const viewToolbar = page.locator('[data-demo-id="org-view-toolbar"]');
-  const viewTrigger = viewToolbar.getByRole("combobox", {
-    name: ruMessages.Ui["Active View"],
-  });
-  const viewValue = viewTrigger.locator('[data-demo-id="org-view-active-value"]');
-  await expect(viewValue).toHaveText(ruMessages.Ui.Main);
-  await expect(viewTrigger).toHaveAttribute("title", ruMessages.Ui.Main);
-  expect(await readSelectValueLayout(viewValue)).toEqual({
-    fitsHorizontally: true,
-    isContained: true,
-    whiteSpace: "nowrap",
-  });
-  await page.screenshot({
-    animations: "disabled",
-    fullPage: true,
-    path: testInfo.outputPath("russian-view-selector.png"),
-  });
   const dialog = await chooseImportFile(page, ruMessages, syntheticStatePath);
-  await expect(dialog.getByRole("tab")).toHaveCount(0);
+  await expect(dialog.getByRole("tab")).toHaveCount(2);
   await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("4");
-  await expect(
-    dialog.getByText(
-      ruMessages.Ui[
-        "Import replaces all organization data and interface settings in the current state."
-      ],
-      { exact: true },
-    ),
-  ).toBeVisible();
   await page.screenshot({
     animations: "disabled",
     fullPage: true,
     path: testInfo.outputPath("russian-state-import.png"),
   });
   await dialog.getByRole("button", { name: ruMessages.Ui.Cancel, exact: true }).click();
-
-  const longViewName = "A custom View name that is wider than the selector";
-  await page.locator('[data-demo-id="org-view-create-button"]').click();
-  const viewDialog = page.getByRole("dialog", { name: ruMessages.Ui["New View"] });
-  await viewDialog.getByLabel(ruMessages.Ui.Name, { exact: true }).fill(longViewName);
-  await viewDialog.getByRole("tab", { name: ruMessages.Ui.Blank, exact: true }).click();
-  await viewDialog.getByRole("button", { name: ruMessages.Ui.Create, exact: true }).click();
-  await expect(viewDialog).toBeHidden();
-  await expect(viewTrigger).toHaveAttribute("title", longViewName);
-  expect(await readSelectValueLayout(viewValue)).toEqual({
-    fitsHorizontally: false,
-    isContained: true,
-    whiteSpace: "nowrap",
-  });
-  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toHaveAccessibleName(
-    ruMessages.Ui["Rename View"],
-  );
-  const deleteViewButton = page.locator('[data-demo-id="org-view-delete-button"]');
-  await expect(deleteViewButton).toHaveAccessibleName(ruMessages.Ui["Delete View"]);
-  await deleteViewButton.click();
-  const deleteViewDialog = page.getByRole("alertdialog", {
-    name: ruMessages.Ui["Delete View?"],
-  });
-  await expect(deleteViewDialog).toContainText(
-    ruMessages.Ui[
-      "View “{name}” and all of its local changes will be deleted. Main will not change."
-    ].replace("{name}", longViewName),
-  );
-  await deleteViewDialog.getByRole("button", { name: ruMessages.Ui.Cancel, exact: true }).click();
-  await expect(viewTrigger).toHaveAttribute("title", longViewName);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
@@ -275,9 +210,27 @@ for (const [locale, messages] of [
     await seedLocale(page, locale);
     await page.goto(await resetServerState(page, locale), { waitUntil: "domcontentloaded" });
 
+    await page.getByRole("button", { name: messages.Ui.Export, exact: true }).click();
+    const exportDialog = page.getByRole("dialog", { name: messages.Ui.Export, exact: true });
     const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: messages.Ui["Export state"], exact: true }).click();
+    await exportDialog.getByRole("button", { name: messages.Ui.Download, exact: true }).click();
     expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
+    await page.getByRole("button", { name: messages.Ui.Export, exact: true }).click();
+    const employeeExportDialog = page.getByRole("dialog", {
+      name: messages.Ui.Export,
+      exact: true,
+    });
+    await employeeExportDialog
+      .getByRole("tab", { name: messages.Ui.Employees, exact: true })
+      .click();
+    await expect(
+      employeeExportDialog.getByText(messages.Ui["Flat Employees with nested Team assignments"], {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await employeeExportDialog
+      .getByRole("button", { name: messages.Ui.Cancel, exact: true })
+      .click();
     const localizedState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
     localizedState.ui.locale = locale;
     let dialog = await chooseImportFile(page, messages, {
@@ -288,6 +241,42 @@ for (const [locale, messages] of [
     await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("4");
     await dialog.getByRole("button", { name: messages.Ui["Replace state"], exact: true }).click();
     await expect(dialog).toBeHidden();
+    await page.getByRole("button", { name: messages.Ui.Import, exact: true }).click();
+    const employeeImportDialog = page.getByRole("dialog", {
+      name: messages.Ui.Import,
+      exact: true,
+    });
+    await employeeImportDialog
+      .getByRole("tab", { name: messages.Ui.Employees, exact: true })
+      .click();
+    const employeeChooser = page.waitForEvent("filechooser");
+    await employeeImportDialog.getByText(messages.Ui["Choose file"], { exact: true }).click();
+    await (await employeeChooser).setFiles({
+      buffer: Buffer.from(
+        JSON.stringify([
+          {
+            email: "localized.employee@example.test",
+            firstName: "Localized",
+            lastName: "Employee",
+            teams: [],
+          },
+        ]),
+      ),
+      mimeType: "application/json",
+      name: "localized-employees.json",
+    });
+    await expect(
+      employeeImportDialog.getByText(messages.Ui["Import Teams"], { exact: true }),
+    ).toBeVisible();
+    await expect(
+      employeeImportDialog.getByRole("button", {
+        name: messages.Ui["Import Employees"],
+        exact: true,
+      }),
+    ).toBeEnabled();
+    await employeeImportDialog
+      .getByRole("button", { name: messages.Ui.Cancel, exact: true })
+      .click();
     await page.locator('[data-demo-id="tab-units"]').click();
     await expectLeadingThematicIcon(
       page.locator('[data-demo-id="unit-create-root-button"]'),

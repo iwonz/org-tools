@@ -5,7 +5,7 @@
     "featured": true,
     "title": "State import confirmation",
     "file": "demo-import.png",
-    "description": "Review the selected filename, size, Employee, Unit, and View counts before atomically replacing the current state.",
+    "description": "Review the selected filename, size, Employee, and Unit counts before atomically replacing the current state.",
     "capabilities": ["Strict state validation", "Summary counts", "Atomic replacement"]
   },
   {
@@ -21,10 +21,10 @@
     "id": "export",
     "module": "export",
     "featured": true,
-    "title": "Direct state Export",
+    "title": "State and Employee Export",
     "file": "demo-export.png",
-    "description": "Download the complete current state in one click, including current in-memory changes.",
-    "capabilities": ["One-click JSON", "Complete state", "Includes current changes"]
+    "description": "Choose complete state or a flat Employee array with nested Team assignments for a local JSON download.",
+    "capabilities": ["Complete state", "Employee array", "Nested Team assignments"]
   },
   {
     "id": "theme",
@@ -202,13 +202,13 @@
     ]
   },
   {
-    "id": "editor-views",
-    "module": "editor",
+    "id": "employee-import-mapping",
+    "module": "import",
     "featured": false,
-    "title": "Custom View management",
-    "file": "feature-editor-views.png",
-    "description": "Switch Views and create an empty or Units-derived independent organization canvas.",
-    "capabilities": ["Built-in Units View", "Custom Views", "Copy from Units", "Empty View"]
+    "title": "Employee field mapping",
+    "file": "feature-employee-import-mapping.png",
+    "description": "Map arbitrary flat or nested JSON fields into Employees and optionally include nested Team assignments.",
+    "capabilities": ["Field mapping", "Nested paths", "Team assignments", "Import preview"]
   },
   {
     "id": "editor-search",
@@ -220,18 +220,17 @@
     "capabilities": ["Unit search", "Employee search", "Canvas navigation"]
   },
   {
-    "id": "editor-view-management",
-    "module": "editor",
+    "id": "employee-import-duplicates",
+    "module": "import",
     "featured": false,
-    "title": "Custom View selection and actions",
-    "file": "feature-editor-view-management.png",
-    "description": "Switch between the built-in Units View and an empty custom View with accessible rename and confirmed delete actions.",
+    "title": "Employee duplicate resolution",
+    "file": "feature-employee-import-duplicates.png",
+    "description": "Resolve deterministic identity matches in bulk or override individual Employees before one atomic import.",
     "capabilities": [
-      "View selection",
-      "Built-in Units View",
-      "Empty custom View",
-      "Rename",
-      "Confirmed Delete"
+      "Deterministic identity",
+      "Bulk policy",
+      "Per-Employee override",
+      "Atomic import"
     ]
   },
   {

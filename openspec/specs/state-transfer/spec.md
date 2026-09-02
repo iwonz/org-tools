@@ -1,43 +1,90 @@
 # state-transfer Specification
 
 ## Purpose
-Define strict complete-state Import and immediate complete-state Export.
+Define strict complete-state and mapped-Employee Import/Export.
 
 ## Requirements
 
-### Requirement: Import replaces one complete current state atomically
-The global Import action SHALL accept only a strictly valid current `OrgToolsState` no larger than
-25 MiB and SHALL replace current memory only after explicit destructive confirmation. The dialog
-SHALL show filename, file size, and Employee, Unit, and View counts, allow another file, localize all
-copy, and leave state unchanged after invalid input or cancellation. Server mode SHALL enqueue an
-atomic all-scope write and Pages SHALL broadcast the accepted replacement to live tabs.
+### Requirement: Import supports complete State and mapped Employees
+The global Import action SHALL open a modal with State and Employees tabs. State SHALL accept only a
+strict current `OrgToolsState` no larger than 25 MiB and atomically replace memory after explicit
+confirmation. Employees SHALL accept a top-level JSON array no larger than 25 MiB, require explicit
+mapping for first name, last name, and email, allow optional field, tag, and Team mappings, preview
+new and matched rows, surface invalid rows as a blocking localized error, and mutate current state
+only after one valid confirmed Apply.
 
-#### Scenario: Confirm valid state
-- **WHEN** a user selects a valid complete file and confirms replacement
+#### Scenario: Import complete State
+- **WHEN** a user selects State, chooses a valid current state, and confirms replacement
 - **THEN** organization and durable UI install atomically, including locale and theme, and the
   runtime immediately schedules its normal persistence or synchronization behavior
 
-#### Scenario: Reject unsupported input
-- **WHEN** a selected file is malformed, oversized, partial, arbitrary JSON, or uses an obsolete
-  contract
-- **THEN** a localized owned error and Choose another file remain available while current state is
-  unchanged
+#### Scenario: Map Employee input
+- **WHEN** a user selects Employees and chooses a JSON array
+- **THEN** bounded discovered source paths can be mapped to current Employee fields, tags, and Teams
+- **AND** identity, validity, new count, and existing-match count are recomputed once per mapping change
 
-#### Scenario: Cancel replacement
-- **WHEN** file selection or confirmation is canceled
+#### Scenario: Reject invalid input
+- **WHEN** JSON is malformed, oversized, not an array for Employees, contains duplicate computed IDs,
+  lacks identity mappings, or produces invalid current fields
+- **THEN** a localized error and file re-selection remain available while current state is unchanged
+
+#### Scenario: Cancel Import
+- **WHEN** file selection, mapping, review, or confirmation is canceled
 - **THEN** current memory, SQLite, and other live tabs are unchanged
 
-### Requirement: Export downloads the complete live state immediately
-The global Export action SHALL create and strictly validate the current complete state and download
-it as `org-tools-state.json` without a content selector, Save dependency, confirmation dialog, or
-success banner. Reporting exports from Download SHALL remain separate and SHALL NOT be accepted by
-Import.
+### Requirement: Export selects complete State or flat Employees
+The global Export action SHALL open a modal with State and Employees choices. State SHALL download
+the strict current state as `org-tools-state.json`. Employees SHALL download
+`org-tools-employees.json` as a flat Employee array where each Employee includes its ordinary fields
+and a `teams` array of `{ id, name, path, position, isBoss }` assignments from the current structure.
 
-#### Scenario: Direct state Export
-- **WHEN** a user activates Export
+#### Scenario: Export complete State
+- **WHEN** the user confirms State Export
 - **THEN** one current `{ organization, ui }` JSON document downloads immediately without changing
   runtime state
 
+#### Scenario: Export Employees
+- **WHEN** the user confirms Employee Export
+- **THEN** one flat array containing all current Employees and nested portable Team assignments downloads
+
 #### Scenario: Export validation failure
 - **WHEN** the live state cannot pass the production parser
-- **THEN** no file downloads and the shell presents a localized owned error
+- **THEN** no file downloads and the modal presents a localized owned error
+
+### Requirement: Employee duplicate policies are bulk-selectable and individually overridable
+Existing Employees SHALL be matched only by deterministic Employee ID. The review SHALL provide one
+bulk policy of Update data, Skip, or Teams only and SHALL allow a sparse per-match override. Update
+SHALL replace mapped core fields and upsert imported Teams when enabled; Skip SHALL change nothing;
+Teams only SHALL retain core data and upsert imported Teams when enabled.
+
+#### Scenario: Apply bulk policy
+- **WHEN** matched Employees exist and the user changes the bulk policy
+- **THEN** every match without an individual override uses that policy
+
+#### Scenario: Override one match
+- **WHEN** the user chooses a different policy for one matched Employee
+- **THEN** only that Employee diverges from the bulk policy and the review count updates
+
+### Requirement: Team assignment Import is explicit and additive
+Employee Import SHALL expose an Import Teams control. When disabled, mapped Team data MUST be
+ignored. When enabled, the importer SHALL match by Unit ID then normalized full path, create missing
+manual path segments, and upsert imported position and boss status while preserving unrelated
+assignments.
+
+#### Scenario: Ignore Teams
+- **WHEN** Import Teams is disabled
+- **THEN** no Unit or assignment changes regardless of mapped Team input
+
+#### Scenario: Import Teams
+- **WHEN** Import Teams is enabled and mapped assignments reference existing or new paths
+- **THEN** matching Units are reused, missing manual Units are created, and referenced assignments are upserted atomically
+
+### Requirement: Large Employee transfer remains bounded
+Mapping and matching SHALL process 20,000 Employees in linear time, cache the derived preview until
+inputs change, and render matched rows through virtualization. Per-row policy state SHALL remain
+sparse and transfer candidates SHALL be released when the modal closes.
+
+#### Scenario: Review 20,000 Employees
+- **WHEN** a valid 20,000-row Employee array is mapped
+- **THEN** the application retains one derived index and renders only the visible review rows
+- **AND** scrolling or changing one row policy does not remap the complete input

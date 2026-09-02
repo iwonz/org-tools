@@ -646,12 +646,9 @@ export const UnitsTab = observer(() => {
             <AlertDialogTitle>{t("Delete Employee?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {deletingEmployee
-                ? t(
-                    "Employee {name} will be removed from the global catalog and Main. Custom Views will keep a local copy.",
-                    {
-                      name: deletingEmployee.fullName,
-                    },
-                  )
+                ? t("Employee {name} will be removed from the catalog and every Team.", {
+                    name: deletingEmployee.fullName,
+                  })
                 : null}
             </AlertDialogDescription>
           </AlertDialogHeader>

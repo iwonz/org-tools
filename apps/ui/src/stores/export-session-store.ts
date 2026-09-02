@@ -463,6 +463,24 @@ export class ExportSessionStore {
     );
   }
 
+  rekeyEmployee(previousEmployeeId: EmployeeId, nextEmployeeId: EmployeeId): void {
+    if (previousEmployeeId === nextEmployeeId) return;
+    this.excludedEmployeeIds = this.excludedEmployeeIds.map((employeeId) =>
+      employeeId === previousEmployeeId ? nextEmployeeId : employeeId,
+    );
+    this.selections = this.selections.map((selection) =>
+      selection.type === "employee" && selection.employeeId === previousEmployeeId
+        ? {
+            ...selection,
+            employeeId: nextEmployeeId,
+            id: selection.id.includes(previousEmployeeId)
+              ? selection.id.replace(previousEmployeeId, nextEmployeeId)
+              : selection.id,
+          }
+        : selection,
+    );
+  }
+
   clearSelection(): void {
     this.selections = [];
     this.excludedEmployeeIds = [];
