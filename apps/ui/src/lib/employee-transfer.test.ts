@@ -3,12 +3,10 @@ import { describe, expect, test } from "vitest";
 import { createEmployeeId } from "@/lib/employee-id";
 import {
   applyEmployeeImport,
-  createEmployeeExport,
   createSuggestedEmployeeImportMapping,
   deriveEmployeeImportPreview,
   parseEmployeeImportText,
 } from "@/lib/employee-transfer";
-import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import type { OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
 import { OrgStore } from "@/stores/org-store";
 
@@ -33,52 +31,6 @@ const manualUnit = (name: string): OrgEditorUnitConfiguration => ({
 });
 
 describe("Employee transfer", () => {
-  test("exports a flat Employee array with portable Team assignments", () => {
-    const store = new OrgStore();
-    const parentId = store.createUnit(manualUnit("Engineering"));
-    const childId = store.createUnit(manualUnit("Platform"), parentId);
-    const employeeId = store.createEmployee(fields("alex@example.test"), [
-      { isBoss: true, position: "Lead", unitId: childId },
-    ]);
-
-    const exported = createEmployeeExport(store.createOrgToolsState());
-    expect(exported).toHaveLength(1);
-    expect(exported[0]).toMatchObject({
-      id: employeeId,
-      teams: [
-        {
-          id: childId,
-          isBoss: true,
-          name: "Platform",
-          path: ["Engineering", "Platform"],
-          position: "Lead",
-        },
-      ],
-    });
-  });
-
-  test("exports resolved Live Team membership", () => {
-    const store = new OrgStore();
-    const employeeId = store.createEmployee(fields("alex@example.test"), []);
-    const liveUnitId = store.createUnit({
-      bossEmployeeId: employeeId,
-      liveFilter: { ...createEmptyEmployeeLiveFilterRule(), query: "Alex" },
-      membershipMode: "live",
-      name: "Alex roster",
-      positionOverrides: [{ employeeId, position: "Coordinator" }],
-    });
-
-    expect(createEmployeeExport(store.createOrgToolsState())[0]?.teams).toEqual([
-      {
-        id: liveUnitId,
-        isBoss: true,
-        name: "Alex roster",
-        path: ["Alex roster"],
-        position: "Coordinator",
-      },
-    ]);
-  });
-
   test("maps arbitrary source paths and applies new Employees and Teams atomically", () => {
     const store = new OrgStore();
     const source = parseEmployeeImportText(

@@ -26,24 +26,55 @@ export type OrgToolsDownloadSelection =
   | { id: string; type: "unit"; unitId: UnitId }
   | { employeeId: EmployeeId; id: string; type: "employee" };
 
+export type OrgToolsDownloadEmployeeFieldKey =
+  | "id"
+  | "firstName"
+  | "lastName"
+  | "fullName"
+  | "gender"
+  | "username"
+  | "profileUrl"
+  | "email"
+  | "phone"
+  | "avatarBase64Url"
+  | "birthday";
+export type OrgToolsDownloadUnitFieldKey =
+  | "unitId"
+  | "unitName"
+  | "unitFullPath"
+  | "position"
+  | "isBoss";
+export type OrgToolsDownloadTagFieldKey = "date" | "label";
+
 export type OrgToolsDownloadState = {
-  employeeFieldOrder: string[];
+  employeeFieldOrder: OrgToolsDownloadEmployeeFieldKey[];
   employeeFilters: OrgToolsEmployeeFilters;
   employeeQuery: string;
   excludedEmployeeIds: EmployeeId[];
-  fieldNames: Record<string, string>;
-  flatUnitFieldOrder: string[];
-  jsonUnitFieldOrder: string[];
+  excludedJsonTagKeys: string[];
+  excludedJsonUnitIds: UnitId[];
+  jsonFieldNames: {
+    employee: Record<OrgToolsDownloadEmployeeFieldKey, string>;
+    tags: {
+      collection: string;
+      fields: Record<OrgToolsDownloadTagFieldKey, string>;
+    };
+    units: {
+      collection: string;
+      fields: Record<OrgToolsDownloadUnitFieldKey, string>;
+    };
+  };
+  jsonTagFieldOrder: OrgToolsDownloadTagFieldKey[];
+  jsonUnitFieldOrder: OrgToolsDownloadUnitFieldKey[];
   rowMode: "allUnits" | "firstUnit";
-  selectedEmployeeFieldKeys: string[];
+  selectedEmployeeFieldKeys: OrgToolsDownloadEmployeeFieldKey[];
   selectedFilters: OrgToolsEmployeeFilters;
-  selectedFlatUnitFieldKeys: string[];
-  selectedJsonUnitFieldKeys: string[];
+  selectedJsonTagFieldKeys: OrgToolsDownloadTagFieldKey[];
+  selectedJsonUnitFieldKeys: OrgToolsDownloadUnitFieldKey[];
   selectedQuery: string;
   selections: OrgToolsDownloadSelection[];
-  tabMode: "csv" | "json" | "template";
+  tabMode: "json" | "template";
   templateFormat: string;
-  unitFullPathSeparator: string;
   unitQuery: string;
 };
 

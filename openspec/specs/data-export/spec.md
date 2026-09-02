@@ -1,40 +1,76 @@
 # data-export Specification
 
 ## Purpose
-Define the local, generic text and image export boundary for Employees and Units.
+Define the local, generic structured-text and Editor image export boundary for Employees and Units.
 
 ## Requirements
 
 ### Requirement: Data export remains local and generic
-The application SHALL export selected Employees and Units as CSV, JSON, separator templates, or a
-canvas PNG using only the generic data model. Employee gender SHALL be available as a selectable
-field using its stable persisted enum. Employee JSON SHALL keep `tags` as an array of labels and add
-`tagDates` records containing `tag` and `date`; CSV and templates SHALL encode dated assignments as
-`tag=YYYY-MM-DD`. PNG output SHALL receive the active locale, render every tag as `label` or
-`label · localized date`, wrap chips, and expand Employee rows and Team cards using the same packing
-model as the Org Editor. A successful Download-tab file save SHALL not render an inline
-downloaded-file label, while clipboard copy confirmation and localized errors SHALL remain
-available.
+The application SHALL export selected Employees as structured JSON or separator templates using
+only the generic data model. JSON SHALL contain one object per selected Employee and SHALL expose
+ordered scalar Employee fields plus independently selectable and nameable Unit and Tag collections.
+The Unit collection SHALL expose configurable `unitId`, `unitName`, `unitFullPath`, `position`, and
+`isBoss` fields. The Tag collection SHALL expose configurable `label` and `date` fields and SHALL
+represent every retained tag as one object. Both collections SHALL default to disabled, SHALL be
+omitted while disabled, and SHALL be empty arrays when enabled but empty after filtering.
+
+The Unit and Tag parent controls SHALL derive unchecked, indeterminate, and checked state from their
+nested selections. Activating an unchecked or indeterminate parent SHALL select every nested field;
+activating a fully checked parent SHALL clear every nested field. Top-level and nested output names
+MUST be non-empty and unique within their JSON object.
+
+JSON SHALL include every exact Unit assignment independent of Template row mode. Searchable
+virtualized exclusion controls SHALL omit exact Unit IDs and normalized Tag labels without removing
+the Employee or implicitly excluding descendant Units. `unitFullPath` SHALL use the fixed ` / `
+separator. Template output SHALL retain All Units/First Unit row behavior and Employee, Unit, tag,
+and dated-tag tokens. CSV output and a configurable Unit-path separator SHALL NOT be available.
+
+Preview output SHALL be bounded to 50 records or rows and 128 KiB. Complete output SHALL be built
+only for an explicit Copy or Download action, SHALL remain local, and SHALL NOT enter browser
+storage. Successful downloads SHALL not render a downloaded-file label, while clipboard
+confirmation and localized errors SHALL remain available.
+
+Editor PNG output SHALL receive the active locale, render every tag as `label` or
+`label · localized date`, wrap complete chips, and expand Employee rows and Unit cards using the
+same packing model as the live Editor.
 
 #### Scenario: Employee field export
-- **WHEN** a user selects gender, profile, embedded avatar, birthday, tags, tag dates, or contact
-  fields
-- **THEN** the exported value comes directly from the persisted Employee without deriving or
-  inferring it from another identifier
+- **WHEN** a user selects gender, profile, embedded avatar, birthday, or contact fields
+- **THEN** the exported value comes directly from the persisted Employee without deriving or inferring it from another identifier
 
-#### Scenario: Backward-compatible tags field
-- **WHEN** an Employee with dated and undated tags is exported
-- **THEN** `tags` contains every label while `tagDates` contains only assignments with dates in the
-  selected output syntax
+#### Scenario: Configure JSON collections
+- **WHEN** a user enables Units or Tags, changes parent or child names, and selects nested fields
+- **THEN** every Employee record contains the configured collection and object keys in deterministic order
+
+#### Scenario: Toggle a collection parent
+- **WHEN** no or some nested fields are selected and the user activates the parent
+- **THEN** every nested field becomes selected
+- **AND** activating the fully selected parent clears every nested selection and omits the collection
+
+#### Scenario: Exclude exact assignments and tags
+- **WHEN** a user excludes a Unit or Tag from JSON
+- **THEN** matching exact assignments or normalized labels are omitted while the Employee, other assignments, and descendant Units remain
+
+#### Scenario: JSON ignores Template row mode
+- **WHEN** an Employee belongs to multiple retained Units and JSON is generated
+- **THEN** one Employee object contains all retained Unit objects regardless of the saved Template row mode
+
+#### Scenario: Generate a template
+- **WHEN** the user selects All Units or First Unit and generates Template output
+- **THEN** the shared formatter renders the corresponding rows with the fixed Unit-path separator
+
+#### Scenario: Preview a large output
+- **WHEN** the selected sources contain 20,000 Employees
+- **THEN** settings render a bounded preview without constructing the complete output
+- **AND** searchable Unit and Tag exclusions render only visible option rows
 
 #### Scenario: PNG with many dated tags
 - **WHEN** an Employee has more localized dated tags than fit on one image row
-- **THEN** the PNG contains every tag on wrapped rows and expands geometry without overlaps or an
-  overflow count
+- **THEN** the PNG contains every tag on wrapped rows and expands geometry without overlaps or an overflow count
 
 #### Scenario: Local export
-- **WHEN** a user copies or saves an export
-- **THEN** the data is produced in the browser without an upload or remote API
+- **WHEN** a user copies or saves complete JSON, Template, or Editor image output
+- **THEN** data is produced in the browser after the explicit action without upload, remote API, or browser persistence
 
 #### Scenario: Silent file download
 - **WHEN** a user downloads a file after copying or without a prior copy

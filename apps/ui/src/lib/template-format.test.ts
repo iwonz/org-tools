@@ -7,11 +7,7 @@ import {
   type TemplateFieldValue,
   templateReferencesField,
 } from "@/lib/template-format";
-import {
-  createDefaultExportFieldNames,
-  type ExportEmployeeFieldKey,
-  type ExportFieldNameMap,
-} from "@/stores/export-session-store";
+import { createDefaultExportJsonFieldNames } from "@/stores/export-session-store";
 
 const render = (template: string, values: Record<string, unknown>) =>
   renderTemplateFormat({
@@ -98,19 +94,20 @@ describe("createExportText template mode", () => {
 
     expect(
       createExportText({
-        fieldNames: {} as ExportFieldNameMap,
+        excludedJsonTagKeys: [],
+        excludedJsonUnitIds: [],
+        jsonFieldNames: createDefaultExportJsonFieldNames(),
         rows,
         selectedEmployeeFieldKeys: [],
-        selectedFlatUnitFieldKeys: [],
+        selectedJsonTagFieldKeys: [],
         selectedJsonUnitFieldKeys: [],
         tabMode: "template",
         templateFormat: "{fullName} <{email}> {username ? '@{username}' : ''}\n",
-        unitFullPathSeparator: " · ",
       }),
     ).toBe("Ada Lovelace <ada@example.test> @ada\n");
   });
 
-  test("exports tags as an array in JSON and semicolon text in flat formats", () => {
+  test("exports Tags as structured JSON and renders legacy tokens in Template", () => {
     const employee = {
       avatarBase64Url: null,
       birthday: null,
@@ -131,24 +128,24 @@ describe("createExportText template mode", () => {
       username: null,
     } satisfies Employee;
     const rows: ExportRow[] = [{ context: "employeeFallback", employee, unitContext: null }];
-    const fieldNames = createDefaultExportFieldNames();
+    const jsonFieldNames = createDefaultExportJsonFieldNames();
     const baseOptions = {
-      fieldNames,
+      excludedJsonTagKeys: [],
+      excludedJsonUnitIds: [],
+      jsonFieldNames,
       rows,
-      selectedEmployeeFieldKeys: ["tags", "tagDates"] as ExportEmployeeFieldKey[],
-      selectedFlatUnitFieldKeys: [],
+      selectedEmployeeFieldKeys: [],
+      selectedJsonTagFieldKeys: ["label", "date"] as const,
       selectedJsonUnitFieldKeys: [],
       templateFormat: "{tags}|{tagDates}",
-      unitFullPathSeparator: " · ",
     };
     const json = createExportText({ ...baseOptions, tabMode: "json" });
-    const csv = createExportText({ ...baseOptions, tabMode: "csv" });
     const template = createExportText({ ...baseOptions, tabMode: "template" });
 
-    expect(JSON.parse(json)[0].tags).toEqual(["Mentor", "Backend"]);
-    expect(JSON.parse(json)[0].tagDates).toEqual([{ date: "2026-09-01", tag: "Backend" }]);
-    expect(csv).toContain("Mentor; Backend");
-    expect(csv).toContain("Backend=2026-09-01");
+    expect(JSON.parse(json)[0].tags).toEqual([
+      { date: null, label: "Mentor" },
+      { date: "2026-09-01", label: "Backend" },
+    ]);
     expect(template).toBe("Mentor; Backend|Backend=2026-09-01");
   });
 });

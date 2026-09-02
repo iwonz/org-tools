@@ -100,8 +100,6 @@ const employeeFields = [
   "phone",
   "avatarBase64Url",
   "birthday",
-  "tags",
-  "tagDates",
 ];
 const state = {
   organization: {
@@ -117,21 +115,27 @@ const state = {
       employeeFilters: emptyFilters,
       employeeQuery: "",
       excludedEmployeeIds: [],
-      fieldNames: Object.fromEntries(
-        [...employeeFields, ...unitFields].map((field) => [field, field]),
-      ),
-      flatUnitFieldOrder: unitFields,
+      excludedJsonTagKeys: [],
+      excludedJsonUnitIds: [],
+      jsonFieldNames: {
+        employee: Object.fromEntries(employeeFields.map((field) => [field, field])),
+        tags: { collection: "tags", fields: { date: "date", label: "label" } },
+        units: {
+          collection: "units",
+          fields: Object.fromEntries(unitFields.map((field) => [field, field])),
+        },
+      },
+      jsonTagFieldOrder: ["label", "date"],
       jsonUnitFieldOrder: unitFields,
       rowMode: "allUnits",
       selectedEmployeeFieldKeys: ["username"],
       selectedFilters: emptyFilters,
-      selectedFlatUnitFieldKeys: ["unitName", "unitFullPath"],
-      selectedJsonUnitFieldKeys: unitFields,
+      selectedJsonTagFieldKeys: [],
+      selectedJsonUnitFieldKeys: [],
       selectedQuery: "",
       selections: [],
-      tabMode: "csv",
+      tabMode: "json",
       templateFormat: "{email}, ",
-      unitFullPathSeparator: " / ",
       unitQuery: "",
     },
     editor: {

@@ -29,14 +29,14 @@ import { ImportDialog } from "@/components/import-dialog";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useAppLocale } from "@/components/locale-provider";
 import { OrgStructureEditorTab } from "@/components/org-structure-editor-tab";
-import { StateExportDialog } from "@/components/state-export-dialog";
 import { useStateRuntime } from "@/components/state-runtime-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitsTab } from "@/components/units-tab";
-import type { UiMessageDescriptor } from "@/i18n/messages";
+import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { type UiTextKey, useMessageText, useUiText } from "@/i18n/use-ui-text";
+import { downloadState } from "@/lib/state-transfer";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -80,9 +80,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
   const { setLocale } = useAppLocale();
   const { setTheme } = useTheme();
   const [importOpen, setImportOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
   const [importState, setImportState] = useState<OrgToolsState | null>(null);
-  const [exportState, setExportState] = useState<OrgToolsState | null>(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
   const [contextHeaderAction, setContextHeaderAction] = useState<ContextHeaderAction | null>(null);
   const sidebarCollapsed = store.sidebarCollapsed;
@@ -222,8 +220,12 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                 className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
                 data-demo-id="export-state"
                 onClick={() => {
-                  setExportState(store.createOrgToolsState());
-                  setExportOpen(true);
+                  try {
+                    downloadState(store.createOrgToolsState());
+                    setError(null);
+                  } catch (exportError) {
+                    setError(describeError(exportError));
+                  }
                 }}
                 title={t("Export")}
                 type="button"
@@ -372,16 +374,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
             if (!open) setImportState(null);
           }}
           open={importOpen}
-        />
-      )}
-      {exportState && (
-        <StateExportDialog
-          onOpenChange={(open) => {
-            setExportOpen(open);
-            if (!open) setExportState(null);
-          }}
-          open={exportOpen}
-          state={exportState}
         />
       )}
     </ContextHeaderActionContext.Provider>

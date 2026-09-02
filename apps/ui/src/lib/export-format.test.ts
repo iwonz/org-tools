@@ -5,14 +5,13 @@ import { buildEmployeeUnitContextIndex } from "@/lib/employee-unit-contexts";
 import {
   buildEmployeeExportRows,
   countEmployeeExportRows,
+  createExportPreview,
   createExportText,
+  createStructuredJsonRecords,
   getExportEmployeeFieldValue,
   validateExportFieldNames,
 } from "@/lib/export-format";
-import {
-  createDefaultExportFieldNames,
-  type ExportEmployeeFieldKey,
-} from "@/stores/export-session-store";
+import { createDefaultExportJsonFieldNames } from "@/stores/export-session-store";
 
 const EMPLOYEE_ID = "00000000-0000-4000-8000-000000000001";
 const ROOT_UNIT_ID = "00000000-0000-4000-8000-000000000002";
@@ -25,13 +24,8 @@ const rootPosition: EmployeeUnitPosition = {
   position: "Research Lead",
   unitId: ROOT_UNIT_ID,
   unitName: "Research",
-  unitPath: {
-    fullName: "Research",
-    ids: [ROOT_UNIT_ID],
-    names: ["Research"],
-  },
+  unitPath: { fullName: "Research", ids: [ROOT_UNIT_ID], names: ["Research"] },
 };
-
 const childPosition: EmployeeUnitPosition = {
   isBoss: false,
   parentId: ROOT_UNIT_ID,
@@ -51,6 +45,7 @@ const createEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   email: "ada@example.test",
   firstName: "Ada",
   fullName: "Ada Lovelace",
+  gender: "female",
   id: EMPLOYEE_ID,
   lastName: "Lovelace",
   phone: "+1 555-0101",
@@ -63,28 +58,28 @@ const createEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   unitPositions: [rootPosition, childPosition],
   username: "ada",
   ...overrides,
-  gender: overrides.gender ?? "female",
 });
 
-const createText = ({
-  employee,
-  selectedEmployeeFieldKeys,
-  tabMode,
-}: {
-  employee: Employee;
-  selectedEmployeeFieldKeys: ExportEmployeeFieldKey[];
-  tabMode: "csv" | "json" | "template";
-}) =>
-  createExportText({
-    fieldNames: createDefaultExportFieldNames(),
-    rows: [{ context: "employeeFallback", employee, unitContext: null }],
-    selectedEmployeeFieldKeys,
-    selectedFlatUnitFieldKeys: [],
-    selectedJsonUnitFieldKeys: ["unitName"],
-    tabMode,
-    templateFormat: selectedEmployeeFieldKeys.map((field) => `{${field}}`).join(" | "),
-    unitFullPathSeparator: " · ",
+const createRows = (employee = createEmployee()) =>
+  buildEmployeeExportRows({
+    employee,
+    isDirectlySelected: true,
+    mode: "allUnits",
+    unitContexts: buildEmployeeUnitContextIndex([employee]).get(employee.id) ?? [],
+    unitOrderById: new Map([
+      [ROOT_UNIT_ID, 0],
+      [CHILD_UNIT_ID, 1],
+    ]),
   });
+
+const createJsonOptions = () => ({
+  excludedJsonTagKeys: [] as string[],
+  excludedJsonUnitIds: [] as string[],
+  jsonFieldNames: createDefaultExportJsonFieldNames(),
+  selectedEmployeeFieldKeys: ["username", "email"] as const,
+  selectedJsonTagFieldKeys: ["label", "date"] as const,
+  selectedJsonUnitFieldKeys: ["unitId", "unitName", "unitFullPath", "position", "isBoss"] as const,
+});
 
 describe("Employee export rows", () => {
   test("supports All Units and First Unit with stable tree precedence", () => {
@@ -94,7 +89,6 @@ describe("Employee export rows", () => {
       [ROOT_UNIT_ID, 0],
       [CHILD_UNIT_ID, 1],
     ]);
-
     const allRows = buildEmployeeExportRows({
       employee,
       isDirectlySelected: true,
@@ -111,7 +105,6 @@ describe("Employee export rows", () => {
     });
 
     expect(allRows.map((row) => row.unitContext?.unitId)).toEqual([ROOT_UNIT_ID, CHILD_UNIT_ID]);
-    expect(firstRows).toHaveLength(1);
     expect(firstRows[0]?.unitContext?.unitId).toBe(ROOT_UNIT_ID);
     expect(
       countEmployeeExportRows({
@@ -123,161 +116,141 @@ describe("Employee export rows", () => {
     ).toBe(2);
   });
 
-  test("retains an unassigned directly selected Employee in First Unit mode", () => {
+  test("retains an unassigned directly selected Employee", () => {
     const employee = createEmployee({ unitIds: [], unitPositions: [] });
-    const rows = buildEmployeeExportRows({
-      employee,
-      isDirectlySelected: true,
-      mode: "firstUnit",
-      unitContexts: [],
-      unitOrderById: new Map(),
-    });
-
-    expect(rows).toEqual([{ context: "employeeFallback", employee, unitContext: null }]);
     expect(
-      countEmployeeExportRows({
+      buildEmployeeExportRows({
+        employee,
         isDirectlySelected: true,
         mode: "firstUnit",
         unitContexts: [],
         unitOrderById: new Map(),
       }),
-    ).toBe(1);
+    ).toEqual([{ context: "employeeFallback", employee, unitContext: null }]);
   });
 });
 
-describe("generic export formats", () => {
-  test("exports persisted profile, embedded avatar, birthday, tags, and contact fields directly", () => {
-    const employee = createEmployee();
-    const selectedEmployeeFieldKeys: ExportEmployeeFieldKey[] = [
-      "firstName",
-      "lastName",
-      "email",
-      "username",
-      "profileUrl",
-      "avatarBase64Url",
-      "phone",
-      "birthday",
-      "gender",
-      "tags",
-    ];
-    const json = JSON.parse(
-      createText({ employee, selectedEmployeeFieldKeys, tabMode: "json" }),
-    ) as Array<Record<string, unknown>>;
-
-    expect(json[0]).toMatchObject({
-      avatarBase64Url: EMBEDDED_AVATAR,
-      birthday: "12-10",
-      email: "ada@example.test",
-      firstName: "Ada",
-      gender: "female",
-      lastName: "Lovelace",
-      phone: "+1 555-0101",
-      profileUrl: "https://example.test/profiles/ada",
-      tags: ["Research", "Computing"],
-      username: "ada",
-      units: [],
-    });
-  });
-
-  test("does not construct a profile URL from username", () => {
-    const employee = createEmployee({ profileUrl: null, username: "standalone-handle" });
-    expect(getExportEmployeeFieldValue(employee, "profileUrl")).toBeNull();
-  });
-
-  test("keeps Unit assignments nested in JSON", () => {
-    const employee = createEmployee();
-    const contexts = buildEmployeeUnitContextIndex([employee]).get(employee.id) ?? [];
-    const rows = buildEmployeeExportRows({
-      employee,
-      isDirectlySelected: true,
-      mode: "allUnits",
-      unitContexts: contexts,
-      unitOrderById: new Map([
-        [ROOT_UNIT_ID, 0],
-        [CHILD_UNIT_ID, 1],
-      ]),
-    });
-    const json = JSON.parse(
-      createExportText({
-        fieldNames: createDefaultExportFieldNames(),
-        rows,
-        selectedEmployeeFieldKeys: ["username"],
-        selectedFlatUnitFieldKeys: ["unitName", "position"],
-        selectedJsonUnitFieldKeys: ["unitName", "position", "isBoss"],
-        tabMode: "json",
-        templateFormat: "",
-        unitFullPathSeparator: " · ",
-      }),
-    ) as Array<{ units: Array<{ isBoss: boolean; position: string; unitName: string }> }>;
-
-    expect(json[0]?.units).toEqual([
-      { isBoss: true, position: "Research Lead", unitName: "Research" },
-      { isBoss: false, position: "Systems Engineer", unitName: "Computing" },
+describe("structured JSON export", () => {
+  test("creates one Employee record with nested Units, Tags, and a fixed Unit path separator", () => {
+    const result = createStructuredJsonRecords(createRows(), createJsonOptions());
+    expect(result).toEqual([
+      {
+        email: "ada@example.test",
+        tags: [
+          { date: null, label: "Research" },
+          { date: "2026-12-10", label: "Computing" },
+        ],
+        units: [
+          {
+            isBoss: true,
+            position: "Research Lead",
+            unitFullPath: "Research",
+            unitId: ROOT_UNIT_ID,
+            unitName: "Research",
+          },
+          {
+            isBoss: false,
+            position: "Systems Engineer",
+            unitFullPath: "Research / Computing",
+            unitId: CHILD_UNIT_ID,
+            unitName: "Computing",
+          },
+        ],
+        username: "ada",
+      },
     ]);
   });
 
-  test("neutralizes formula-leading spreadsheet values", () => {
-    const csv = createText({
-      employee: createEmployee({ firstName: "=2+3" }),
-      selectedEmployeeFieldKeys: ["firstName"],
-      tabMode: "csv",
+  test("omits disabled groups, keeps empty enabled groups, and excludes exact Units and normalized Tags", () => {
+    const options = createJsonOptions();
+    const withoutGroups = createStructuredJsonRecords(createRows(), {
+      ...options,
+      selectedJsonTagFieldKeys: [],
+      selectedJsonUnitFieldKeys: [],
     });
+    expect(withoutGroups[0]).not.toHaveProperty("tags");
+    expect(withoutGroups[0]).not.toHaveProperty("units");
 
-    expect(csv).toBe('firstName\r\n"\'=2+3"');
+    const filtered = createStructuredJsonRecords(createRows(), {
+      ...options,
+      excludedJsonTagKeys: ["research", "computing"],
+      excludedJsonUnitIds: [ROOT_UNIT_ID, CHILD_UNIT_ID],
+    });
+    expect(filtered[0]).toMatchObject({ tags: [], units: [] });
   });
 
-  test("keeps tags as arrays in JSON and renders them as text in flat formats", () => {
-    const employee = createEmployee();
-    expect(
-      JSON.parse(createText({ employee, selectedEmployeeFieldKeys: ["tags"], tabMode: "json" }))[0]
-        .tags,
-    ).toEqual(["Research", "Computing"]);
-    expect(createText({ employee, selectedEmployeeFieldKeys: ["tags"], tabMode: "template" })).toBe(
-      "Research; Computing",
-    );
-  });
-});
-
-describe("export field names", () => {
-  test("reports semantic duplicate, empty, and reserved output-name errors", () => {
-    const fieldNames = createDefaultExportFieldNames();
-    fieldNames.username = "identity";
-    fieldNames.email = "identity";
-    fieldNames.firstName = "";
-    fieldNames.profileUrl = "units";
-
-    const csvValidation = validateExportFieldNames({
-      fieldNames,
-      selectedEmployeeFieldKeys: ["username", "email", "firstName"],
-      selectedFlatUnitFieldKeys: [],
-      selectedJsonUnitFieldKeys: ["unitName"],
-      tabMode: "csv",
-    });
-    const jsonValidation = validateExportFieldNames({
-      fieldNames,
-      selectedEmployeeFieldKeys: ["profileUrl"],
-      selectedFlatUnitFieldKeys: [],
+  test("supports collection and nested field naming and validates collisions", () => {
+    const names = createDefaultExportJsonFieldNames();
+    names.units.collection = "teams";
+    names.units.fields.unitName = "name";
+    names.tags.collection = "labels";
+    names.employee.email = "username";
+    const validation = validateExportFieldNames({
+      jsonFieldNames: names,
+      selectedEmployeeFieldKeys: ["username", "email"],
+      selectedJsonTagFieldKeys: ["label"],
       selectedJsonUnitFieldKeys: ["unitName"],
       tabMode: "json",
     });
-
-    expect(csvValidation.isValid).toBe(false);
-    expect(csvValidation.errors).toEqual(
-      expect.arrayContaining([
-        {
-          fieldKey: "email",
-          fieldName: "identity",
-          group: "csv",
-          kind: "duplicate",
-          previousFieldKey: "username",
-        },
-        { fieldKey: "firstName", group: "csv", kind: "missing" },
-      ]),
-    );
-    expect(jsonValidation.errors).toContainEqual({
-      fieldName: "units",
-      group: "employee",
-      kind: "reserved",
+    expect(validation.isValid).toBe(false);
+    expect(validation.errors).toContainEqual({
+      fieldKey: "email",
+      fieldName: "username",
+      group: "topLevel",
+      kind: "duplicate",
+      previousFieldKey: "username",
     });
+
+    names.employee.email = "mail";
+    const record = createStructuredJsonRecords(createRows(), {
+      ...createJsonOptions(),
+      jsonFieldNames: names,
+      selectedJsonTagFieldKeys: ["label"],
+      selectedJsonUnitFieldKeys: ["unitName"],
+    })[0];
+    expect(record).toMatchObject({
+      labels: [{ label: "Research" }, { label: "Computing" }],
+      teams: [{ name: "Research" }, { name: "Computing" }],
+    });
+  });
+
+  test("bounds preview to 50 records", () => {
+    const rows = Array.from({ length: 80 }, (_, index) => ({
+      context: "employeeFallback" as const,
+      employee: createEmployee({
+        id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+        username: `employee-${index}`,
+      }),
+      unitContext: null,
+    }));
+    const preview = createExportPreview({
+      ...createJsonOptions(),
+      rows,
+      tabMode: "json",
+      templateFormat: "",
+    });
+    expect(preview.fullCount).toBe(80);
+    expect(preview.shownCount).toBe(50);
+    expect(preview.truncated).toBe(true);
+  });
+});
+
+describe("Template export", () => {
+  test("keeps row mode output and Employee tag tokens", () => {
+    const text = createExportText({
+      ...createJsonOptions(),
+      rows: createRows(),
+      tabMode: "template",
+      templateFormat: "{fullName}|{unitFullPath}|{tags}|{tagDates}\n",
+    });
+    expect(text).toContain(
+      "Ada Lovelace|Research / Computing|Research; Computing|Computing=2026-12-10",
+    );
+  });
+
+  test("does not synthesize a profile URL", () => {
+    expect(
+      getExportEmployeeFieldValue(createEmployee({ profileUrl: null }), "profileUrl"),
+    ).toBeNull();
   });
 });

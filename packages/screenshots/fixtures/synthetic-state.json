@@ -209,9 +209,7 @@
         "email",
         "phone",
         "avatarBase64Url",
-        "birthday",
-        "tags",
-        "tagDates"
+        "birthday"
       ],
       "employeeFilters": {
         "birthday": null,
@@ -224,27 +222,38 @@
       },
       "employeeQuery": "",
       "excludedEmployeeIds": [],
-      "fieldNames": {
-        "id": "id",
-        "firstName": "firstName",
-        "lastName": "lastName",
-        "fullName": "fullName",
-        "gender": "gender",
-        "username": "username",
-        "profileUrl": "profileUrl",
-        "email": "email",
-        "phone": "phone",
-        "avatarBase64Url": "avatarBase64Url",
-        "birthday": "birthday",
-        "tags": "tags",
-        "tagDates": "tagDates",
-        "unitId": "unitId",
-        "unitName": "unitName",
-        "unitFullPath": "unitFullPath",
-        "position": "position",
-        "isBoss": "isBoss"
+      "excludedJsonTagKeys": [],
+      "excludedJsonUnitIds": [],
+      "jsonFieldNames": {
+        "employee": {
+          "id": "id",
+          "firstName": "firstName",
+          "lastName": "lastName",
+          "fullName": "fullName",
+          "gender": "gender",
+          "username": "username",
+          "profileUrl": "profileUrl",
+          "email": "email",
+          "phone": "phone",
+          "avatarBase64Url": "avatarBase64Url",
+          "birthday": "birthday"
+        },
+        "tags": {
+          "collection": "tags",
+          "fields": { "label": "label", "date": "date" }
+        },
+        "units": {
+          "collection": "units",
+          "fields": {
+            "unitId": "unitId",
+            "unitName": "unitName",
+            "unitFullPath": "unitFullPath",
+            "position": "position",
+            "isBoss": "isBoss"
+          }
+        }
       },
-      "flatUnitFieldOrder": ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
+      "jsonTagFieldOrder": ["label", "date"],
       "jsonUnitFieldOrder": ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
       "rowMode": "allUnits",
       "selectedEmployeeFieldKeys": ["username"],
@@ -257,13 +266,12 @@
         "selectedTags": [],
         "selectedUnitIds": []
       },
-      "selectedFlatUnitFieldKeys": ["unitName", "unitFullPath"],
-      "selectedJsonUnitFieldKeys": ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
+      "selectedJsonTagFieldKeys": [],
+      "selectedJsonUnitFieldKeys": [],
       "selectedQuery": "",
       "selections": [],
-      "tabMode": "csv",
+      "tabMode": "json",
       "templateFormat": "{email}, ",
-      "unitFullPathSeparator": " / ",
       "unitQuery": ""
     },
     "editor": {

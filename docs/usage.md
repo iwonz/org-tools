@@ -47,9 +47,9 @@ control.
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header.
 - **Editor** manages the current Unit structure on an adaptive snapped grid, including search,
-  history, layout, bulk commands, templates, and PNG output. There is no alternate View or structure
-  selector: Units and Editor always operate on the same organization. Closing Search clears its
-  query. Unit cards keep the same opaque background
+  history, layout, bulk commands, Image, JSON, and Template output. There is no alternate View or
+  structure selector: Units and Editor always operate on the same organization. Closing Search
+  clears its query. Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights, and
   hierarchy connections while retaining configurable output styling. Every tag is written in full;
@@ -60,8 +60,11 @@ control.
   headings, and empty Birthday, dated-event, or Past sections. Both day details and dated-tag
   history use complete Employee cards with the ordinary Tag, Edit, and Delete actions while
   retaining bounded scrolling and tag-history navigation.
-- **Data Download** selects Units or Employees and produces CSV, JSON, templates, and PNG output.
-  **Continue** stays disabled in the shared header until at least one Employee is selected.
+- **Data Download** selects Units or Employees and produces structured JSON or Template output.
+  JSON always produces one record per Employee. Unit and Tag arrays are independently enabled,
+  renamed, and filtered through searchable exclusion menus; Template retains All Units and First
+  Unit row modes. Unit paths use the fixed ` / ` separator. **Continue** stays disabled in the
+  shared header until at least one Employee is selected.
 
 ## Import and Export
 
@@ -71,10 +74,10 @@ array, maps flat or nested properties, requires first name, last name, and email
 nested Team assignments. Existing deterministic identities can be updated, skipped, or limited to
 Teams in bulk with per-Employee overrides. Invalid input never changes current data.
 
-**Export** opens the same two choices. All state downloads `org-tools-state.json`. Employees
-downloads `org-tools-employees.json` as a flat Employee array with nested Team assignments. Both
-include current unsaved-in-flight memory after validation. Data Download artifacts remain separate
-reporting outputs and cannot be imported as application state or Employee transfer.
+**Export** immediately validates the live state and downloads `org-tools-state.json`; it has no
+dialog or Employee-only mode. The file includes the latest in-memory changes. Data Download and
+Editor artifacts remain separate outputs and cannot be imported as application state or Employee
+transfer.
 
 Employee IDs are deterministic 64-character SHA-256 values derived from normalized first name, last
 name, and email. Unicode NFKC normalization, trimmed and collapsed whitespace, lowercase, U+001F

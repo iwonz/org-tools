@@ -129,6 +129,20 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(mismatched)).toThrow("invalid Employee");
   });
 
+  test("rejects obsolete CSV and flat Unit Download state", () => {
+    const state = createBlankOrgToolsState();
+    const obsolete = structuredClone(state) as unknown as {
+      ui: { download: Record<string, unknown> };
+    };
+    obsolete.ui.download = {
+      ...obsolete.ui.download,
+      flatUnitFieldOrder: ["unitName"],
+      tabMode: "csv",
+      unitFullPathSeparator: " / ",
+    };
+    expect(() => parseOrgToolsState(obsolete)).toThrow("invalid durable UI state");
+  });
+
   test("uses SHA-256 IDs for Employees and UUIDs for Units", () => {
     const { employeeId, unitId } = populatedStore();
     expect(isEmployeeId(employeeId)).toBe(true);

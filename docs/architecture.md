@@ -37,8 +37,8 @@ unfinished forms are transient.
 State Import parses one detached value, validates exact keys, identifiers, dates, URLs, embedded
 avatars, references, graph invariants, and UI references, then performs one atomic replacement.
 Employee Import maps a flat or nested array, deterministically matches identity, and optionally
-upserts portable Team assignments. Export selects the complete state or a flat Employee array with
-nested Team assignments. Old state shapes are rejected.
+upserts portable Team assignments. Export directly validates and downloads the complete current
+state. Old state shapes are rejected.
 
 An Employee ID is the full SHA-256 of normalized first name, last name, and email separated by
 U+001F. Normalization uses Unicode NFKC, trimmed and collapsed whitespace, and locale-independent
@@ -101,9 +101,11 @@ history, collaborative cursors, or remote synchronization.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
   and write observation; the SQLite transport is imported only by `apps/ui`.
-- Import owns one transient `File`, mapping, and validated candidate. Export projects only the
-  selected mode after an explicit action.
-- Data Download remains a separate reporting pipeline for CSV, JSON, templates, and PNG.
+- Import owns one transient `File`, mapping, and validated candidate. Global Export validates and
+  downloads the complete current state only after an explicit action.
+- Data Download is a separate reporting pipeline for structured JSON and separator templates.
+  JSON creates one record per Employee with independently enabled, named, and filtered nested Unit
+  and Tag arrays. Template retains All Units and First Unit row modes.
 
 Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
 headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row
@@ -111,8 +113,10 @@ heights, and hierarchy anchors. The selected export font measures one immutable 
 Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
 drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
 Employee summary, and boss treatment while excluding Static/Live membership type, transient
-selection, hover, handles, and menus. Image titles, backgrounds, fonts, scope, radius, and Employee
-templates remain output-only settings and do not mutate the current structure.
+selection, hover, handles, and menus. Image titles, backgrounds, fonts, scope, radius, Employee
+templates, and Editor JSON settings remain output-only session settings and do not mutate the
+current structure. Editor JSON and Template use the same formatter as Data Download while limiting
+Employees and assignments to Unit-only or subtree scope.
 
 Both runtimes expose the same Import, Export, language, and theme actions and retain identical
 compact/expanded sidebar geometry.

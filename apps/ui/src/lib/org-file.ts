@@ -10,8 +10,11 @@ import type {
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
   OrgEditorUnit,
+  OrgToolsDownloadEmployeeFieldKey,
   OrgToolsDownloadSelection,
   OrgToolsDownloadState,
+  OrgToolsDownloadTagFieldKey,
+  OrgToolsDownloadUnitFieldKey,
   OrgToolsEmployeeFilters,
   OrgToolsState,
   OrgToolsUiState,
@@ -40,6 +43,30 @@ const EMPLOYEE_FIELD_KEYS = [
   "tags",
   "username",
 ] as const;
+const DOWNLOAD_EMPLOYEE_FIELD_KEYS = [
+  "id",
+  "firstName",
+  "lastName",
+  "fullName",
+  "gender",
+  "username",
+  "profileUrl",
+  "email",
+  "phone",
+  "avatarBase64Url",
+  "birthday",
+] as const satisfies readonly OrgToolsDownloadEmployeeFieldKey[];
+const DOWNLOAD_TAG_FIELD_KEYS = [
+  "label",
+  "date",
+] as const satisfies readonly OrgToolsDownloadTagFieldKey[];
+const DOWNLOAD_UNIT_FIELD_KEYS = [
+  "unitId",
+  "unitName",
+  "unitFullPath",
+  "position",
+  "isBoss",
+] as const satisfies readonly OrgToolsDownloadUnitFieldKey[];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -382,9 +409,48 @@ const normalizeDownloadSelection = (value: unknown): OrgToolsDownloadSelection |
   return null;
 };
 
-const normalizeStringRecord = (value: unknown): Record<string, string> | null => {
-  if (!isRecord(value) || Object.values(value).some((entry) => !isString(entry))) return null;
-  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, entry as string]));
+const normalizeExactStringRecord = <Key extends string>(
+  value: unknown,
+  keys: readonly Key[],
+): Record<Key, string> | null => {
+  if (!isRecord(value) || !hasExactKeys(value, keys) || keys.some((key) => !isString(value[key]))) {
+    return null;
+  }
+  return Object.fromEntries(keys.map((key) => [key, value[key]])) as Record<Key, string>;
+};
+
+const normalizeEnumArray = <Value extends string>(
+  value: unknown,
+  allowed: readonly Value[],
+): Value[] | null => {
+  if (!Array.isArray(value)) return null;
+  const allowedSet = new Set<string>(allowed);
+  return value.every((item) => isString(item) && allowedSet.has(item)) ? (value as Value[]) : null;
+};
+
+const normalizeDownloadJsonFieldNames = (
+  value: unknown,
+): OrgToolsDownloadState["jsonFieldNames"] | null => {
+  if (!isRecord(value) || !hasExactKeys(value, ["employee", "tags", "units"])) return null;
+  if (!isRecord(value.tags) || !hasExactKeys(value.tags, ["collection", "fields"])) return null;
+  if (!isRecord(value.units) || !hasExactKeys(value.units, ["collection", "fields"])) return null;
+  const employee = normalizeExactStringRecord(value.employee, DOWNLOAD_EMPLOYEE_FIELD_KEYS);
+  const tagFields = normalizeExactStringRecord(value.tags.fields, DOWNLOAD_TAG_FIELD_KEYS);
+  const unitFields = normalizeExactStringRecord(value.units.fields, DOWNLOAD_UNIT_FIELD_KEYS);
+  if (
+    !employee ||
+    !tagFields ||
+    !unitFields ||
+    !isString(value.tags.collection) ||
+    !isString(value.units.collection)
+  ) {
+    return null;
+  }
+  return {
+    employee,
+    tags: { collection: value.tags.collection, fields: tagFields },
+    units: { collection: value.units.collection, fields: unitFields },
+  };
 };
 
 const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null => {
@@ -395,64 +461,95 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
       "employeeFilters",
       "employeeQuery",
       "excludedEmployeeIds",
-      "fieldNames",
-      "flatUnitFieldOrder",
+      "excludedJsonTagKeys",
+      "excludedJsonUnitIds",
+      "jsonFieldNames",
+      "jsonTagFieldOrder",
       "jsonUnitFieldOrder",
       "rowMode",
       "selectedEmployeeFieldKeys",
       "selectedFilters",
-      "selectedFlatUnitFieldKeys",
+      "selectedJsonTagFieldKeys",
       "selectedJsonUnitFieldKeys",
       "selectedQuery",
       "selections",
       "tabMode",
       "templateFormat",
-      "unitFullPathSeparator",
       "unitQuery",
     ]) ||
-    !isStringArray(value.employeeFieldOrder) ||
+    !Array.isArray(value.employeeFieldOrder) ||
     !isString(value.employeeQuery) ||
     !isEmployeeIdArray(value.excludedEmployeeIds) ||
-    !isStringArray(value.flatUnitFieldOrder) ||
-    !isStringArray(value.jsonUnitFieldOrder) ||
+    !isStringArray(value.excludedJsonTagKeys) ||
+    !isUuidArray(value.excludedJsonUnitIds) ||
+    !Array.isArray(value.jsonTagFieldOrder) ||
+    !Array.isArray(value.jsonUnitFieldOrder) ||
     (value.rowMode !== "allUnits" && value.rowMode !== "firstUnit") ||
-    !isStringArray(value.selectedEmployeeFieldKeys) ||
-    !isStringArray(value.selectedFlatUnitFieldKeys) ||
-    !isStringArray(value.selectedJsonUnitFieldKeys) ||
+    !Array.isArray(value.selectedEmployeeFieldKeys) ||
+    !Array.isArray(value.selectedJsonTagFieldKeys) ||
+    !Array.isArray(value.selectedJsonUnitFieldKeys) ||
     !isString(value.selectedQuery) ||
     !Array.isArray(value.selections) ||
-    (value.tabMode !== "csv" && value.tabMode !== "json" && value.tabMode !== "template") ||
+    (value.tabMode !== "json" && value.tabMode !== "template") ||
     !isString(value.templateFormat) ||
-    !isString(value.unitFullPathSeparator) ||
-    value.unitFullPathSeparator.length > 5 ||
     !isString(value.unitQuery)
   ) {
     return null;
   }
   const employeeFilters = normalizeEmployeeSearchFilters(value.employeeFilters);
   const selectedFilters = normalizeEmployeeSearchFilters(value.selectedFilters);
-  const fieldNames = normalizeStringRecord(value.fieldNames);
+  const jsonFieldNames = normalizeDownloadJsonFieldNames(value.jsonFieldNames);
   const selections = value.selections.map(normalizeDownloadSelection);
-  if (!employeeFilters || !selectedFilters || !fieldNames || selections.some((item) => !item))
+  const employeeFieldOrder = normalizeEnumArray(
+    value.employeeFieldOrder,
+    DOWNLOAD_EMPLOYEE_FIELD_KEYS,
+  );
+  const jsonTagFieldOrder = normalizeEnumArray(value.jsonTagFieldOrder, DOWNLOAD_TAG_FIELD_KEYS);
+  const jsonUnitFieldOrder = normalizeEnumArray(value.jsonUnitFieldOrder, DOWNLOAD_UNIT_FIELD_KEYS);
+  const selectedEmployeeFieldKeys = normalizeEnumArray(
+    value.selectedEmployeeFieldKeys,
+    DOWNLOAD_EMPLOYEE_FIELD_KEYS,
+  );
+  const selectedJsonTagFieldKeys = normalizeEnumArray(
+    value.selectedJsonTagFieldKeys,
+    DOWNLOAD_TAG_FIELD_KEYS,
+  );
+  const selectedJsonUnitFieldKeys = normalizeEnumArray(
+    value.selectedJsonUnitFieldKeys,
+    DOWNLOAD_UNIT_FIELD_KEYS,
+  );
+  if (
+    !employeeFilters ||
+    !selectedFilters ||
+    !jsonFieldNames ||
+    !employeeFieldOrder ||
+    !jsonTagFieldOrder ||
+    !jsonUnitFieldOrder ||
+    !selectedEmployeeFieldKeys ||
+    !selectedJsonTagFieldKeys ||
+    !selectedJsonUnitFieldKeys ||
+    selections.some((item) => !item)
+  )
     return null;
   return {
-    employeeFieldOrder: [...value.employeeFieldOrder],
+    employeeFieldOrder,
     employeeFilters,
     employeeQuery: value.employeeQuery,
     excludedEmployeeIds: [...value.excludedEmployeeIds],
-    fieldNames,
-    flatUnitFieldOrder: [...value.flatUnitFieldOrder],
-    jsonUnitFieldOrder: [...value.jsonUnitFieldOrder],
+    excludedJsonTagKeys: [...new Set(value.excludedJsonTagKeys)],
+    excludedJsonUnitIds: [...new Set(value.excludedJsonUnitIds)] as UnitId[],
+    jsonFieldNames,
+    jsonTagFieldOrder,
+    jsonUnitFieldOrder,
     rowMode: value.rowMode,
-    selectedEmployeeFieldKeys: [...value.selectedEmployeeFieldKeys],
+    selectedEmployeeFieldKeys,
     selectedFilters,
-    selectedFlatUnitFieldKeys: [...value.selectedFlatUnitFieldKeys],
-    selectedJsonUnitFieldKeys: [...value.selectedJsonUnitFieldKeys],
+    selectedJsonTagFieldKeys,
+    selectedJsonUnitFieldKeys,
     selectedQuery: value.selectedQuery,
     selections: selections as OrgToolsDownloadSelection[],
     tabMode: value.tabMode,
     templateFormat: value.templateFormat,
-    unitFullPathSeparator: value.unitFullPathSeparator,
     unitQuery: value.unitQuery,
   };
 };
@@ -705,46 +802,43 @@ export const createBlankDownloadState = (): OrgToolsDownloadState => ({
     "phone",
     "avatarBase64Url",
     "birthday",
-    "tags",
-    "tagDates",
   ],
   employeeFilters: createEmptyEmployeeFiltersState(),
   employeeQuery: "",
   excludedEmployeeIds: [],
-  fieldNames: Object.fromEntries(
-    [
-      "id",
-      "firstName",
-      "lastName",
-      "fullName",
-      "gender",
-      "username",
-      "profileUrl",
-      "email",
-      "phone",
-      "avatarBase64Url",
-      "birthday",
-      "tags",
-      "tagDates",
-      "unitId",
-      "unitName",
-      "unitFullPath",
-      "position",
-      "isBoss",
-    ].map((key) => [key, key]),
-  ),
-  flatUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
+  excludedJsonTagKeys: [],
+  excludedJsonUnitIds: [],
+  jsonFieldNames: {
+    employee: Object.fromEntries(DOWNLOAD_EMPLOYEE_FIELD_KEYS.map((key) => [key, key])) as Record<
+      OrgToolsDownloadEmployeeFieldKey,
+      string
+    >,
+    tags: {
+      collection: "tags",
+      fields: { date: "date", label: "label" },
+    },
+    units: {
+      collection: "units",
+      fields: {
+        isBoss: "isBoss",
+        position: "position",
+        unitFullPath: "unitFullPath",
+        unitId: "unitId",
+        unitName: "unitName",
+      },
+    },
+  },
+  jsonTagFieldOrder: ["label", "date"],
   jsonUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
   rowMode: "allUnits",
   selectedEmployeeFieldKeys: ["username"],
   selectedFilters: createEmptyEmployeeFiltersState(),
-  selectedFlatUnitFieldKeys: ["unitName", "unitFullPath"],
-  selectedJsonUnitFieldKeys: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
+  selectedJsonTagFieldKeys: [],
+  selectedJsonUnitFieldKeys: [],
   selectedQuery: "",
   selections: [],
-  tabMode: "csv",
+  tabMode: "json",
   templateFormat: "{email}, ",
-  unitFullPathSeparator: " / ",
   unitQuery: "",
 });
 

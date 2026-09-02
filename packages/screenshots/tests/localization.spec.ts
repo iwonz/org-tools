@@ -151,15 +151,8 @@ test("switches the interface in place and persists the choice", async ({ page },
     path: testInfo.outputPath("russian-shell.png"),
   });
 
-  await page.getByRole("button", { name: ruMessages.Ui.Export, exact: true }).click();
-  const stateExportDialog = page.getByRole("dialog", {
-    name: ruMessages.Ui.Export,
-    exact: true,
-  });
   const stateDownloadPromise = page.waitForEvent("download");
-  await stateExportDialog
-    .getByRole("button", { name: ruMessages.Ui.Download, exact: true })
-    .click();
+  await page.getByRole("button", { name: ruMessages.Ui.Export, exact: true }).click();
   expect((await stateDownloadPromise).suggestedFilename()).toBe("org-tools-state.json");
 
   await page.getByRole("tab", { name: ruMessages.Ui.Employees, exact: true }).click();
@@ -210,27 +203,9 @@ for (const [locale, messages] of [
     await seedLocale(page, locale);
     await page.goto(await resetServerState(page, locale), { waitUntil: "domcontentloaded" });
 
-    await page.getByRole("button", { name: messages.Ui.Export, exact: true }).click();
-    const exportDialog = page.getByRole("dialog", { name: messages.Ui.Export, exact: true });
     const downloadPromise = page.waitForEvent("download");
-    await exportDialog.getByRole("button", { name: messages.Ui.Download, exact: true }).click();
-    expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
     await page.getByRole("button", { name: messages.Ui.Export, exact: true }).click();
-    const employeeExportDialog = page.getByRole("dialog", {
-      name: messages.Ui.Export,
-      exact: true,
-    });
-    await employeeExportDialog
-      .getByRole("tab", { name: messages.Ui.Employees, exact: true })
-      .click();
-    await expect(
-      employeeExportDialog.getByText(messages.Ui["Flat Employees with nested Team assignments"], {
-        exact: true,
-      }),
-    ).toBeVisible();
-    await employeeExportDialog
-      .getByRole("button", { name: messages.Ui.Cancel, exact: true })
-      .click();
+    expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
     const localizedState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
     localizedState.ui.locale = locale;
     let dialog = await chooseImportFile(page, messages, {

@@ -24,13 +24,13 @@ Capabilities: Strict rejection, No mutation, Choose another file.
 
 ## Export
 
-### State and Employee Export
+### Direct state Export
 
-[![State and Employee Export](screenshots/demo-export.png)](screenshots/demo-export.png)
+[![Direct state Export](screenshots/demo-export.png)](screenshots/demo-export.png)
 
-Choose complete state or a flat Employee array with nested Team assignments for a local JSON download.
+Download the complete validated application state directly from the sidebar without an intermediate dialog.
 
-Capabilities: Complete state, Employee array, Nested Team assignments.
+Capabilities: Complete state, Direct download, Unsaved live snapshot.
 
 ## Theme
 
@@ -227,6 +227,14 @@ Build a text representation from Employee and Unit tokens with a live preview.
 
 Capabilities: Text template, Field tokens, Scope, Live preview.
 
+### Editor structured JSON export
+
+[![Editor structured JSON export](screenshots/feature-editor-json-export.png)](screenshots/feature-editor-json-export.png)
+
+Export the selected Unit or subtree through the shared Employee-first JSON engine with configurable Unit and Tag groups.
+
+Capabilities: JSON, Scoped Employees, Scoped assignments, Units and Tags.
+
 ### Editor image detail settings
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
@@ -308,29 +316,21 @@ Select Employees from Teams or the catalog, inspect and filter the resulting set
 
 Capabilities: Team sources, Employee sources, Selected set, Search and filters, Exclusions.
 
-### CSV Download settings
+### JSON Unit and Tag exclusions
 
-[![CSV Download settings](screenshots/feature-download-csv-settings.png)](screenshots/feature-download-csv-settings.png)
+[![JSON Unit and Tag exclusions](screenshots/feature-download-json-exclusions.png)](screenshots/feature-download-json-exclusions.png)
 
-Choose row behavior and reorder, select, or rename Employee and Team fields for CSV output.
+Enable structured Unit and Tag arrays, rename their fields, and exclude exact Units or normalized Tag labels through searchable virtualized menus.
 
-Capabilities: CSV, Field selection, Rename and reorder, Row modes.
+Capabilities: Group toggles, Field naming, Unit exclusions, Tag exclusions.
 
 ### JSON Download settings
 
 [![JSON Download settings](screenshots/feature-download-json-settings.png)](screenshots/feature-download-json-settings.png)
 
-Choose Employee fields and configure the fields of each nested Team object for JSON output.
+Choose Employee fields and configure the names of the optional nested Unit and Tag groups for JSON output.
 
-Capabilities: JSON, Employee fields, Nested Team fields, Field order.
-
-### CSV Download preview
-
-[![CSV Download preview](screenshots/feature-download-csv-preview.png)](screenshots/feature-download-csv-preview.png)
-
-Inspect the lower field list and live CSV rows before copying or downloading the local file.
-
-Capabilities: Remaining fields, Live CSV rows, Copy, Local download.
+Capabilities: JSON, Employee fields, Nested Unit fields, Nested Tag fields.
 
 ### JSON Download preview
 
@@ -342,8 +342,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
 ## Review checklist
 
-- Confirm Import and Export expose only All state and Employees, with mapped Employee fields,
-  deterministic duplicate choices, and no project, file, Save, or autosave controls.
+- Confirm Import exposes All state and Employees with mapped fields and deterministic duplicate
+  choices; Export must download only the complete state directly with no dialog.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
@@ -363,6 +363,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
   heights, and connection endpoints without card overlap, membership-type labels, or transient
   editing chrome.
+- Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
+  and Template. Russian uses its localized Template label consistently, JSON groups support naming
+  and searchable exclusions, and previews remain bounded.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
   browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.

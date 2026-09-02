@@ -68,7 +68,7 @@ reload, middleware, locale URL segments, or remote catalog requests.
 ### Requirement: Localization completeness is automatically enforced
 Catalog validation SHALL require identical non-empty keys and placeholder sets. Static checks SHALL
 reject uncatalogued user-facing literals and unexpected English fallbacks in the Russian interface,
-except an explicit allowlist for Org Tools, JSON, CSV, English, filenames, and user-authored data.
+except an explicit allowlist for Org Tools, JSON, English, filenames, and user-authored data.
 Runtime error codes SHALL map to catalog entries and raw internal messages MUST NOT be rendered.
 
 #### Scenario: Catalog mismatch
@@ -81,7 +81,7 @@ Runtime error codes SHALL map to catalog entries and raw internal messages MUST 
   visible or announced
 
 ### Requirement: Employee transfer is completely localized
-Both bundled locales SHALL provide matching non-empty messages for transfer tabs, source mapping,
+Both bundled locales SHALL provide matching non-empty messages for Import tabs, source mapping,
 Team options, counts, duplicate policies, per-row actions, validation, progress, confirmation, and
 accessibility names. User data and source field paths SHALL remain verbatim.
 
@@ -89,6 +89,16 @@ accessibility names. User data and source field paths SHALL remain verbatim.
 - **WHEN** Russian is active and the user opens every Employee Import step
 - **THEN** all owned visible and accessibility copy is Russian except allowed technical terms and user data
 
-#### Scenario: English Employee Export
-- **WHEN** English is active and the user opens Employee Export
-- **THEN** all owned visible and accessibility copy is English
+### Requirement: Structured export is completely localized
+Both bundled locales SHALL provide matching non-empty messages for JSON and Template tabs, Unit and
+Tag collection controls, nested field names, exclusions, bounded-preview metadata, build progress,
+validation, clipboard feedback, and direct State Export errors. Russian SHALL consistently use its
+localized Template label; English SHALL consistently label it `Template`.
+
+#### Scenario: Russian structured output
+- **WHEN** Russian is active and a user opens Data Download or Editor export
+- **THEN** both format selectors use the localized Russian Template label and all owned JSON, exclusion, preview, and error copy is Russian
+
+#### Scenario: English structured output
+- **WHEN** English is active and a user opens Data Download or Editor export
+- **THEN** both format selectors use `Template` and all owned JSON, exclusion, preview, and error copy is English

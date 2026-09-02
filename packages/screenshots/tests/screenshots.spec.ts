@@ -237,18 +237,15 @@ test("captures valid and invalid state imports", async ({ page }) => {
   await capture(page, "employee-import-duplicates");
 });
 
-test("captures state and Employee export", async ({ page }) => {
+test("captures direct state export", async ({ page }) => {
   await openSyntheticState(page);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
   const action = page.getByRole("button", { name: "Export", exact: true });
   await action.hover();
-  await action.click();
-  const dialog = page.getByRole("dialog", { name: "Export", exact: true });
   await capture(page, "export");
-  await dialog.getByRole("tab", { name: "Employees", exact: true }).click();
   const downloadPromise = page.waitForEvent("download");
-  await dialog.getByRole("button", { name: "Download", exact: true }).click();
-  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-employees.json");
+  await action.click();
+  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
 });
 
 test("captures both themes and both language states", async ({ page }) => {
@@ -423,6 +420,8 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor-image-settings");
   await dialog.getByRole("tab", { name: "Template", exact: true }).click();
   await capture(page, "editor-template-export");
+  await dialog.getByRole("tab", { name: "JSON", exact: true }).click();
+  await capture(page, "editor-json-export");
 });
 
 test("captures Analytics overview, lower groups, and drill-down", async ({ page }) => {
@@ -477,25 +476,29 @@ test("captures source selection and every data Download format", async ({ page }
   const settings = page.locator('[data-demo-id="export-settings-dialog"]');
   await expect(settings).toBeVisible();
   const settingsBody = settings.locator('[data-slot="dialog-body"]');
-  await capture(page, "download-csv-settings");
+  await capture(page, "download-json-settings");
+  const jsonSettings = settings.locator('[data-demo-id="structured-json-settings"]');
+  await jsonSettings.getByRole("checkbox", { name: "Units", exact: true }).click();
+  await jsonSettings.getByRole("checkbox", { name: "Tags", exact: true }).click();
+  await settings.locator('[data-demo-id="json-units-exclusions"]').click();
+  await page
+    .locator('[data-demo-id="json-units-exclusions-popover"] [role="checkbox"]')
+    .first()
+    .click();
+  await capture(page, "download-json-exclusions");
+  await page.keyboard.press("Escape");
   await settingsBody.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
   await expect(settings.locator('[data-demo-id="export-inline-preview"]')).toBeVisible();
-  await capture(page, "download-csv-preview");
-  await settingsBody.evaluate((element) => {
-    element.scrollTop = 0;
-  });
-  await settings.getByRole("tab", { name: "JSON", exact: true }).click();
-  await capture(page, "download-json-settings");
-  await settingsBody.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
   await capture(page, "download-json-preview");
   await settingsBody.evaluate((element) => {
     element.scrollTop = 0;
   });
   await settings.getByRole("tab", { name: "Template", exact: true }).click();
-  await expect(settings.locator('[data-demo-id="export-inline-preview"]')).toBeVisible();
+  await expect(settings.locator('[data-demo-id="export-content-template-preview"]')).toBeVisible();
+  await settingsBody.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
   await capture(page, "download");
 });

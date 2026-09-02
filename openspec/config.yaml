@@ -1,19 +1,21 @@
 schema: spec-driven
 
 context: |
-  Product: org-tools, a static browser-only organization editor.
-  Stack: TypeScript, React 19, Next.js static export, MobX, Radix UI, Tailwind CSS, pnpm, Vitest,
+  Product: org-tools, a local organization editor delivered as a loopback SQLite-backed Next.js
+    server and a browser-only static GitHub Pages application.
+  Stack: TypeScript, React 19, Next.js, MobX, Radix UI, Tailwind CSS, node:sqlite, pnpm, Vitest,
     Playwright, and Biome.
-  Persistence: the strict unversioned OrgToolsState JSON file is the sole public transfer contract,
-    with content-scoped Teams, Employees, Teams + Employees, and Full workspace projections. State
-    is held in memory and saved only by explicit download. Ordinary JSON uses explicit
-    append-only mapping. Public file schemas are current-only: interface changes replace obsolete
-    contracts and remove their readers, migrations, fixtures, docs, and tests.
-  Privacy: organization data, imports, search terms, analytics, and exports never leave the browser.
-    There is no telemetry, remote logging, synchronization, remote avatar fetching, or server
-    database.
+  Persistence: the strict unversioned OrgToolsState JSON object is the sole public state contract.
+    Server mode writes one singleton state automatically to local SQLite; Pages holds state only in
+    live tab memory and synchronizes open tabs through BroadcastChannel. Global Import accepts the
+    complete state or a mapped Employee array; global Export directly downloads only the complete
+    state. Public schemas are current-only: changes replace obsolete contracts and remove their
+    readers, migrations, fixtures, docs, and tests.
+  Privacy: organization data, imports, search terms, analytics, and exports never leave the browser
+    and loopback same-origin runtime. There is no telemetry, remote logging, remote synchronization,
+    remote avatar fetching, or third-party database.
   Scale: preserve the interaction target of 20,000 Employees and 4,000 Units through normalized
-    state, shared derived indexes, lazy View materialization, and virtualization.
+    state, shared derived indexes, bounded previews, spatial culling, and virtualization.
   Language: the runtime UI supports English and Russian through bundled message catalogs. Source
     comments, tests, fixtures, specifications, and documentation are English; Cyrillic is allowed
     only in apps/ui/messages/ru.json.

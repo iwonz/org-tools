@@ -7,12 +7,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   HiOutlineArrowDownTray,
   HiOutlineClipboardDocument,
+  HiOutlineCodeBracket,
   HiOutlineMagnifyingGlassPlus,
   HiOutlinePhoto,
   HiOutlineQueueList,
 } from "react-icons/hi2";
 
 import { ExportTemplateSettings } from "@/components/export-template-settings";
+import {
+  StructuredJsonSettings,
+  type StructuredJsonSettingsValue,
+} from "@/components/structured-json-settings";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,7 +40,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
-import { exportEmployeeFields } from "@/lib/export-format";
+import {
+  createExportPreview,
+  createExportTextAsync,
+  exportEmployeeFields,
+  exportRowModeOptions,
+  exportUnitFields,
+  validateExportFieldNames,
+} from "@/lib/export-format";
 import type { OrgEditorSourceIndex, OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
 import type {
   OrgEditorExportScope,
@@ -45,20 +57,28 @@ import type {
   OrgEditorImageExportSettings,
 } from "@/lib/org-editor-export";
 import {
-  buildOrgEditorTemplateRows,
+  buildOrgEditorExportRows,
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorExportFileBaseName,
-  createOrgEditorTemplateText,
   createOrgEditorUnitImageBlob,
+  getOrgEditorExportUnits,
   ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
   orgEditorTemplateContainsBossToken,
-  orgEditorTemplateUnitFields,
 } from "@/lib/org-editor-export";
 import { copyTextToClipboard, downloadBlob, downloadText } from "@/lib/org-file";
+import { normalizeSearchValue } from "@/lib/search-index";
 import { cn } from "@/lib/utils";
+import {
+  createDefaultExportJsonFieldNames,
+  defaultExportEmployeeFieldKeys,
+  defaultExportEmployeeFieldOrder,
+  defaultExportJsonTagFieldOrder,
+  defaultExportJsonUnitFieldOrder,
+} from "@/stores/export-session-store";
+import type { ExportRowMode } from "@/stores/org-store";
 
 type OrgEditorExportDialogProps = {
   employeeById: ReadonlyMap<EmployeeId, Employee>;
@@ -116,7 +136,18 @@ export function OrgEditorExportDialog({
     createDefaultOrgEditorImageExportSettings(),
   );
   const [templateFormat, setTemplateFormat] = useState(DEFAULT_TEMPLATE_FORMAT);
-  const [bossLabel, setBossLabel] = useState(() => t("Boss"));
+  const [rowMode, setRowMode] = useState<ExportRowMode>("allUnits");
+  const [jsonSettings, setJsonSettings] = useState<StructuredJsonSettingsValue>(() => ({
+    employeeFieldOrder: [...defaultExportEmployeeFieldOrder],
+    excludedJsonTagKeys: [],
+    excludedJsonUnitIds: [],
+    jsonFieldNames: createDefaultExportJsonFieldNames(),
+    jsonTagFieldOrder: [...defaultExportJsonTagFieldOrder],
+    jsonUnitFieldOrder: [...defaultExportJsonUnitFieldOrder],
+    selectedEmployeeFieldKeys: [...defaultExportEmployeeFieldKeys],
+    selectedJsonTagFieldKeys: [],
+    selectedJsonUnitFieldKeys: [],
+  }));
   const [status, setStatus] = useState<ExportStatus | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<UiTextKey | null>(null);
@@ -146,32 +177,55 @@ export function OrgEditorExportDialog({
     () => visibleEmployeeFields.filter((field) => field.key !== "tags"),
     [visibleEmployeeFields],
   );
-  const templateRows = useMemo(() => {
+  const exportRows = useMemo(() => {
     if (!unit) return [];
 
-    return buildOrgEditorTemplateRows({
+    return buildOrgEditorExportRows({
       rootUnit: unit,
+      rowMode: activeTab === "json" ? "allUnits" : rowMode,
       scope,
       sourceIndex,
       units,
     });
-  }, [scope, sourceIndex, unit, units]);
-  const hasBossToken = orgEditorTemplateContainsBossToken(templateFormat);
+  }, [activeTab, rowMode, scope, sourceIndex, unit, units]);
+  const scopedUnits = useMemo(
+    () => (unit ? getOrgEditorExportUnits({ rootUnit: unit, scope, units }) : []),
+    [scope, unit, units],
+  );
+  const tagOptions = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const row of exportRows) {
+      for (const tag of row.employee.tags) {
+        labels.set(normalizeSearchValue(tag.label), tag.label);
+      }
+    }
+    return [...labels].map(([value, label]) => ({ label, value }));
+  }, [exportRows]);
+  const jsonValidation = useMemo(
+    () =>
+      validateExportFieldNames({
+        jsonFieldNames: jsonSettings.jsonFieldNames,
+        selectedEmployeeFieldKeys: jsonSettings.selectedEmployeeFieldKeys,
+        selectedJsonTagFieldKeys: jsonSettings.selectedJsonTagFieldKeys,
+        selectedJsonUnitFieldKeys: jsonSettings.selectedJsonUnitFieldKeys,
+        tabMode: "json",
+      }),
+    [jsonSettings],
+  );
   const hasImageBossToken = orgEditorTemplateContainsBossToken(imageSettings.employeeFormat);
-  const isBossLabelValid = !hasBossToken || bossLabel.trim().length > 0;
   const isImageBossLabelValid =
     !hasImageBossToken || imageSettings.imageBossLabel.trim().length > 0;
-  const templatePreviewText =
-    templateRows.length > 0 && isBossLabelValid
-      ? createOrgEditorTemplateText({
-          bossLabel: bossLabel.trim(),
-          rows: templateRows,
-          templateFormat,
-        })
-      : isBossLabelValid
-        ? t("The selected Unit has no Employees to export.")
-        : t("Provide a value for the {isBoss} token.");
-  const canExportTemplate = templateRows.length > 0 && isBossLabelValid;
+  const textPreview = useMemo(
+    () =>
+      createExportPreview({
+        ...jsonSettings,
+        rows: exportRows,
+        tabMode: activeTab === "json" ? "json" : "template",
+        templateFormat,
+      }),
+    [activeTab, exportRows, jsonSettings, templateFormat],
+  );
+  const canExportText = exportRows.length > 0 && (activeTab !== "json" || jsonValidation.isValid);
   const canExportImage = Boolean(unit) && isImageBossLabelValid;
 
   useEffect(() => {
@@ -282,10 +336,11 @@ export function OrgEditorExportDialog({
     });
   };
 
-  const createTemplateText = () =>
-    createOrgEditorTemplateText({
-      bossLabel: bossLabel.trim(),
-      rows: templateRows,
+  const createTextExport = () =>
+    createExportTextAsync({
+      ...jsonSettings,
+      rows: exportRows,
+      tabMode: activeTab === "json" ? "json" : "template",
       templateFormat,
     });
 
@@ -301,8 +356,13 @@ export function OrgEditorExportDialog({
         return;
       }
 
-      if (!canExportTemplate) return;
-      downloadText(createTemplateText(), `${createOrgEditorExportFileBaseName(unit)}.txt`);
+      if (!canExportText) return;
+      const json = activeTab === "json";
+      downloadText(
+        await createTextExport(),
+        `${createOrgEditorExportFileBaseName(unit)}.${json ? "json" : "txt"}`,
+        json ? "application/json;charset=utf-8" : "text/plain;charset=utf-8",
+      );
       setStatus({ kind: "success", text: "Text export saved" });
     } catch {
       setStatus({
@@ -325,8 +385,8 @@ export function OrgEditorExportDialog({
         return;
       }
 
-      if (!canExportTemplate) return;
-      await copyTextToClipboard(createTemplateText());
+      if (!canExportText) return;
+      await copyTextToClipboard(await createTextExport());
       setStatus({ kind: "success", text: "Text copied to the clipboard" });
     } catch (error) {
       setStatus({
@@ -385,6 +445,10 @@ export function OrgEditorExportDialog({
                   <TabsTrigger value="image">
                     <HiOutlinePhoto />
                     {t("Image")}
+                  </TabsTrigger>
+                  <TabsTrigger value="json">
+                    <HiOutlineCodeBracket />
+                    JSON
                   </TabsTrigger>
                   <TabsTrigger value="template">
                     <HiOutlineQueueList />
@@ -656,6 +720,42 @@ export function OrgEditorExportDialog({
                 </section>
               </TabsContent>
 
+              <TabsContent className="mt-0 grid gap-4" value="json">
+                <StructuredJsonSettings
+                  errors={jsonValidation.errors}
+                  onChange={(value) => {
+                    setJsonSettings(value);
+                    setStatus(null);
+                  }}
+                  tagOptions={tagOptions}
+                  unitOptions={scopedUnits.map((currentUnit) => ({
+                    label: currentUnit.name,
+                    value: currentUnit.id,
+                  }))}
+                  value={jsonSettings}
+                />
+                <div className="grid gap-2" data-demo-id="org-editor-export-json-preview">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label>{t("Preview")}</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {textPreview.truncated
+                        ? t("Showing {shown} of {total}", {
+                            shown: textPreview.shownCount,
+                            total: textPreview.fullCount,
+                          })
+                        : countText("records", { count: textPreview.fullCount })}
+                    </span>
+                  </div>
+                  <div className="max-h-80 min-h-40 overflow-auto rounded-md border bg-muted/30 p-3">
+                    <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">
+                      {canExportText
+                        ? textPreview.text
+                        : t("The selected Unit has no Employees to export.")}
+                    </pre>
+                  </div>
+                </div>
+              </TabsContent>
+
               <TabsContent className="mt-0" value="template">
                 <ExportTemplateSettings
                   dataDemoId="org-editor-export-template"
@@ -666,29 +766,44 @@ export function OrgEditorExportDialog({
                     setTemplateFormat(value);
                     setStatus(null);
                   }}
-                  previewMeta={countText("rows", { count: templateRows.length })}
-                  previewText={templatePreviewText}
-                  unitFields={orgEditorTemplateUnitFields}
+                  previewMeta={
+                    textPreview.truncated
+                      ? t("Showing {shown} of {total}", {
+                          shown: textPreview.shownCount,
+                          total: textPreview.fullCount,
+                        })
+                      : countText("rows", { count: textPreview.fullCount })
+                  }
+                  previewText={
+                    canExportText
+                      ? textPreview.text
+                      : t("The selected Unit has no Employees to export.")
+                  }
+                  unitFields={exportUnitFields}
                 >
-                  {hasBossToken && (
-                    <div className="grid max-w-sm gap-2">
-                      <Label htmlFor="org-editor-export-boss-label">{t("isBoss value")}</Label>
-                      <Input
-                        aria-invalid={!isBossLabelValid}
-                        id="org-editor-export-boss-label"
-                        onChange={(event) => {
-                          setBossLabel(event.currentTarget.value);
-                          setStatus(null);
-                        }}
-                        value={bossLabel}
-                      />
-                      {!isBossLabelValid && (
-                        <p className="text-xs text-destructive">
-                          {t("The boss value cannot be empty.")}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  <div className="grid max-w-md gap-2">
+                    <Label htmlFor="org-editor-export-row-mode">
+                      {t("When an Employee belongs to multiple Units")}
+                    </Label>
+                    <Select
+                      onValueChange={(value) => {
+                        setRowMode(value as ExportRowMode);
+                        setStatus(null);
+                      }}
+                      value={rowMode}
+                    >
+                      <SelectTrigger id="org-editor-export-row-mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {exportRowModeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {t(option.title as UiTextKey)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </ExportTemplateSettings>
               </TabsContent>
             </Tabs>
@@ -705,7 +820,7 @@ export function OrgEditorExportDialog({
               </div>
             )}
             <Button
-              disabled={activeTab === "template" ? !canExportTemplate : !canExportImage}
+              disabled={activeTab === "image" ? !canExportImage : !canExportText}
               onClick={copy}
               type="button"
               variant="outline"
@@ -714,7 +829,7 @@ export function OrgEditorExportDialog({
               {t("Copy")}
             </Button>
             <Button
-              disabled={activeTab === "template" ? !canExportTemplate : !canExportImage}
+              disabled={activeTab === "image" ? !canExportImage : !canExportText}
               onClick={download}
               type="button"
             >

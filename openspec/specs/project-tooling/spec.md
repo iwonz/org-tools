@@ -229,12 +229,13 @@ runners without deprecation annotations.
   and accepted inputs without deprecated-runtime or unexpected-input annotations
 
 ### Requirement: Documentation and gallery cover current product surfaces
-The repository SHALL document the current browser-memory and loopback SQLite runtimes, state
-transfer, privacy, performance, usage, and screenshot workflows without obsolete integration
-guidance. The deterministic gallery SHALL contain exactly 38 PNGs covering the existing product
-scenarios, replacing obsolete custom View frames with current State/Employees Import and Export,
-mapping, Team options, and duplicate policy workflows. The README SHALL retain exactly ten featured
-Import, Export, theme, language, Teams, Employees, Editor, Analytics, Calendar, and Download frames.
+The repository SHALL document the current browser-memory and loopback SQLite runtimes, direct State
+Export, State/Employee Import, structured JSON/Template Data Download, Editor Image/JSON/Template
+export, privacy, performance, usage, and screenshot workflows without obsolete integration
+guidance. The deterministic gallery SHALL contain exactly 38 PNGs covering the current product
+scenarios, replacing both CSV frames with JSON-exclusion and Editor-JSON frames. The README SHALL
+retain exactly ten featured Import, direct Export, theme, language, Teams, Employees, Editor,
+Analytics, Calendar, and Download frames.
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
@@ -242,7 +243,11 @@ Import, Export, theme, language, Teams, Employees, Editor, Analytics, Calendar, 
 
 #### Scenario: Transfer gallery
 - **WHEN** screenshot generation completes
-- **THEN** featured Import and Export show their mode selectors and supporting frames explain Employee mapping and duplicate resolution
+- **THEN** featured Import shows State and Employee modes while featured Export shows the direct complete-state sidebar action without a mode dialog
+
+#### Scenario: Structured-output gallery
+- **WHEN** screenshot generation completes
+- **THEN** Data Download shows JSON collections, exact exclusions, bounded preview, and Template while Editor shows Image, JSON, and Template
 
 #### Scenario: Editor gallery
 - **WHEN** Editor frames are generated

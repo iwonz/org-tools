@@ -1,8 +1,8 @@
 # JSON transfer formats
 
-The global Import and Export actions provide two explicit JSON modes: **All state** and
-**Employees**. Both are local, user-initiated transfers. Neither format is sent to a remote service
-or retained as an import candidate.
+Global Import provides two explicit JSON modes: **All state** and **Employees**. Global Export always
+downloads **All state** directly. Every transfer is local and user initiated; no source or candidate
+is sent to a remote service or retained after the dialog closes.
 
 ## All state
 
@@ -28,12 +28,12 @@ state after confirmation. Export downloads `org-tools-state.json`.
 
 ## Employees
 
-Employee Export downloads `org-tools-employees.json` as one flat JSON array. Each record contains
-the persisted Employee fields and a nested `teams` array:
+Employee Import accepts a top-level array whose optional mapped `teams` property uses this portable
+assignment shape:
 
 ```ts
-type EmployeeTransferRecord = OrganizationEmployee & {
-  teams: Array<{
+type EmployeeImportRecord = Record<string, unknown> & {
+  teams?: Array<{
     id: string;
     name: string;
     path: string[];
@@ -43,8 +43,8 @@ type EmployeeTransferRecord = OrganizationEmployee & {
 };
 ```
 
-`path` is the portable root-to-Team name path. `id` identifies an existing Team when both files came
-from the same state. Export includes resolved membership in manual and Live Teams.
+`path` is the portable root-to-Team name path. `id` can identify an existing Team from the current
+state.
 
 Employee Import accepts a top-level array of objects up to 25 MiB. Source properties may be flat or
 nested; the mapping screen maps property paths to current Employee fields, tags, and Teams. First
@@ -70,5 +70,5 @@ digest is retained. Missing email normalizes to an empty string. Identity edits 
 all Team, boss, position, Editor-selection, and Download-selection references. A duplicate digest is
 rejected.
 
-CSV, report JSON, templates, and PNGs from Data Download or Editor export are output artifacts and
+Structured report JSON, templates, and PNGs from Data Download or Editor export are output artifacts and
 cannot be imported by either transfer mode.

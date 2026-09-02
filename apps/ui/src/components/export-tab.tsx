@@ -42,14 +42,16 @@ import {
 import {
   buildEmployeeExportRows,
   countEmployeeExportRows,
-  createExportText as createExportTextValue,
+  createExportPreview,
+  createExportTextAsync,
   type ExportRow,
   validateExportFieldNames,
 } from "@/lib/export-format";
 import { copyTextToClipboard, downloadText } from "@/lib/org-file";
+import { normalizeSearchValue } from "@/lib/search-index";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
-import type { ExportEmployeeFieldKey, ExportRowMode, ExportSelection } from "@/stores/org-store";
+import type { ExportRowMode, ExportSelection } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type ExportSourceSection = "employees" | "units";
@@ -120,10 +122,11 @@ export const ExportTab = observer(() => {
   const activeTab = store.exportTabMode;
   const rowMode = store.exportRowMode;
   const selectedEmployeeFieldKeys = store.exportSelectedEmployeeFieldKeys;
-  const selectedFlatUnitFieldKeys = store.exportSelectedFlatUnitFieldKeys;
   const selectedJsonUnitFieldKeys = store.exportSelectedJsonUnitFieldKeys;
-  const exportFieldNames = store.exportFieldNames;
-  const unitFullPathSeparator = store.exportUnitFullPathSeparator;
+  const selectedJsonTagFieldKeys = store.exportSelectedJsonTagFieldKeys;
+  const jsonFieldNames = store.exportJsonFieldNames;
+  const excludedJsonUnitIds = store.exportExcludedJsonUnitIds;
+  const excludedJsonTagKeys = store.exportExcludedJsonTagKeys;
   const templateFormat = store.exportTemplateFormat;
   const selections = store.exportSelections;
   const excludedEmployeeIds = store.exportExcludedEmployeeIds;
@@ -300,7 +303,7 @@ export const ExportTab = observer(() => {
       return buildEmployeeExportRows({
         employee,
         isDirectlySelected: selectedDirectEmployeeIdSet.has(employee.id),
-        mode: rowMode,
+        mode: activeTab === "json" ? "allUnits" : rowMode,
         unitContexts: employeeUnitContextsByEmployeeId.get(employee.id) ?? [],
         unitOrderById,
       });
@@ -308,6 +311,7 @@ export const ExportTab = observer(() => {
   }, [
     employeeUnitContextsByEmployeeId,
     isExportSettingsDialogOpen,
+    activeTab,
     rowMode,
     selectedDirectEmployeeIdSet,
     selectedEmployees,
@@ -318,56 +322,77 @@ export const ExportTab = observer(() => {
   const exportFieldNameValidation = useMemo(
     () =>
       validateExportFieldNames({
-        fieldNames: exportFieldNames,
+        jsonFieldNames,
         selectedEmployeeFieldKeys,
-        selectedFlatUnitFieldKeys,
+        selectedJsonTagFieldKeys,
         selectedJsonUnitFieldKeys,
         tabMode: activeTab,
       }),
     [
       activeTab,
-      exportFieldNames,
+      jsonFieldNames,
       selectedEmployeeFieldKeys,
-      selectedFlatUnitFieldKeys,
+      selectedJsonTagFieldKeys,
       selectedJsonUnitFieldKeys,
     ],
   );
   const hasSelectedEmployees = selectedEmployees.length > 0;
   const canExport = rows.length > 0 && exportFieldNameValidation.isValid;
-  const createExportText = useCallback(
+  const createFullExportText = useCallback(
     () =>
-      createExportTextValue({
-        fieldNames: exportFieldNames,
+      createExportTextAsync({
+        excludedJsonTagKeys,
+        excludedJsonUnitIds,
+        jsonFieldNames,
         rows,
         selectedEmployeeFieldKeys,
-        selectedFlatUnitFieldKeys,
+        selectedJsonTagFieldKeys,
         selectedJsonUnitFieldKeys,
         tabMode: activeTab,
         templateFormat,
-        unitFullPathSeparator,
       }),
     [
       activeTab,
-      exportFieldNames,
+      excludedJsonTagKeys,
+      excludedJsonUnitIds,
+      jsonFieldNames,
       rows,
       selectedEmployeeFieldKeys,
-      selectedFlatUnitFieldKeys,
+      selectedJsonTagFieldKeys,
       selectedJsonUnitFieldKeys,
       templateFormat,
-      unitFullPathSeparator,
     ],
   );
-  const exportPreviewText = useMemo(
-    () => (isExportSettingsDialogOpen && canExport ? createExportText() : ""),
-    [canExport, createExportText, isExportSettingsDialogOpen],
+  const exportPreview = useMemo(
+    () =>
+      isExportSettingsDialogOpen && canExport
+        ? createExportPreview({
+            excludedJsonTagKeys,
+            excludedJsonUnitIds,
+            jsonFieldNames,
+            rows,
+            selectedEmployeeFieldKeys,
+            selectedJsonTagFieldKeys,
+            selectedJsonUnitFieldKeys,
+            tabMode: activeTab,
+            templateFormat,
+          })
+        : { fullCount: exportRecordCount, shownCount: 0, text: "", truncated: false },
+    [
+      activeTab,
+      canExport,
+      excludedJsonTagKeys,
+      excludedJsonUnitIds,
+      exportRecordCount,
+      isExportSettingsDialogOpen,
+      jsonFieldNames,
+      rows,
+      selectedEmployeeFieldKeys,
+      selectedJsonTagFieldKeys,
+      selectedJsonUnitFieldKeys,
+      templateFormat,
+    ],
   );
-  const toggleEmployeeExportField = useCallback(
-    (fieldKey: ExportEmployeeFieldKey) => {
-      store.toggleExportEmployeeFieldKey(fieldKey);
-    },
-    [store],
-  );
-
   const hasEmployeeSourceContent = (units?.allEmployees.length ?? 0) > 0;
 
   if (!units) return null;
@@ -441,25 +466,21 @@ export const ExportTab = observer(() => {
     setStatus(null);
   };
 
-  const download = () => {
+  const download = async () => {
     if (!canExport) return;
 
-    const extension = activeTab === "json" ? "json" : activeTab === "csv" ? "csv" : "txt";
+    const extension = activeTab === "json" ? "json" : "txt";
     const type =
-      activeTab === "json"
-        ? "application/json;charset=utf-8"
-        : activeTab === "csv"
-          ? "text/csv;charset=utf-8"
-          : "text/plain;charset=utf-8";
+      activeTab === "json" ? "application/json;charset=utf-8" : "text/plain;charset=utf-8";
 
-    downloadText(createExportText(), `org-tools-export.${extension}`, type);
+    downloadText(await createFullExportText(), `org-tools-export.${extension}`, type);
     setStatus(null);
   };
 
   const copy = async () => {
     if (!canExport) return;
 
-    await copyTextToClipboard(createExportText());
+    await copyTextToClipboard(await createFullExportText());
     setStatus("Copied to the clipboard");
   };
 
@@ -729,14 +750,23 @@ export const ExportTab = observer(() => {
           <ExportSettingsStep
             canExport={canExport}
             fieldNameErrors={exportFieldNameValidation.errors}
-            onEmployeeFieldToggle={toggleEmployeeExportField}
             onCopy={copy}
             onDownload={download}
-            previewText={exportPreviewText}
-            rowCount={exportRecordCount}
+            previewFullCount={exportPreview.fullCount}
+            previewShownCount={exportPreview.shownCount}
+            previewText={exportPreview.text}
+            previewTruncated={exportPreview.truncated}
             rowCountByMode={rowCountByMode}
             selectedEmployeeCount={selectedEmployees.length}
             status={status ? t(status) : null}
+            tagOptions={employeeTagOptions.map((label) => ({
+              label,
+              value: normalizeSearchValue(label),
+            }))}
+            unitOptions={units.deepUnits.map((unit) => ({
+              label: unit.path.fullName,
+              value: unit.id,
+            }))}
           />
         </DialogContent>
       </Dialog>

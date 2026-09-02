@@ -30,14 +30,15 @@ import {
   parseOrgToolsState,
 } from "@/lib/org-file";
 import type {
-  ExportEmployeeFieldKey,
   ExportFieldDropPlacement,
   ExportFieldKey,
+  ExportJsonEmployeeFieldKey,
+  ExportJsonSettingsState,
+  ExportJsonTagFieldKey,
   ExportJsonUnitFieldKey,
   ExportRowMode,
   ExportSelection,
   ExportTabMode,
-  ExportUnitFieldKey,
 } from "@/stores/export-session-store";
 import { ExportSessionStore } from "@/stores/export-session-store";
 import { OrgEditorStore, type OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
@@ -49,7 +50,10 @@ export type {
   ExportEmployeeFieldKey,
   ExportFieldDropPlacement,
   ExportFieldKey,
-  ExportFieldNameMap,
+  ExportJsonEmployeeFieldKey,
+  ExportJsonFieldNames,
+  ExportJsonSettingsState,
+  ExportJsonTagFieldKey,
   ExportJsonUnitFieldKey,
   ExportRowMode,
   ExportSelection,
@@ -200,12 +204,13 @@ export class OrgStore {
       this.exportSession.rowMode,
       this.exportSession.selectedEmployeeFieldKeys,
       this.exportSession.employeeFieldOrder,
-      this.exportSession.selectedFlatUnitFieldKeys,
-      this.exportSession.flatUnitFieldOrder,
       this.exportSession.selectedJsonUnitFieldKeys,
       this.exportSession.jsonUnitFieldOrder,
-      this.exportSession.fieldNames,
-      this.exportSession.unitFullPathSeparator,
+      this.exportSession.selectedJsonTagFieldKeys,
+      this.exportSession.jsonTagFieldOrder,
+      this.exportSession.jsonFieldNames,
+      this.exportSession.excludedJsonUnitIds,
+      this.exportSession.excludedJsonTagKeys,
       this.exportSession.templateFormat,
       this.exportSession.selections,
       this.exportSession.excludedEmployeeIds,
@@ -245,23 +250,26 @@ export class OrgStore {
   get exportEmployeeFieldOrder() {
     return this.exportSession.employeeFieldOrder;
   }
-  get exportSelectedFlatUnitFieldKeys() {
-    return this.exportSession.selectedFlatUnitFieldKeys;
-  }
-  get exportFlatUnitFieldOrder() {
-    return this.exportSession.flatUnitFieldOrder;
-  }
   get exportSelectedJsonUnitFieldKeys() {
     return this.exportSession.selectedJsonUnitFieldKeys;
   }
   get exportJsonUnitFieldOrder() {
     return this.exportSession.jsonUnitFieldOrder;
   }
-  get exportFieldNames() {
-    return this.exportSession.fieldNames;
+  get exportSelectedJsonTagFieldKeys() {
+    return this.exportSession.selectedJsonTagFieldKeys;
   }
-  get exportUnitFullPathSeparator() {
-    return this.exportSession.unitFullPathSeparator;
+  get exportJsonTagFieldOrder() {
+    return this.exportSession.jsonTagFieldOrder;
+  }
+  get exportJsonFieldNames() {
+    return this.exportSession.jsonFieldNames;
+  }
+  get exportExcludedJsonUnitIds() {
+    return this.exportSession.excludedJsonUnitIds;
+  }
+  get exportExcludedJsonTagKeys() {
+    return this.exportSession.excludedJsonTagKeys;
   }
   get exportTemplateFormat() {
     return this.exportSession.templateFormat;
@@ -513,46 +521,61 @@ export class OrgStore {
   setExportTabMode(value: ExportTabMode): void {
     this.exportSession.setTabMode(value);
   }
+  setExportJsonSettings(value: ExportJsonSettingsState): void {
+    this.exportSession.setJsonSettings(value);
+  }
   setExportRowMode(value: ExportRowMode): void {
     this.exportSession.setRowMode(value);
   }
   setExportTemplateFormat(value: string): void {
     this.exportSession.setTemplateFormat(value);
   }
-  setExportUnitFullPathSeparator(value: string): void {
-    this.exportSession.setUnitFullPathSeparator(value);
-  }
   appendExportTemplateField(value: ExportFieldKey): void {
     this.exportSession.appendTemplateField(value);
   }
-  setExportFieldName(fieldKey: ExportFieldKey, fieldName: string): void {
-    this.exportSession.setFieldName(fieldKey, fieldName);
+  setExportJsonFieldName(
+    group: "employee" | "tags" | "units",
+    fieldKey: ExportJsonEmployeeFieldKey | ExportJsonTagFieldKey | ExportJsonUnitFieldKey,
+    fieldName: string,
+  ): void {
+    this.exportSession.setJsonFieldName(group, fieldKey, fieldName);
   }
-  resetExportFieldName(fieldKey: ExportFieldKey): void {
-    this.exportSession.resetFieldName(fieldKey);
+  resetExportJsonFieldName(
+    group: "employee" | "tags" | "units",
+    fieldKey: ExportJsonEmployeeFieldKey | ExportJsonTagFieldKey | ExportJsonUnitFieldKey,
+  ): void {
+    this.exportSession.resetJsonFieldName(group, fieldKey);
   }
-  toggleExportEmployeeFieldKey(fieldKey: ExportEmployeeFieldKey): void {
+  setExportJsonCollectionName(group: "tags" | "units", value: string): void {
+    this.exportSession.setJsonCollectionName(group, value);
+  }
+  resetExportJsonCollectionName(group: "tags" | "units"): void {
+    this.exportSession.resetJsonCollectionName(group);
+  }
+  toggleExportEmployeeFieldKey(fieldKey: ExportJsonEmployeeFieldKey): void {
     this.exportSession.toggleEmployeeFieldKey(fieldKey);
-  }
-  toggleExportFlatUnitFieldKey(fieldKey: ExportUnitFieldKey): void {
-    this.exportSession.toggleFlatUnitFieldKey(fieldKey);
   }
   toggleExportJsonUnitFieldKey(fieldKey: ExportJsonUnitFieldKey): void {
     this.exportSession.toggleJsonUnitFieldKey(fieldKey);
   }
+  toggleExportJsonTagFieldKey(fieldKey: ExportJsonTagFieldKey): void {
+    this.exportSession.toggleJsonTagFieldKey(fieldKey);
+  }
+  toggleExportJsonGroup(group: "tags" | "units"): void {
+    this.exportSession.toggleJsonGroup(group);
+  }
+  setExportExcludedJsonUnitIds(unitIds: UnitId[]): void {
+    this.exportSession.setExcludedJsonUnitIds(unitIds);
+  }
+  setExportExcludedJsonTagKeys(tagKeys: string[]): void {
+    this.exportSession.setExcludedJsonTagKeys(tagKeys);
+  }
   moveExportEmployeeFieldKey(
-    fieldKey: ExportEmployeeFieldKey,
-    targetFieldKey: ExportEmployeeFieldKey,
+    fieldKey: ExportJsonEmployeeFieldKey,
+    targetFieldKey: ExportJsonEmployeeFieldKey,
     placement: ExportFieldDropPlacement,
   ): void {
     this.exportSession.moveEmployeeFieldKey(fieldKey, targetFieldKey, placement);
-  }
-  moveExportFlatUnitFieldKey(
-    fieldKey: ExportUnitFieldKey,
-    targetFieldKey: ExportUnitFieldKey,
-    placement: ExportFieldDropPlacement,
-  ): void {
-    this.exportSession.moveFlatUnitFieldKey(fieldKey, targetFieldKey, placement);
   }
   moveExportJsonUnitFieldKey(
     fieldKey: ExportJsonUnitFieldKey,
@@ -560,6 +583,13 @@ export class OrgStore {
     placement: ExportFieldDropPlacement,
   ): void {
     this.exportSession.moveJsonUnitFieldKey(fieldKey, targetFieldKey, placement);
+  }
+  moveExportJsonTagFieldKey(
+    fieldKey: ExportJsonTagFieldKey,
+    targetFieldKey: ExportJsonTagFieldKey,
+    placement: ExportFieldDropPlacement,
+  ): void {
+    this.exportSession.moveJsonTagFieldKey(fieldKey, targetFieldKey, placement);
   }
   addExportSelection(selection: ExportSelection): void {
     this.exportSession.addSelection(selection);

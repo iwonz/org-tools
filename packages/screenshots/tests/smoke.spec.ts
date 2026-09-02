@@ -1121,31 +1121,15 @@ test("atomically imports, directly exports, automatically writes, and reloads st
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
   await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  const exportDialog = page.getByRole("dialog", { name: "Export", exact: true });
   const exportPromise = page.waitForEvent("download");
-  await exportDialog.getByRole("button", { name: "Download", exact: true }).click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
   const exported = await exportPromise;
   expect(exported.suggestedFilename()).toBe("org-tools-state.json");
-  await expect(exportDialog).toBeHidden();
+  await expect(page.locator('[data-demo-id="state-export-dialog"]')).toHaveCount(0);
   const exportedPath = await exported.path();
   const exportedState = JSON.parse(await readFile(exportedPath ?? "", "utf8")) as OrgToolsState;
   expect(Object.keys(exportedState).sort()).toEqual(["organization", "ui"]);
   expect(exportedState.organization.employees).toHaveLength(4);
-
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  const employeeExportDialog = page.getByRole("dialog", { name: "Export", exact: true });
-  await employeeExportDialog.getByRole("tab", { name: "Employees", exact: true }).click();
-  const employeeExportPromise = page.waitForEvent("download");
-  await employeeExportDialog.getByRole("button", { name: "Download", exact: true }).click();
-  const employeeExport = await employeeExportPromise;
-  expect(employeeExport.suggestedFilename()).toBe("org-tools-employees.json");
-  const employeeExportPath = await employeeExport.path();
-  const employeeRecords = JSON.parse(await readFile(employeeExportPath ?? "", "utf8")) as Array<{
-    teams: Array<{ isBoss: boolean; name: string; path: string[]; position: string | null }>;
-  }>;
-  expect(employeeRecords).toHaveLength(4);
-  expect(employeeRecords.some((record) => record.teams.length > 0)).toBe(true);
 
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -1201,7 +1185,9 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
   await assertLocalRequests();
 });
 
-test("keeps CSV as a Download output while Import accepts JSON only", async ({ page }) => {
+test("keeps JSON and Template as Download outputs while Import accepts JSON only", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -1220,10 +1206,15 @@ test("keeps CSV as a Download output while Import accepts JSON only", async ({ p
     .click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   const settings = page.getByRole("dialog").filter({ hasText: "Download settings" });
-  await expect(settings.getByRole("tab", { name: "CSV", exact: true })).toBeVisible();
+  await expect(settings.getByRole("tab", { name: "CSV", exact: true })).toHaveCount(0);
+  await expect(settings.getByRole("tab", { name: "JSON", exact: true })).toBeVisible();
   const downloadPromise = page.waitForEvent("download");
   await settings.getByRole("button", { name: "Download", exact: true }).click();
-  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-export.csv");
+  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-export.json");
+  await settings.getByRole("tab", { name: "Template", exact: true }).click();
+  const templatePromise = page.waitForEvent("download");
+  await settings.getByRole("button", { name: "Download", exact: true }).click();
+  expect((await templatePromise).suggestedFilename()).toBe("org-tools-export.txt");
   await expect(settings.locator('[data-demo-id="export-actions"] > div')).toHaveCount(0);
 
   await assertLocalRequests();
@@ -1883,6 +1874,22 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   expect(metadata).toMatchObject({ format: "png", hasAlpha: true });
   expect(metadata.width ?? 0).toBeGreaterThanOrEqual(300);
   expect(metadata.height ?? 0).toBeGreaterThan(1_000);
+
+  await exportDialog.getByRole("tab", { name: "JSON", exact: true }).click();
+  const jsonPromise = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
+  const jsonDownload = await jsonPromise;
+  expect(jsonDownload.suggestedFilename()).toBe("Product.json");
+  const jsonPath = await jsonDownload.path();
+  const records = JSON.parse(await readFile(jsonPath ?? "", "utf8")) as Array<
+    Record<string, unknown>
+  >;
+  expect(records.length).toBeGreaterThan(0);
+
+  await exportDialog.getByRole("tab", { name: "Template", exact: true }).click();
+  const templatePromise = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
+  expect((await templatePromise).suggestedFilename()).toBe("Product.txt");
   await assertLocalRequests();
 });
 

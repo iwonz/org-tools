@@ -43,7 +43,7 @@ describe("locale catalogs", () => {
   });
 
   it("does not silently fall back to source keys in the Russian UI", () => {
-    const allowedEnglishValues = new Set(["CSV", "English", "Org Tools"]);
+    const allowedEnglishValues = new Set(["English", "Org Tools"]);
     const untranslated = Object.entries(ru.Ui)
       .filter(([key, value]) => key === value && !allowedEnglishValues.has(value))
       .map(([key]) => key);

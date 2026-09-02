@@ -33,23 +33,21 @@ only after one valid confirmed Apply.
 - **THEN** current memory, SQLite, and other live tabs are unchanged
 
 ### Requirement: Export selects complete State or flat Employees
-The global Export action SHALL open a modal with State and Employees choices. State SHALL download
-the strict current state as `org-tools-state.json`. Employees SHALL download
-`org-tools-employees.json` as a flat Employee array where each Employee includes its ordinary fields
-and a `teams` array of `{ id, name, path, position, isBoss }` assignments from the current structure.
+The global Export action SHALL immediately validate and download the strict current state as
+`org-tools-state.json`. It SHALL NOT open a mode dialog or offer a separate Employee export. State
+and mapped Employee Import SHALL remain available as distinct Import tabs.
 
 #### Scenario: Export complete State
-- **WHEN** the user confirms State Export
-- **THEN** one current `{ organization, ui }` JSON document downloads immediately without changing
-  runtime state
-
-#### Scenario: Export Employees
-- **WHEN** the user confirms Employee Export
-- **THEN** one flat array containing all current Employees and nested portable Team assignments downloads
+- **WHEN** the user activates global Export
+- **THEN** one current `{ organization, ui }` JSON document downloads immediately without changing runtime state or opening a dialog
 
 #### Scenario: Export validation failure
 - **WHEN** the live state cannot pass the production parser
-- **THEN** no file downloads and the modal presents a localized owned error
+- **THEN** no file downloads and the shell presents a localized owned error
+
+#### Scenario: Import choices remain available
+- **WHEN** the user opens Import
+- **THEN** complete State and mapped Employees remain the only two Import tabs
 
 ### Requirement: Employee duplicate policies are bulk-selectable and individually overridable
 Existing Employees SHALL be matched only by deterministic Employee ID. The review SHALL provide one

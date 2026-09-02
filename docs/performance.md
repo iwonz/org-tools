@@ -44,8 +44,11 @@ virtualized DOM.
 Import reads at most 25 MiB. State mode parses one detached complete state and validates references
 in indexed passes. Employee mode discovers paths from a bounded sample, derives IDs and match indexes
 in O(n), keeps per-row overrides sparse, and virtualizes the matched review. Apply validates one
-candidate before replacement. Export computes only the selected complete-state or Employee
-projection after the explicit action. Data Download derives only selected sources.
+candidate before replacement. Global Export computes only the complete state after the explicit
+action. Data Download derives only selected sources, caps preview work at 50 records or rows and
+128 KiB, and builds complete JSON or Template output in yielding batches only for Copy or Download.
+Unit and Tag exclusions use normalized `Set` lookups; searchable selectors virtualize their options
+and show only an exclusion count in the trigger.
 Canvas PNG generation uses current layout, shared live-card geometry, bounded embedded avatar bytes,
 complete locally measured tag text, and local vector primitives without network work. Oversized tags
 increase only their Employee row and containing Unit height; the existing maximum canvas-pixel bound

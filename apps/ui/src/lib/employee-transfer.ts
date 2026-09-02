@@ -9,7 +9,6 @@ import type {
 } from "@org-tools/types";
 
 import { LocalizedError, uiMessage } from "@/i18n/messages";
-import { buildOrganizationStructure } from "@/lib/build-organization-structure";
 import {
   createUuid,
   isEmployeeGender,
@@ -21,7 +20,6 @@ import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { parseOrgToolsState } from "@/lib/org-file";
 
 export const MAX_EMPLOYEE_IMPORT_BYTES = 25 * 1024 * 1024;
-export const EMPLOYEE_EXPORT_FILE_NAME = "org-tools-employees.json";
 
 export type EmployeeTransferTeam = {
   id: UnitId;
@@ -29,10 +27,6 @@ export type EmployeeTransferTeam = {
   name: string;
   path: string[];
   position: string | null;
-};
-
-export type EmployeeTransferRecord = OrganizationEmployee & {
-  teams: EmployeeTransferTeam[];
 };
 
 export const EMPLOYEE_IMPORT_FIELDS = [
@@ -326,27 +320,6 @@ const createUnitPaths = (units: readonly OrgEditorUnit[]) => {
   };
   for (const unit of units) resolve(unit);
   return pathById;
-};
-
-export const createEmployeeExport = (state: OrgToolsState): EmployeeTransferRecord[] => {
-  const current = parseOrgToolsState(structuredClone(state));
-  const structure = buildOrganizationStructure(current.organization.employees, {
-    ...current.organization.structure,
-    selectedItems: current.ui.editor.selectedItems,
-    viewport: current.ui.editor.viewport,
-  });
-  return current.organization.employees.map((employee) => ({
-    ...structuredClone(employee),
-    teams: (structure.indexes.employeesById.get(employee.id)?.unitPositions ?? []).map(
-      (position) => ({
-        id: position.unitId,
-        isBoss: position.isBoss,
-        name: position.unitName,
-        path: [...position.unitPath.names],
-        position: position.position,
-      }),
-    ),
-  }));
 };
 
 const cloneUnit = (unit: OrgEditorUnit): OrgEditorUnit => ({

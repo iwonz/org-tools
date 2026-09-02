@@ -9,6 +9,7 @@ import {
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
 } from "@/lib/org-editor";
 import {
+  buildOrgEditorExportRows,
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorExportEmployeeTagLayout,
   createOrgEditorExportFileBaseName,
@@ -173,5 +174,42 @@ describe("Org Editor image export", () => {
         unitHeight: 136,
       }),
     ).toBe("M 188 212 C 188 256, 540 256, 540 300");
+  });
+});
+
+describe("Org Editor structured export scope", () => {
+  test("limits Employees and Unit assignments to the selected Unit or subtree", () => {
+    const root = { ...unit, employeeIds: [employee.id] };
+    const child: OrgEditorUnit = {
+      ...unit,
+      employeeIds: [employee.id],
+      id: "00000000-0000-4000-8000-000000000013",
+      name: "Child",
+      parentId: root.id,
+      x: 360,
+      y: 240,
+    };
+    const sourceIndex = { employeesById: new Map([[employee.id, employee]]) };
+
+    const unitRows = buildOrgEditorExportRows({
+      rootUnit: root,
+      rowMode: "allUnits",
+      scope: "unit",
+      sourceIndex,
+      units: [root, child],
+    });
+    const subtreeRows = buildOrgEditorExportRows({
+      rootUnit: root,
+      rowMode: "allUnits",
+      scope: "subtree",
+      sourceIndex,
+      units: [root, child],
+    });
+    expect(unitRows.map((row) => row.unitContext?.unitName)).toEqual([root.name]);
+    expect(subtreeRows.map((row) => row.unitContext?.unitName)).toEqual([root.name, child.name]);
+    expect(subtreeRows[1]?.unitContext?.unitPosition.unitPath.names).toEqual([
+      root.name,
+      child.name,
+    ]);
   });
 });

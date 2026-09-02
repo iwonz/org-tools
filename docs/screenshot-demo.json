@@ -21,10 +21,10 @@
     "id": "export",
     "module": "export",
     "featured": true,
-    "title": "State and Employee Export",
+    "title": "Direct state Export",
     "file": "demo-export.png",
-    "description": "Choose complete state or a flat Employee array with nested Team assignments for a local JSON download.",
-    "capabilities": ["Complete state", "Employee array", "Nested Team assignments"]
+    "description": "Download the complete validated application state directly from the sidebar without an intermediate dialog.",
+    "capabilities": ["Complete state", "Direct download", "Unsaved live snapshot"]
   },
   {
     "id": "theme",
@@ -285,6 +285,15 @@
     "capabilities": ["Text template", "Field tokens", "Scope", "Live preview"]
   },
   {
+    "id": "editor-json-export",
+    "module": "editor",
+    "featured": false,
+    "title": "Editor structured JSON export",
+    "file": "feature-editor-json-export.png",
+    "description": "Export the selected Unit or subtree through the shared Employee-first JSON engine with configurable Unit and Tag groups.",
+    "capabilities": ["JSON", "Scoped Employees", "Scoped assignments", "Units and Tags"]
+  },
+  {
     "id": "editor-image-settings",
     "module": "editor",
     "featured": false,
@@ -389,13 +398,13 @@
     ]
   },
   {
-    "id": "download-csv-settings",
+    "id": "download-json-exclusions",
     "module": "download",
     "featured": false,
-    "title": "CSV Download settings",
-    "file": "feature-download-csv-settings.png",
-    "description": "Choose row behavior and reorder, select, or rename Employee and Team fields for CSV output.",
-    "capabilities": ["CSV", "Field selection", "Rename and reorder", "Row modes"]
+    "title": "JSON Unit and Tag exclusions",
+    "file": "feature-download-json-exclusions.png",
+    "description": "Enable structured Unit and Tag arrays, rename their fields, and exclude exact Units or normalized Tag labels through searchable virtualized menus.",
+    "capabilities": ["Group toggles", "Field naming", "Unit exclusions", "Tag exclusions"]
   },
   {
     "id": "download-json-settings",
@@ -405,15 +414,6 @@
     "file": "feature-download-json-settings.png",
     "description": "Choose Employee fields and configure the fields of each nested Team object for JSON output.",
     "capabilities": ["JSON", "Employee fields", "Nested Team fields", "Field order"]
-  },
-  {
-    "id": "download-csv-preview",
-    "module": "download",
-    "featured": false,
-    "title": "CSV Download preview",
-    "file": "feature-download-csv-preview.png",
-    "description": "Inspect the lower field list and live CSV rows before copying or downloading the local file.",
-    "capabilities": ["Remaining fields", "Live CSV rows", "Copy", "Local download"]
   },
   {
     "id": "download-json-preview",

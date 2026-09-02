@@ -10,6 +10,8 @@ import { sortEmployeeTags } from "@/lib/employee-tags";
 import { getEmployeeInitials } from "@/lib/employee-utils";
 import {
   asExportText,
+  buildEmployeeExportRows,
+  type ExportRow,
   exportEmployeeFieldByKey,
   getExportEmployeeFieldValue,
 } from "@/lib/export-format";
@@ -41,10 +43,10 @@ import {
   type TemplateFieldValue,
   templateReferencesField,
 } from "@/lib/template-format";
-import type { ExportEmployeeFieldKey } from "@/stores/org-store";
+import type { ExportEmployeeFieldKey, ExportRowMode } from "@/stores/org-store";
 
 export type OrgEditorExportScope = "subtree" | "unit";
-export type OrgEditorExportTab = "image" | "template";
+export type OrgEditorExportTab = "image" | "json" | "template";
 export type OrgEditorExportTitleAlign = "center" | "left" | "right";
 export type OrgEditorImageBackground =
   | { type: "transparent" }
@@ -1430,6 +1432,86 @@ export const buildOrgEditorTemplateRows = ({
     }
   }
 
+  return rows;
+};
+
+const getOrgEditorUnitPath = (
+  unit: OrgEditorUnit,
+  unitById: ReadonlyMap<OrgEditorUnitId, OrgEditorUnit>,
+) => {
+  const ids: OrgEditorUnitId[] = [];
+  const names: string[] = [];
+  const visited = new Set<OrgEditorUnitId>();
+  let current: OrgEditorUnit | undefined = unit;
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    ids.unshift(current.id);
+    names.unshift(getOrgEditorUnitDisplayName(current));
+    current = current.parentId ? unitById.get(current.parentId) : undefined;
+  }
+  return { fullName: names.join(" / "), ids, names };
+};
+
+export const buildOrgEditorExportRows = ({
+  rootUnit,
+  rowMode,
+  scope,
+  sourceIndex,
+  units,
+}: {
+  rootUnit: OrgEditorUnit;
+  rowMode: ExportRowMode;
+  scope: OrgEditorExportScope;
+  sourceIndex: OrgEditorSourceIndex;
+  units: OrgEditorUnit[];
+}): ExportRow[] => {
+  const unitById = new Map(units.map((currentUnit) => [currentUnit.id, currentUnit] as const));
+  const exportUnits = getOrgEditorTemplateUnits({ rootUnit, scope, units });
+  const unitOrderById = new Map(exportUnits.map((currentUnit, index) => [currentUnit.id, index]));
+  const contextsByEmployeeId = new Map<EmployeeId, ExportRow["unitContext"][]>();
+
+  for (const currentUnit of exportUnits) {
+    const unitPath = getOrgEditorUnitPath(currentUnit, unitById);
+    for (const employeeId of getOrgEditorTemplateEmployeeIds(currentUnit, sourceIndex)) {
+      const employee = sourceIndex.employeesById.get(employeeId);
+      if (!employee) continue;
+      const contexts = contextsByEmployeeId.get(employeeId) ?? [];
+      const position = getEffectiveEmployeePosition(employee, currentUnit);
+      contexts.push({
+        id: `org:${currentUnit.id}`,
+        isBoss: employeeId === currentUnit.bossEmployeeId,
+        position,
+        type: "org",
+        unitFullPath: unitPath.fullName,
+        unitId: currentUnit.id,
+        unitName: getOrgEditorUnitDisplayName(currentUnit),
+        unitPosition: {
+          isBoss: employeeId === currentUnit.bossEmployeeId,
+          parentId: currentUnit.parentId,
+          position,
+          unitId: currentUnit.id,
+          unitName: getOrgEditorUnitDisplayName(currentUnit),
+          unitPath,
+        },
+      });
+      contextsByEmployeeId.set(employeeId, contexts);
+    }
+  }
+
+  const rows: ExportRow[] = [];
+  for (const [employeeId, contexts] of contextsByEmployeeId) {
+    const employee = sourceIndex.employeesById.get(employeeId);
+    if (!employee) continue;
+    rows.push(
+      ...buildEmployeeExportRows({
+        employee,
+        isDirectlySelected: true,
+        mode: rowMode,
+        unitContexts: contexts.filter((context) => context !== null),
+        unitOrderById,
+      }),
+    );
+  }
   return rows;
 };
 
