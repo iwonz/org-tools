@@ -10,6 +10,7 @@ export type EmployeeTag = {
 /** Generic fields shared by organization Employees and transfer records. */
 export type EditableEmployeeFields = {
   avatarBase64Url: string | null;
+  /** Canonical DD.MM.YYYY date; year 1900 means that only day and month are known. */
   birthday: string | null;
   email: string | null;
   firstName: string;

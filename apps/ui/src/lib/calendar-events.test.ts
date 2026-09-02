@@ -6,7 +6,7 @@ import { getCalendarBirthdayEmployees, isCalendarLeapYear } from "@/lib/calendar
 
 const employee = (id: string): Employee => ({
   avatarBase64Url: null,
-  birthday: "02-29",
+  birthday: "29.02.1900",
   email: null,
   firstName: "Leap",
   fullName: `Leap ${id}`,

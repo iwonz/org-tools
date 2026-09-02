@@ -1089,6 +1089,7 @@ test("imports complete states and mapped Employee arrays", async ({ page }) => {
     buffer: Buffer.from(
       JSON.stringify([
         {
+          birthday: "29.02.1900",
           contact: { email: "riley.brooks@example.test" },
           firstName: "Riley",
           lastName: "Brooks",
@@ -1103,6 +1104,16 @@ test("imports complete states and mapped Employee arrays", async ({ page }) => {
   await employeeImport.getByRole("button", { name: "Import Employees", exact: true }).click();
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(page.getByText("Riley Brooks", { exact: true })).toBeVisible();
+  await page.locator('[data-demo-id="employee-edit-button"]').click();
+  const importedEmployeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
+  await expect(importedEmployeeDialog.getByRole("combobox", { name: "Day" })).toContainText("29");
+  await expect(importedEmployeeDialog.getByRole("combobox", { name: "Month" })).toContainText(
+    "February",
+  );
+  await expect(importedEmployeeDialog.getByRole("combobox", { name: "Year" })).toContainText(
+    "Unknown year",
+  );
+  await importedEmployeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await assertLocalRequests();
 });
 
@@ -1142,6 +1153,12 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
 }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
+  const obsoleteBirthdayState = JSON.parse(
+    await readFile(syntheticStatePath, "utf8"),
+  ) as OrgToolsState;
+  const obsoleteBirthdayEmployee = obsoleteBirthdayState.organization.employees[0];
+  if (!obsoleteBirthdayEmployee) throw new Error("Synthetic Employee is unavailable.");
+  obsoleteBirthdayEmployee.birthday = "03-14";
 
   const rejectedFiles = [
     {
@@ -1162,6 +1179,14 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
         buffer: Buffer.from(JSON.stringify({ employees: [{ name: "Ordinary row" }] })),
         mimeType: "application/json",
         name: "generic.json",
+      },
+    },
+    {
+      error: "Birthday must use the DD.MM.YYYY format.",
+      file: {
+        buffer: Buffer.from(JSON.stringify(obsoleteBirthdayState)),
+        mimeType: "application/json",
+        name: "obsolete-birthday.json",
       },
     },
     {
@@ -1477,6 +1502,12 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await genderSelect.click();
   await expect(page.getByRole("option")).toHaveText(["Male", "Female", "Not specified"]);
   await page.getByRole("option", { name: "Female", exact: true }).click();
+  await createDialog.getByRole("combobox", { name: "Day", exact: true }).click();
+  await page.getByRole("option", { name: "12", exact: true }).click();
+  await createDialog.getByRole("combobox", { name: "Month", exact: true }).click();
+  await page.getByRole("option", { name: "March", exact: true }).click();
+  await createDialog.getByRole("combobox", { name: "Year", exact: true }).click();
+  await page.getByRole("option", { name: "Unknown year", exact: true }).click();
   await createDialog.getByRole("button", { name: "Create", exact: true }).click();
   await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("5 Employees");
 
@@ -1485,6 +1516,13 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   const editDialog = page.getByRole("dialog", { name: "Edit Employee" });
   await expect(editDialog.getByRole("combobox", { name: "Gender", exact: true })).toContainText(
     "Female",
+  );
+  await expect(editDialog.getByRole("combobox", { name: "Day", exact: true })).toContainText("12");
+  await expect(editDialog.getByRole("combobox", { name: "Month", exact: true })).toContainText(
+    "March",
+  );
+  await expect(editDialog.getByRole("combobox", { name: "Year", exact: true })).toContainText(
+    "Unknown year",
   );
   await editDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await createdEmployee.getByRole("button", { name: "Delete", exact: true }).click();

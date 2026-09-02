@@ -55,7 +55,12 @@ import {
   readClipboardAvatarBlob,
   releaseAvatarSource,
 } from "@/lib/avatar-image";
-import { createBirthdayKey, parseBirthdayMonthDay } from "@/lib/birthday";
+import {
+  createEmployeeBirthday,
+  getBirthdayDaysInMonth,
+  parseEmployeeBirthday,
+  UNKNOWN_BIRTH_YEAR,
+} from "@/lib/birthday";
 import { findEmployeeTag, normalizeEmployeeTags, sortEmployeeTags } from "@/lib/employee-tags";
 
 export type EditorEmployeeAssignment = {
@@ -126,6 +131,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
   const [fields, setFields] = useState<EditableEmployeeFields>(() => getInitialFields(employee));
   const [birthdayDay, setBirthdayDay] = useState("none");
   const [birthdayMonth, setBirthdayMonth] = useState("none");
+  const [birthdayYear, setBirthdayYear] = useState("none");
   const [selectedUnitIds, setSelectedUnitIds] = useState<AssignableUnitId[]>([]);
   const [bossUnitIds, setBossUnitIds] = useState<AssignableUnitId[]>([]);
   const [positionByUnitId, setPositionByUnitId] = useState<Record<string, string>>({});
@@ -169,6 +175,13 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
 
     return sortEmployeeTags(tags).map((tag) => ({ id: tag.label, label: tag.label }));
   }, [fields.tags, props.tagOptions]);
+  const birthdayYearOptions = useMemo(() => {
+    const currentYear = new Date().getUTCFullYear();
+    return Array.from(
+      { length: currentYear - UNKNOWN_BIRTH_YEAR },
+      (_, index) => currentYear - index,
+    );
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -177,9 +190,10 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
     setFormError(null);
     setAvatarError(null);
     setAvatarSource(null);
-    const birthday = parseBirthdayMonthDay(employee?.birthday);
+    const birthday = parseEmployeeBirthday(employee?.birthday);
     setBirthdayDay(birthday ? String(birthday.day) : "none");
     setBirthdayMonth(birthday ? String(birthday.month) : "none");
+    setBirthdayYear(birthday ? String(birthday.year) : "none");
 
     if (mode === "global") {
       const globalEmployee = props.employee;
@@ -272,12 +286,34 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
       [String(unitId)]: value,
     }));
   };
+  const updateBirthdayMonth = (value: string) => {
+    setBirthdayMonth(value);
+    if (birthdayDay === "none" || value === "none") return;
+    const year = birthdayYear === "none" ? UNKNOWN_BIRTH_YEAR : Number(birthdayYear);
+    if (Number(birthdayDay) > getBirthdayDaysInMonth(Number(value), year)) {
+      setBirthdayDay("none");
+    }
+  };
+  const updateBirthdayYear = (value: string) => {
+    setBirthdayYear(value);
+    if (birthdayDay === "none" || birthdayMonth === "none" || value === "none") return;
+    if (Number(birthdayDay) > getBirthdayDaysInMonth(Number(birthdayMonth), Number(value))) {
+      setBirthdayDay("none");
+    }
+  };
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const selectedBirthdayPartCount = [birthdayDay, birthdayMonth, birthdayYear].filter(
+      (value) => value !== "none",
+    ).length;
+    if (selectedBirthdayPartCount > 0 && selectedBirthdayPartCount < 3) {
+      setFormError(uiMessage("Choose the birthday day, month, and year."));
+      return;
+    }
     const birthday =
-      birthdayDay !== "none" && birthdayMonth !== "none"
-        ? createBirthdayKey(Number(birthdayDay), Number(birthdayMonth))
+      selectedBirthdayPartCount === 3
+        ? createEmployeeBirthday(Number(birthdayDay), Number(birthdayMonth), Number(birthdayYear))
         : null;
     const nextFields: EditableEmployeeFields = {
       ...fields,
@@ -403,22 +439,35 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                   />
                 </Field>
                 <Field label={t("Birthday")}>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <Select onValueChange={setBirthdayDay} value={birthdayDay}>
-                      <SelectTrigger>
+                      <SelectTrigger aria-label={t("Day")}>
                         <SelectValue placeholder={t("Day")} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">{t("Day")}</SelectItem>
-                        {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
+                        {Array.from(
+                          {
+                            length:
+                              birthdayMonth === "none"
+                                ? 31
+                                : getBirthdayDaysInMonth(
+                                    Number(birthdayMonth),
+                                    birthdayYear === "none"
+                                      ? UNKNOWN_BIRTH_YEAR
+                                      : Number(birthdayYear),
+                                  ),
+                          },
+                          (_, index) => index + 1,
+                        ).map((day) => (
                           <SelectItem key={day} value={String(day)}>
                             {String(day).padStart(2, "0")}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Select onValueChange={setBirthdayMonth} value={birthdayMonth}>
-                      <SelectTrigger>
+                    <Select onValueChange={updateBirthdayMonth} value={birthdayMonth}>
+                      <SelectTrigger aria-label={t("Month")}>
                         <SelectValue placeholder={t("Month")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -429,6 +478,22 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                               month: "long",
                               timeZone: "UTC",
                             })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={updateBirthdayYear} value={birthdayYear}>
+                      <SelectTrigger aria-label={t("Year")}>
+                        <SelectValue placeholder={t("Year")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{t("Year")}</SelectItem>
+                        <SelectItem value={String(UNKNOWN_BIRTH_YEAR)}>
+                          {t("Unknown year")}
+                        </SelectItem>
+                        {birthdayYearOptions.map((year) => (
+                          <SelectItem key={year} value={String(year)}>
+                            {year}
                           </SelectItem>
                         ))}
                       </SelectContent>

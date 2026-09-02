@@ -1,6 +1,6 @@
 import type { Employee, EmployeeId } from "@org-tools/types";
 
-import { createBirthdayKey, parseBirthdayMonthDay } from "@/lib/birthday";
+import { createBirthdayKey, parseEmployeeBirthday } from "@/lib/birthday";
 
 export type AnalyticsCountEntryKind = "birthdayDate" | "birthdayMonth" | "missingPosition" | "text";
 
@@ -81,7 +81,7 @@ const countEmployeesByBirthdayMonth = (employees: Employee[]): AnalyticsCountEnt
   const employeesByMonth = new Map<number, Employee[]>();
 
   for (const employee of employees) {
-    const birthday = parseBirthdayMonthDay(employee.birthday);
+    const birthday = parseEmployeeBirthday(employee.birthday);
 
     if (!birthday) continue;
 
@@ -105,7 +105,7 @@ const countEmployeesByBirthdayDate = (employees: Employee[]): AnalyticsCountEntr
   const employeesByDate = new Map<string, Employee[]>();
 
   for (const employee of employees) {
-    const birthday = parseBirthdayMonthDay(employee.birthday);
+    const birthday = parseEmployeeBirthday(employee.birthday);
 
     if (!birthday) continue;
 

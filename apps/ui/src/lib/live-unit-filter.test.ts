@@ -48,7 +48,7 @@ const createEmployee = (
 
 const employees: OrganizationEmployee[] = [
   createEmployee(ALEX_ID, {
-    birthday: "03-12",
+    birthday: "12.03.1900",
     email: "alex@example.test",
     firstName: "Alex",
     tags: [

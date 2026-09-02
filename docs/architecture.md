@@ -38,7 +38,9 @@ State Import parses one detached value, validates exact keys, identifiers, dates
 avatars, references, graph invariants, and UI references, then performs one atomic replacement.
 Employee Import maps a flat or nested array, deterministically matches identity, and optionally
 upserts portable Team assignments. Export directly validates and downloads the complete current
-state. Old state shapes are rejected.
+state. Employee birthdays are nullable canonical `DD.MM.YYYY` strings; year `1900` is reserved for
+an unknown year and recurrence indexes derive only their day and month. Old state shapes and former
+birthday formats are rejected.
 
 An Employee ID is the full SHA-256 of normalized first name, last name, and email separated by
 U+001F. Normalization uses Unicode NFKC, trimmed and collapsed whitespace, and locale-independent

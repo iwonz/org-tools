@@ -151,6 +151,39 @@ describe("Employee transfer", () => {
     expect(store.createOrgToolsState()).toEqual(before);
   });
 
+  test("imports only complete current birthday values with unknown-year semantics", () => {
+    const source = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        {
+          birthday: "29.02.1900",
+          email: "leap@example.test",
+          firstName: "Leap",
+          lastName: "Example",
+        },
+      ]),
+    );
+    const mapping = createSuggestedEmployeeImportMapping(source.paths);
+    const preview = deriveEmployeeImportPreview(source, mapping, []);
+    expect(preview.rows[0]?.fields.birthday).toBe("29.02.1900");
+
+    const obsoleteSource = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        {
+          birthday: "02-29",
+          email: "legacy@example.test",
+          firstName: "Legacy",
+          lastName: "Example",
+        },
+      ]),
+    );
+    const obsoleteMapping = createSuggestedEmployeeImportMapping(obsoleteSource.paths);
+    expect(() => deriveEmployeeImportPreview(obsoleteSource, obsoleteMapping, [])).toThrow(
+      "Birthday must use the DD.MM.YYYY format.",
+    );
+  });
+
   test("derives 20,000 rows once with sparse override state", () => {
     const rows = Array.from({ length: 20_000 }, (_, index) => ({
       email: `employee-${index}@example.test`,

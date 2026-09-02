@@ -30,7 +30,7 @@ const employees = Array.from({ length: employeeCount }, (_, index) => {
   const serial = String(index + 1).padStart(5, "0");
   return {
     avatarBase64Url: null,
-    birthday: `${String((index % 12) + 1).padStart(2, "0")}-${String((index % 28) + 1).padStart(2, "0")}`,
+    birthday: `${String((index % 28) + 1).padStart(2, "0")}.${String((index % 12) + 1).padStart(2, "0")}.${index % 5 === 0 ? "1900" : String(1970 + (index % 35))}`,
     createdAt: timestamp,
     email: `employee${serial}@example.test`,
     firstName: "Employee",

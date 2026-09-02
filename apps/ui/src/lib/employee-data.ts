@@ -1,6 +1,7 @@
 import type { EditableEmployeeFields, EmployeeGender, EmployeeId } from "@org-tools/types";
 
 import { LocalizedError, uiMessage } from "@/i18n/messages";
+import { parseEmployeeBirthday } from "@/lib/birthday";
 import { createEmployeeId } from "@/lib/employee-id";
 import { normalizeEmployeeTags } from "@/lib/employee-tags";
 
@@ -46,14 +47,11 @@ export const normalizeBirthday = (value: string | null): string | null => {
   const normalized = normalizeOptionalEmployeeText(value);
   if (normalized === null) return null;
 
-  const match = /^(\d{2})-(\d{2})$/.exec(normalized);
-  if (!match) throw new LocalizedError(uiMessage("Birthday must use the MM-DD format."));
-
-  const month = Number(match[1]);
-  const day = Number(match[2]);
-  const date = new Date(Date.UTC(2000, month - 1, day));
-  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
-    throw new LocalizedError(uiMessage("Birthday must be a valid month and day."));
+  if (!/^(\d{2})\.(\d{2})\.(\d{4})$/.test(normalized)) {
+    throw new LocalizedError(uiMessage("Birthday must use the DD.MM.YYYY format."));
+  }
+  if (!parseEmployeeBirthday(normalized)) {
+    throw new LocalizedError(uiMessage("Birthday must be a valid date that is not in the future."));
   }
 
   return normalized;

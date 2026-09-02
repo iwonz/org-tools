@@ -1,6 +1,7 @@
 import type { OrgToolsState } from "@org-tools/types";
 
 import { LocalizedError, uiMessage } from "@/i18n/messages";
+import { normalizeBirthday } from "@/lib/employee-data";
 import { downloadJson, parseOrgToolsState } from "@/lib/org-file";
 
 export const MAX_STATE_IMPORT_BYTES = 25 * 1024 * 1024;
@@ -12,6 +13,19 @@ export type StateImportCandidate = {
   fileSizeBytes: number;
   state: OrgToolsState;
   unitCount: number;
+};
+
+const assertCurrentBirthdayFormats = (input: unknown) => {
+  if (!input || typeof input !== "object") return;
+  const organization = Reflect.get(input, "organization");
+  if (!organization || typeof organization !== "object") return;
+  const employees = Reflect.get(organization, "employees");
+  if (!Array.isArray(employees)) return;
+  for (const employee of employees) {
+    if (!employee || typeof employee !== "object") continue;
+    const birthday = Reflect.get(employee, "birthday");
+    if (birthday === null || typeof birthday === "string") normalizeBirthday(birthday);
+  }
 };
 
 export const parseStateImportText = (
@@ -36,6 +50,7 @@ export const parseStateImportText = (
   }
 
   try {
+    assertCurrentBirthdayFormats(input);
     const state = parseOrgToolsState(input);
     return {
       employeeCount: state.organization.employees.length,
@@ -44,7 +59,8 @@ export const parseStateImportText = (
       state,
       unitCount: state.organization.structure.units.length,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof LocalizedError) throw error;
     throw new LocalizedError(uiMessage("Only a complete Org Tools state can be imported."));
   }
 };

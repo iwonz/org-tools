@@ -150,10 +150,11 @@
     "featured": false,
     "title": "Employee profile and assignments",
     "file": "feature-employees-form.png",
-    "description": "Edit identity, contact, gender, birthday, embedded avatar, tags, Team membership, boss state, and positions.",
+    "description": "Edit identity, contact, gender, a complete Day/Month/Year birthday with an unknown-year choice, embedded avatar, tags, Team membership, boss state, and positions.",
     "capabilities": [
       "Identity and contact",
-      "Gender and birthday",
+      "Complete birthday",
+      "Unknown year",
       "Embedded avatar",
       "Tags",
       "Team assignments"

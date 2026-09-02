@@ -125,9 +125,10 @@ Capabilities: Birthday filter, Gender filter, Position filter, Tag filter, Team 
 
 [![Employee profile and assignments](screenshots/feature-employees-form.png)](screenshots/feature-employees-form.png)
 
-Edit identity, contact, gender, birthday, embedded avatar, tags, Team membership, boss state, and positions.
+Edit identity, contact, gender, a complete Day/Month/Year birthday with an unknown-year choice,
+embedded avatar, tags, Team membership, boss state, and positions.
 
-Capabilities: Identity and contact, Gender and birthday, Embedded avatar, Tags, Team assignments.
+Capabilities: Identity and contact, Complete birthday, Unknown year, Embedded avatar, Tags, Team assignments.
 
 ### Tag date calendar
 

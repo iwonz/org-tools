@@ -40,7 +40,7 @@ const employee = (id: string, fields: Partial<OrganizationEmployee>): Organizati
 
 const employees: OrganizationEmployee[] = [
   employee(ALEX_ID, {
-    birthday: "03-12",
+    birthday: "12.03.1900",
     email: "alex@example.test",
     firstName: "Alex",
     gender: "female",
@@ -48,7 +48,7 @@ const employees: OrganizationEmployee[] = [
     username: "alex",
   }),
   employee(BLAIR_ID, {
-    birthday: "04-18",
+    birthday: "18.04.1990",
     email: "blair@example.test",
     firstName: "Blair",
     gender: "male",

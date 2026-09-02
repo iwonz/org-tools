@@ -129,6 +129,20 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(mismatched)).toThrow("invalid Employee");
   });
 
+  test("accepts complete birthdays and rejects obsolete birthday state", () => {
+    const state = populatedStore().store.createOrgToolsState();
+    const employee = state.organization.employees[0];
+    if (!employee) throw new Error("Expected an Employee.");
+    employee.birthday = "29.02.1900";
+    expect(parseOrgToolsState(state).organization.employees[0]?.birthday).toBe("29.02.1900");
+
+    const obsolete = structuredClone(state);
+    const obsoleteEmployee = obsolete.organization.employees[0];
+    if (!obsoleteEmployee) throw new Error("Expected an Employee.");
+    obsoleteEmployee.birthday = "02-29";
+    expect(() => parseOrgToolsState(obsolete)).toThrow("invalid Employee");
+  });
+
   test("rejects obsolete CSV and flat Unit Download state", () => {
     const state = createBlankOrgToolsState();
     const obsolete = structuredClone(state) as unknown as {

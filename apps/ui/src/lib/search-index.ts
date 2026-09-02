@@ -1,6 +1,6 @@
 import type { Employee, EmployeeSearchDocument, Unit, UnitSearchDocument } from "@org-tools/types";
 
-import { createBirthdayKey, parseBirthdayMonthDay } from "@/lib/birthday";
+import { createBirthdayKey, parseEmployeeBirthday } from "@/lib/birthday";
 
 export const EMPTY_POSITION_LABEL = "Position not specified";
 
@@ -22,7 +22,7 @@ export const getEmployeePositionLabels = (employee: Employee) =>
     : employee.unitPositions.map((unitPosition) => getEmployeePositionLabel(unitPosition.position));
 
 const getEmployeeBirthdayKey = (employee: Employee) => {
-  const birthday = parseBirthdayMonthDay(employee.birthday);
+  const birthday = parseEmployeeBirthday(employee.birthday);
 
   return birthday ? createBirthdayKey(birthday.day, birthday.month) : null;
 };

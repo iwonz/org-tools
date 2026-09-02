@@ -42,8 +42,9 @@ control.
   align with roster avatars, and direct plus descendant Employees appear in one contiguous list.
   The current roster count appears below search without redundant roster-section headings or counts.
   **Add Unit** is in the shared header.
-- **Employees** manages profiles, gender, birthday, embedded avatar, tags, contact fields, and Unit
-  assignments with compound filters. Avatar cropping produces a local 512 by 512 image, preferring
+- **Employees** manages profiles, gender, complete birthdays, embedded avatar, tags, contact fields,
+  and Unit assignments with compound filters. Birthday uses styled Day, Month, and Year selectors;
+  **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header.
 - **Editor** manages the current Unit structure on an adaptive snapped grid, including search,
@@ -71,7 +72,8 @@ control.
 **Import** opens a modal with **All state** and **Employees**. All state accepts the exact current
 state shape up to 25 MiB and replaces it atomically after confirmation. Employees accepts a JSON
 array, maps flat or nested properties, requires first name, last name, and email, and can import
-nested Team assignments. Existing deterministic identities can be updated, skipped, or limited to
+nested Team assignments. A mapped birthday must be a real `DD.MM.YYYY` value; `1900` means the birth
+year is unknown, including for `29.02.1900`. Existing deterministic identities can be updated, skipped, or limited to
 Teams in bulk with per-Employee overrides. Invalid input never changes current data.
 
 **Export** immediately validates the live state and downloads `org-tools-state.json`; it has no

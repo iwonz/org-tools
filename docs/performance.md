@@ -20,6 +20,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Persist identifiers and relationships rather than nested Employee copies.
 - Build shared maps, search documents, Unit order, membership, birthday, gender, dated-tag,
   position, and tag indexes outside React render paths.
+- Parse each canonical `DD.MM.YYYY` birthday once while building the shared search index; Calendar,
+  Analytics, and filters reuse its derived recurring month-day key without duplicating Employee data.
 - Build the current derived structure once per organization change and reuse its indexes.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
@@ -43,7 +45,8 @@ virtualized DOM.
 
 Import reads at most 25 MiB. State mode parses one detached complete state and validates references
 in indexed passes. Employee mode discovers paths from a bounded sample, derives IDs and match indexes
-in O(n), keeps per-row overrides sparse, and virtualizes the matched review. Apply validates one
+in O(n), validates canonical complete birthdays in the same pass, keeps per-row overrides sparse,
+and virtualizes the matched review. Apply validates one
 candidate before replacement. Global Export computes only the complete state after the explicit
 action. Data Download derives only selected sources, caps preview work at 50 records or rows and
 128 KiB, and builds complete JSON or Template output in yielding batches only for Copy or Download.

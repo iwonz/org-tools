@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createBlankOrgToolsState } from "@/lib/org-file";
 import { MAX_STATE_IMPORT_BYTES, parseStateImportText } from "@/lib/state-transfer";
+import { OrgStore } from "@/stores/org-store";
 
 describe("state transfer", () => {
   it("parses one complete state and derives bounded summary counts", () => {
@@ -32,6 +33,34 @@ describe("state transfer", () => {
     );
     expect(() => parseStateImportText("broken.json", "{")).toThrow(
       "Could not read or parse the selected file.",
+    );
+  });
+
+  it("accepts current birthdays and reports obsolete birthday formats", () => {
+    const store = new OrgStore();
+    store.createEmployee(
+      {
+        avatarBase64Url: null,
+        birthday: "29.02.1900",
+        email: "leap@example.test",
+        firstName: "Leap",
+        gender: "unspecified",
+        lastName: "Example",
+        phone: null,
+        profileUrl: null,
+        tags: [],
+        username: null,
+      },
+      [],
+    );
+    const state = store.createOrgToolsState();
+    expect(parseStateImportText("state.json", JSON.stringify(state)).employeeCount).toBe(1);
+
+    const employee = state.organization.employees[0];
+    if (!employee) throw new Error("Expected an Employee.");
+    employee.birthday = "02-29";
+    expect(() => parseStateImportText("state.json", JSON.stringify(state))).toThrow(
+      "Birthday must use the DD.MM.YYYY format.",
     );
   });
 

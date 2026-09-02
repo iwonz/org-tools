@@ -274,6 +274,17 @@ for (const [locale, messages] of [
     await expect(
       employeeDialog.getByRole("button", { name: messages.Ui["Paste image"], exact: true }),
     ).toBeVisible();
+    await expect(
+      employeeDialog.getByRole("combobox", { name: messages.Ui.Day, exact: true }),
+    ).toBeVisible();
+    await expect(
+      employeeDialog.getByRole("combobox", { name: messages.Ui.Month, exact: true }),
+    ).toBeVisible();
+    await employeeDialog.getByRole("combobox", { name: messages.Ui.Year, exact: true }).click();
+    await expect(
+      page.getByRole("option", { name: messages.Ui["Unknown year"], exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
     await employeeDialog.getByRole("button", { name: messages.Ui.Cancel, exact: true }).click();
 
     await page.getByRole("tab", { name: messages.Ui["Data Download"], exact: true }).click();

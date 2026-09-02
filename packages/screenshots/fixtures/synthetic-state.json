@@ -3,7 +3,7 @@
     "employees": [
       {
         "avatarBase64Url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
-        "birthday": "03-14",
+        "birthday": "14.03.1991",
         "createdAt": "2026-01-15T12:00:00.000Z",
         "email": "avery.stone@example.test",
         "firstName": "Avery",
@@ -27,7 +27,7 @@
       },
       {
         "avatarBase64Url": null,
-        "birthday": "07-22",
+        "birthday": "22.07.1900",
         "createdAt": "2026-01-15T12:00:00.000Z",
         "email": "jordan.reed@example.test",
         "firstName": "Jordan",
@@ -51,7 +51,7 @@
       },
       {
         "avatarBase64Url": null,
-        "birthday": "11-05",
+        "birthday": "05.11.1988",
         "createdAt": "2026-01-15T12:00:00.000Z",
         "email": "morgan.park@example.test",
         "firstName": "Morgan",
@@ -71,7 +71,7 @@
       },
       {
         "avatarBase64Url": null,
-        "birthday": "01-30",
+        "birthday": "30.01.1994",
         "createdAt": "2026-01-15T12:00:00.000Z",
         "email": "riley.chen@example.test",
         "firstName": "Riley",

@@ -46,6 +46,11 @@ type EmployeeImportRecord = Record<string, unknown> & {
 `path` is the portable root-to-Team name path. `id` can identify an existing Team from the current
 state.
 
+The optional mapped `birthday` field is either null or one zero-padded `DD.MM.YYYY` string. A real
+known year starts at 1901 and cannot be in the future. `1900` is reserved to mean that only day and
+month are known; `29.02.1900` is valid unknown-year data. `MM-DD`, ISO dates, timestamps, partial
+dates, and locale-dependent text are rejected without conversion.
+
 Employee Import accepts a top-level array of objects up to 25 MiB. Source properties may be flat or
 nested; the mapping screen maps property paths to current Employee fields, tags, and Teams. First
 name, last name, and email mappings are mandatory. When mapped, tags must be `{ label, date }`

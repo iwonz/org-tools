@@ -41,7 +41,7 @@ const childPosition: EmployeeUnitPosition = {
 
 const createEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   avatarBase64Url: EMBEDDED_AVATAR,
-  birthday: "12-10",
+  birthday: "10.12.1985",
   email: "ada@example.test",
   firstName: "Ada",
   fullName: "Ada Lovelace",
@@ -82,6 +82,13 @@ const createJsonOptions = () => ({
 });
 
 describe("Employee export rows", () => {
+  test("retains the canonical complete birthday scalar", () => {
+    expect(getExportEmployeeFieldValue(createEmployee(), "birthday")).toBe("10.12.1985");
+    expect(
+      getExportEmployeeFieldValue(createEmployee({ birthday: "29.02.1900" }), "birthday"),
+    ).toBe("29.02.1900");
+  });
+
   test("supports All Units and First Unit with stable tree precedence", () => {
     const employee = createEmployee();
     const contexts = buildEmployeeUnitContextIndex([employee]).get(employee.id) ?? [];
@@ -131,6 +138,18 @@ describe("Employee export rows", () => {
 });
 
 describe("structured JSON export", () => {
+  test("emits the exact complete birthday in JSON", () => {
+    const options = createJsonOptions();
+    expect(
+      createStructuredJsonRecords(createRows(), {
+        ...options,
+        selectedEmployeeFieldKeys: ["birthday"],
+        selectedJsonTagFieldKeys: [],
+        selectedJsonUnitFieldKeys: [],
+      }),
+    ).toEqual([{ birthday: "10.12.1985" }]);
+  });
+
   test("creates one Employee record with nested Units, Tags, and a fixed Unit path separator", () => {
     const result = createStructuredJsonRecords(createRows(), createJsonOptions());
     expect(result).toEqual([
@@ -236,6 +255,17 @@ describe("structured JSON export", () => {
 });
 
 describe("Template export", () => {
+  test("emits the exact unknown-year birthday in Template output", () => {
+    expect(
+      createExportText({
+        ...createJsonOptions(),
+        rows: createRows(createEmployee({ birthday: "29.02.1900" })).slice(0, 1),
+        tabMode: "template",
+        templateFormat: "{birthday}",
+      }),
+    ).toBe("29.02.1900");
+  });
+
   test("keeps row mode output and Employee tag tokens", () => {
     const text = createExportText({
       ...createJsonOptions(),
