@@ -1,10 +1,18 @@
 import type { Employee, OrgEditorUnit } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
-
+import {
+  getOrgEditorEmployeeTextMaxWidth,
+  getOrgEditorUnitBounds,
+  getOrgEditorUnitHeightForEmployeeRows,
+  ORG_EDITOR_EMPLOYEE_TAG_STYLE,
+  ORG_EDITOR_UNIT_BORDER_RADIUS,
+  ORG_EDITOR_UNIT_HEADER_HEIGHT,
+} from "@/lib/org-editor";
 import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorExportFileBaseName,
   getEmployeeCanvasAvatarUrl,
+  getOrgEditorExportConnectionPath,
   getOrgEditorExportEmployeeGeometry,
   getOrgEditorExportEmployeeRowHeight,
   getOrgEditorExportEmployeeTagChipWidth,
@@ -58,7 +66,10 @@ describe("Org Editor image export", () => {
   });
 
   test("uses English defaults and filesystem-safe Unit names", () => {
-    expect(createDefaultOrgEditorImageExportSettings().imageBossLabel).toBe("Manager");
+    expect(createDefaultOrgEditorImageExportSettings()).toMatchObject({
+      imageBossLabel: "Manager",
+      unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
+    });
     expect(ORG_EDITOR_EXPORT_GRADIENTS.map(({ label }) => label)).toEqual([
       "Air",
       "Mint",
@@ -86,25 +97,59 @@ describe("Org Editor image export", () => {
     expect(english).toHaveLength(4);
     expect(english).toContain("Last day · Sep 1, 2026");
     expect(russian).not.toEqual(english);
-    expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBe(47.5);
-    expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90, () => 36)).toBe(52);
-    expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(4);
-    expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBe(120);
+    expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBe(38);
+    expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90)).toBeCloseTo(43.2);
+    expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(3);
+    expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBe(76);
   });
 
-  test("uses the neutral Employee-card chip palette and spacing", () => {
+  test("shares compact tag and Employee-row geometry with the live canvas", () => {
     expect(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE).toEqual({
+      ...ORG_EDITOR_EMPLOYEE_TAG_STYLE,
       fillStyle: "rgba(29, 29, 29, 0.1)",
-      fontSize: 11,
-      gap: 4,
-      height: 20,
-      horizontalPadding: 8,
-      radius: 6,
       textStyle: "#1d1d1d",
-      widthPerCharacter: 6.3,
     });
     expect(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fillStyle).not.toContain("39, 135, 245");
     expect(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.textStyle).not.toBe("#2787f5");
-    expect(getOrgEditorExportEmployeeGeometry(unit, 0).textMaxWidth).toBe(314);
+
+    const unitWidth = getOrgEditorUnitBounds(unit).width;
+    expect(getOrgEditorEmployeeTextMaxWidth(unitWidth)).toBe(310);
+    expect(getOrgEditorExportEmployeeGeometry(unit, 0, 76, 3)).toEqual({
+      avatarX: 27,
+      avatarY: 119,
+      rowTop: ORG_EDITOR_UNIT_HEADER_HEIGHT + 9,
+      tagY: 108,
+      textBaselineY: 103,
+      textMaxWidth: 310,
+      textX: 45,
+    });
+    expect(
+      getOrgEditorUnitHeightForEmployeeRows({
+        collapsed: false,
+        employeeRowHeights: [76, 48],
+      }),
+    ).toBe(212);
+  });
+
+  test("anchors hierarchy connections to rendered card heights", () => {
+    const child = {
+      ...unit,
+      id: "00000000-0000-4000-8000-000000000013",
+      name: "Child",
+      parentId: unit.id,
+      x: 400,
+      y: 300,
+    };
+
+    expect(
+      getOrgEditorExportConnectionPath({
+        employeeById: new Map(),
+        layoutMode: "topDown",
+        parentUnit: unit,
+        parentUnitHeight: 212,
+        unit: child,
+        unitHeight: 136,
+      }),
+    ).toBe("M 188 212 C 188 256, 540 256, 540 300");
   });
 });

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import type { OrgToolsState } from "@org-tools/types";
 import type { Locator, Page, Request } from "@playwright/test";
+import sharp from "sharp";
 
 import { expect, test } from "./browser-test.js";
 import {
@@ -80,6 +81,50 @@ async function expectTextBeforeTrailingIcon(locator: Locator) {
   });
 
   expect(positions.iconLeft).toBeGreaterThanOrEqual(positions.labelRight);
+}
+
+async function createLongRosterState(): Promise<OrgToolsState> {
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const mainView = state.organization.views.find((view) => view.kind === "main");
+  const product = mainView?.document.units.find((unit) => unit.name === "Product");
+  const platform = mainView?.document.units.find((unit) => unit.name === "Platform");
+  const avatar = state.organization.employees[0]?.avatarBase64Url ?? null;
+  if (!product || !platform) throw new Error("Synthetic hierarchy is unavailable.");
+
+  const addedEmployees = Array.from({ length: 10 }, (_, index) => {
+    const suffix = String(index + 1).padStart(2, "0");
+    return {
+      avatarBase64Url: index % 3 === 0 ? avatar : null,
+      birthday: null,
+      createdAt: "2026-01-15T12:00:00.000Z",
+      email: `synthetic.person.${suffix}@example.test`,
+      firstName: "Synthetic",
+      gender: "unspecified" as const,
+      id: `50000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      lastName: `Person ${suffix}`,
+      phone: `+1-202-555-01${String(10 + index).padStart(2, "0")}`,
+      profileUrl: null,
+      tags: [
+        { date: null, label: index % 2 === 0 ? "Client Applications" : "Platform" },
+        { date: null, label: "Accessibility" },
+        { date: null, label: "Engineering" },
+        { date: null, label: "Remote" },
+      ],
+      updatedAt: "2026-01-15T12:00:00.000Z",
+      username: `synthetic.person.${suffix}`,
+    };
+  });
+
+  state.organization.employees.push(...addedEmployees);
+  product.employeeIds.push(...addedEmployees.map((employee) => employee.id));
+  product.employeePositions.push(
+    ...addedEmployees.map((employee) => ({
+      employeeId: employee.id,
+      position: "Software Engineer",
+    })),
+  );
+  platform.y = 960;
+  return state;
 }
 
 async function expectStableHoverGeometry(locator: Locator) {
@@ -1654,6 +1699,79 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   expect(darkUnitHover).toEqual(darkUnitResting);
   expect(darkUnitHover.alpha).toBe(1);
   expect(darkUnitHover.opacity).toBe("1");
+  await assertLocalRequests();
+});
+
+test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  const state = await createLongRosterState();
+  const importDialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "synthetic-long-roster.json",
+  });
+  await expect(importDialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
+    "14 Employees",
+  );
+  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+
+  const product = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  const firstRow = product.locator("[data-org-editor-employee-row]").first();
+  const geometry = await product.evaluate((unitElement) => {
+    const unit = unitElement.getBoundingClientRect();
+    const header = unitElement.querySelector("[data-org-editor-unit-header]");
+    const row = unitElement.querySelector("[data-org-editor-employee-row]");
+    const avatar = row?.querySelector("[data-org-editor-employee-avatar]");
+    const content = row?.querySelector("[data-org-editor-employee-content]");
+    if (!(header instanceof HTMLElement) || !(row instanceof HTMLElement)) {
+      throw new Error("Editor card geometry is unavailable.");
+    }
+    if (!(avatar instanceof HTMLElement) || !(content instanceof HTMLElement)) {
+      throw new Error("Employee geometry is unavailable.");
+    }
+    const headerBox = header.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const avatarBox = avatar.getBoundingClientRect();
+    const contentBox = content.getBoundingClientRect();
+    return {
+      avatarCenterX: avatarBox.left + avatarBox.width / 2 - unit.left,
+      avatarCenterY: avatarBox.top + avatarBox.height / 2 - rowBox.top,
+      borderRadius: Number.parseFloat(window.getComputedStyle(unitElement).borderRadius),
+      contentX: contentBox.left - unit.left,
+      headerHeight: headerBox.height,
+      rowHeight: rowBox.height,
+      rowX: rowBox.left - unit.left,
+    };
+  });
+  expect(geometry).toMatchObject({
+    avatarCenterX: 27,
+    borderRadius: 8,
+    contentX: 45,
+    headerHeight: 72,
+    rowX: 9,
+  });
+  expect(geometry.avatarCenterY).toBe(geometry.rowHeight / 2);
+  await expect(firstRow).toBeVisible();
+
+  await product.click({ button: "right", position: { x: 20, y: 20 } });
+  await page.locator('[data-demo-id="org-editor-export-action"]').click();
+  const exportDialog = page.getByRole("dialog", { name: "Export" });
+  const preview = exportDialog.locator('[data-demo-id="org-editor-export-image"]');
+  await expect(preview).toBeVisible();
+  await expect
+    .poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalHeight))
+    .toBeGreaterThan(1_000);
+
+  const downloadPromise = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("Product.png");
+  const path = await download.path();
+  const metadata = await sharp(await readFile(path ?? "")).metadata();
+  expect(metadata).toMatchObject({ format: "png", hasAlpha: true });
+  expect(metadata.width ?? 0).toBeGreaterThanOrEqual(300);
+  expect(metadata.height ?? 0).toBeGreaterThan(1_000);
   await assertLocalRequests();
 });
 

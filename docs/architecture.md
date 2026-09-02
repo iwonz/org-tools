@@ -119,6 +119,13 @@ history, collaborative cursors, or remote synchronization.
 - Import owns one transient `File` and validated candidate. Export performs a direct download.
 - Data Download remains a separate reporting pipeline for CSV, JSON, templates, and PNG.
 
+Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
+headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row
+heights, and hierarchy anchors. Its deterministic canvas painter adds the stable Unit identity,
+conditional Live badge, and boss treatment while excluding transient selection, hover, handles, and
+menus. Image titles, backgrounds, fonts, scope, radius, and Employee templates remain output-only
+settings and do not mutate the View document.
+
 The server sidebar adds **MCP** after state Export; its icon is green only while enabled. The static
 sidebar has no MCP slot, accessible action, dialog, endpoint request, or imported MCP control. Both
 retain identical compact/expanded geometry. The MCP modal contains

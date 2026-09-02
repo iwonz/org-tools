@@ -208,9 +208,10 @@ Capabilities: Multi-selection, Boss assignment, Bulk tags, Edit, Copy, Delete.
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Preview a local PNG export and choose scope, transparent, solid, or gradient backgrounds.
+Preview a local hierarchy PNG whose Unit cards, centered Employee rows, compact tags, boss marker,
+and connections follow the live canvas, then choose transparent, solid, or gradient backgrounds.
 
-Capabilities: PNG export, Scope, Live preview, Background presets.
+Capabilities: PNG export, Live-card geometry, Hierarchy, Boss marker, Scope, Background presets.
 
 ### Editor text template export
 
@@ -224,7 +225,8 @@ Capabilities: Text template, Field tokens, Scope, Live preview.
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Configure PNG title, font, spacing, alignment, boss label, and Employee card content below the preview.
+Configure PNG title, font, spacing, alignment, boss label, and Employee card content below the
+aligned hierarchy preview.
 
 Capabilities: Title and font, Spacing and alignment, Boss label, Employee card content.
 
@@ -396,6 +398,9 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
   both themes.
 - Confirm the Editor labels its canonical View with the localized Units term, never exposes Rename
   or Delete for it, and keeps both actions available for an empty custom View.
+- Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
+  and tag columns, compact tag wrapping, boss marker, variable row heights, and connection endpoints
+  without card overlap or transient editing chrome.
 - Confirm MCP frames contain only the synthetic token; the enabled icon is green; Setup, Activity,
   Enable, Disable, and token rotation use leading icons; all seven Client setup choices have their
   own leading bundled icon; and setup shows the installable-skill prompt rather than a standalone

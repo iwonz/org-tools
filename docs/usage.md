@@ -67,7 +67,9 @@ control.
   View chooser is a standard styled Select. Every custom View, including an empty one, can be
   renamed or deleted after confirmation; deletion returns to Units and never changes canonical
   organization data. Closing Search clears its query. Unit cards keep the same opaque background
-  when hovered or selected, with selection indicated only by the signal border.
+  when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
+  the live Unit header, roster spacing, centered avatars, compact tags, boss marker, variable row
+  heights, and hierarchy connections while retaining configurable output styling.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
   actions. Day and tag dialogs omit redundant descriptions, the dated-event and current/future

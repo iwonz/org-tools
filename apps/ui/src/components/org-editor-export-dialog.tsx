@@ -196,6 +196,7 @@ export function OrgEditorExportDialog({
       employeeById,
       formatUnitSummary,
       layoutMode,
+      liveUnitLabel: t("Live"),
       locale,
       maxCanvasPixels: ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
       rootUnit: unit,
@@ -234,6 +235,7 @@ export function OrgEditorExportDialog({
     locale,
     open,
     scope,
+    t,
     unit,
     units,
   ]);
@@ -274,6 +276,7 @@ export function OrgEditorExportDialog({
       employeeById,
       formatUnitSummary,
       layoutMode,
+      liveUnitLabel: t("Live"),
       locale,
       rootUnit: unit,
       scope,

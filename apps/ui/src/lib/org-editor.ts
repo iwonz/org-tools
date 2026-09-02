@@ -14,11 +14,30 @@ import { createUuid } from "@/lib/employee-data";
 
 export const ORG_EDITOR_UNIT_MIN_WIDTH = 280;
 export const ORG_EDITOR_UNIT_HEADER_HEIGHT = 72;
+export const ORG_EDITOR_UNIT_BORDER_WIDTH = 1;
+export const ORG_EDITOR_UNIT_BORDER_RADIUS = 8;
 export const ORG_EDITOR_EMPLOYEE_ROW_HEIGHT = 48;
-export const ORG_EDITOR_EMPLOYEE_TAG_ROW_HEIGHT = 14;
-export const ORG_EDITOR_EMPLOYEE_TAG_GAP = 2;
+export const ORG_EDITOR_EMPLOYEE_AVATAR_SIZE = 20;
+export const ORG_EDITOR_EMPLOYEE_CONTENT_GAP = 8;
+export const ORG_EDITOR_EMPLOYEE_CONTENT_RIGHT_PADDING = 4;
+export const ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE = 12;
+export const ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT = 16;
+export const ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING = 8;
+export const ORG_EDITOR_EMPLOYEE_TAG_STYLE = {
+  fontSize: 9,
+  gap: 2,
+  height: 12,
+  horizontalPadding: 6,
+  radius: 6,
+  widthPerCharacter: 5.2,
+} as const;
+export const ORG_EDITOR_EMPLOYEE_TAG_ROW_HEIGHT =
+  ORG_EDITOR_EMPLOYEE_TAG_STYLE.height + ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
+export const ORG_EDITOR_EMPLOYEE_TAG_GAP = ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
 export const ORG_EDITOR_UNIT_HORIZONTAL_GAP = 40;
-export const ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING = 8;
+export const ORG_EDITOR_UNIT_CONTENT_PADDING = 8;
+export const ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING = ORG_EDITOR_UNIT_CONTENT_PADDING;
+export const ORG_EDITOR_UNIT_EMPLOYEE_LIST_HORIZONTAL_PADDING = ORG_EDITOR_UNIT_CONTENT_PADDING;
 export const ORG_EDITOR_UNIT_VERTICAL_PADDING = 16;
 export const ORG_EDITOR_UNIT_VERTICAL_GAP = 40;
 export const ORG_EDITOR_UNIT_LAYER_GAP = 64;
@@ -89,7 +108,7 @@ export const packOrgEditorTagLabels = (
   let rows = 1;
   let usedWidth = 0;
   for (const label of labels) {
-    const chipWidth = Math.min(availableWidth, Math.max(24, 12 + label.length * 5.2));
+    const chipWidth = getOrgEditorTagChipWidth(label, availableWidth);
     const nextWidth =
       usedWidth === 0 ? chipWidth : usedWidth + ORG_EDITOR_EMPLOYEE_TAG_GAP + chipWidth;
     if (usedWidth > 0 && nextWidth > availableWidth) {
@@ -102,6 +121,16 @@ export const packOrgEditorTagLabels = (
   return rows;
 };
 
+export const getOrgEditorTagChipWidth = (label: string, availableWidth: number) =>
+  Math.min(
+    availableWidth,
+    Math.max(
+      24,
+      ORG_EDITOR_EMPLOYEE_TAG_STYLE.horizontalPadding * 2 +
+        label.length * ORG_EDITOR_EMPLOYEE_TAG_STYLE.widthPerCharacter,
+    ),
+  );
+
 export const getOrgEditorEmployeeRowHeightForTagLabels = (
   labels: readonly string[],
   availableWidth: number,
@@ -109,6 +138,75 @@ export const getOrgEditorEmployeeRowHeightForTagLabels = (
   ORG_EDITOR_EMPLOYEE_ROW_HEIGHT +
   Math.max(0, packOrgEditorTagLabels(labels, availableWidth) - 1) *
     ORG_EDITOR_EMPLOYEE_TAG_ROW_HEIGHT;
+
+export const getOrgEditorEmployeeTextMaxWidth = (unitWidth: number) =>
+  Math.max(
+    0,
+    unitWidth -
+      ORG_EDITOR_UNIT_BORDER_WIDTH * 2 -
+      ORG_EDITOR_UNIT_EMPLOYEE_LIST_HORIZONTAL_PADDING * 2 -
+      ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING * 2 -
+      ORG_EDITOR_EMPLOYEE_AVATAR_SIZE -
+      ORG_EDITOR_EMPLOYEE_CONTENT_GAP -
+      ORG_EDITOR_EMPLOYEE_CONTENT_RIGHT_PADDING,
+  );
+
+export const getOrgEditorEmployeeVisualGeometry = ({
+  employeeRowHeight,
+  employeeRowOffset,
+  tagRowCount,
+  unitWidth,
+  unitX,
+  unitY,
+}: {
+  employeeRowHeight: number;
+  employeeRowOffset: number;
+  tagRowCount: number;
+  unitWidth: number;
+  unitX: number;
+  unitY: number;
+}) => {
+  const rowTop =
+    unitY +
+    ORG_EDITOR_UNIT_BORDER_WIDTH +
+    ORG_EDITOR_UNIT_HEADER_HEIGHT +
+    ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING +
+    employeeRowOffset;
+  const avatarX =
+    unitX +
+    ORG_EDITOR_UNIT_BORDER_WIDTH +
+    ORG_EDITOR_UNIT_EMPLOYEE_LIST_HORIZONTAL_PADDING +
+    ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING +
+    ORG_EDITOR_EMPLOYEE_AVATAR_SIZE / 2;
+  const textX =
+    unitX +
+    ORG_EDITOR_UNIT_BORDER_WIDTH +
+    ORG_EDITOR_UNIT_EMPLOYEE_LIST_HORIZONTAL_PADDING +
+    ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING +
+    ORG_EDITOR_EMPLOYEE_AVATAR_SIZE +
+    ORG_EDITOR_EMPLOYEE_CONTENT_GAP;
+  const tagBlockHeight =
+    tagRowCount === 0
+      ? 0
+      : tagRowCount * ORG_EDITOR_EMPLOYEE_TAG_STYLE.height +
+        (tagRowCount - 1) * ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
+  const contentHeight =
+    ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT + (tagRowCount === 0 ? 0 : 2 + tagBlockHeight);
+  const contentTop = rowTop + (employeeRowHeight - contentHeight) / 2;
+
+  return {
+    avatarX,
+    avatarY: rowTop + employeeRowHeight / 2,
+    rowTop,
+    tagY: contentTop + ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT + 2,
+    textBaselineY:
+      contentTop +
+      (ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT + ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE) / 2 -
+      1,
+    textMaxWidth: getOrgEditorEmployeeTextMaxWidth(unitWidth),
+    textX,
+  };
+};
 
 export const setOrgEditorUnitEmployeeRowHeights = (
   unitId: OrgEditorUnitId,
@@ -190,19 +288,31 @@ export const getOrgEditorUnitVisibleEmployeeCount = (
   return unit.bossEmployeeId !== null && unit.employeeIds.includes(unit.bossEmployeeId) ? 1 : 0;
 };
 
+export const getOrgEditorUnitHeightForEmployeeRows = ({
+  collapsed,
+  employeeRowHeights,
+}: {
+  collapsed: boolean;
+  employeeRowHeights: readonly number[];
+}) => {
+  if (collapsed && employeeRowHeights.length === 0) return ORG_EDITOR_UNIT_COLLAPSED_HEIGHT;
+
+  return Math.max(
+    collapsed ? ORG_EDITOR_UNIT_COLLAPSED_HEIGHT : ORG_EDITOR_UNIT_MIN_HEIGHT,
+    ORG_EDITOR_UNIT_HEADER_HEIGHT +
+      ORG_EDITOR_UNIT_VERTICAL_PADDING +
+      employeeRowHeights.reduce((sum, height) => sum + height, 0),
+  );
+};
+
 export const getOrgEditorUnitHeight = (
   unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds" | "id">,
 ) => {
-  if (unit.collapsed && getOrgEditorUnitVisibleEmployeeCount(unit) === 0) {
-    return ORG_EDITOR_UNIT_COLLAPSED_HEIGHT;
-  }
-
-  return Math.max(
-    unit.collapsed ? ORG_EDITOR_UNIT_COLLAPSED_HEIGHT : ORG_EDITOR_UNIT_MIN_HEIGHT,
-    ORG_EDITOR_UNIT_HEADER_HEIGHT +
-      ORG_EDITOR_UNIT_VERTICAL_PADDING +
-      getOrgEditorEmployeeRowLayout(unit).totalHeight,
-  );
+  const rowLayout = getOrgEditorEmployeeRowLayout(unit);
+  return getOrgEditorUnitHeightForEmployeeRows({
+    collapsed: unit.collapsed,
+    employeeRowHeights: rowLayout.heights,
+  });
 };
 
 export const getOrgEditorUnitDisplayName = (unit: Pick<OrgEditorUnit, "name">) =>

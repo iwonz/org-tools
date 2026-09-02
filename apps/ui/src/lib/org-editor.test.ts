@@ -8,8 +8,12 @@ import {
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
+  getOrgEditorEmployeeTextMaxWidth,
+  getOrgEditorEmployeeVisualGeometry,
   getOrgEditorUnitHeight,
+  getOrgEditorUnitHeightForEmployeeRows,
   layoutOrgEditorUnits,
+  ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_GRID_MIN_SCREEN_SIZE,
   ORG_EDITOR_GRID_SIZE,
   type OrgEditorUnitEmployeeSummary,
@@ -121,6 +125,42 @@ describe("Org Editor Employee summaries", () => {
 });
 
 describe("Org Editor variable Employee geometry", () => {
+  test("keeps card content on one shared visual grid", () => {
+    expect(ORG_EDITOR_EMPLOYEE_TAG_STYLE).toEqual({
+      fontSize: 9,
+      gap: 2,
+      height: 12,
+      horizontalPadding: 6,
+      radius: 6,
+      widthPerCharacter: 5.2,
+    });
+    expect(getOrgEditorEmployeeTextMaxWidth(280)).toBe(214);
+    expect(
+      getOrgEditorEmployeeVisualGeometry({
+        employeeRowHeight: 48,
+        employeeRowOffset: 0,
+        tagRowCount: 1,
+        unitWidth: 280,
+        unitX: 24,
+        unitY: 48,
+      }),
+    ).toEqual({
+      avatarX: 51,
+      avatarY: 153,
+      rowTop: 129,
+      tagY: 156,
+      textBaselineY: 151,
+      textMaxWidth: 214,
+      textX: 69,
+    });
+    expect(
+      getOrgEditorUnitHeightForEmployeeRows({ collapsed: false, employeeRowHeights: [] }),
+    ).toBe(120);
+    expect(getOrgEditorUnitHeightForEmployeeRows({ collapsed: true, employeeRowHeights: [] })).toBe(
+      72,
+    );
+  });
+
   test("packs every tag and derives prefix offsets for bounds and virtualization", () => {
     const unit = createUnit({
       employeeIds: ["employee-1", "employee-2"],

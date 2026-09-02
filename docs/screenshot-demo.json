@@ -265,8 +265,15 @@
     "featured": false,
     "title": "Editor image export",
     "file": "feature-editor-image-export.png",
-    "description": "Preview a local PNG export and choose scope, transparent, solid, or gradient backgrounds.",
-    "capabilities": ["PNG export", "Scope", "Live preview", "Background presets"]
+    "description": "Preview a local hierarchy PNG whose Unit cards, centered Employee rows, compact tags, boss marker, and connections follow the live canvas.",
+    "capabilities": [
+      "PNG export",
+      "Live-card geometry",
+      "Hierarchy",
+      "Boss marker",
+      "Scope",
+      "Background presets"
+    ]
   },
   {
     "id": "editor-template-export",
@@ -283,7 +290,7 @@
     "featured": false,
     "title": "Editor image detail settings",
     "file": "feature-editor-image-settings.png",
-    "description": "Configure PNG title, font, spacing, alignment, boss label, and Employee card content below the preview.",
+    "description": "Configure PNG title, font, spacing, alignment, boss label, and Employee card content below the aligned hierarchy preview.",
     "capabilities": [
       "Title and font",
       "Spacing and alignment",

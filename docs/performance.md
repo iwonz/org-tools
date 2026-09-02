@@ -41,15 +41,17 @@ token, and bundled templates; it never reads or serializes organization state.
   commands to the 24-unit document grid.
 
 Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, bounded inline events,
-and virtualized event dialogs. Editor Employee rows use deterministic tag packing and cached prefix
-offsets for visibility and PNG geometry.
+and virtualized event dialogs. Editor Employee rows and PNG output use the same deterministic tag
+packing, variable row heights, and prefix geometry. Image export builds one immutable render entry
+per included Unit, then paints cards and connections without measuring mounted or virtualized DOM.
 
 ## Import and output
 
 Import reads at most 25 MiB, parses one detached complete state, validates references in indexed
 passes, and computes only Employee, Unit, and View counts before confirmation. Export serializes one
 validated current state after the explicit action. Data Download derives only selected sources.
-Canvas PNG generation uses current layout and embedded avatar bytes without network work.
+Canvas PNG generation uses current layout, shared live-card geometry, bounded embedded avatar bytes,
+and local vector primitives without network work.
 
 Avatar input is bounded to 25 MiB compressed and 40 megapixels decoded. The crop preview is capped at
 4096 pixels on its longest side; confirmation creates one 512 by 512 WebP and releases temporary

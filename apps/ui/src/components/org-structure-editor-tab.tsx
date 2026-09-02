@@ -127,6 +127,7 @@ import {
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
+  getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorOrderedEmployeeIds,
   getOrgEditorUnitBounds,
   getOrgEditorUnitDescendantIds,
@@ -1116,7 +1117,11 @@ function OrgEditorNode({
       >
         <HiOutlinePlus className="size-4" />
       </Button>
-      <div className="grid shrink-0 gap-1.5 p-2" style={{ height: ORG_EDITOR_UNIT_HEADER_HEIGHT }}>
+      <div
+        className="grid shrink-0 gap-1.5 p-2"
+        data-org-editor-unit-header
+        style={{ height: ORG_EDITOR_UNIT_HEADER_HEIGHT }}
+      >
         <div className="flex items-center gap-2">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground">
             <HiOutlineBuildingOffice2 className="size-4" />
@@ -1211,7 +1216,7 @@ function OrgEditorNode({
                   title={employee?.fullName ?? t("Employee unavailable")}
                   type="button"
                 >
-                  <span className="relative inline-flex shrink-0">
+                  <span className="relative inline-flex shrink-0" data-org-editor-employee-avatar>
                     {employee ? (
                       <EmployeeAvatar
                         className={cn(
@@ -1236,7 +1241,10 @@ function OrgEditorNode({
                       </span>
                     )}
                   </span>
-                  <span className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pr-1">
+                  <span
+                    className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pr-1"
+                    data-org-editor-employee-content
+                  >
                     <span className="truncate">
                       {employee?.fullName ?? t("Employee unavailable")}
                     </span>
@@ -1934,7 +1942,10 @@ export const OrgStructureEditorTab = observer(() => {
   );
   useMemo(() => {
     for (const unit of displayUnits) {
-      const availableWidth = Math.max(80, getOrgEditorUnitWidth(unit) - 64);
+      const availableWidth = Math.max(
+        80,
+        getOrgEditorEmployeeTextMaxWidth(getOrgEditorUnitWidth(unit)),
+      );
       const heights = new Map<EmployeeId, number>();
       const orderedEmployeeIds = getOrgEditorOrderedEmployeeIds(unit, employeeById);
       for (const employeeId of orderedEmployeeIds) {

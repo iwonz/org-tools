@@ -111,7 +111,7 @@ async function openSyntheticTab(page: Page, tab: string) {
 }
 
 async function openEditorExport(page: Page) {
-  await page.locator('fieldset[aria-label="Canvas Unit Platform"]').click({
+  await page.locator('fieldset[aria-label="Canvas Unit Product"]').click({
     button: "right",
     position: { x: 20, y: 20 },
   });
