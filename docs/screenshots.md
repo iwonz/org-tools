@@ -167,9 +167,9 @@ Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and co
 
 [![Custom View management](screenshots/feature-editor-views.png)](screenshots/feature-editor-views.png)
 
-Switch Views and create an empty or Main-derived independent organization canvas.
+Switch Views and create an empty or Units-derived independent organization canvas.
 
-Capabilities: Main View, Custom Views, Copy from Main, Empty View.
+Capabilities: Built-in Units View, Custom Views, Copy from Units, Empty View.
 
 ### Editor search
 
@@ -183,9 +183,10 @@ Capabilities: Unit search, Employee search, Canvas navigation.
 
 [![Custom View selection and actions](screenshots/feature-editor-view-management.png)](screenshots/feature-editor-view-management.png)
 
-Switch between Main and independent custom Views and access contextual rename and delete actions.
+Switch between the built-in Units View and an empty independent custom View while retaining
+accessible rename and confirmed delete actions.
 
-Capabilities: View selection, Main and custom Views, Rename, Delete.
+Capabilities: View selection, Built-in Units View, Empty custom View, Rename, Confirmed Delete.
 
 ### Unit context commands
 
@@ -393,6 +394,8 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
   cards while retaining the conditional Past section.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
   both themes.
+- Confirm the Editor labels its canonical View with the localized Units term, never exposes Rename
+  or Delete for it, and keeps both actions available for an empty custom View.
 - Confirm MCP frames contain only the synthetic token; the enabled icon is green; Setup, Activity,
   Enable, Disable, and token rotation use leading icons; all seven Client setup choices have their
   own leading bundled icon; and setup shows the installable-skill prompt rather than a standalone

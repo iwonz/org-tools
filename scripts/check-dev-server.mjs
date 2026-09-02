@@ -201,7 +201,7 @@ async function probeBrowser(origin) {
       timeout: startupTimeoutMs,
     });
     await page.getByRole("combobox", { name: "Active View" }).click();
-    await page.getByRole("option", { name: "Main", exact: true }).click();
+    await page.getByRole("option", { name: "Units", exact: true }).click();
     await page.getByRole("tab", { name: "Download", exact: true }).click();
     await page.getByRole("tabpanel", { name: "Download", exact: true }).waitFor({
       state: "visible",

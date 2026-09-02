@@ -151,6 +151,12 @@ performs the single snapped command and persistence observation. A geometry-keye
 limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
 document geometry changes.
 
+The Editor presents the canonical main-kind View with the same localized label as the Units
+destination. That View remains protected from rename and deletion. Management actions remain
+available for every custom View, including an empty canvas. Confirmed custom View deletion removes
+its document and derived selection/viewport UI, returns an active Editor to the canonical View, and
+falls a deleted Data Download source back to that canonical View before the next strict snapshot.
+
 ## Builds and development
 
 `pnpm dev` starts the local server with webpack and warms `/` plus `/api/state`. `pnpm dev:check`

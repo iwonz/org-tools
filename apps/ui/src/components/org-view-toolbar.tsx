@@ -150,66 +150,67 @@ export const OrgViewToolbar = observer(
                 </SelectContent>
               </Select>
             )}
-            {!emptyCanvas && (
+            {!emptyCanvas && canUndo && (
+              <Button
+                aria-label={t("Undo")}
+                className={ORG_VIEW_ACTION_CLASS_NAME}
+                data-demo-id="org-editor-undo-button"
+                onClick={onUndo}
+                size="icon"
+                title={t("Undo")}
+                variant="ghost"
+              >
+                <HiOutlineArrowUturnLeft />
+              </Button>
+            )}
+            {!emptyCanvas && canRedo && (
+              <Button
+                aria-label={t("Redo")}
+                className={ORG_VIEW_ACTION_CLASS_NAME}
+                data-demo-id="org-editor-redo-button"
+                onClick={onRedo}
+                size="icon"
+                title={t("Redo")}
+                variant="ghost"
+              >
+                <HiOutlineArrowUturnRight />
+              </Button>
+            )}
+            <Button
+              aria-label={t("Create View")}
+              className={ORG_VIEW_ACTION_CLASS_NAME}
+              data-demo-id="org-view-create-button"
+              onClick={openCreate}
+              size="icon"
+              title={t("Create View")}
+              variant="ghost"
+            >
+              <HiOutlinePlus />
+            </Button>
+            {!isMain && (
               <>
-                {canUndo && (
-                  <Button
-                    aria-label={t("Undo")}
-                    className={ORG_VIEW_ACTION_CLASS_NAME}
-                    data-demo-id="org-editor-undo-button"
-                    onClick={onUndo}
-                    size="icon"
-                    title={t("Undo")}
-                    variant="ghost"
-                  >
-                    <HiOutlineArrowUturnLeft />
-                  </Button>
-                )}
-                {canRedo && (
-                  <Button
-                    aria-label={t("Redo")}
-                    className={ORG_VIEW_ACTION_CLASS_NAME}
-                    data-demo-id="org-editor-redo-button"
-                    onClick={onRedo}
-                    size="icon"
-                    title={t("Redo")}
-                    variant="ghost"
-                  >
-                    <HiOutlineArrowUturnRight />
-                  </Button>
-                )}
                 <Button
+                  aria-label={t("Rename View")}
                   className={ORG_VIEW_ACTION_CLASS_NAME}
-                  data-demo-id="org-view-create-button"
-                  onClick={openCreate}
+                  data-demo-id="org-view-rename-button"
+                  onClick={openRename}
                   size="icon"
-                  title={t("Create View")}
+                  title={t("Rename View")}
                   variant="ghost"
                 >
-                  <HiOutlinePlus />
+                  <HiOutlinePencilSquare />
                 </Button>
-                {!isMain && (
-                  <>
-                    <Button
-                      className={ORG_VIEW_ACTION_CLASS_NAME}
-                      onClick={openRename}
-                      size="icon"
-                      title={t("Rename View")}
-                      variant="ghost"
-                    >
-                      <HiOutlinePencilSquare />
-                    </Button>
-                    <Button
-                      className={ORG_VIEW_ACTION_CLASS_NAME}
-                      onClick={() => setDeleteOpen(true)}
-                      size="icon"
-                      title={t("Delete View")}
-                      variant="ghost"
-                    >
-                      <HiOutlineTrash />
-                    </Button>
-                  </>
-                )}
+                <Button
+                  aria-label={t("Delete View")}
+                  className={ORG_VIEW_ACTION_CLASS_NAME}
+                  data-demo-id="org-view-delete-button"
+                  onClick={() => setDeleteOpen(true)}
+                  size="icon"
+                  title={t("Delete View")}
+                  variant="ghost"
+                >
+                  <HiOutlineTrash />
+                </Button>
               </>
             )}
           </div>

@@ -207,8 +207,8 @@
     "featured": false,
     "title": "Custom View management",
     "file": "feature-editor-views.png",
-    "description": "Switch Views and create an empty or Main-derived independent organization canvas.",
-    "capabilities": ["Main View", "Custom Views", "Copy from Main", "Empty View"]
+    "description": "Switch Views and create an empty or Units-derived independent organization canvas.",
+    "capabilities": ["Built-in Units View", "Custom Views", "Copy from Units", "Empty View"]
   },
   {
     "id": "editor-search",
@@ -225,8 +225,14 @@
     "featured": false,
     "title": "Custom View selection and actions",
     "file": "feature-editor-view-management.png",
-    "description": "Switch between Main and independent custom Views and access contextual rename and delete actions.",
-    "capabilities": ["View selection", "Main and custom Views", "Rename", "Delete"]
+    "description": "Switch between the built-in Units View and an empty custom View with accessible rename and confirmed delete actions.",
+    "capabilities": [
+      "View selection",
+      "Built-in Units View",
+      "Empty custom View",
+      "Rename",
+      "Confirmed Delete"
+    ]
   },
   {
     "id": "editor-unit-commands",

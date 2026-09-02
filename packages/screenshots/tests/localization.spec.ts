@@ -232,6 +232,7 @@ test("switches the interface in place and persists the choice", async ({ page },
   await page.locator('[data-demo-id="org-view-create-button"]').click();
   const viewDialog = page.getByRole("dialog", { name: ruMessages.Ui["New View"] });
   await viewDialog.getByLabel(ruMessages.Ui.Name, { exact: true }).fill(longViewName);
+  await viewDialog.getByRole("tab", { name: ruMessages.Ui.Blank, exact: true }).click();
   await viewDialog.getByRole("button", { name: ruMessages.Ui.Create, exact: true }).click();
   await expect(viewDialog).toBeHidden();
   await expect(viewTrigger).toHaveAttribute("title", longViewName);
@@ -240,6 +241,22 @@ test("switches the interface in place and persists the choice", async ({ page },
     isContained: true,
     whiteSpace: "nowrap",
   });
+  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toHaveAccessibleName(
+    ruMessages.Ui["Rename View"],
+  );
+  const deleteViewButton = page.locator('[data-demo-id="org-view-delete-button"]');
+  await expect(deleteViewButton).toHaveAccessibleName(ruMessages.Ui["Delete View"]);
+  await deleteViewButton.click();
+  const deleteViewDialog = page.getByRole("alertdialog", {
+    name: ruMessages.Ui["Delete View?"],
+  });
+  await expect(deleteViewDialog).toContainText(
+    ruMessages.Ui[
+      "View “{name}” and all of its local changes will be deleted. Main will not change."
+    ].replace("{name}", longViewName),
+  );
+  await deleteViewDialog.getByRole("button", { name: ruMessages.Ui.Cancel, exact: true }).click();
+  await expect(viewTrigger).toHaveAttribute("title", longViewName);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");

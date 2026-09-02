@@ -118,6 +118,40 @@ describe("OrgToolsState", () => {
     expect(store.organizationChangeSequence).toBe(organizationSequenceBefore);
   });
 
+  test("deletes only custom Views and repairs durable View references", () => {
+    const { store } = populatedStore();
+    const mainViewId = store.mainOrgViewId;
+    const mainDocumentBefore = structuredClone(
+      store.createOrganizationState().views.find((view) => view.id === mainViewId)?.document,
+    );
+    const deletedViewId = store.createOrgView("Temporary scenario", "blank");
+    const retainedViewId = store.createOrgView("Retained scenario", "main");
+    store.selectExportOrgView(deletedViewId);
+    store.selectOrgView(deletedViewId);
+
+    const beforeProtectedDeletion = store.createOrgToolsState();
+    store.deleteOrgView(mainViewId);
+    expect(store.createOrgToolsState()).toEqual(beforeProtectedDeletion);
+
+    store.resetChangeTracking();
+    store.deleteOrgView(deletedViewId);
+
+    const state = store.createOrgToolsState();
+    expect(() => parseOrgToolsState(state)).not.toThrow();
+    expect(store.activeOrgViewId).toBe(mainViewId);
+    expect(store.exportSourceViewId).toBe(mainViewId);
+    expect(state.organization.views.some((view) => view.id === deletedViewId)).toBe(false);
+    expect(state.organization.views.some((view) => view.id === retainedViewId)).toBe(true);
+    expect(state.ui.views.some((view) => view.viewId === deletedViewId)).toBe(false);
+    expect(state.ui.activeViewId).toBe(mainViewId);
+    expect(state.ui.download.sourceViewId).toBe(mainViewId);
+    expect(state.organization.views.find((view) => view.id === mainViewId)?.document).toEqual(
+      mainDocumentBefore,
+    );
+    expect(store.organizationChangeSequence).toBeGreaterThan(0);
+    expect(store.uiChangeSequence).toBeGreaterThan(0);
+  });
+
   test("rejects obsolete version fields and string-tag state without migration", () => {
     const { store } = populatedStore();
     const legacy = structuredClone(store.createOrgToolsState()) as unknown as Record<

@@ -34,7 +34,7 @@ setup prompt, and review applied activity. The prompt tells the agent to install
 needed, and verify only read tools. Setup, Activity, Enable, Disable, and token rotation place a
 thematic icon before their visible localized label. Every Client setup choice also starts with its
 own bundled client icon. The sidebar icon is green while MCP is enabled. Enabling grants complete
-access to Employees, Units, Main, and custom Views.
+access to Employees, Units, the canonical Units View, and custom Views.
 
 Agent changes always use Preview → a new explicit user approval → Apply. Apply writes automatically
 like a user action and updates open browser tabs. Independent simultaneous fields merge; overlapping
@@ -62,10 +62,12 @@ control.
   **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, birthday, embedded avatar, tags, contact fields, and Unit
   assignments with compound filters. **Add Employee** is in the shared header.
-- **Editor** manages Main and custom Views on an adaptive snapped grid, including search, history,
-  layout, bulk commands, templates, and PNG output. The View chooser is a standard styled Select;
-  closing Search clears its query. Unit cards keep the same opaque background when hovered or
-  selected, with selection indicated only by the signal border.
+- **Editor** manages the protected built-in Units View and independent custom Views on an adaptive
+  snapped grid, including search, history, layout, bulk commands, templates, and PNG output. The
+  View chooser is a standard styled Select. Every custom View, including an empty one, can be
+  renamed or deleted after confirmation; deletion returns to Units and never changes canonical
+  organization data. Closing Search clears its query. Unit cards keep the same opaque background
+  when hovered or selected, with selection indicated only by the signal border.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
   actions. Day and tag dialogs omit redundant descriptions, the dated-event and current/future

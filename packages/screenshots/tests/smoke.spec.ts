@@ -1509,8 +1509,8 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await expect(viewSelect.locator("svg")).toBeVisible();
   expect(await getBackgroundColor(viewSelect)).not.toBe("rgba(0, 0, 0, 0)");
   await viewSelect.click();
-  await expect(page.getByRole("option", { name: "Main", exact: true })).toBeVisible();
-  await page.getByRole("option", { name: "Main", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Units", exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "Units", exact: true }).click();
   expect(
     await topActions.evaluate(
       (element) => element.lastElementChild?.getAttribute("data-demo-id") ?? null,
@@ -1654,6 +1654,70 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   expect(darkUnitHover).toEqual(darkUnitResting);
   expect(darkUnitHover.alpha).toBe(1);
   expect(darkUnitHover.opacity).toBe("1");
+  await assertLocalRequests();
+});
+
+test("keeps empty custom Views manageable and deletes them safely", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+
+  const viewTrigger = page.locator('[data-demo-id="org-view-select-trigger"]');
+  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText("Units");
+  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-view-delete-button"]')).toHaveCount(0);
+
+  await page.locator('[data-demo-id="org-view-create-button"]').click();
+  const createDialog = page.getByRole("dialog", { name: "New View" });
+  await createDialog.getByLabel("Name", { exact: true }).fill("Disposable View");
+  await createDialog.getByRole("tab", { name: "Blank", exact: true }).click();
+  await createDialog.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(createDialog).toBeHidden();
+
+  await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toHaveAccessibleName(
+    "Rename View",
+  );
+  const deleteButton = page.locator('[data-demo-id="org-view-delete-button"]');
+  await expect(deleteButton).toHaveAccessibleName("Delete View");
+  await deleteButton.click();
+  let deleteDialog = page.getByRole("alertdialog", { name: "Delete View?" });
+  await expect(deleteDialog).toContainText("Units will not change.");
+  await deleteDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText(
+    "Disposable View",
+  );
+
+  await deleteButton.click();
+  deleteDialog = page.getByRole("alertdialog", { name: "Delete View?" });
+  await deleteDialog.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(deleteDialog).toBeHidden();
+  await expect(viewTrigger.locator('[data-demo-id="org-view-active-value"]')).toHaveText("Units");
+  await viewTrigger.click();
+  await expect(page.getByRole("option", { name: "Disposable View", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  await expect
+    .poll(async () => {
+      const response = await page.request.get("/api/state");
+      const state = (await response.json()) as {
+        state: {
+          organization: { views: Array<{ id: string; kind: "custom" | "main"; name: string }> };
+          ui: { activeViewId: string };
+        };
+      };
+      const mainViewId = state.state.organization.views.find((view) => view.kind === "main")?.id;
+      return {
+        activeIsMain: state.state.ui.activeViewId === mainViewId,
+        disposableViews: state.state.organization.views.filter(
+          (view) => view.name === "Disposable View",
+        ).length,
+      };
+    })
+    .toEqual({
+      activeIsMain: true,
+      disposableViews: 0,
+    });
   await assertLocalRequests();
 });
 

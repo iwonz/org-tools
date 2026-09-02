@@ -455,11 +455,16 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   let dialog = page.getByRole("dialog", { name: "New View" });
   await expect(dialog.locator('[data-demo-id="org-view-source-switcher"]')).toBeVisible();
   await capture(page, "editor-views");
+  await dialog.getByRole("tab", { name: "Blank", exact: true }).click();
   await dialog.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(page.locator('[data-demo-id="org-view-rename-button"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-view-delete-button"]')).toBeVisible();
   await page.getByRole("combobox", { name: "Active View", exact: true }).click();
   await expect(page.getByRole("option", { name: "View 1", exact: true })).toBeVisible();
   await capture(page, "editor-view-management");
   await page.keyboard.press("Escape");
+  await page.getByRole("combobox", { name: "Active View", exact: true }).click();
+  await page.getByRole("option", { name: "Units", exact: true }).click();
 
   await page.locator('[data-demo-id="org-editor-search-button"]').click();
   await page.locator('[data-demo-id="org-editor-search-input"]').fill("Avery");

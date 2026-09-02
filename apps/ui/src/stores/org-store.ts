@@ -473,7 +473,12 @@ export class OrgStore {
   }
 
   deleteOrgView(viewId: string): void {
+    const deleteExportSource = this.exportSourceViewId === viewId;
     this.orgViews.deleteView(viewId);
+    if (deleteExportSource && !this.orgViews.editorByViewId.has(viewId)) {
+      this.exportSourceViewId = this.mainOrgViewId;
+      this.resetExportSessionState();
+    }
     this.rebuildActiveViewModel();
   }
 
