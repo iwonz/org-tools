@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
+import type { OrgToolsState } from "@org-tools/types";
 import type { Page } from "@playwright/test";
 import sharp from "sharp";
 
@@ -29,6 +30,7 @@ const manifestPath = fileURLToPath(new URL("../../../docs/screenshot-demo.json",
 const screenshotManifest = JSON.parse(await readFile(manifestPath, "utf8")) as ScreenshotScenario[];
 const scenariosById = new Map(screenshotManifest.map((scenario) => [scenario.id, scenario]));
 const rasterNoisePixelBudget = 32;
+const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
 
 test.setTimeout(60_000);
 
@@ -108,6 +110,40 @@ async function openSyntheticState(page: Page) {
 async function openSyntheticTab(page: Page, tab: string) {
   await openSyntheticState(page);
   await page.getByRole("tab", { name: tab, exact: true }).click();
+}
+
+async function replaceWithImageExportState(page: Page) {
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const mainView = state.organization.views.find((view) => view.kind === "main");
+  const product = mainView?.document.units.find((unit) => unit.name === "Product");
+  const platform = mainView?.document.units.find((unit) => unit.name === "Platform");
+  const employee = state.organization.employees.find((candidate) =>
+    product?.employeeIds.includes(candidate.id),
+  );
+  if (!product || !platform || !employee) {
+    throw new Error("Synthetic image-export state is unavailable.");
+  }
+  employee.tags.push({ date: "2026-09-01", label: LONG_EXPORT_TAG });
+  platform.bossEmployeeId = null;
+  platform.employeeIds = [];
+  platform.employeePositions = [];
+  platform.liveFilter = {
+    birthday: null,
+    includeWithoutTags: false,
+    includeWithoutUnits: false,
+    query: "",
+    selectedPositions: [],
+    selectedTags: [],
+    selectedUnitIds: [product.id],
+  };
+  const dialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "synthetic-image-export.json",
+  });
+  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
 }
 
 async function openEditorExport(page: Page) {
@@ -489,9 +525,15 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor-bulk-employees");
   await page.keyboard.press("Escape");
 
+  await replaceWithImageExportState(page);
   dialog = await openEditorExport(page);
   await expect(dialog.locator('[data-demo-id="org-editor-export-image"]')).toBeVisible();
+  await dialog.getByRole("button", { name: "Open", exact: true }).click();
+  const imagePreviewDialog = page.getByRole("dialog", { name: "Image preview" });
+  await expect(imagePreviewDialog).toBeVisible();
   await capture(page, "editor-image-export");
+  await page.keyboard.press("Escape");
+  await expect(imagePreviewDialog).toBeHidden();
   await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });

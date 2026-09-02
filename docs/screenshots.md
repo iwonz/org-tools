@@ -209,10 +209,12 @@ Capabilities: Multi-selection, Boss assignment, Bulk tags, Edit, Copy, Delete.
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Preview a local hierarchy PNG whose Unit cards, centered Employee rows, compact tags, boss marker,
-and connections follow the live canvas, then choose transparent, solid, or gradient backgrounds.
+Open a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping tags, boss
+marker, and connections follow the live canvas without printing Static/Live membership type, then
+choose transparent, solid, or gradient backgrounds.
 
-Capabilities: PNG export, Live-card geometry, Hierarchy, Boss marker, Scope, Background presets.
+Capabilities: Expanded PNG preview, Complete tags, Membership-neutral cards, Hierarchy, Boss marker, Scope,
+Background presets.
 
 ### Editor text template export
 
@@ -400,8 +402,9 @@ Capabilities: Safe Undo, Overlap blocking, Conflict details, No silent loss.
 - Confirm the Editor labels its canonical View with the localized Units term, never exposes Rename
   or Delete for it, and keeps both actions available for an empty custom View.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
-  and tag columns, compact tag wrapping, boss marker, variable row heights, and connection endpoints
-  without card overlap or transient editing chrome.
+  and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
+  heights, and connection endpoints without card overlap, membership-type labels, or transient
+  editing chrome.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
   browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
 - Confirm MCP frames contain only the synthetic token; the enabled icon is green; Setup, Activity,

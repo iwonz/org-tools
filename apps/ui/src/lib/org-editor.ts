@@ -154,6 +154,7 @@ export const getOrgEditorEmployeeTextMaxWidth = (unitWidth: number) =>
 export const getOrgEditorEmployeeVisualGeometry = ({
   employeeRowHeight,
   employeeRowOffset,
+  tagBlockHeight,
   tagRowCount,
   unitWidth,
   unitX,
@@ -161,6 +162,7 @@ export const getOrgEditorEmployeeVisualGeometry = ({
 }: {
   employeeRowHeight: number;
   employeeRowOffset: number;
+  tagBlockHeight?: number;
   tagRowCount: number;
   unitWidth: number;
   unitX: number;
@@ -185,13 +187,15 @@ export const getOrgEditorEmployeeVisualGeometry = ({
     ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING +
     ORG_EDITOR_EMPLOYEE_AVATAR_SIZE +
     ORG_EDITOR_EMPLOYEE_CONTENT_GAP;
-  const tagBlockHeight =
-    tagRowCount === 0
+  const resolvedTagBlockHeight =
+    tagBlockHeight ??
+    (tagRowCount === 0
       ? 0
       : tagRowCount * ORG_EDITOR_EMPLOYEE_TAG_STYLE.height +
-        (tagRowCount - 1) * ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
+        (tagRowCount - 1) * ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap);
   const contentHeight =
-    ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT + (tagRowCount === 0 ? 0 : 2 + tagBlockHeight);
+    ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT +
+    (resolvedTagBlockHeight === 0 ? 0 : 2 + resolvedTagBlockHeight);
   const contentTop = rowTop + (employeeRowHeight - contentHeight) / 2;
 
   return {

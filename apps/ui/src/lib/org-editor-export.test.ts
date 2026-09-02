@@ -10,11 +10,13 @@ import {
 } from "@/lib/org-editor";
 import {
   createDefaultOrgEditorImageExportSettings,
+  createOrgEditorExportEmployeeTagLayout,
   createOrgEditorExportFileBaseName,
   getEmployeeCanvasAvatarUrl,
   getOrgEditorExportConnectionPath,
   getOrgEditorExportEmployeeGeometry,
   getOrgEditorExportEmployeeRowHeight,
+  getOrgEditorExportEmployeeRowHeightForTagLayout,
   getOrgEditorExportEmployeeTagChipWidth,
   getOrgEditorExportEmployeeTagLabels,
   getOrgEditorExportEmployeeTagRowCount,
@@ -100,7 +102,28 @@ describe("Org Editor image export", () => {
     expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBe(38);
     expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90)).toBeCloseTo(43.2);
     expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(3);
-    expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBe(76);
+    expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBeGreaterThan(76);
+  });
+
+  test("wraps one oversized tag in full and grows following geometry", () => {
+    const label = "StrategicCustomerExperienceOperationsEnablement";
+    const measureText = (text: string) => [...text].length * 6;
+    const layout = createOrgEditorExportEmployeeTagLayout([label, "Remote"], 72, measureText);
+    const longChip = layout.chips[0];
+    const followingChip = layout.chips[1];
+    if (!longChip || !followingChip) throw new Error("Expected both tag chips.");
+
+    expect(longChip.lines.length).toBeGreaterThan(1);
+    expect(longChip.lines.join("")).toBe(label);
+    expect(longChip.lines.every((line) => measureText(line) <= 60)).toBe(true);
+    expect(longChip.lines.every((line) => !line.includes("..."))).toBe(true);
+    expect(longChip.width).toBe(72);
+    expect(longChip.height).toBeGreaterThan(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height);
+    expect(followingChip.y).toBeGreaterThanOrEqual(longChip.height + 2);
+    expect(layout.rowCount).toBe(2);
+    expect(getOrgEditorExportEmployeeRowHeightForTagLayout(layout)).toBe(
+      48 + layout.height - ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height,
+    );
   });
 
   test("shares compact tag and Employee-row geometry with the live canvas", () => {
@@ -114,7 +137,7 @@ describe("Org Editor image export", () => {
 
     const unitWidth = getOrgEditorUnitBounds(unit).width;
     expect(getOrgEditorEmployeeTextMaxWidth(unitWidth)).toBe(310);
-    expect(getOrgEditorExportEmployeeGeometry(unit, 0, 76, 3)).toEqual({
+    expect(getOrgEditorExportEmployeeGeometry(unit, 0, 76, 40)).toEqual({
       avatarX: 27,
       avatarY: 119,
       rowTop: ORG_EDITOR_UNIT_HEADER_HEIGHT + 9,

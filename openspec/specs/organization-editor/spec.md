@@ -250,8 +250,9 @@ The Org Editor SHALL compute Employee row heights from all rendered localized ta
 use shared prefix offsets for virtualization, hitboxes, selection, connectors, layout, and bounds.
 The PNG renderer SHALL draw every localized tag as a compact neutral chip matching the on-screen
 Employee-card treatment, including rounded geometry, typography, wrapping, and `label · date`
-content, and SHALL use the same packing dimensions for drawing and row-height growth without hidden
-tags or unused tag-row space.
+content. It SHALL preserve every tag character without ellipsis by wrapping oversized content inside
+its chip, and SHALL derive drawing plus row-height growth from the same measured tag layout without
+hidden tags, text overflow, or unused tag-row space.
 
 #### Scenario: Tag rows change
 - **WHEN** Employee tags or the active locale changes the packed chip rows
@@ -262,9 +263,9 @@ tags or unused tag-row space.
 - **THEN** only visible rows render while hit testing and connector anchors remain aligned with their Employees
 
 #### Scenario: Export Employee tags to PNG
-- **WHEN** an Employee with dated or undated tags is included in an Org Editor PNG export
-- **THEN** every tag appears as a wrapped neutral chip with card-consistent text, padding, radius, and compact row gaps
-- **AND** dated tags use a localized date after a middle dot without bright blue styling or reserved empty rows
+- **WHEN** an Employee with dated, undated, or wider-than-column tags is included in an Org Editor PNG export
+- **THEN** every complete tag appears as one wrapped neutral chip with card-consistent text, padding, radius, and compact row gaps
+- **AND** dated tags use a localized date after a middle dot without bright blue styling, ellipsis, clipping, or reserved empty rows
 
 ### Requirement: Editor commands retain readable interaction feedback
 Editor toolbar controls and command actions SHALL use an opaque tonal hover surface with readable
@@ -284,22 +285,21 @@ exact resting background color and opacity during passive pointer hover.
 ### Requirement: Editor PNG cards follow the live canvas geometry
 The Org Editor PNG renderer SHALL derive Unit width, header height, vertical padding, Employee row
 height, avatar placement, text-column origin, compact tag packing, and hierarchy connection anchors
-from the maintained live Editor geometry. The default exported card SHALL preserve the live canvas's
-stable visual hierarchy for Unit identity, summary, conditional Live membership, Employee names and
-tags, and boss indication without including transient editing controls. Image-specific title,
-background, font, scope, radius, Employee format, and boss-label controls SHALL remain available,
-and rendering MUST remain local and bounded.
+from maintained Editor geometry and its measured export-tag layout. The default exported card SHALL
+preserve the live canvas's stable visual hierarchy for Unit identity, Employee-count summary,
+Employee names and complete tags, and boss indication without including Unit membership type or
+transient editing controls. Image-specific title, background, font, scope, radius, Employee format,
+and boss-label controls SHALL remain available, and rendering MUST remain local and bounded.
 
 #### Scenario: Export one Unit with a roster
-- **WHEN** a Unit with ordinary and boss Employees is exported with default image settings
-- **THEN** the Unit header, icon, summary, conditional Live badge, avatar centers, name column,
-  compact tags, and boss indicator align with the corresponding live Editor card geometry
+- **WHEN** a static or dynamic Unit with ordinary and boss Employees is exported with default image settings
+- **THEN** the Unit header, icon, summary, avatar centers, name column, compact tags, and boss indicator align with the corresponding live Editor card geometry
 - **AND** every Employee row begins from the same horizontal and vertical layout rhythm
+- **AND** no Static, Dynamic, or Live membership-type label appears in the image
 
 #### Scenario: Export wrapped Employee tags
-- **WHEN** Employee tags wrap across one or more lines in the live Editor geometry
-- **THEN** the PNG uses the same tag width estimator, row count, compact chip dimensions, and
-  row-height growth
+- **WHEN** Employee tags wrap across or within one or more chip rows in the exported Editor geometry
+- **THEN** the PNG uses one measured layout for chip positions, complete text lines, compact dimensions, and row-height growth
 - **AND** no avatar, name, tag, following Employee, or Unit boundary overlaps or shifts independently
 
 #### Scenario: Export a Unit hierarchy

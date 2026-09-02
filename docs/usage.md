@@ -70,8 +70,9 @@ control.
   renamed or deleted after confirmation; deletion returns to Units and never changes canonical
   organization data. Closing Search clears its query. Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
-  the live Unit header, roster spacing, centered avatars, compact tags, boss marker, variable row
-  heights, and hierarchy connections while retaining configurable output styling.
+  the live Unit header, roster spacing, centered avatars, boss marker, variable row heights, and
+  hierarchy connections while retaining configurable output styling. Every tag is written in full;
+  oversized labels wrap inside their compact chip. Static/Live membership type is not printed.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
 - **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
   actions. Day and tag dialogs omit redundant descriptions, the dated-event and current/future

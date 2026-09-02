@@ -15,6 +15,8 @@ import {
   syntheticStatePath,
 } from "./helpers.js";
 
+const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
+
 async function expectNoHorizontalRule(locator: Locator) {
   expect(
     await locator.evaluate((element) => ({
@@ -105,6 +107,7 @@ async function createLongRosterState(): Promise<OrgToolsState> {
       phone: `+1-202-555-01${String(10 + index).padStart(2, "0")}`,
       profileUrl: null,
       tags: [
+        ...(index === 0 ? [{ date: "2026-09-01", label: LONG_EXPORT_TAG }] : []),
         { date: null, label: index % 2 === 0 ? "Client Applications" : "Platform" },
         { date: null, label: "Accessibility" },
         { date: null, label: "Engineering" },
@@ -123,6 +126,18 @@ async function createLongRosterState(): Promise<OrgToolsState> {
       position: "Software Engineer",
     })),
   );
+  platform.bossEmployeeId = null;
+  platform.employeeIds = [];
+  platform.employeePositions = [];
+  platform.liveFilter = {
+    birthday: null,
+    includeWithoutTags: false,
+    includeWithoutUnits: false,
+    query: "",
+    selectedPositions: [],
+    selectedTags: [],
+    selectedUnitIds: [product.id],
+  };
   platform.y = 960;
   return state;
 }
@@ -1763,6 +1778,19 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   expect(geometry.avatarCenterY).toBe(geometry.rowHeight / 2);
   await expect(firstRow).toBeVisible();
 
+  await page.evaluate(() => {
+    const paintedText: string[] = [];
+    const originalFillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+      paintedText.push(String(text));
+      if (maxWidth === undefined) return originalFillText.call(this, text, x, y);
+      return originalFillText.call(this, text, x, y, maxWidth);
+    };
+    (
+      window as typeof window & { __orgToolsExportPaintedText?: string[] }
+    ).__orgToolsExportPaintedText = paintedText;
+  });
+
   await product.click({ button: "right", position: { x: 20, y: 20 } });
   await page.locator('[data-demo-id="org-editor-export-action"]').click();
   const exportDialog = page.getByRole("dialog", { name: "Export" });
@@ -1771,6 +1799,26 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await expect
     .poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalHeight))
     .toBeGreaterThan(1_000);
+  const paintedText = await page.evaluate(
+    () =>
+      (window as typeof window & { __orgToolsExportPaintedText?: string[] })
+        .__orgToolsExportPaintedText ?? [],
+  );
+  const completeLocalizedTag = `${LONG_EXPORT_TAG} · Sep 1, 2026`;
+  expect(
+    paintedText.some((_, startIndex) => {
+      let candidate = "";
+      for (let index = startIndex; index < paintedText.length; index += 1) {
+        candidate += paintedText[index];
+        if (candidate === completeLocalizedTag) return true;
+        if (!completeLocalizedTag.startsWith(candidate)) return false;
+      }
+      return false;
+    }),
+  ).toBe(true);
+  expect(paintedText).not.toContain("Live");
+  expect(paintedText).not.toContain("Static");
+  expect(paintedText).not.toContain("Dynamic");
 
   const downloadPromise = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Save", exact: true }).click();

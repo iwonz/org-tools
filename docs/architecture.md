@@ -127,10 +127,12 @@ history, collaborative cursors, or remote synchronization.
 
 Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
 headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row
-heights, and hierarchy anchors. Its deterministic canvas painter adds the stable Unit identity,
-conditional Live badge, and boss treatment while excluding transient selection, hover, handles, and
-menus. Image titles, backgrounds, fonts, scope, radius, and Employee templates remain output-only
-settings and do not mutate the View document.
+heights, and hierarchy anchors. The selected export font measures one immutable tag layout per
+Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
+drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
+Employee summary, and boss treatment while excluding Static/Live membership type, transient
+selection, hover, handles, and menus. Image titles, backgrounds, fonts, scope, radius, and Employee
+templates remain output-only settings and do not mutate the View document.
 
 The server sidebar adds **MCP** after state Export; its icon is green only while enabled. The static
 sidebar has no MCP slot, accessible action, dialog, endpoint request, or imported MCP control. Both
