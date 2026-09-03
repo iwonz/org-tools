@@ -88,6 +88,30 @@ test("runs the complete state editor at the repository base path without APIs or
 
   await expect(page.locator('[data-demo-id="org-editor-view-toolbar"]')).toBeVisible();
   await expect(page.locator('[data-demo-id="org-editor-view-select"]')).toContainText("Units");
+  const footerChipInsets = await page
+    .locator('[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]')
+    .locator("[data-org-editor-unit-tag-footer] > span")
+    .evaluateAll((chips) =>
+      chips.map((chip) => {
+        const label = chip.firstElementChild?.getBoundingClientRect();
+        const count = chip.lastElementChild?.getBoundingClientRect();
+        const bounds = chip.getBoundingClientRect();
+        return {
+          labelClientWidth: chip.firstElementChild?.clientWidth ?? 0,
+          labelScrollWidth: chip.firstElementChild?.scrollWidth ?? 0,
+          left: (label?.left ?? bounds.left) - bounds.left,
+          right: bounds.right - (count?.right ?? bounds.right),
+        };
+      }),
+    );
+  expect(footerChipInsets.length).toBeGreaterThan(1);
+  for (const inset of footerChipInsets) {
+    expect(inset.left).toBeGreaterThanOrEqual(7);
+    expect(inset.left).toBeLessThanOrEqual(9);
+    expect(inset.right).toBeGreaterThanOrEqual(7);
+    expect(inset.right).toBeLessThanOrEqual(12);
+    expect(inset.labelScrollWidth).toBeLessThanOrEqual(inset.labelClientWidth + 1);
+  }
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   const coloredTag = page.locator('[data-tag-color-surface][data-tag-color="blue"]').first();

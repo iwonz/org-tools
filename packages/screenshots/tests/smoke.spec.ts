@@ -2078,6 +2078,31 @@ test("renders split Org Editor controls and reveals search to the left", async (
   await expect(tagFooter).toContainText("· 2");
   await expect(tagFooter).toHaveCSS("border-width", "0px");
   await expect(tagFooter).toHaveCSS("box-shadow", "none");
+  const footerChipMetrics = await tagFooter.locator(":scope > span").evaluateAll((chips) =>
+    chips.map((chip) => {
+      const label = chip.firstElementChild?.getBoundingClientRect();
+      const count = chip.lastElementChild?.getBoundingClientRect();
+      const bounds = chip.getBoundingClientRect();
+      return {
+        labelClientWidth: chip.firstElementChild?.clientWidth ?? 0,
+        labelScrollWidth: chip.firstElementChild?.scrollWidth ?? 0,
+        leftInset: (label?.left ?? bounds.left) - bounds.left,
+        rightInset: bounds.right - (count?.right ?? bounds.right),
+        text: chip.textContent ?? "",
+        width: bounds.width,
+      };
+    }),
+  );
+  expect(footerChipMetrics.length).toBeGreaterThan(1);
+  for (const metric of footerChipMetrics) {
+    const context = JSON.stringify(metric);
+    expect(metric.leftInset, context).toBeGreaterThanOrEqual(7);
+    expect(metric.leftInset, context).toBeLessThanOrEqual(9);
+    expect(metric.rightInset, context).toBeGreaterThanOrEqual(7);
+    expect(metric.rightInset, context).toBeLessThanOrEqual(12);
+    expect(metric.labelScrollWidth, context).toBeLessThanOrEqual(metric.labelClientWidth + 1);
+  }
+  expect(new Set(footerChipMetrics.map((metric) => metric.width)).size).toBeGreaterThan(1);
   await expect(editorCommand).toHaveText("Arrange selected");
   const dragBox = await editorUnit.boundingBox();
   if (!dragBox) throw new Error("Selected Editor Unit is unavailable for group drag.");

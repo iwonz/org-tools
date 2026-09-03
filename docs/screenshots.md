@@ -507,7 +507,7 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   and Tag edits remain visible everywhere. System View lifecycle actions stay disabled.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
-  heights, direct-Employee Tag footer, and connection endpoints without card overlap,
+  heights, content-sized direct-Employee Tag footer chips with equal insets, and connection endpoints without card overlap,
   membership-type labels, or transient editing chrome.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming

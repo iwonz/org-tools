@@ -41,6 +41,7 @@ import {
   ORG_EDITOR_UNIT_CONTENT_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
+  ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
   ORG_EDITOR_UNIT_TAG_FOOTER_GAP,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
   type OrgEditorUnitEmployeeSummary,
@@ -1432,9 +1433,9 @@ export const createOrgEditorUnitImageBlob = async ({
         drawTrimmedText(
           context,
           text,
-          chipX + 8,
+          chipX + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
           chipY + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT / 2 + 0.5,
-          chipWidth - 16,
+          chipWidth - ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2,
         );
         chipX += chipWidth + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
       }

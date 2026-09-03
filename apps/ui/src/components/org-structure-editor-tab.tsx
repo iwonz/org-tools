@@ -126,6 +126,8 @@ import {
   ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
+  ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
+  ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP,
   ORG_EDITOR_UNIT_VERTICAL_GAP,
   type OrgEditorUnitEmployeeSummary,
   type OrgEditorUnitTagSummary,
@@ -1278,18 +1280,24 @@ function OrgEditorNode({
           {tagSummary.map((tag) => (
             <span
               className={cn(
-                "inline-flex h-5 max-w-full items-center rounded-md px-2 text-[10px] leading-none",
+                "inline-flex h-5 max-w-full items-center rounded-md text-[10px] leading-none",
                 tagColorSurfaceClassName(tag.color),
               )}
               data-tag-color={tag.color ?? "none"}
               key={tag.tagId}
               style={{
                 ...customTagColorSurfaceStyle(tag.color),
+                paddingInline: ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
                 width: getOrgEditorUnitTagFooterChipWidth(tag, getOrgEditorUnitWidth(unit) - 16),
               }}
             >
               <span className="truncate">{tag.label}</span>
-              <span className="ms-1 opacity-70">· {tag.count}</span>
+              <span
+                className="opacity-70"
+                style={{ marginInlineStart: ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP }}
+              >
+                · {tag.count}
+              </span>
             </span>
           ))}
         </div>

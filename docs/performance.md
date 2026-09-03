@@ -40,7 +40,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   rebuilt for pointer samples.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
-  View and their cached wrapped footer heights participate in the same geometry pass.
+  View; a deterministic glyph-aware width packs their content-sized chips, and the cached wrapped
+  footer heights participate in the same geometry pass without DOM measurement.
 
 Analytics builds every count group, known birth-year index, and gender age cohort in one Employee
 pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys

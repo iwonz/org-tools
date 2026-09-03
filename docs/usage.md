@@ -77,8 +77,10 @@ control.
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights,
   direct-membership Tag summary footer, and hierarchy connections while retaining configurable
-  output styling. Every tag is written in full; oversized labels wrap inside their compact chip.
-  Static/Live membership type is not printed. Editor exports always use the active View.
+  output styling. Footer chips use equal compact insets and follow their own label/count width rather
+  than reserving trailing space. Every Employee-row tag is written in full; oversized labels wrap
+  inside their compact chip. Static/Live membership type is not printed. Editor exports always use
+  the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
   reports known birth years and completed ages, including one-decimal averages plus deterministic
   youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`

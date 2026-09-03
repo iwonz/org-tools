@@ -47,6 +47,8 @@ export const ORG_EDITOR_UNIT_ROOT_GAP = 64;
 export const ORG_EDITOR_UNIT_MIN_HEIGHT = 120;
 export const ORG_EDITOR_UNIT_COLLAPSED_HEIGHT = ORG_EDITOR_UNIT_HEADER_HEIGHT;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT = 20;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING = 8;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP = 4;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_GAP = 4;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_PADDING = 8;
 export const ORG_EDITOR_DEFAULT_LAYOUT_MODE: OrgEditorLayoutMode = "topDown";
@@ -79,6 +81,31 @@ export type OrgEditorUnitTagSummary = {
   label: string;
   tagId: TagId;
 };
+
+const COMPACT_FOOTER_TEXT_SAFETY = 3;
+
+const getCompactFooterGlyphWidth = (glyph: string) => {
+  if (/\p{Mark}/u.test(glyph)) return 0;
+  if (/\s/u.test(glyph)) return 2.8;
+  if (/\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}|\p{Script=Hangul}/u.test(glyph)) {
+    return 10;
+  }
+  if (/\p{Script=Arabic}/u.test(glyph)) return 5.6;
+  if (/\p{N}/u.test(glyph)) return 5.6;
+  if (/[ilI|!.,:;'"`]/u.test(glyph)) return 2.3;
+  if (/[jtfr·]/u.test(glyph)) return 3;
+  if (/[MWmw@%&\u0416\u0424\u0428\u0429\u042b\u042e]/u.test(glyph)) return 8.4;
+  if (/\p{Lu}/u.test(glyph)) return 7;
+  if (/[acersuvxyz]/u.test(glyph)) return 5;
+  if (/[bdghnopq]/u.test(glyph)) return 5.6;
+  return 5.4;
+};
+
+const measureCompactFooterText = (value: string) =>
+  [...value.normalize("NFC")].reduce(
+    (width, glyph) => width + getCompactFooterGlyphWidth(glyph),
+    0,
+  );
 
 export const snapOrgEditorCoordinate = (value: number) =>
   Math.round(value / ORG_EDITOR_GRID_SIZE) * ORG_EDITOR_GRID_SIZE;
@@ -169,11 +196,18 @@ export const getOrgEditorUnitTagFooterHeight = (
 export const getOrgEditorUnitTagFooterChipWidth = (
   summary: Pick<OrgEditorUnitTagSummary, "count" | "label">,
   availableWidth: number,
-) =>
-  Math.min(
-    availableWidth,
-    Math.max(44, summary.label.length * 6.2 + String(summary.count).length * 6 + 36),
-  );
+) => {
+  const normalizedLabel = summary.label.normalize("NFC");
+  const textSafety = [...normalizedLabel].length <= 3 ? 0 : COMPACT_FOOTER_TEXT_SAFETY;
+  const contentWidth =
+    measureCompactFooterText(normalizedLabel) +
+    textSafety +
+    ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP +
+    measureCompactFooterText(`· ${summary.count}`) +
+    ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2;
+
+  return Math.min(availableWidth, Math.max(40, Math.ceil(contentWidth)));
+};
 
 export const setOrgEditorUnitTagFooterHeight = (unitId: OrgEditorUnitId, height: number): void => {
   tagFooterHeightByUnitId.set(unitId, height);

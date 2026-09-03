@@ -158,6 +158,9 @@ selection, hover, handles, and menus. Its bounded inline preview has no secondar
 viewer. Image titles, backgrounds, fonts, icon-only alignment, scope, radius, Employee templates,
 and Editor JSON settings remain output-only session settings and do not mutate the active View.
 Image template tokens exclude avatar bytes, while painted avatars remain available.
+Unit footer chips use one deterministic mixed-script glyph metric plus equal fixed insets for their
+live width, row packing, card bounds, connections, collision geometry, and PNG painting. This keeps
+the summary content-sized without a font-loading measurement pass or a second layout commit.
 Editor JSON and Template use the same formatter and sortable field controls as Data Download while
 limiting Employees and assignments to Unit-only or subtree scope.
 

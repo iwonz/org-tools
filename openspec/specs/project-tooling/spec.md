@@ -329,6 +329,15 @@ The maintained Template token frame SHALL show the Format help affordance and lo
 - **WHEN** browser validation visits each token-aware Format surface
 - **THEN** a help icon follows the label and exposes localized `@` guidance on hover and keyboard focus
 
+### Requirement: Gallery verifies compact Unit Tag footers
+The maintained Editor screenshots SHALL show content-sized direct-Tag footer chips with equal compact
+insets and without a large empty trailing area. Screenshot generation SHALL retain the existing 52
+declared scenarios.
+
+#### Scenario: Regenerate Editor frames
+- **WHEN** the deterministic gallery is generated twice from unchanged source
+- **THEN** affected Editor frames show compact evenly inset footer chips and all 52 PNG hashes match between runs
+
 ### Requirement: Large multi-View validation remains bounded
 Automated checks SHALL exercise global Employee mutation, active View switching, Data Download source
 switching, and Tag footer derivation with 20,000 Employees and 4,000 Units without eager inactive-View

@@ -13,11 +13,15 @@ import {
   getOrgEditorEmployeeVisualGeometry,
   getOrgEditorUnitHeight,
   getOrgEditorUnitHeightForEmployeeRows,
+  getOrgEditorUnitTagFooterChipWidth,
   getOrgEditorUnitTagFooterHeight,
   layoutOrgEditorUnits,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_GRID_MIN_SCREEN_SIZE,
   ORG_EDITOR_GRID_SIZE,
+  ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
+  ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
+  ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
   type OrgEditorUnitEmployeeSummary,
   setOrgEditorUnitEmployeeRowHeights,
   setOrgEditorUnitTagFooterHeight,
@@ -206,6 +210,31 @@ describe("Org Editor variable Employee geometry", () => {
 });
 
 describe("Org Editor Unit Tag footer", () => {
+  test("sizes mixed-script chips by content with equal compact insets", () => {
+    const chip = (label: string, count = 1, availableWidth = 264) =>
+      getOrgEditorUnitTagFooterChipWidth({ count, label }, availableWidth);
+
+    expect(chip("TeamLead")).toBe(83);
+    expect(chip("Vue")).toBe(49);
+    expect(chip("Backend")).toBe(73);
+    expect(chip("PHP")).toBe(53);
+    expect(chip("Cafe\u0301")).toBe(chip("Café"));
+    expect(chip("团队")).toBeGreaterThan(chip("UI"));
+    expect(chip("فريق")).toBeGreaterThan(40);
+    expect(chip("A very long Tag name", 12, 72)).toBe(72);
+    expect(ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING).toBe(8);
+
+    const summaries = ["TeamLead", "Vue", "Backend", "PHP"].map((label, index) => ({
+      color: null,
+      count: 1,
+      label,
+      tagId: `tag-${index}`,
+    }));
+    expect(getOrgEditorUnitTagFooterHeight(summaries, 264)).toBe(
+      ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT * 2 + 4,
+    );
+  });
+
   test("counts direct Employees once and follows catalog order", () => {
     const employee = (id: string, tags: Employee["tags"]): Employee => ({ id, tags }) as Employee;
     const employees = new Map([
