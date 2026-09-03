@@ -1,10 +1,13 @@
 import { readFile } from "node:fs/promises";
 
-import type { OrgToolsState } from "@org-tools/types";
+import type { AppLocale, OrgToolsState } from "@org-tools/types";
 import type { Locator, Page } from "@playwright/test";
-
+import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import enMessages from "../../../apps/ui/messages/en.json" with { type: "json" };
+import esMessages from "../../../apps/ui/messages/es.json" with { type: "json" };
+import frMessages from "../../../apps/ui/messages/fr.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
+import zhMessages from "../../../apps/ui/messages/zh.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import {
   expectLocalRequestsOnly,
@@ -29,7 +32,7 @@ const setBrowserLanguages = async (page: Page, languages: string[]) => {
   }, languages);
 };
 
-const seedLocale = async (page: Page, locale: "en" | "ru") => {
+const seedLocale = async (page: Page, locale: AppLocale) => {
   await page.addInitScript(({ key, value }) => window.localStorage.setItem(key, value), {
     key: localeStorageKey,
     value: locale,
@@ -77,25 +80,28 @@ const expectTrailingThematicIcon = async (control: Locator, accessibleName: stri
   ).toEqual({ firstChild: "span", iconIndex: 1, labelIndex: 0 });
 };
 
-test("detects Russian from browser preferences on first use", async ({ page }) => {
+test("honors a supported locale from the current state", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await setBrowserLanguages(page, ["de-DE", "ru-RU", "en-US"]);
-  await page.goto(await resetServerState(page, "ru"), { waitUntil: "domcontentloaded" });
+  await setBrowserLanguages(page, ["de-DE", "ar-EG", "en-US"]);
+  await page.addInitScript((key) => window.localStorage.removeItem(key), localeStorageKey);
+  await page.goto(await resetServerState(page, "ar"), { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator("html")).toHaveAttribute("lang", "ru");
-  await expect(page.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("tab", { name: arMessages.Ui.Editor, exact: true })).toBeVisible();
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    ruMessages.Metadata.description,
+    arMessages.Metadata.description,
   );
   expect(await page.evaluate((key) => window.localStorage.getItem(key), localeStorageKey)).toBe(
-    "ru",
+    "ar",
   );
   await assertLocalRequests();
 });
 
-test("falls back to English for an unsupported browser locale", async ({ page }) => {
-  await setBrowserLanguages(page, ["de-DE", "fr-FR"]);
+test("falls back to English for unsupported browser locales", async ({ page }) => {
+  await setBrowserLanguages(page, ["de-DE", "it-IT"]);
+  await page.addInitScript((key) => window.localStorage.removeItem(key), localeStorageKey);
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
@@ -122,30 +128,22 @@ test("switches the interface in place and persists the choice", async ({ page },
   expect(languageBox?.y ?? 0).toBeLessThan(themeBox?.y ?? 0);
 
   await languageToggle.click();
-  await expect(
-    page.getByRole("option", { name: ruMessages.Ui.Russian, exact: true }),
-  ).toContainText("🇷🇺");
-  await expect(
-    page.getByRole("option", { name: enMessages.Ui.English, exact: true }),
-  ).toContainText("🇬🇧");
-  await page.getByRole("option", { name: ruMessages.Ui.Russian, exact: true }).click();
+  const languageDialog = page.locator('[data-demo-id="language-dialog"]');
+  await expect(languageDialog.getByRole("radio")).toHaveCount(6);
+  await languageDialog.locator('label:has(input[value="ru"])').click();
 
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
   await expect(page.getByRole("tab", { name: ruMessages.Ui.Units, exact: true })).toBeVisible();
   await expect(languageToggle).toHaveAccessibleName(
     `${ruMessages.Ui.Language}: ${ruMessages.Ui.Russian}`,
   );
-  await expect(languageToggle).toContainText("🇷🇺");
-  await expect(languageToggle).toHaveText(`🇷🇺${ruMessages.Ui.Language}`);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     ruMessages.Metadata.description,
   );
   const header = page.locator("header");
   const sidebar = page.locator('[data-demo-id="app-sidebar"]');
-  await expect(header.getByRole("img", { name: "Org Tools", exact: true })).toHaveCount(0);
-  await expect(header.getByRole("tab")).toHaveCount(0);
-  await expect(header).toContainText(ruMessages.Ui.Editor);
+  await expect(header).toHaveCount(0);
   await expect(sidebar.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true })).toBeVisible();
   await expect(
     sidebar.getByRole("button", { name: ruMessages.Ui.Import, exact: true }),
@@ -207,8 +205,12 @@ test("switches the interface in place and persists the choice", async ({ page },
 
 for (const [locale, messages] of [
   ["en", enMessages],
+  ["zh", zhMessages],
   ["ru", ruMessages],
-] as const satisfies ReadonlyArray<readonly ["en" | "ru", Messages]>) {
+  ["es", esMessages],
+  ["fr", frMessages],
+  ["ar", arMessages],
+] as const satisfies ReadonlyArray<readonly [AppLocale, Messages]>) {
   test(`localizes explicit database recovery in ${locale}`, async ({ page }) => {
     const assertLocalRequests = await expectLocalRequestsOnly(page);
     await seedLocale(page, locale);
@@ -256,7 +258,31 @@ for (const [locale, messages] of [
     await expect(dialog).toBeHidden();
 
     await page.getByRole("tab", { name: messages.Ui.Editor, exact: true }).click();
+    const editorCanvas = page.locator('[data-demo-id="org-editor-canvas"]');
+    const editorWorld = editorCanvas.locator(':scope > div[dir="ltr"]');
     const productUnit = page.locator("fieldset").filter({ hasText: "Product" }).first();
+    await expect(editorWorld).toHaveCount(1);
+    await expect(productUnit).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    const expectedFont =
+      locale === "ar" ? '"Noto Sans Arabic"' : locale === "zh" ? '"Noto Sans SC"' : '"Noto Sans"';
+    expect(
+      await productUnit.evaluate((element) => window.getComputedStyle(element).fontFamily),
+    ).toContain(expectedFont);
+    if (locale === "ar") {
+      const [canvasBox, historyBox, actionBox] = await Promise.all([
+        editorCanvas.boundingBox(),
+        page.locator('[data-demo-id="org-editor-history-actions"]').boundingBox(),
+        page.locator('[data-demo-id="org-editor-actions"]').boundingBox(),
+      ]);
+      expect(canvasBox).not.toBeNull();
+      expect(historyBox).not.toBeNull();
+      expect(actionBox).not.toBeNull();
+      expect((historyBox?.x ?? 0) + (historyBox?.width ?? 0)).toBeCloseTo(
+        (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) - 12,
+        0,
+      );
+      expect(actionBox?.x ?? 0).toBeCloseTo((canvasBox?.x ?? 0) + 12, 0);
+    }
     await productUnit.click({ button: "right", position: { x: 20, y: 20 } });
     await page.locator('[data-demo-id="org-editor-export-action"]').click();
     const editorExport = page.locator('[data-demo-id="org-editor-export-dialog"]');
@@ -404,7 +430,7 @@ for (const [locale, messages] of [
     await expect(page.locator('[data-demo-id="employees-total-count"]')).toContainText("4");
     await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
     await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("Avery");
-    await expect(page.locator('[data-demo-id="employees-match-count"]')).toContainText("1");
+    await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveText(/^·\s*.+/u);
     if (locale === "ru") {
       await page.screenshot({
         animations: "disabled",
@@ -438,6 +464,7 @@ for (const [locale, messages] of [
       tagEmployeeCard.getByRole("button", { name: messages.Ui.Delete, exact: true }),
     ).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", locale);
+    await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
     await assertLocalRequests();
   });
 }

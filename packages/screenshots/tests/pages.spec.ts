@@ -1,10 +1,24 @@
 import { readFile } from "node:fs/promises";
 
+import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
+import enMessages from "../../../apps/ui/messages/en.json" with { type: "json" };
+import esMessages from "../../../apps/ui/messages/es.json" with { type: "json" };
+import frMessages from "../../../apps/ui/messages/fr.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
+import zhMessages from "../../../apps/ui/messages/zh.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import { localeStorageKey, syntheticStatePath } from "./helpers.js";
 
 const useEnglish = (key: string) => window.localStorage.setItem(key, "en");
+
+const localeCases = [
+  ["en", enMessages, "ltr"],
+  ["zh", zhMessages, "ltr"],
+  ["ru", ruMessages, "ltr"],
+  ["es", esMessages, "ltr"],
+  ["fr", frMessages, "ltr"],
+  ["ar", arMessages, "rtl"],
+] as const;
 
 async function importSyntheticState(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Import", exact: true }).click();
@@ -18,6 +32,34 @@ async function importSyntheticState(page: import("@playwright/test").Page) {
   await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
+
+test("detects the browser locale and switches all six bundled languages", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((key) => {
+    window.localStorage.removeItem(key);
+    Object.defineProperty(navigator, "languages", {
+      configurable: true,
+      value: ["de-DE", "zh-Hans-CN", "en-US"],
+    });
+  }, localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh");
+  await expect(page.getByRole("tab", { name: zhMessages.Ui.Editor, exact: true })).toBeVisible();
+
+  for (const [locale, messages, direction] of localeCases) {
+    await page.locator('[data-demo-id="language-toggle"]').click();
+    const dialog = page.locator('[data-demo-id="language-dialog"]');
+    await expect(dialog.getByRole("radio")).toHaveCount(6);
+    await dialog.locator(`label:has(input[value="${locale}"])`).click();
+    await expect(page.locator("html")).toHaveAttribute("lang", locale);
+    await expect(page.locator("html")).toHaveAttribute("dir", direction);
+    await expect(page.getByRole("tab", { name: messages.Ui.Editor, exact: true })).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+});
 
 test("runs the complete state editor at the repository base path without APIs or file persistence", async ({
   page,
@@ -78,9 +120,9 @@ test("runs the complete state editor at the repository base path without APIs or
   expect(metadata.storageKeys).toEqual([localeStorageKey, "org-tools-theme"]);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
   await page.locator('[data-demo-id="theme-toggle"]').click();
-  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await page.locator('[data-demo-id="theme-dialog"] label:has(input[value="dark"])').click();
   await page.locator('[data-demo-id="language-toggle"]').click();
-  await page.getByRole("option", { name: ruMessages.Ui.Russian, exact: true }).click();
+  await page.locator('[data-demo-id="language-dialog"] label:has(input[value="ru"])').click();
   expect(externalRequests).toEqual([]);
   expect(apiRequests).toEqual([]);
 });

@@ -3,7 +3,6 @@
 import type { DatedTagEvent, DatedTagGroup, Employee } from "@org-tools/types";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
-import { useLocale } from "next-intl";
 import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   HiOutlineCalendarDays,
@@ -17,6 +16,7 @@ import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCard, EmployeeCardList } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
+import { useAppLocale } from "@/components/locale-provider";
 import { MiddleDot } from "@/components/middle-dot";
 import {
   AlertDialog,
@@ -39,6 +39,7 @@ import {
 import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
 import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
+import { formatCalendarDayTitle, getCalendarWeekStart } from "@/lib/calendar-locale";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { tagColorClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
@@ -156,7 +157,7 @@ function CalendarDayCell({
   return (
     <button
       className={cn(
-        "flex min-h-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg bg-muted/30 p-2.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "flex min-h-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg bg-muted/30 p-2.5 text-start outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         isWeekend && "bg-muted/65 hover:bg-muted/80",
         isToday && "bg-signal/15 hover:bg-signal/20",
       )}
@@ -258,7 +259,7 @@ function CalendarDayDialogList({
               {row.kind === "header" ? (
                 row.normalizedLabel ? (
                   <button
-                    className="flex w-full items-center gap-2 bg-muted/35 px-3.5 py-2.5 text-left text-sm font-semibold outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    className="flex w-full items-center gap-2 bg-muted/35 px-3.5 py-2.5 text-start text-sm font-semibold outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                     data-demo-id="calendar-day-tag-heading"
                     onClick={() => onTagClick(row.normalizedLabel as string)}
                     type="button"
@@ -293,7 +294,7 @@ export const CalendarTab = observer(() => {
   const store = useOrgStore();
   const t = useUiText();
   const format = useAppFormatter();
-  const locale = useLocale();
+  const { locale } = useAppLocale();
   const employeesByBirthday =
     store.units?.indexes.birthdayEmployeesByKey ?? EMPTY_BIRTHDAY_EMPLOYEES_BY_KEY;
   const datedEventsByDate = store.units?.indexes.datedTagEventsByDate ?? EMPTY_DATED_EVENTS_BY_DATE;
@@ -323,19 +324,19 @@ export const CalendarTab = observer(() => {
     () => monthDays.find((day) => day.key === dialogDayKey) ?? null,
     [dialogDayKey, monthDays],
   );
-  const startsOnMonday = locale.startsWith("ru");
+  const weekStartsOn = getCalendarWeekStart(locale);
   const firstWeekday = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
-  const leadingDayCount = startsOnMonday ? (firstWeekday + 6) % 7 : firstWeekday;
+  const leadingDayCount = (firstWeekday - weekStartsOn + 7) % 7;
   const rowCount = Math.ceil((leadingDayCount + monthDays.length) / 7);
   const weekdayLabels = useMemo(
     () =>
       Array.from({ length: 7 }, (_, index) => {
-        const sundayBasedDay = startsOnMonday ? (index + 1) % 7 : index;
+        const sundayBasedDay = (weekStartsOn + index) % 7;
         return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(
           new Date(Date.UTC(2026, 7, 2 + sundayBasedDay)),
         );
       }),
-    [locale, startsOnMonday],
+    [locale, weekStartsOn],
   );
   const monthTitle = format.dateTime(new Date(Date.UTC(year, monthIndex, 1)), {
     month: "long",
@@ -382,9 +383,9 @@ export const CalendarTab = observer(() => {
                 variant="secondary"
               >
                 <span
-                  className={cn("mr-1.5 size-2 rounded-full", tagColorClassName(group.color))}
+                  className={cn("me-1.5 size-2 rounded-full", tagColorClassName(group.color))}
                 />
-                <HiOutlineTag className="mr-1.5 size-3.5" />
+                <HiOutlineTag className="me-1.5 size-3.5" />
                 <span>{group.label}</span>
                 <MiddleDot />
                 <span>{format.number(group.events.length)}</span>
@@ -396,7 +397,7 @@ export const CalendarTab = observer(() => {
             data-demo-id="calendar-header-navigation"
           >
             <div
-              className="mr-1 text-base font-semibold capitalize"
+              className="me-1 text-base font-semibold capitalize"
               data-demo-id="calendar-month-title"
             >
               {title}
@@ -439,7 +440,8 @@ export const CalendarTab = observer(() => {
           <div className="flex min-h-full min-w-[640px] flex-col">
             <div className="mb-2 grid shrink-0 grid-cols-7 gap-2" data-demo-id="calendar-weekdays">
               {weekdayLabels.map((label, index) => {
-                const isWeekend = startsOnMonday ? index >= 5 : index === 0 || index === 6;
+                const weekday = (weekStartsOn + index) % 7;
+                const isWeekend = weekday === 0 || weekday === 6;
                 return (
                   <div
                     className={cn(
@@ -489,10 +491,7 @@ export const CalendarTab = observer(() => {
           <DialogHeader>
             <DialogTitle>
               {dialogDay
-                ? format.dateTime(new Date(`${dialogDay.date}T00:00:00Z`), {
-                    dateStyle: "long",
-                    timeZone: "UTC",
-                  })
+                ? formatCalendarDayTitle(new Date(`${dialogDay.date}T00:00:00Z`), locale)
                 : ""}
             </DialogTitle>
           </DialogHeader>

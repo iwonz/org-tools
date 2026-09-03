@@ -4,18 +4,27 @@ import { NextIntlClientProvider } from "next-intl";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { prepareMessagesForNextIntl } from "@/i18n/intl-messages";
 import {
+  APP_LOCALE_CONFIG,
   type AppLocale,
   isAppLocale,
   LOCALE_STORAGE_KEY,
   persistLocale,
   resolveInitialLocale,
 } from "@/i18n/locale";
+import arMessages from "../../messages/ar.json";
 import enMessages from "../../messages/en.json";
+import esMessages from "../../messages/es.json";
+import frMessages from "../../messages/fr.json";
 import ruMessages from "../../messages/ru.json";
+import zhMessages from "../../messages/zh.json";
 
 const messagesByLocale = {
+  ar: prepareMessagesForNextIntl(arMessages),
   en: prepareMessagesForNextIntl(enMessages),
+  es: prepareMessagesForNextIntl(esMessages),
+  fr: prepareMessagesForNextIntl(frMessages),
   ru: prepareMessagesForNextIntl(ruMessages),
+  zh: prepareMessagesForNextIntl(zhMessages),
 } satisfies Record<AppLocale, typeof enMessages>;
 
 type LocaleContextValue = {
@@ -43,6 +52,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     const messages = messagesByLocale[locale];
     const syncDocumentMetadata = () => {
       document.documentElement.lang = locale;
+      document.documentElement.dir = APP_LOCALE_CONFIG[locale].direction;
 
       const titles = [...document.head.querySelectorAll("title")];
       const title = titles[0] ?? document.createElement("title");

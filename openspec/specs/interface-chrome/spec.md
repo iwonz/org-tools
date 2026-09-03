@@ -4,23 +4,19 @@
 Define the restrained layered shell, interaction states, workflow grouping, and overlay hierarchy.
 ## Requirements
 ### Requirement: Application chrome uses a restrained layered visual system
-The application SHALL use a dark collapsible navigation sidebar, a compact workflow content header
-without persistence actions or status, a low-contrast shell, full-bleed primary workflows without
-decorative outer frames or empty perimeter gutters, and restrained tonal inner grouping in both
-light and dark themes. Primary actions SHALL use an accessible graphite treatment; focus, active
-navigation, and selection SHALL use neutral tonal cues while destructive and event colors remain
-semantic. Surface, typography, spacing, radius, shadow, and control-height decisions SHALL be
-consistent across all six product workflows without adding a remote asset, request, or runtime
-dependency.
+The application SHALL use a dark collapsible navigation sidebar, a compact workflow header outside
+Editor, a low-contrast shell, full-bleed workflows, and restrained tonal grouping in light and dark
+themes. Editor SHALL omit the shared 64 px header and use that height for its canvas. Primary,
+focus, active, and semantic states SHALL retain the established utilitarian palette without remote
+assets or requests.
 
 The shared interaction signal SHALL use a restrained steel-blue hue, while larger active, selected,
 and hover surfaces SHALL remain nearly neutral blue-gray rather than violet or lavender. The signal
 SHALL NOT replace graphite primary actions or semantic destructive and calendar-event colors.
 
-The application SHALL use Inter as its sole UI typeface across headings, body text, placeholders,
-native form controls, portals, and code-like editing surfaces. A font chosen for an image-export
-artifact MAY appear inside that artifact or its explicit preview but SHALL NOT change the
-surrounding application chrome.
+The interface SHALL use the locally bundled Noto Sans superfamily consistently: Noto Sans for
+Latin/Cyrillic, Noto Sans SC for Simplified Chinese, and Noto Sans Arabic for Arabic. A font chosen
+for an image-export artifact MAY differ only inside that artifact or preview.
 
 #### Scenario: Light hierarchy
 - **WHEN** a product workflow renders in the light theme
@@ -37,10 +33,13 @@ surrounding application chrome.
 - **THEN** fonts, icons, colors, and effects come from bundled assets and local code without a
   third-party request
 
-#### Scenario: Uniform UI typography
-- **WHEN** the browser renders ordinary text, a heading, placeholder, native control, dialog portal,
-  menu, or template editing surface
-- **THEN** its computed UI font family starts with Inter regardless of workflow or locale
+#### Scenario: Editor canvas height
+- **WHEN** Editor is active
+- **THEN** the shared content header is absent and the canvas owns the released height
+
+#### Scenario: Uniform locale typography
+- **WHEN** headings, body text, placeholders, native controls, portals, or template inputs render
+- **THEN** the active locale's bundled Noto family member is used consistently without remote fonts
 
 #### Scenario: Utilitarian interaction palette
 - **WHEN** the application renders focus, selection, active, or hover feedback in either theme
@@ -69,16 +68,14 @@ and inline SVG with semantic theme tokens without decorative containers, shadows
   behavior
 
 ### Requirement: Navigation states are explicit and responsive
-Product destinations SHALL retain their accessible Radix tab behavior and order inside a vertical
-sidebar. The sidebar SHALL initialize compact and SHALL own language, theme, Import, and Export
-without a project, file, agent-access, or persistence control in either runtime. Expanded mode SHALL
-show icons and visible labels; compact mode SHALL show only icons with localized accessible names
-and tooltips. The active destination, hover, press, and keyboard focus SHALL remain tonal,
-borderless, shadowless, and geometry-stable. The desktop collapse control and every compact sidebar
-action SHALL keep the same 48 px width, 40 px height, 14 px horizontal padding, 20 px icon size, and
-icon axis. The shell SHALL render no decorative product glyph, visible product title, Save control,
-Autosave control, or persistence status. Sidebar collapse and all other durable navigation context
-SHALL be represented in the current state.
+Product destinations SHALL retain accessible vertical tabs and the current order. The sidebar SHALL
+initialize compact and own Import, Export, Language, and Theme actions. Language and Theme SHALL be
+buttons opening separate modal dialogs rather than Select popovers. Compact actions SHALL show only
+icons with localized names and direction-aware tooltips. Sidebar controls SHALL keep their existing
+48 px width, 40 px height, padding, icon size, and borderless tonal interaction. The shell SHALL
+render no decorative product glyph, visible product title, Save control, Autosave control, or
+persistence status. Sidebar collapse and all other durable navigation context SHALL be represented
+in the current state.
 The 64 px context header SHALL reserve one right-aligned workflow action for populated or empty
 Teams and Employees and for populated Download. The action SHALL keep its localized accessible name
 and thematic icon at ordinary widths and SHALL become icon-only without overflow at narrow widths.
@@ -100,6 +97,18 @@ Workflows SHALL NOT repeat that action inside their content or empty state.
 #### Scenario: Stable menu content
 - **WHEN** theme, language, or another menu item is hovered, focused, selected, or pressed
 - **THEN** its content position and geometry remain unchanged without a pointer-state border
+
+#### Scenario: Open settings modal
+- **WHEN** Language or Theme is activated
+- **THEN** its independent modal opens above workflow controls without a dropdown surface
+
+#### Scenario: Compact tooltip over Editor
+- **WHEN** a compact navigation action is hovered while Editor is active
+- **THEN** its tooltip is fully visible above canvas toolbars and below any open modal
+
+#### Scenario: Responsive and RTL shell
+- **WHEN** the shell renders at maintained widths or in Arabic RTL
+- **THEN** actions remain reachable, logical placement mirrors, and controls do not overflow
 
 #### Scenario: Responsive shell containment
 - **WHEN** either runtime renders at 390, 1024, or 1280 px wide
@@ -225,13 +234,16 @@ measurement, wrapped tag visibility, and bounded scrolling SHALL remain unchange
   overlap
 
 ### Requirement: Dialogs and overlays preserve task context
-Dialog and alert-dialog outer surfaces SHALL remain distinct from the shell through radius and
-overlay, with at most one restrained separation shadow and no decorative outline. Headers,
-scrollable bodies, and footers SHALL use consistent spacing and restrained tonal separation when it
-keeps actions or context visible. Every non-modal Popover, Select, theme/language menu, tag/search
-menu, and Editor context menu SHALL use one permanent neutral container hairline and at most one
-restrained shadow; its items and pointer states SHALL remain borderless. Floating surfaces SHALL
-retain localized copy, accessible names, close behavior, and focus management.
+Dialog and alert-dialog surfaces SHALL remain distinct through overlay, radius, focus management,
+and at most one restrained shadow. Language and Theme SHALL use compact modal radio lists. Non-modal
+Popover, Select, Tag/search, and Editor menus SHALL retain one neutral hairline and borderless items.
+Overlay levels SHALL place canvas tools below sidebar tooltips, sidebar content below dialogs, and
+runtime errors above all ordinary interaction layers. Headers, scrollable bodies, and footers SHALL
+use consistent spacing and restrained tonal separation when it keeps actions or context visible.
+
+#### Scenario: Modal setting selector
+- **WHEN** Language or Theme opens over any workflow
+- **THEN** the modal traps focus, shows stable radio rows, and remains above sidebar and canvas UI
 
 #### Scenario: State Import dialog
 - **WHEN** a valid or invalid state file is selected at a 390 px viewport
@@ -281,11 +293,20 @@ horizontal overflow.
 - **THEN** source and selection panes stack as equal-height regions and every control remains reachable
 
 ### Requirement: Units detail panes use one compact alignment
-The Units hierarchy SHALL begin directly at the workflow content boundary without an empty spacer
-below the shared header. Search, breadcrumbs, and Employee rows SHALL share one horizontal start
-aligned to the Employee avatar column without introducing an outer border or shadow. The selected
-Unit roster SHALL present direct and descendant Employees as one contiguous list without a section
-heading or repeated section count.
+At 768 px and wider, the Units hierarchy and Employee roster SHALL each occupy exactly half of the
+workflow width. Their Unit-name and Employee searches SHALL share the same first-row vertical
+position, height, and padding. Selected Unit identity, breadcrumb, and roster count SHALL follow the
+right search before one contiguous Employee list. Below 768 px, the panes SHALL stack as equal-height
+regions without horizontal overflow. The hierarchy SHALL begin directly at the workflow content
+boundary, and search, breadcrumbs, and Employee rows SHALL share one logical content edge.
+
+#### Scenario: Populated desktop Units workflow
+- **WHEN** a Unit with Employees renders at desktop width
+- **THEN** both panes are equal width and both searches share one horizontal baseline
+
+#### Scenario: Narrow Units workflow
+- **WHEN** Units renders below 768 px
+- **THEN** the hierarchy and roster are equal-height stacked panes with reachable controls
 
 #### Scenario: Populated Units workflow alignment
 - **WHEN** a Unit with Employees is selected at a maintained desktop width

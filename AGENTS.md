@@ -24,9 +24,10 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
 - The organization has one current Unit structure. Do not reintroduce alternate Views, View-local
   Employees, or selectors for structural documents.
 - Profile and email navigation must require an explicit user action and use referrer protections.
-- Source comments, fixtures, tests, specifications, and documentation are English. Cyrillic product
-  copy is allowed only in `apps/ui/messages/ru.json`; all other public engineering text remains
-  English.
+- Source comments, fixtures, tests, specifications, and documentation are English. Non-English
+  product copy is allowed only in its matching catalog under `apps/ui/messages/{locale}.json` for
+  `zh`, `ru`, `es`, `fr`, and `ar`; all other public engineering text remains English. Every UI
+  change must keep all six catalogs complete and remove obsolete message keys.
 - Fixtures must be obviously synthetic. Use `example.test`, fictional names, reserved `555-01xx`
   phone numbers, and embedded or initial-based avatars.
 

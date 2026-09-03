@@ -39,9 +39,9 @@
     "id": "theme",
     "module": "theme",
     "featured": true,
-    "title": "Dark theme",
+    "title": "Dark theme dialog",
     "file": "demo-theme.png",
-    "description": "Use the expanded sidebar theme menu to choose Light, Dark, or System appearance.",
+    "description": "Use the expanded sidebar theme dialog to choose Light, Dark, or System appearance.",
     "capabilities": ["Dark theme", "Light option", "System option", "Expanded sidebar"]
   },
   {
@@ -57,29 +57,24 @@
     "id": "language",
     "module": "language",
     "featured": true,
-    "title": "Russian interface",
+    "title": "Six-language selector",
     "file": "demo-language.png",
-    "description": "Switch the complete interface in place using the bundled Russian and English catalogs.",
+    "description": "Choose among all six bundled UN-language catalogs in a compact modal selector.",
     "capabilities": [
-      "Russian locale",
+      "Six locales",
       "In-place switching",
       "Localized navigation",
       "Persistent locale"
     ]
   },
   {
-    "id": "language-english-menu",
+    "id": "language-arabic-rtl",
     "module": "language",
     "featured": false,
-    "title": "English language menu",
-    "file": "feature-language-english-menu.png",
-    "description": "Open the English language selector with stable rows, flags, names, and selected state.",
-    "capabilities": [
-      "English locale",
-      "Flag selector",
-      "Selected indicator",
-      "Stable menu geometry"
-    ]
+    "title": "Arabic RTL interface",
+    "file": "feature-language-arabic-rtl.png",
+    "description": "Inspect the mirrored Arabic shell and six-language modal while Editor geometry remains direction-stable.",
+    "capabilities": ["Arabic locale", "RTL shell", "Selected indicator", "Stable menu geometry"]
   },
   {
     "id": "teams",
@@ -285,7 +280,7 @@
     "featured": false,
     "title": "Editor search",
     "file": "feature-editor-search.png",
-    "description": "Reveal the right-growing search field, locate Units and Employees without leaving the canvas, and clear the query when Search closes.",
+    "description": "Reveal the left-expanding search field, locate Units and Employees without leaving the canvas, and clear the query when Search closes.",
     "capabilities": ["Unit search", "Employee search", "Canvas navigation"]
   },
   {
@@ -383,8 +378,8 @@
     "featured": true,
     "title": "Organization Analytics",
     "file": "demo-analytics.png",
-    "description": "Review sortable position, birth month, birthday, first-name, last-name, and full-name distributions.",
-    "capabilities": ["Six distributions", "Counts", "Sorting", "Virtualized rows"]
+    "description": "Review average age and deterministic age extremes alongside sortable birth-year, position, birthday, and name distributions.",
+    "capabilities": ["Age cohorts", "Birth years", "Counts", "Sorting", "Virtualized rows"]
   },
   {
     "id": "analytics-complete-groups",
@@ -392,8 +387,14 @@
     "featured": false,
     "title": "Complete Analytics groups",
     "file": "feature-analytics-complete-groups.png",
-    "description": "Scroll the unified Analytics surface to inspect the remaining name distributions and bounded groups.",
-    "capabilities": ["Last names", "Full names", "Content-sized groups", "Internal scrolling"]
+    "description": "Scroll the unified Analytics surface to inspect birth-year and name distributions in bounded groups.",
+    "capabilities": [
+      "Birth years",
+      "Last names",
+      "Full names",
+      "Content-sized groups",
+      "Internal scrolling"
+    ]
   },
   {
     "id": "analytics-drilldown",

@@ -5,7 +5,7 @@ The screenshot catalog is generated from the production applications and declare
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
-The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
+The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and all six languages including Arabic RTL, then run it again and compare hashes.
 
 ## Import
 
@@ -48,11 +48,11 @@ Capabilities: Explicit recovery, Timestamped backup, Current schema, No silent r
 
 ## Theme
 
-### Dark theme
+### Dark theme dialog
 
-[![Dark theme](screenshots/demo-theme.png)](screenshots/demo-theme.png)
+[![Dark theme dialog](screenshots/demo-theme.png)](screenshots/demo-theme.png)
 
-Use the expanded sidebar theme menu to choose Light, Dark, or System appearance.
+Use the expanded sidebar theme dialog to choose Light, Dark, or System appearance.
 
 Capabilities: Dark theme, Light option, System option, Expanded sidebar.
 
@@ -66,21 +66,22 @@ Capabilities: Light theme, Expanded sidebar, Module labels, Local actions.
 
 ## Language
 
-### Russian interface
+### Six-language selector
 
-[![Russian interface](screenshots/demo-language.png)](screenshots/demo-language.png)
+[![Six-language selector](screenshots/demo-language.png)](screenshots/demo-language.png)
 
-Switch the complete interface in place using the bundled Russian and English catalogs.
+Choose among all six bundled UN-language catalogs in a compact modal selector.
 
-Capabilities: Russian locale, In-place switching, Localized navigation, Persistent locale.
+Capabilities: Six locales, In-place switching, Localized navigation, Persistent locale.
 
-### English language menu
+### Arabic RTL interface
 
-[![English language menu](screenshots/feature-language-english-menu.png)](screenshots/feature-language-english-menu.png)
+[![Arabic RTL interface](screenshots/feature-language-arabic-rtl.png)](screenshots/feature-language-arabic-rtl.png)
 
-Open the English language selector with stable rows, flags, names, and selected state.
+Inspect the mirrored Arabic shell and six-language modal while Editor geometry remains
+direction-stable.
 
-Capabilities: English locale, Flag selector, Selected indicator, Stable menu geometry.
+Capabilities: Arabic locale, RTL shell, Selected indicator, Stable modal geometry.
 
 ## Teams
 
@@ -254,7 +255,8 @@ Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and co
 
 [![Editor search](screenshots/feature-editor-search.png)](screenshots/feature-editor-search.png)
 
-Reveal the right-growing search field, locate Units and Employees without leaving the canvas, and clear the query when Search closes.
+Reveal the left-expanding search field, locate Units and Employees without leaving the canvas, and
+clear the query when Search closes.
 
 Capabilities: Unit search, Employee search, Canvas navigation.
 
@@ -317,17 +319,18 @@ Capabilities: Title and font, Spacing and alignment, Boss label, Employee card c
 
 [![Organization Analytics](screenshots/demo-analytics.png)](screenshots/demo-analytics.png)
 
-Review sortable position, birth month, birthday, first-name, last-name, and full-name distributions.
+Review average age and deterministic age extremes alongside sortable birth-year, position,
+birthday, and name distributions.
 
-Capabilities: Six distributions, Counts, Sorting, Virtualized rows.
+Capabilities: Age cohorts, Birth years, Counts, Sorting, Virtualized rows.
 
 ### Complete Analytics groups
 
 [![Complete Analytics groups](screenshots/feature-analytics-complete-groups.png)](screenshots/feature-analytics-complete-groups.png)
 
-Scroll the unified Analytics surface to inspect the remaining name distributions and bounded groups.
+Scroll the unified Analytics surface to inspect birth-year and name distributions in bounded groups.
 
-Capabilities: Last names, Full names, Content-sized groups, Internal scrolling.
+Capabilities: Birth years, Last names, Full names, Content-sized groups, Internal scrolling.
 
 ### Analytics drill-down
 
@@ -423,7 +426,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
 - Confirm Import exposes All state and Employees with mapped fields and normalized identity duplicate
   choices; Export must download only the complete state directly with no dialog.
-- Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
+- Review light and dark themes, all six locale dialogs, Arabic RTL, compact and expanded sidebar
+  geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
 - Confirm thematic icons precede text in buttons and tabs while disclosure, sorting, removal,

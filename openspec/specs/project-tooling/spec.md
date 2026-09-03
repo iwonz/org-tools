@@ -94,8 +94,9 @@ The repository SHALL document stable UUID Employee identity, normalized duplicat
 one current Editor structure, local runtimes, privacy, and scale behavior. It SHALL include an
 English README with exactly ten deterministic featured screenshot previews, a comprehensive grouped
 screenshot catalog, contributor and security guidance, license, tests, specifications, detailed
-documentation, CI, and generated PNGs. The reviewed Russian catalog SHALL be the only source file
-containing Cyrillic product copy. The public state contract SHALL be unversioned, current-only,
+documentation, CI, and generated PNGs. Non-English product copy SHALL live only in its corresponding
+locale catalog; source, comments, fixtures, tests, specifications, and documentation SHALL remain
+English. The public state contract SHALL be unversioned, current-only,
 complete, and validated without discriminators, partial scopes, legacy migration, project metadata,
 or compatibility readers. Employee mapping is supported only by the explicit Employee transfer mode.
 
@@ -135,7 +136,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Publication language scan
 - **WHEN** public-safety checks scan tracked source and production output
-- **THEN** Cyrillic outside the exact Russian catalog path fails validation
+- **THEN** non-English product copy outside its corresponding locale catalog fails validation
 
 #### Scenario: Large Editor interaction validation
 - **WHEN** automated performance coverage prepares 20,000 Employees and 4,000 Units
@@ -229,17 +230,24 @@ runners without deprecation annotations.
   and accepted inputs without deprecated-runtime or unexpected-input annotations
 
 ### Requirement: Documentation and gallery cover current product surfaces
-The repository SHALL document the current browser-memory and loopback SQLite runtimes, explicit
-backed-up database recreation, direct State Export, State/Employee Import, structured JSON/Template
-Data Download, Editor Image/JSON/Template export, privacy, performance, usage, and screenshot
-workflows without obsolete integration guidance. The deterministic gallery SHALL contain exactly 46
-PNGs covering the current product scenarios, including `database-create-new` and
-`download-template-tokens`. The README SHALL retain exactly ten featured Import, direct Export,
-theme, language, Teams, Employees, Editor, Analytics, Calendar, and Download frames.
+The repository SHALL document both local-only runtimes, six bundled locales, Arabic RTL, Analytics
+age/year insights, modal Language and Theme settings, selected-only Editor arrangement, direct State
+Export, Import, structured output, privacy, performance, and screenshots without obsolete guidance.
+The deterministic gallery SHALL contain exactly 46 PNGs and the README SHALL retain exactly ten
+featured Import, Export, Theme, Language, Units, Employees, Editor, Analytics, Calendar, and Download
+frames.
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
 - **THEN** it deterministically replaces exactly 46 declared PNGs covering only current product workflows
+
+#### Scenario: Locale gallery
+- **WHEN** Language frames are generated
+- **THEN** the primary frame shows the six-language modal and the supporting frame demonstrates Arabic RTL
+
+#### Scenario: Updated workflow gallery
+- **WHEN** Analytics, Editor, Units, Calendar, Theme, and Language frames are generated
+- **THEN** they show the new metrics, controls, equal panes, localized date, and modal selectors
 
 #### Scenario: Transfer gallery
 - **WHEN** screenshot generation completes
@@ -260,6 +268,19 @@ theme, language, Teams, Employees, Editor, Analytics, Calendar, and Download fra
 #### Scenario: Deterministic generation
 - **WHEN** the 46-frame gallery is generated twice from unchanged source and fixed fixtures
 - **THEN** every PNG hash is identical and every owned page has no unexpected console or network diagnostic
+
+### Requirement: Localization validation covers every supported catalog
+Automated checks SHALL validate exact keys, placeholders, non-empty translations, allowed technical
+tokens, browser detection, writing direction, and representative visible and accessibility surfaces
+for `en`, `zh`, `ru`, `es`, `fr`, and `ar` in both production runtimes.
+
+#### Scenario: Validate six catalogs
+- **WHEN** repository and browser validation runs
+- **THEN** every supported locale passes static parity and runtime surface checks without fallback copy
+
+#### Scenario: Validate large localized data
+- **WHEN** Analytics and Editor exercise 20,000 Employees and 4,000 Units
+- **THEN** locale-only UI changes do not serialize organization state or trigger per-frame full scans
 
 ### Requirement: Gallery documents Employee schema, Tags, and Calendar
 The deterministic gallery SHALL contain 46 PNG files: the maintained existing workflows refreshed

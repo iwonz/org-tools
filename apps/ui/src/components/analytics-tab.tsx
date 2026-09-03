@@ -5,7 +5,9 @@ import { observer } from "mobx-react-lite";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HiOutlineChartBar, HiOutlineChevronDown, HiOutlineEye } from "react-icons/hi2";
+import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
+import { EmployeeDialog } from "@/components/employee-dialog";
 import { HighlightedText } from "@/components/highlighted-text";
 import {
   EmployeeSearchInput,
@@ -15,6 +17,16 @@ import {
   hasActiveEmployeeSearchFilters,
 } from "@/components/search-controls";
 import { TopLevelEmptyState } from "@/components/source-empty-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,13 +38,27 @@ import {
 } from "@/components/ui/dialog";
 import { ProductSurface } from "@/components/ui/product-surface";
 import { type UiTextKey, useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
-import type { AnalyticsCountEntry } from "@/lib/analytics";
+import type { AnalyticsAgeCohort, AnalyticsCountEntry, AnalyticsResult } from "@/lib/analytics";
 import { useOrgStore } from "@/stores/org-store-context";
 
+type AnalyticsGroupId = keyof Pick<
+  AnalyticsResult,
+  | "birthdayDateCounts"
+  | "birthdayMonthCounts"
+  | "birthdayYearCounts"
+  | "firstNameCounts"
+  | "fullNameDuplicates"
+  | "lastNameCounts"
+  | "positionCounts"
+>;
+
 type AnalyticsView = {
-  entry: AnalyticsCountEntry;
+  entryKey: string;
+  groupId: AnalyticsGroupId;
   groupTitleKey: UiTextKey;
 };
+
+const getAnalyticsEntryKey = (entry: AnalyticsCountEntry) => `${entry.kind}:${entry.label}`;
 
 type AnalyticsSortDirection = "asc" | "desc";
 type AnalyticsSortKey = "count" | "label";
@@ -122,7 +148,7 @@ function AnalyticsSortableHeader({
       <button
         className={[
           "inline-flex w-full cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-          align === "right" ? "justify-end text-right" : "justify-start text-left",
+          align === "right" ? "justify-end text-end" : "justify-start text-start",
           isActive ? "text-foreground" : "text-muted-foreground",
         ].join(" ")}
         onClick={() => onSort(sortKey)}
@@ -233,7 +259,7 @@ function AnalyticsList({
             ref={scrollRef}
           >
             <table className="w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-analytics-surface text-left text-xs text-muted-foreground">
+              <thead className="sticky top-0 z-10 bg-analytics-surface text-start text-xs text-muted-foreground">
                 <tr>
                   <AnalyticsSortableHeader
                     className="px-3 py-1"
@@ -275,10 +301,10 @@ function AnalyticsList({
                       ref={rowVirtualizer.measureElement}
                     >
                       <td className="min-w-0 break-words px-3 py-2">{getEntryLabel(entry)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                      <td className="px-3 py-2 text-end tabular-nums text-muted-foreground">
                         {format.number(entry.count)}
                       </td>
-                      <td className="px-2 py-1 text-right">
+                      <td className="px-2 py-1 text-end">
                         <Button
                           data-demo-id={`${demoId}-view-button`}
                           onClick={() => onView(entry)}
@@ -307,6 +333,56 @@ function AnalyticsList({
   );
 }
 
+function AgeSummary({ ageCohorts }: { ageCohorts: AnalyticsResult["ageCohorts"] }) {
+  const t = useUiText();
+  const format = useAppFormatter();
+  const rows: { cohort: AnalyticsAgeCohort; label: UiTextKey }[] = [
+    { cohort: ageCohorts.all, label: "All Employees" },
+    { cohort: ageCohorts.male, label: "Men" },
+    { cohort: ageCohorts.female, label: "Women" },
+  ];
+  const renderExtreme = (extreme: AnalyticsAgeCohort["youngest"]) =>
+    extreme ? `${extreme.employee.fullName} · ${format.number(extreme.age)}` : t("Not available");
+
+  return (
+    <section
+      className="overflow-hidden rounded-lg bg-analytics-surface p-3 lg:col-span-2"
+      data-demo-id="analytics-age-summary"
+    >
+      <h2 className="h-7 text-sm font-medium">{t("Age")}</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] border-collapse text-sm">
+          <thead className="text-start text-xs text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 font-medium">{t("Group")}</th>
+              <th className="px-3 py-2 font-medium">{t("Average age")}</th>
+              <th className="px-3 py-2 font-medium">{t("Youngest")}</th>
+              <th className="px-3 py-2 font-medium">{t("Oldest")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ cohort, label }) => (
+              <tr className="odd:bg-muted/25" key={label}>
+                <th className="px-3 py-3 text-start font-medium">{t(label)}</th>
+                <td className="px-3 py-3 tabular-nums text-muted-foreground">
+                  {cohort.averageAge === null
+                    ? t("Not available")
+                    : format.number(cohort.averageAge, {
+                        maximumFractionDigits: 1,
+                        minimumFractionDigits: 1,
+                      })}
+                </td>
+                <td className="px-3 py-3">{renderExtreme(cohort.youngest)}</td>
+                <td className="px-3 py-3">{renderExtreme(cohort.oldest)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export const AnalyticsTab = observer(() => {
   const store = useOrgStore();
   const t = useUiText();
@@ -314,10 +390,22 @@ export const AnalyticsTab = observer(() => {
   const getEntryLabel = useAnalyticsEntryLabel();
   const units = store.units;
   const [view, setView] = useState<AnalyticsView | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<
+    AnalyticsCountEntry["employees"][number] | null
+  >(null);
+  const [deletingEmployee, setDeletingEmployee] = useState<
+    AnalyticsCountEntry["employees"][number] | null
+  >(null);
   const viewSearchQuery = store.analyticsUi.query;
   const viewFilters = store.analyticsUi.filters;
   const analytics = store.analyticsResult;
   const analyticsBuildStatus = store.analyticsBuildStatus;
+  const viewEntry = useMemo(() => {
+    if (!view || !analytics) return null;
+    return (
+      analytics[view.groupId].find((entry) => getAnalyticsEntryKey(entry) === view.entryKey) ?? null
+    );
+  }, [analytics, view]);
   const employeePositionOptions = units?.indexes.positionOptions ?? [];
   const employeeTagOptions = units?.indexes.tagOptions ?? [];
   const employeeSearchDocumentByEmployeeId = units?.indexes.employeeSearchDocumentByEmployeeId;
@@ -328,18 +416,18 @@ export const AnalyticsTab = observer(() => {
     return filterEmployeesBySearch({
       employeeSearchDocumentByEmployeeId,
       employeeUnitMembershipsByEmployeeId: store.employeeUnitMembershipsByEmployeeId,
-      employees: view?.entry.employees ?? [],
+      employees: viewEntry?.employees ?? [],
       filters: viewFilters,
       queryTokens: viewSearchTokens,
     });
   }, [
     employeeSearchDocumentByEmployeeId,
     store.employeeUnitMembershipsByEmployeeId,
-    view?.entry.employees,
+    viewEntry?.employees,
     viewFilters,
     viewSearchTokens,
   ]);
-  const hasViewEmployees = (view?.entry.employees.length ?? 0) > 0;
+  const hasViewEmployees = (viewEntry?.employees.length ?? 0) > 0;
   const hasViewSearch =
     hasViewEmployees &&
     (viewSearchTokens.length > 0 || hasActiveEmployeeSearchFilters(viewFilters));
@@ -349,6 +437,10 @@ export const AnalyticsTab = observer(() => {
 
     store.ensureAnalyticsResult();
   }, [analytics, store, units]);
+
+  useEffect(() => {
+    if (view && analytics && !viewEntry) setView(null);
+  }, [analytics, view, viewEntry]);
 
   if (!units) return null;
   if (units.allEmployees.length === 0) {
@@ -366,9 +458,14 @@ export const AnalyticsTab = observer(() => {
     );
   }
 
-  const openView = (groupTitleKey: UiTextKey, entry: AnalyticsCountEntry) => {
+  const openView = (
+    groupId: AnalyticsGroupId,
+    groupTitleKey: UiTextKey,
+    entry: AnalyticsCountEntry,
+  ) => {
     setView({
-      entry,
+      entryKey: getAnalyticsEntryKey(entry),
+      groupId,
       groupTitleKey,
     });
   };
@@ -380,17 +477,6 @@ export const AnalyticsTab = observer(() => {
         data-demo-id="analytics-tab"
       >
         <ProductSurface className="flex min-h-0 flex-1 flex-col" data-demo-id="analytics-surface">
-          <div
-            className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-background p-4"
-            data-demo-id="analytics-header"
-          >
-            <div className="min-w-0">
-              <div className="text-sm font-medium">{t("Analytics")}</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {countText("employeesInMain", { count: units.allEmployees.length })}
-              </div>
-            </div>
-          </div>
           <div className="min-h-0 flex-1 overflow-auto p-4" data-demo-id="analytics-scroll-area">
             {!analytics ? (
               <div className="grid h-full min-h-[320px] place-items-center">
@@ -411,39 +497,47 @@ export const AnalyticsTab = observer(() => {
                 className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2"
                 data-demo-id="analytics-grid"
               >
+                <AgeSummary ageCohorts={analytics.ageCohorts} />
                 <AnalyticsList
                   demoId="analytics-positions"
                   emptyState={t("No positions found")}
                   entries={analytics.positionCounts}
-                  onView={(entry) => openView("Positions", entry)}
+                  onView={(entry) => openView("positionCounts", "Positions", entry)}
                   title={t("Positions")}
+                />
+                <AnalyticsList
+                  demoId="analytics-birthday-years"
+                  emptyState={t("No birth years found")}
+                  entries={analytics.birthdayYearCounts}
+                  onView={(entry) => openView("birthdayYearCounts", "Birth years", entry)}
+                  title={t("Birth years")}
                 />
                 <AnalyticsList
                   demoId="analytics-birthday-months"
                   emptyState={t("No birth months found")}
                   entries={analytics.birthdayMonthCounts}
-                  onView={(entry) => openView("Birth months", entry)}
+                  onView={(entry) => openView("birthdayMonthCounts", "Birth months", entry)}
                   title={t("Birth months")}
                 />
                 <AnalyticsList
                   demoId="analytics-birthday-dates"
                   emptyState={t("No birthdays found")}
                   entries={analytics.birthdayDateCounts}
-                  onView={(entry) => openView("Birthdays", entry)}
+                  onView={(entry) => openView("birthdayDateCounts", "Birthdays", entry)}
                   title={t("Birthdays")}
                 />
                 <AnalyticsList
                   demoId="analytics-first-names"
                   emptyState={t("No first names found")}
                   entries={analytics.firstNameCounts}
-                  onView={(entry) => openView("First names", entry)}
+                  onView={(entry) => openView("firstNameCounts", "First names", entry)}
                   title={t("First names")}
                 />
                 <AnalyticsList
                   demoId="analytics-last-names"
                   emptyState={t("No last names found")}
                   entries={analytics.lastNameCounts}
-                  onView={(entry) => openView("Last names", entry)}
+                  onView={(entry) => openView("lastNameCounts", "Last names", entry)}
                   title={t("Last names")}
                 />
                 <AnalyticsList
@@ -451,7 +545,7 @@ export const AnalyticsTab = observer(() => {
                   demoId="analytics-full-name-duplicates"
                   emptyState={t("No duplicate full names")}
                   entries={analytics.fullNameDuplicates}
-                  onView={(entry) => openView("Full names", entry)}
+                  onView={(entry) => openView("fullNameDuplicates", "Full names", entry)}
                   title={t("Full names")}
                 />
               </div>
@@ -473,12 +567,12 @@ export const AnalyticsTab = observer(() => {
         >
           <DialogHeader>
             <DialogTitle>
-              {view ? `${t(view.groupTitleKey)}: ${getEntryLabel(view.entry)}` : null}
+              {view && viewEntry ? `${t(view.groupTitleKey)}: ${getEntryLabel(viewEntry)}` : null}
             </DialogTitle>
             <DialogDescription>
-              {view ? (
+              {viewEntry ? (
                 <>
-                  {t("In group:")} {countText("employees", { count: view.entry.employees.length })}
+                  {t("In group:")} {countText("employees", { count: viewEntry.employees.length })}
                   {hasViewSearch && (
                     <>
                       {" "}
@@ -507,6 +601,16 @@ export const AnalyticsTab = observer(() => {
               />
             )}
             <EmployeeCardList
+              actions={(employee) => (
+                <EmployeeCardActions
+                  employee={employee}
+                  onApplyTags={store.updateEmployeeTags}
+                  onDelete={setDeletingEmployee}
+                  onEdit={setEditingEmployee}
+                  tagOptions={employeeTagOptions}
+                  tagPickerDataDemoId="analytics-tag-picker"
+                />
+              )}
               className="min-h-0 flex-1"
               dataDemoId="analytics-employees-dialog-list"
               employees={visibleViewEmployees}
@@ -516,7 +620,7 @@ export const AnalyticsTab = observer(() => {
               name={(employee) => (
                 <HighlightedText queryTokens={viewSearchTokens} text={employee.fullName} />
               )}
-              resetKey={`analytics-view:${view?.groupTitleKey ?? ""}:${viewSearchQuery}:${getEmployeeSearchFiltersKey(viewFilters)}`}
+              resetKey={`analytics-view:${view?.groupId ?? ""}:${view?.entryKey ?? ""}:${viewSearchQuery}:${getEmployeeSearchFiltersKey(viewFilters)}`}
               queryTokens={viewSearchTokens}
               subtitle={(employee) => (
                 <EmployeeIdentity employee={employee} queryTokens={viewSearchTokens} />
@@ -529,6 +633,48 @@ export const AnalyticsTab = observer(() => {
           </DialogBody>
         </DialogContent>
       </Dialog>
+      {editingEmployee && (
+        <EmployeeDialog
+          employee={editingEmployee}
+          mode="global"
+          onOpenChange={(open) => !open && setEditingEmployee(null)}
+          onSave={(fields, memberships) =>
+            store.updateEmployee(editingEmployee.id, fields, memberships)
+          }
+          open={Boolean(editingEmployee)}
+          tagOptions={employeeTagOptions}
+          units={units}
+        />
+      )}
+      <AlertDialog
+        onOpenChange={(open) => !open && setDeletingEmployee(null)}
+        open={Boolean(deletingEmployee)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Delete Employee?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingEmployee
+                ? t("Employee {name} will be removed from the catalog and every Team.", {
+                    name: deletingEmployee.fullName,
+                  })
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                if (deletingEmployee) store.deleteOrganizationEmployee(deletingEmployee.id);
+                setDeletingEmployee(null);
+              }}
+            >
+              {t("Delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 });

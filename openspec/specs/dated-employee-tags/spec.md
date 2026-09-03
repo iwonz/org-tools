@@ -110,3 +110,12 @@ and optional date action without clipping or oversized vertical whitespace.
 - **WHEN** the quick tag picker contains multiple labels
 - **THEN** each option occupies at most 44 px and its checkbox, label, and date action remain centered,
   visible, and independently actionable
+
+### Requirement: Dated-event surfaces follow the active writing direction
+Calendar Tag rails, event headings, Employee rows, and day dialogs SHALL use the active locale and
+writing direction while preserving Tag and Employee data verbatim. Arabic mirroring MUST NOT change
+event grouping, date identity, or interaction results.
+
+#### Scenario: Open Arabic day events
+- **WHEN** Arabic is active and a populated Calendar date opens
+- **THEN** owned labels and layout are RTL while Tag labels, Employee identities, and actions remain intact

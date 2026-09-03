@@ -26,20 +26,25 @@ their distinct role.
 
 ## Language and appearance
 
-English and Russian catalogs are bundled locally. The first static tab uses the first supported
-browser language and falls back to English. The language menu switches all navigation, menus,
-dialogs, errors, empty states, and accessibility labels in place. Locale and theme are allowed local
-metadata; both are also part of exported state so an Import restores the selected interface.
+English, Simplified Chinese, Russian, Spanish, French, and Modern Standard Arabic catalogs are
+bundled locally. A new static state uses the first supported entry in the browser language list and
+falls back to English. An existing SQLite state, imported state, live-tab state, or previous manual
+choice takes priority. The Language modal switches navigation, menus, dialogs, errors, empty states,
+date formatting, plurals, and accessibility labels in place. Arabic sets the document to RTL and
+mirrors the shell while keeping Editor canvas coordinates LTR. The Theme modal offers Light, Dark,
+and System. Locale and theme are allowed local metadata; both are also part of exported state so an
+Import restores the selected interface.
 
-Theme and language rows do not shift on hover or selection. Floating menus use a thin neutral border
+Theme and language radio rows do not shift on hover or selection. Floating menus use a thin neutral border
 and restrained separation shadow. Hover, active, and pressed states never add a border or resize the
 control.
 
 ## Product modules
 
 - **Units** manages the hierarchy, manual and Live membership, bosses, positions, and Employee
-  movement. Its name search remains available for every nonempty hierarchy; selected-path and search controls
-  align with roster avatars, and direct plus descendant Employees appear in one contiguous list.
+  movement. Its hierarchy and roster use equal desktop columns, and their searches share one
+  horizontal row. The selected path, summary, and search align with roster avatars; direct plus
+  descendant Employees appear in one contiguous list.
   The current roster count appears below search without redundant roster-section headings or counts.
   **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, complete birthdays, embedded avatar, typed custom fields,
@@ -53,14 +58,22 @@ control.
   header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
   rest of the form.
 - **Editor** manages the current Unit structure on an adaptive snapped grid, including search,
-  history, layout, bulk commands, Image, JSON, and Template output. There is no alternate View or
+  history, layout, bulk commands, Image, JSON, and Template output. It uses the full content height:
+  Undo/Redo are at the logical start, while Search, layout, Arrange, and Collapse/Expand are at the
+  logical end. Search expands inward without moving the other controls. Dragging one Unit in an
+  existing multi-selection keeps the group selected; **Arrange selected** moves only those Units in
+  one undoable snapped operation. There is no alternate View or
   structure selector: Units and Editor always operate on the same organization. Closing Search
   clears its query. Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights, and
   hierarchy connections while retaining configurable output styling. Every tag is written in full;
   oversized labels wrap inside their compact chip. Static/Live membership type is not printed.
-- **Analytics** derives organization distributions locally and provides Employee drill-down.
+- **Analytics** derives organization distributions locally without repeating the page title. It
+  reports known birth years and completed ages, including one-decimal averages plus deterministic
+  youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`
+  unknown-year sentinel are excluded. Every Eye drill-down uses current full Employee cards with
+  Tag, Edit, and Delete actions.
 - **Calendar** combines recurring birthdays and dated tags with localized weekday order, leading
   month offsets, weekend tones, a horizontal Tag rail, conditional Today navigation, interactive dates, and Employee
   actions. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each
@@ -69,6 +82,8 @@ control.
   Birthday, dated-event, or Past sections. Both day details and dated-tag
   history use complete Employee cards with the ordinary Tag, Edit, and Delete actions while
   retaining bounded scrolling and tag-history navigation.
+  Day-dialog titles follow the active locale; Russian titles omit the abbreviated year suffix and
+  use the catalog's corrected backward/forward navigation labels.
 - **Data Download** uses equal source and selected-Employee panes whose geometry stays fixed when
   switching sources, then produces structured JSON or Template output.
   JSON always produces one record per Employee. Drag handles order scalar fields and the ordinary

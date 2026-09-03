@@ -44,6 +44,18 @@ const populatedStore = () => {
 };
 
 describe("OrgToolsState", () => {
+  test("accepts exactly the six supported interface locales", () => {
+    for (const locale of ["ar", "en", "es", "fr", "ru", "zh"] as const) {
+      expect(parseOrgToolsState(createBlankOrgToolsState("system", locale)).ui.locale).toBe(locale);
+    }
+    expect(() =>
+      parseOrgToolsState({
+        ...createBlankOrgToolsState(),
+        ui: { ...createBlankOrgToolsState().ui, locale: "de" },
+      }),
+    ).toThrow();
+  });
+
   test("starts with one editable organization structure", () => {
     const store = new OrgStore();
     expect(store.activeTab).toBe("orgEditor");

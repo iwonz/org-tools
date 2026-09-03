@@ -38,9 +38,10 @@ The default `.org-tools/` runtime directory is ignored by Git. Stop the local se
 the SQLite file so rollback-journal transactions are settled. A custom path may be outside the
 repository, but invalid configuration is a blocking error.
 
-The Pages artifact contains HTML, CSS, JavaScript, and local fonts only. It contains no SQLite code,
-state endpoint, organization fixture, secret, remote asset, or external request. `pnpm pages:check`
-and `pnpm public:check` scan these boundaries.
+The Pages artifact contains HTML, CSS, JavaScript, locally bundled Noto UI families, and the
+export-only font choices. Language and theme selectors never download catalogs or fonts. It
+contains no SQLite code, state endpoint, organization fixture, secret, remote asset, or external
+request. `pnpm pages:check` and `pnpm public:check` scan these boundaries.
 
 Tests and screenshots use fictional names, `example.test`, reserved `555-01xx` phone numbers, and
 embedded or initial avatars. Never commit a real organization state, contact list, screenshot,

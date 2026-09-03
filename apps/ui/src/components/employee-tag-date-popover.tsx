@@ -1,14 +1,15 @@
 "use client";
 
-import { useLocale } from "next-intl";
 import { useState } from "react";
-import { enUS, ru } from "react-day-picker/locale";
+import { ar, enUS, es, fr, ru, zhCN } from "react-day-picker/locale";
 import { HiOutlineCalendarDays } from "react-icons/hi2";
-
+import { useAppLocale } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
+
+const DATE_PICKER_LOCALES = { ar, en: enUS, es, fr, ru, zh: zhCN } as const;
 
 export type EmployeeTagDateValue = string | null | "mixed";
 
@@ -66,7 +67,7 @@ export function EmployeeTagDatePopover({
   onOpenChange?: (open: boolean) => void;
 }) {
   const t = useUiText();
-  const locale = useLocale();
+  const { locale } = useAppLocale();
   const [open, setOpen] = useState(false);
   const selectedDate = date === null || date === "mixed" ? undefined : isoDateToLocalDate(date);
   const setPopoverOpen = (nextOpen: boolean) => {
@@ -96,7 +97,7 @@ export function EmployeeTagDatePopover({
       >
         <Calendar
           data-demo-id="tag-date-calendar"
-          locale={locale === "ru" ? ru : enUS}
+          locale={DATE_PICKER_LOCALES[locale]}
           mode="single"
           onSelect={(nextDate) => {
             if (!nextDate) return;

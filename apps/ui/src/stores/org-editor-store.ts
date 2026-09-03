@@ -714,6 +714,52 @@ export class OrgEditorStore {
     });
   }
 
+  applyLayoutToUnits(
+    unitIds: Iterable<OrgEditorUnitId>,
+    layoutMode: OrgEditorLayoutMode = this.layoutMode,
+  ): void {
+    const selectedUnitIds = new Set(unitIds);
+    if (selectedUnitIds.size < 2) {
+      this.applyLayout(layoutMode);
+      return;
+    }
+
+    this.runCommand("Align selected Units", () => {
+      const selectedUnits = this.units.filter((unit) => selectedUnitIds.has(unit.id));
+      const selectedBounds = getGroupBounds(selectedUnits);
+      if (!selectedBounds || selectedUnits.length < 2) return;
+
+      const inducedUnits = selectedUnits.map((unit) => ({
+        ...unit,
+        parentId:
+          unit.parentId !== null && selectedUnitIds.has(unit.parentId) ? unit.parentId : null,
+      }));
+      const laidOutUnits = layoutOrgEditorUnits(inducedUnits, layoutMode, { x: 0, y: 0 });
+      const layoutBounds = getGroupBounds(laidOutUnits);
+      if (!layoutBounds) return;
+
+      const centeredUnits = shiftUnits(laidOutUnits, {
+        x: selectedBounds.x + selectedBounds.width / 2 - (layoutBounds.x + layoutBounds.width / 2),
+        y:
+          selectedBounds.y + selectedBounds.height / 2 - (layoutBounds.y + layoutBounds.height / 2),
+      });
+      const positionedUnits = avoidUnitOverlaps({
+        movingUnits: centeredUnits,
+        staticUnits: this.units.filter((unit) => !selectedUnitIds.has(unit.id)),
+      });
+      const positionByUnitId = new Map(
+        positionedUnits.map((unit) => [unit.id, { x: unit.x, y: unit.y }] as const),
+      );
+      const now = new Date().toISOString();
+
+      this.layoutMode = layoutMode;
+      this.units = this.units.map((unit) => {
+        const position = positionByUnitId.get(unit.id);
+        return position ? { ...unit, ...position, updatedAt: now } : unit;
+      });
+    });
+  }
+
   clearSelection(): void {
     this.selectedItems = [];
   }

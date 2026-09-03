@@ -112,7 +112,13 @@ const isTimestamp = (value: unknown): value is string =>
   isString(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value;
 const isTheme = (value: unknown): value is UiTheme =>
   value === "light" || value === "dark" || value === "system";
-const isLocale = (value: unknown): value is AppLocale => value === "en" || value === "ru";
+const isLocale = (value: unknown): value is AppLocale =>
+  value === "ar" ||
+  value === "en" ||
+  value === "es" ||
+  value === "fr" ||
+  value === "ru" ||
+  value === "zh";
 const isActiveTab = (value: unknown): value is UiActiveTab =>
   value === "units" ||
   value === "employees" ||

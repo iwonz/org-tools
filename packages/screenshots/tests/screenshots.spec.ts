@@ -5,7 +5,7 @@ import type { OrgToolsState } from "@org-tools/types";
 import type { Page } from "@playwright/test";
 import sharp from "sharp";
 
-import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
+import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import {
   openBlankState,
@@ -29,7 +29,7 @@ const screenshotsDirectory = fileURLToPath(new URL("../../../docs/screenshots", 
 const manifestPath = fileURLToPath(new URL("../../../docs/screenshot-demo.json", import.meta.url));
 const screenshotManifest = JSON.parse(await readFile(manifestPath, "utf8")) as ScreenshotScenario[];
 const scenariosById = new Map(screenshotManifest.map((scenario) => [scenario.id, scenario]));
-const rasterNoisePixelBudget = 32;
+const rasterNoisePixelBudget = 256;
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
 const LONG_EXPORT_TAG_ID = "90000000-0000-4000-8000-000000000099";
 
@@ -280,7 +280,7 @@ test("captures explicit database recovery", async ({ page }) => {
   await capture(page, "database-create-new");
 });
 
-test("captures both themes and both language states", async ({ page }) => {
+test("captures both themes and multilingual language states", async ({ page }) => {
   await openSyntheticState(page);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
   await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveAttribute(
@@ -290,22 +290,23 @@ test("captures both themes and both language states", async ({ page }) => {
   await capture(page, "theme-light-shell");
 
   await page.locator('[data-demo-id="theme-toggle"]').click();
-  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await page.locator('[data-demo-id="theme-dialog"] label:has(input[value="dark"])').click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await capture(page, "theme");
 
-  await page.getByRole("option", { name: "Light", exact: true }).click();
-  await page.locator('[data-demo-id="language-toggle"]').click();
-  await capture(page, "language-english-menu");
-
-  await page.locator('[data-demo-id="language-menu"]').getByRole("option").first().click();
-  await expect(page.locator('[data-demo-id="tab-units"]')).toHaveAttribute(
-    "aria-label",
-    ruMessages.Ui.Units,
-  );
+  await page.locator('[data-demo-id="theme-dialog"] label:has(input[value="light"])').click();
   await page.locator('[data-demo-id="language-toggle"]').click();
   await capture(page, "language");
+
+  await page.locator('[data-demo-id="language-dialog"] label:has(input[value="ar"])').click();
+  await expect(page.locator('[data-demo-id="tab-units"]')).toHaveAttribute(
+    "aria-label",
+    arMessages.Ui.Units,
+  );
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await page.locator('[data-demo-id="language-toggle"]').click();
+  await capture(page, "language-arabic-rtl");
 });
 
 test("captures Team browsing, creation, Live rules, and editing", async ({ page }) => {

@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ORG_EDITOR_GRID_SIZE, snapOrgEditorPoint } from "@/lib/org-editor";
-import { createLatestFrameScheduler, createSpatialIndex } from "@/lib/org-editor-interaction";
+import {
+  createLatestFrameScheduler,
+  createSpatialIndex,
+  getUnitPointerSelectionIntent,
+} from "@/lib/org-editor-interaction";
 
 describe("latest Editor interaction frame", () => {
   it("replaces pending samples and flushes only the latest value", () => {
@@ -92,5 +96,24 @@ describe("Editor interaction grid", () => {
   it("preserves 24-unit snapping at gesture commit boundaries", () => {
     expect(ORG_EDITOR_GRID_SIZE).toBe(24);
     expect(snapOrgEditorPoint({ x: 37, y: -35 })).toEqual({ x: 48, y: -24 });
+  });
+});
+
+describe("Editor Unit pointer selection", () => {
+  it("preserves a selected group for drag and defers ordinary click replacement", () => {
+    const selectedUnitIds = new Set(["first", "second"]);
+
+    expect(
+      getUnitPointerSelectionIntent({ clickedUnitId: "first", selectedUnitIds, toggle: false }),
+    ).toEqual({
+      dragUnitIds: ["first", "second"],
+      preserveForPotentialGroupDrag: true,
+    });
+    expect(
+      getUnitPointerSelectionIntent({ clickedUnitId: "third", selectedUnitIds, toggle: false }),
+    ).toEqual({
+      dragUnitIds: ["third"],
+      preserveForPotentialGroupDrag: false,
+    });
   });
 });

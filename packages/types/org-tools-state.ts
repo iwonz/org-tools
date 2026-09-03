@@ -12,7 +12,7 @@ import type {
 } from "./org-editor.js";
 import type { EmployeeCustomFieldFilter, OrganizationEmployee } from "./organization.js";
 
-export type AppLocale = "en" | "ru";
+export type AppLocale = "ar" | "en" | "es" | "fr" | "ru" | "zh";
 export type UiTheme = "light" | "dark" | "system";
 export type UiActiveTab = "units" | "employees" | "orgEditor" | "export" | "analytics" | "calendar";
 

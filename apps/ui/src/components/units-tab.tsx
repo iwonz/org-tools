@@ -331,9 +331,8 @@ export const UnitsTab = observer(() => {
   return (
     <section className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
       <ProductSurface
-        className="grid min-h-0 flex-1"
+        className="grid min-h-0 flex-1 grid-rows-2 md:grid-cols-2 md:grid-rows-1"
         data-demo-id="units-surface"
-        style={{ gridTemplateColumns: "fit-content(70%) minmax(30%, 1fr)" }}
       >
         <div className="flex min-h-0 min-w-0 flex-col bg-muted/25" data-demo-id="units-tree-panel">
           <div className="flex shrink-0 items-start gap-2 p-3" data-demo-id="units-tree-header">
@@ -463,9 +462,22 @@ export const UnitsTab = observer(() => {
           data-demo-id="units-employee-panel"
         >
           <div
-            className="grid shrink-0 gap-2 bg-muted/15 px-3.5 py-4"
+            className="grid shrink-0 gap-2 bg-muted/15 p-3 px-3.5"
             data-demo-id="units-employee-header"
           >
+            <EmployeeSearchInput
+              ariaLabel={t("Search Employees in the selected Unit")}
+              dataDemoId="units-employee-search"
+              filters={employeeSearchFilters}
+              onFiltersChange={(employeeFilters) => store.setUnitsUi({ employeeFilters })}
+              onValueChange={(employeeQuery) => store.setUnitsUi({ employeeQuery })}
+              placeholder={t("Search Employees")}
+              positionButtonDemoId="units-employee-position-filter"
+              positionOptions={units.indexes.positionOptions}
+              positionPopoverDemoId="units-employee-position-popover"
+              tagOptions={units.indexes.tagOptions}
+              value={employeeSearchQuery}
+            />
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
               <nav
@@ -485,45 +497,28 @@ export const UnitsTab = observer(() => {
                   ))}
                 </ol>
               </nav>
-            </div>
-            {hasUnitEmployees && (
-              <div className="grid gap-1" data-demo-id="units-employee-search-column">
-                <EmployeeSearchInput
-                  ariaLabel={t("Search Employees in the selected Unit")}
-                  dataDemoId="units-employee-search"
-                  filters={employeeSearchFilters}
-                  onFiltersChange={(employeeFilters) => store.setUnitsUi({ employeeFilters })}
-                  onValueChange={(employeeQuery) => store.setUnitsUi({ employeeQuery })}
-                  placeholder={t("Search Employees")}
-                  positionButtonDemoId="units-employee-position-filter"
-                  positionOptions={units.indexes.positionOptions}
-                  positionPopoverDemoId="units-employee-position-popover"
-                  tagOptions={units.indexes.tagOptions}
-                  value={employeeSearchQuery}
-                />
-                <div
-                  className="px-1 text-xs text-muted-foreground"
-                  data-demo-id="units-employee-summary"
-                >
-                  <span data-demo-id="units-employee-total-count">
-                    {countText("employees", {
-                      count: sortedDirectEmployees.length + nestedEmployees.length,
-                    })}
-                  </span>
-                  {hasEmployeeSearch && (
-                    <>
-                      {" "}
-                      <span data-demo-id="units-employee-match-count">
-                        ·{" "}
-                        {countText("matches", {
-                          count: filteredDirectEmployees.length + filteredNestedEmployees.length,
-                        })}
-                      </span>
-                    </>
-                  )}
-                </div>
+              <div
+                className="mt-1 text-xs text-muted-foreground"
+                data-demo-id="units-employee-summary"
+              >
+                <span data-demo-id="units-employee-total-count">
+                  {countText("employees", {
+                    count: sortedDirectEmployees.length + nestedEmployees.length,
+                  })}
+                </span>
+                {hasEmployeeSearch && (
+                  <>
+                    {" "}
+                    <span data-demo-id="units-employee-match-count">
+                      ·{" "}
+                      {countText("matches", {
+                        count: filteredDirectEmployees.length + filteredNestedEmployees.length,
+                      })}
+                    </span>
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
           <EmployeeCardList
             actions={(employee) => (

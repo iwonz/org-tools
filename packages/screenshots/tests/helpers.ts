@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-import type { OrgToolsState } from "@org-tools/types";
+import type { AppLocale, OrgToolsState } from "@org-tools/types";
 import { expect, type Page } from "@playwright/test";
 
 export type ImportFilePayload = {
@@ -96,7 +96,7 @@ const emptyDownloadState = (): OrgToolsState["ui"]["download"] => ({
   unitQuery: "",
 });
 
-export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): Promise<string> {
+export async function resetServerState(page: Page, locale: AppLocale = "en"): Promise<string> {
   const port = process.env.ORG_TOOLS_PORT ?? "4273";
   const origin = process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
   const response = await page.request.get("/api/state", {

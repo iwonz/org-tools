@@ -479,6 +479,24 @@
     "Preview truncated at 128 KiB": "Preview truncated at 128 KiB",
     "Source JSON path": "Source JSON path",
     "Org Tools field": "Org Tools field",
-    "Source JSON path for {field}": "Source JSON path for {field}"
+    "Source JSON path for {field}": "Source JSON path for {field}",
+    "Age": "Age",
+    "All Employees": "All Employees",
+    "Average age": "Average age",
+    "Birth years": "Birth years",
+    "Group": "Group",
+    "Men": "Men",
+    "No birth years found": "No birth years found",
+    "Not available": "Not available",
+    "Oldest": "Oldest",
+    "Women": "Women",
+    "Youngest": "Youngest",
+    "Chinese": "Chinese",
+    "Spanish": "Spanish",
+    "French": "French",
+    "Arabic": "Arabic",
+    "Choose interface language": "Choose the interface language.",
+    "Choose interface theme": "Choose the interface appearance.",
+    "Arrange selected": "Arrange selected"
   }
 }

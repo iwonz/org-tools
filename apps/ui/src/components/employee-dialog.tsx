@@ -734,7 +734,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                   <PopoverTrigger asChild>
                     <button
                       aria-label={t("Select Employee tags")}
-                      className="flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent/20 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
+                      className="flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-start text-sm outline-none transition-colors hover:bg-accent/20 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
                       data-demo-id="employee-draft-tag-picker-trigger"
                       type="button"
                     >
@@ -752,7 +752,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                           </span>
                         ))
                       )}
-                      <HiOutlineChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
+                      <HiOutlineChevronDown className="ms-auto size-4 shrink-0 text-muted-foreground" />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent align="start" className="p-0" sideOffset={6}>
@@ -802,10 +802,10 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                               )}
                             </div>
                             <div className="relative">
-                              <HiOutlineBriefcase className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                              <HiOutlineBriefcase className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                               <Input
                                 aria-label={t("Position in Unit {name}", { name: option.label })}
-                                className="pl-9"
+                                className="ps-9"
                                 onChange={(event) =>
                                   updateUnitPosition(unitId, event.currentTarget.value)
                                 }

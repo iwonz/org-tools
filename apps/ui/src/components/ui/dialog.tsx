@@ -58,7 +58,7 @@ function DialogContent({
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
-            className="absolute right-4 top-3 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground active:bg-accent-strong/70 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50"
+            className="absolute end-4 top-3 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground active:bg-accent-strong/70 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50"
             data-slot="dialog-close"
           >
             <HiMiniXMark className="size-5" />
@@ -73,7 +73,7 @@ function DialogContent({
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("grid shrink-0 gap-1.5 bg-card px-5 py-4 pr-16 text-left", className)}
+      className={cn("grid shrink-0 gap-1.5 bg-card px-5 py-4 pe-16 text-start", className)}
       data-slot="dialog-header"
       {...props}
     />

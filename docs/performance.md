@@ -36,7 +36,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid.
 
-Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, a constant-size Tag
+Analytics builds every count group, known birth-year index, and gender age cohort in one Employee
+pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys
+rather than detached Employee arrays. Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, a constant-size Tag
 indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same deterministic tag
 packing, variable row heights, and prefix geometry. Image export measures each included tag once
 with the loaded output font, retains complete multi-line chip layouts, and builds one immutable

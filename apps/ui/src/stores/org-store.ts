@@ -538,9 +538,7 @@ export class OrgStore {
 
     this.analyticsBuildStatus = "building";
     try {
-      const nextAnalytics = buildAnalytics(units.allEmployees, {
-        birthdayEmployeesByKey: units.indexes.birthdayEmployeesByKey,
-      });
+      const nextAnalytics = buildAnalytics(units.allEmployees);
       if (token !== this.analyticsBuildToken || this.uiOrgStructure !== units) return;
       this.analyticsResult = nextAnalytics;
       this.analyticsBuildStatus = "ready";

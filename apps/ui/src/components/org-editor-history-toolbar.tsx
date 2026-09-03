@@ -22,32 +22,30 @@ export function OrgEditorHistoryToolbar({
   const t = useUiText();
   return (
     <div className="flex items-center gap-1" data-demo-id="org-editor-history-toolbar">
-      {canUndo && (
-        <Button
-          aria-label={t("Undo")}
-          className={ACTION_CLASS_NAME}
-          data-demo-id="org-editor-undo-button"
-          onClick={onUndo}
-          size="icon"
-          title={t("Undo")}
-          variant="ghost"
-        >
-          <HiOutlineArrowUturnLeft />
-        </Button>
-      )}
-      {canRedo && (
-        <Button
-          aria-label={t("Redo")}
-          className={ACTION_CLASS_NAME}
-          data-demo-id="org-editor-redo-button"
-          onClick={onRedo}
-          size="icon"
-          title={t("Redo")}
-          variant="ghost"
-        >
-          <HiOutlineArrowUturnRight />
-        </Button>
-      )}
+      <Button
+        aria-label={t("Undo")}
+        className={ACTION_CLASS_NAME}
+        data-demo-id="org-editor-undo-button"
+        disabled={!canUndo}
+        onClick={onUndo}
+        size="icon"
+        title={t("Undo")}
+        variant="ghost"
+      >
+        <HiOutlineArrowUturnLeft />
+      </Button>
+      <Button
+        aria-label={t("Redo")}
+        className={ACTION_CLASS_NAME}
+        data-demo-id="org-editor-redo-button"
+        disabled={!canRedo}
+        onClick={onRedo}
+        size="icon"
+        title={t("Redo")}
+        variant="ghost"
+      >
+        <HiOutlineArrowUturnRight />
+      </Button>
     </div>
   );
 }

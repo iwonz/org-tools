@@ -54,4 +54,62 @@ describe("OrgEditorStore grid geometry", () => {
     store.pasteAt({ x: 333, y: 377 });
     expectUnitsOnGrid(store);
   });
+
+  test("arranges only the selected induced hierarchy in one command", () => {
+    let documentChanges = 0;
+    const store = new OrgEditorStore(() => {
+      documentChanges += 1;
+    });
+    const state = createDefaultOrgEditorState();
+    const root = createOrgEditorUnitFromScratch({ name: "Root", x: 96, y: 96 });
+    const child = createOrgEditorUnitFromScratch({
+      name: "Child",
+      parentId: root.id,
+      x: 624,
+      y: 456,
+    });
+    const unselectedChild = createOrgEditorUnitFromScratch({
+      name: "Unselected child",
+      parentId: child.id,
+      x: 1_200,
+      y: 744,
+    });
+    const outside = createOrgEditorUnitFromScratch({ name: "Outside", x: 2_400, y: 1_200 });
+    store.loadState({ ...state, units: [root, child, unselectedChild, outside] });
+    store.setSelectedItems([
+      { type: "unit", unitId: root.id },
+      { type: "unit", unitId: child.id },
+    ]);
+    const beforeSelected = store.units
+      .filter((unit) => unit.id === root.id || unit.id === child.id)
+      .map(({ id, x, y }) => ({ id, x, y }));
+    const beforeUnselected = store.units
+      .filter((unit) => unit.id === unselectedChild.id || unit.id === outside.id)
+      .map(({ id, x, y }) => ({ id, x, y }));
+    documentChanges = 0;
+
+    store.applyLayoutToUnits([root.id, child.id]);
+
+    expect(documentChanges).toBe(1);
+    expect(store.selectedUnitIds).toEqual(new Set([root.id, child.id]));
+    expect(
+      store.units
+        .filter((unit) => unit.id === unselectedChild.id || unit.id === outside.id)
+        .map(({ id, x, y }) => ({ id, x, y })),
+    ).toEqual(beforeUnselected);
+    expect(
+      store.units
+        .filter((unit) => unit.id === root.id || unit.id === child.id)
+        .map(({ id, x, y }) => ({ id, x, y })),
+    ).not.toEqual(beforeSelected);
+    expectUnitsOnGrid(store);
+
+    store.undo();
+    expect(
+      store.units
+        .filter((unit) => unit.id === root.id || unit.id === child.id)
+        .map(({ id, x, y }) => ({ id, x, y })),
+    ).toEqual(beforeSelected);
+    expect(store.selectedUnitIds).toEqual(new Set([root.id, child.id]));
+  });
 });

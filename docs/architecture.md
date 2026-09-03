@@ -102,6 +102,12 @@ current validated state; if no tab answers, the new tab starts empty. Closing th
 organization data.
 Only locale and theme may remain as browser metadata.
 
+Locale bootstrap accepts `en`, `zh`, `ru`, `es`, `fr`, and `ar`. A valid stored preference is used
+for a new state before the first supported `navigator.languages` entry and the English fallback;
+loaded SQLite, imported, or live-peer state then remains authoritative. The provider owns document
+`lang` and `dir`, local date/number/plural formatting, and one locally bundled Noto Sans family
+member per script. Arabic mirrors the shell and portals while the Editor world layer remains LTR.
+
 Messages include a per-tab origin and logical stamp. Exact parsing, deterministic last-write-wins
 ordering, and origin checks prevent echo loops. Organization updates broadcast full state; UI-only
 updates broadcast the bounded projection. This provides convergence between local tabs, not users,
@@ -141,7 +147,8 @@ Editor JSON and Template use the same formatter and sortable field controls as D
 limiting Employees and assignments to Unit-only or subtree scope.
 
 Both runtimes expose the same Import, Export, language, and theme actions and retain identical
-compact/expanded sidebar geometry.
+compact/expanded sidebar geometry. Language and Theme are independent modal radio selectors rather
+than floating menus.
 The header combines the active section icon and title with effect-registered contextual actions.
 Units registers **Add Unit**; Employees registers **Employee model**, **Tags**, and **Add Employee**;
 Data Download registers **Continue**. Inactive sections unregister without updating the shell during render. Thematic icons
@@ -149,8 +156,9 @@ precede their labels and collapse to an accessible icon-only control with a tool
 screens. Floating non-modal surfaces use one neutral border and restrained shadow; hover and active
 states change tone without changing geometry.
 
-The Units split workflow always shows its indexed hierarchy-name search for a nonempty structure,
-aligns selected-path and roster search controls with Employee avatars, and derives its compact roster count
+The Units split workflow uses equal desktop panes and equal-height mobile rows. It always shows its
+indexed hierarchy-name search for a nonempty structure, aligns both searches on one row, aligns the
+selected path and roster controls with Employee avatars, and derives its compact roster count
 from current membership below search. Direct and descendant Employees keep their existing group
 order inside one contiguous virtualized roster without repeated section headings or counts. Calendar
 day and dated-tag details reuse the virtualized
@@ -160,12 +168,23 @@ its stable Employee list. A selected
 dated tag is stored by normalized key so edits and deletions re-derive current events instead of
 retaining a stale group snapshot. The month grid uses locale-aware weekday order, leading empty
 cells, real weekend tones, a horizontal dated-Tag rail, and one Tag icon/count per occupied date.
+Calendar day titles are assembled from locale parts; Russian omits its abbreviated year suffix.
 
-The Editor keeps pointer and wheel previews outside the MobX structure document. One animation-frame
+Analytics derives birth-year counts and `all`, `male`, and `female` completed-age cohorts in the same
+linear Employee pass as the existing distributions. Missing and `1900` birthdays are excluded.
+Drill-down stores only a stable group/entry key and re-resolves current full Employee cards after an
+edit or deletion.
+
+The Editor omits the shared content header. History controls occupy a dedicated logical-start
+surface; search and canvas commands occupy the logical end and mirror around the LTR world in
+Arabic. The Editor keeps pointer and wheel previews outside the MobX structure document. One animation-frame
 scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce
 performs the single snapped command and persistence observation. A geometry-keyed spatial index
 limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
 document geometry changes.
+Dragging an already selected Unit past the movement threshold preserves the whole selection.
+Selected-only Arrange lays out the induced selected hierarchy, keeps its center, avoids unselected
+bounds, and commits one snapped history operation without moving other Units.
 
 The Editor always presents the current Unit structure. It has no View selector, View-local Employee
 copies, alternate structure documents, or View lifecycle. Data Download uses the same current

@@ -15,7 +15,7 @@ requests.
 | :---: | :---: |
 | [![State import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct state export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
 | Theme | Language |
-| [![Dark theme menu](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) | [![Russian language menu](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) |
+| [![Dark theme dialog](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) | [![Six-language selector](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) |
 | Teams | Employees |
 | [![Populated Teams](docs/screenshots/demo-teams.png)](docs/screenshots/demo-teams.png) | [![Searchable Employee catalog](docs/screenshots/demo-employees.png)](docs/screenshots/demo-employees.png) |
 | Editor | Analytics |
@@ -33,9 +33,16 @@ Tag catalog with semantic colors. Custom fields participate in forms, filters, E
 structured JSON, and Template output. The Calendar uses locale-aware weeks, weekend tones, a
 compact dated-Tag rail, and direct Today navigation when browsing another month.
 
+The complete interface is bundled in English, Simplified Chinese, Russian, Spanish, French, and
+Modern Standard Arabic. New in-memory states follow the first supported browser language, Arabic
+mirrors the application shell through RTL, and language plus theme are selected in compact modal
+dialogs. No font or translation asset is loaded from the network.
+
 Data Download and Editor JSON export use one drag-sortable field list: scalar Employee fields,
 Units, and Tags appear in their exact output order. Editor Image export keeps a compact inline
 preview with localized boss text and no secondary image viewer.
+Analytics includes known birth-year distributions plus average, youngest, and oldest age summaries
+for the whole catalog, men, and women; unknown `1900` years are excluded.
 Template formats in Data Download and Editor export accept `@` to insert documented `{token}` values
 at the caret. If a local SQLite database cannot open, explicit recovery preserves its file family as
 a timestamped backup before creating a blank current-schema database.

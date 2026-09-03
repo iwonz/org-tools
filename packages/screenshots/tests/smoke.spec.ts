@@ -5,6 +5,7 @@ import type { OrgToolsState } from "@org-tools/types";
 import type { Locator, Page, Request } from "@playwright/test";
 import sharp from "sharp";
 
+import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import {
   expectLocalRequestsOnly,
@@ -235,6 +236,19 @@ async function expectStablePressedGeometry(locator: Locator) {
   expect(pressed).toEqual(before);
   expect(pressed.transform).toBe("none");
   expect(pressed.translate).toBe("none");
+}
+
+async function selectDialogRadio(
+  page: Page,
+  triggerId: "language-toggle" | "theme-toggle",
+  dialogId: "language-dialog" | "theme-dialog",
+  value: string,
+) {
+  await page.locator(`[data-demo-id="${triggerId}"]`).click();
+  const dialog = page.locator(`[data-demo-id="${dialogId}"]`);
+  await expect(dialog).toBeVisible();
+  await dialog.locator(`label:has(input[type="radio"][value="${value}"])`).click();
+  await expect(dialog).toBeHidden();
 }
 
 test("shows one centered icon-only loader while loading initial state", async ({ page }) => {
@@ -679,7 +693,7 @@ async function expectUniformUiFont(page: Page) {
       Array.from(new Set(elements.map((element) => window.getComputedStyle(element).fontFamily))),
     );
   expect(families.length).toBeGreaterThan(0);
-  expect(families.every((family) => family.startsWith("Inter"))).toBe(true);
+  expect(families.every((family) => family.startsWith('"Noto Sans'))).toBe(true);
 }
 
 async function expectFullBleedProductSurface(surface: Locator) {
@@ -728,7 +742,6 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
 
-  await expect(page.locator('[data-demo-id="app-header"]')).toHaveCSS("border-bottom-width", "0px");
   await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveCSS("border-right-width", "0px");
 
   const header = page.locator('[data-demo-id="app-header"]');
@@ -737,16 +750,12 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
   const actions = page.locator('[data-demo-id="sidebar-actions"]');
   await expect(sidebar.locator('[data-demo-id="product-navigation"]')).toHaveCount(1);
   await expect(sidebar.locator('[data-demo-id="sidebar-actions"]')).toHaveCount(1);
-  await expect(header.locator('[data-demo-id="product-navigation"]')).toHaveCount(0);
-  await expect(header.locator('[data-demo-id="sidebar-actions"]')).toHaveCount(0);
-  await expect(header.getByRole("img", { name: "Org Tools", exact: true })).toHaveCount(0);
+  await expect(header).toHaveCount(0);
   await expect(page.locator('[data-demo-id="brand-wordmark"]')).toHaveCount(0);
   await expect(sidebar.getByText("Org Tools", { exact: true })).toHaveCount(0);
   await expect(page.locator('[data-demo-id="sidebar-header"] svg')).toHaveCount(1);
-  await expect(page.locator('[data-demo-id="app-title"]')).toHaveText("Editor");
-  await expect(header).toHaveCSS("box-shadow", "none");
+  await expect(page.locator('[data-demo-id="app-title"]')).toHaveCount(0);
   await expect(sidebar).toHaveCSS("box-shadow", "none");
-  expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
   const navigationBox = await navigation.boundingBox();
   const actionsBox = await actions.boundingBox();
   expect(navigationBox).not.toBeNull();
@@ -761,28 +770,21 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
     "document-arrow-down",
   );
   await page.locator('[data-demo-id="theme-toggle"]').click();
-  const themeMenu = page.locator('[data-demo-id="theme-menu"]');
-  await expect(themeMenu).toHaveCSS("border-width", "1px");
-  expect(
-    await themeMenu.evaluate((element) => {
-      const style = window.getComputedStyle(element);
-      return style.borderColor !== style.backgroundColor;
-    }),
-  ).toBe(true);
-  const darkThemeOption = page.getByRole("option", { name: "Dark", exact: true });
+  const themeDialog = page.locator('[data-demo-id="theme-dialog"]');
+  await expect(themeDialog).toBeVisible();
+  const darkThemeOption = themeDialog.locator('label:has(input[value="dark"])');
   await expectStableHoverGeometry(darkThemeOption);
-  await darkThemeOption.click();
+  await themeDialog.locator('label:has(input[value="dark"])').click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expectSidebarNavigation(page, 64);
   await expectSidebarActions(page);
   await page.locator('[data-demo-id="theme-toggle"]').click();
-  await expect(themeMenu).toHaveCSS("border-width", "1px");
-  await page.getByRole("option", { name: "Light", exact: true }).click();
+  await expect(themeDialog).toBeVisible();
+  await themeDialog.locator('label:has(input[value="light"])').click();
   await page.locator('[data-demo-id="language-toggle"]').click();
-  await expect(page.locator('[data-demo-id="language-menu"]')).toHaveCSS("border-width", "1px");
-  await expectStableHoverGeometry(
-    page.locator('[data-demo-id="language-menu"]').getByRole("option").first(),
-  );
+  const languageDialog = page.locator('[data-demo-id="language-dialog"]');
+  await expect(languageDialog).toBeVisible();
+  await expectStableHoverGeometry(languageDialog.locator('label:has(input[type="radio"])').first());
   await page.keyboard.press("Escape");
   await expectStablePressedGeometry(page.locator('[data-demo-id="tab-units"]'));
   await expectUniformUiFont(page);
@@ -857,6 +859,7 @@ test("keeps interaction cues accessible with reduced motion", async ({ page }) =
 test("contains the collapsible sidebar at narrow and desktop widths", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openBlankState(page);
+  await page.locator('[data-demo-id="tab-employees"]').click();
 
   const header = page.locator('[data-demo-id="app-header"]');
   const sidebar = page.locator('[data-demo-id="app-sidebar"]');
@@ -1046,7 +1049,7 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
     shell: "oklch(97.5% .004 245)",
     signal: "oklch(53% .095 240)",
   });
-  expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
+  await expect(header).toHaveCount(0);
   await expectTransparentBackground(page.locator('[data-demo-id="top-level-empty-state"]'));
 
   await replaceWithSyntheticState(page);
@@ -1058,7 +1061,11 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   const surfaces = [
     ["tab-units", '[data-demo-id="units-surface"]', ['[data-demo-id="units-employee-header"]']],
     ["tab-employees", '[data-demo-id="employees-surface"]', ['[data-demo-id="employees-search"]']],
-    ["tab-analytics", '[data-demo-id="analytics-surface"]', ['[data-demo-id="analytics-header"]']],
+    [
+      "tab-analytics",
+      '[data-demo-id="analytics-surface"]',
+      ['[data-demo-id="analytics-scroll-area"]'],
+    ],
     ["tab-calendar", '[data-demo-id="calendar-tab"]', ['[data-demo-id="calendar-header"]']],
     [
       "tab-export",
@@ -1072,11 +1079,13 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
 
   for (const [tabDemoId, selector, leadingSelectors] of surfaces) {
     await page.locator(`[data-demo-id="${tabDemoId}"]`).click();
+    await expect(header).toBeVisible();
+    expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
     const surface = page.locator(selector);
     await expectFullBleedProductSurface(surface);
     const surfaceBox = await surface.boundingBox();
     expect(surfaceBox).not.toBeNull();
-    expect(Math.abs((surfaceBox?.y ?? 0) - (editorCanvasBox?.y ?? 0))).toBeLessThanOrEqual(1);
+    expect(Math.abs((surfaceBox?.y ?? 0) - (editorCanvasBox?.y ?? 0) - 64)).toBeLessThanOrEqual(1);
     expect(Math.abs((surfaceBox?.x ?? 0) - (editorCanvasBox?.x ?? 0))).toBeLessThanOrEqual(1);
     expect(Math.abs((surfaceBox?.width ?? 0) - (editorCanvasBox?.width ?? 0))).toBeLessThanOrEqual(
       1,
@@ -1087,6 +1096,7 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   }
 
   await page.locator('[data-demo-id="tab-org-editor"]').click();
+  await expect(header).toHaveCount(0);
   const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
   expect(await getBackgroundColor(canvas)).not.toBe(lightShellBackground);
   expect(await getBackgroundColor(canvas)).not.toBe("rgba(0, 0, 0, 0)");
@@ -1096,8 +1106,7 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   await expect(employeeCard).toBeVisible();
   await expectTransparentBackground(employeeCard);
 
-  await page.locator('[data-demo-id="theme-toggle"]').click();
-  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");
   await expect(page.locator("html")).toHaveClass(/dark/);
   const darkShellBackground = await getBackgroundColor(shell);
   const darkInteractionTokens = await shell.evaluate((element) => {
@@ -1505,6 +1514,7 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   ).toBeLessThanOrEqual(16);
 
   const unitEmployeeSearch = page.locator('[data-demo-id="units-employee-search"]');
+  const unitTreeSearch = page.locator('[data-demo-id="units-tree-header"]').getByRole("searchbox");
   const unitBreadcrumbs = page.locator('[data-demo-id="units-selected-path"]');
   const unitEmployeeAvatar = page.locator('[data-demo-id="unit-employee-card"] > span').first();
   const [unitSearchBox, breadcrumbsBox, employeeAvatarBox] = await Promise.all([
@@ -1515,6 +1525,12 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   expect(unitSearchBox).not.toBeNull();
   expect(breadcrumbsBox).not.toBeNull();
   expect(employeeAvatarBox).not.toBeNull();
+  expect((await unitTreeSearch.boundingBox())?.y).toBeCloseTo(unitSearchBox?.y ?? 0, 0);
+  const [treePanelBox, employeePanelBox] = await Promise.all([
+    page.locator('[data-demo-id="units-tree-panel"]').boundingBox(),
+    page.locator('[data-demo-id="units-employee-panel"]').boundingBox(),
+  ]);
+  expect(treePanelBox?.width).toBeCloseTo(employeePanelBox?.width ?? 0, 0);
   expect(Math.abs((unitSearchBox?.x ?? 0) - (employeeAvatarBox?.x ?? 0))).toBeLessThanOrEqual(1);
   expect(Math.abs((breadcrumbsBox?.x ?? 0) - (employeeAvatarBox?.x ?? 0))).toBeLessThanOrEqual(1);
   await expect(page.getByText("Direct Employees", { exact: true })).toHaveCount(0);
@@ -1682,12 +1698,14 @@ test("renders tonal content-sized Analytics groups with working drill-down", asy
   await openBlankState(page);
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
+  await expect(page.locator('[data-demo-id="app-title"]')).toHaveText("Analytics");
+  await expect(page.locator('[data-demo-id="analytics-tab"] h1')).toHaveCount(0);
+  await expect(page.getByText(/Employees in the.*Units/u)).toHaveCount(0);
 
-  const analyticsHeader = page.locator('[data-demo-id="analytics-header"]');
-  await expectNoHorizontalRule(analyticsHeader);
+  await expect(page.locator('[data-demo-id="analytics-header"]')).toHaveCount(0);
   const analyticsSurface = page.locator('[data-demo-id="analytics-surface"]');
   await expectFullBleedProductSurface(analyticsSurface);
-  await expectContainedBy(analyticsSurface, analyticsHeader);
+  await expectContainedBy(analyticsSurface, page.locator('[data-demo-id="analytics-scroll-area"]'));
   expect(
     await page.locator('[data-demo-id="analytics-grid"]').evaluate((element) => {
       const style = window.getComputedStyle(element);
@@ -1737,13 +1755,27 @@ test("renders tonal content-sized Analytics groups with working drill-down", asy
   await positions.locator('[data-demo-id="analytics-positions-view-button"]').first().click();
   const drillDown = page.locator('[data-demo-id="analytics-employees-dialog"]');
   await expect(drillDown).toBeVisible();
+  const drillDownCard = drillDown.locator("article").first();
+  await expect(drillDownCard.locator("[data-employee-card-actions] button")).toHaveCount(3);
+  await expect(drillDownCard.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(drillDownCard.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+  await drillDown.getByRole("button", { name: "Close", exact: true }).click();
+
+  const ageSummary = page.locator('[data-demo-id="analytics-age-summary"]');
+  await expect(ageSummary).toContainText("34.7");
+  await expect(ageSummary).toContainText("33.5");
+  await expect(ageSummary).toContainText("Morgan Park");
+  await expect(ageSummary).toContainText("Riley Chen");
+  const birthYears = page.locator('[data-demo-id="analytics-birthday-years"]');
+  await expect(birthYears).toHaveAttribute("data-analytics-entry-count", "3");
+  await birthYears.locator('[data-demo-id="analytics-birthday-years-view-button"]').first().click();
+  await expect(drillDown).toBeVisible();
   await drillDown.getByRole("button", { name: "Close", exact: true }).click();
 
   const duplicates = page.locator('[data-demo-id="analytics-full-name-duplicates"]');
   await expect(duplicates).toHaveAttribute("data-analytics-visible-rows", "0");
   await expect(duplicates).toHaveCSS("height", "148px");
-  await page.locator('[data-demo-id="theme-toggle"]').click();
-  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");
   await expect(page.locator("html")).toHaveClass(/dark/);
   expect(await getBackgroundColor(positions.locator("thead"))).toBe(
     await getBackgroundColor(positions),
@@ -1751,13 +1783,14 @@ test("renders tonal content-sized Analytics groups with working drill-down", asy
   await assertLocalRequests();
 });
 
-test("renders surfaced Org Editor controls and reveals search to the right", async ({ page }) => {
+test("renders split Org Editor controls and reveals search to the left", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
 
   const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
+  const historyActions = page.locator('[data-demo-id="org-editor-history-actions"]');
   const topActions = page.locator('[data-demo-id="org-editor-actions"]');
   const viewportActions = page.locator('[data-demo-id="org-editor-viewport-actions"]');
   const topStyle = await topActions.evaluate((element) => {
@@ -1808,9 +1841,13 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await expect(topActions.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
   expect(
     await topActions.evaluate(
-      (element) => element.lastElementChild?.getAttribute("data-demo-id") ?? null,
+      (element) => element.firstElementChild?.getAttribute("data-demo-id") ?? null,
     ),
   ).toBe("org-editor-search");
+  expect((await historyActions.boundingBox())?.height).toBeCloseTo(
+    (await viewportActions.boundingBox())?.height ?? 0,
+    0,
+  );
   expect(
     new Set(
       await topActions
@@ -1905,9 +1942,39 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
 
   const canvasBox = await canvas.boundingBox();
   const topActionsBox = await topActions.boundingBox();
+  const historyActionsBox = await historyActions.boundingBox();
   expect(canvasBox).not.toBeNull();
   expect(topActionsBox).not.toBeNull();
-  expect(Math.abs((topActionsBox?.x ?? 0) - (canvasBox?.x ?? 0) - 12)).toBeLessThanOrEqual(1);
+  expect(historyActionsBox).not.toBeNull();
+  const sidebar = page.locator('[data-demo-id="app-sidebar"]');
+  expect(
+    Number.parseInt(
+      await sidebar.evaluate((element) => window.getComputedStyle(element).zIndex),
+      10,
+    ),
+  ).toBeGreaterThan(
+    Number.parseInt(
+      await topActions.evaluate((element) => window.getComputedStyle(element).zIndex),
+      10,
+    ),
+  );
+  const compactEditorTab = page.locator('[data-demo-id="tab-org-editor"]');
+  await compactEditorTab.hover();
+  const compactEditorTooltip = compactEditorTab.getByRole("tooltip");
+  await expect(compactEditorTooltip).toHaveCSS("opacity", "1");
+  const tooltipBox = await compactEditorTooltip.boundingBox();
+  expect(tooltipBox).not.toBeNull();
+  expect(tooltipBox?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect((tooltipBox?.x ?? 0) + (tooltipBox?.width ?? 0)).toBeLessThanOrEqual(1280);
+  expect(Math.abs((historyActionsBox?.x ?? 0) - (canvasBox?.x ?? 0) - 12)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      (topActionsBox?.x ?? 0) +
+        (topActionsBox?.width ?? 0) -
+        ((canvasBox?.x ?? 0) + (canvasBox?.width ?? 0)) +
+        12,
+    ),
+  ).toBeLessThanOrEqual(1);
 
   const searchButton = page.locator('[data-demo-id="org-editor-search-button"]');
   await searchButton.click();
@@ -1924,9 +1991,7 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   ]);
   expect(buttonBox).not.toBeNull();
   expect(inputBox).not.toBeNull();
-  expect(inputBox?.x ?? 0).toBeGreaterThanOrEqual(
-    (buttonBox?.x ?? 0) + (buttonBox?.width ?? 0) - 1,
-  );
+  expect((inputBox?.x ?? 0) + (inputBox?.width ?? 0)).toBeLessThanOrEqual((buttonBox?.x ?? 0) + 1);
   await searchInput.fill("Product");
   await expect(page.locator('[data-demo-id="org-editor-search-results"]')).toBeVisible();
   await searchButton.click();
@@ -1936,8 +2001,26 @@ test("renders surfaced Org Editor controls and reveals search to the right", asy
   await expect(searchInput).toHaveValue("");
   await expect(page.locator('[data-demo-id="org-editor-search-results"]')).toHaveCount(0);
 
-  await page.locator('[data-demo-id="theme-toggle"]').click();
-  await page.getByRole("option", { name: "Dark", exact: true }).click();
+  const platformUnit = page.locator(
+    '[data-org-editor-unit-id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"]',
+  );
+  await platformUnit.click({ modifiers: ["Control"], position: { x: 72, y: 64 } });
+  await expect(editorUnit).toHaveClass(/border-signal/u);
+  await expect(platformUnit).toHaveClass(/border-signal/u);
+  await expect(editorCommand).toHaveText("Arrange selected");
+  const dragBox = await editorUnit.boundingBox();
+  if (!dragBox) throw new Error("Selected Editor Unit is unavailable for group drag.");
+  await page.mouse.move(dragBox.x + 72, dragBox.y + 64);
+  await page.mouse.down();
+  await page.mouse.move(dragBox.x + 120, dragBox.y + 112, { steps: 8 });
+  await page.mouse.up();
+  await expect(editorUnit).toHaveClass(/border-signal/u);
+  await expect(platformUnit).toHaveClass(/border-signal/u);
+  await editorCommand.click();
+  await expect(editorUnit).toHaveClass(/border-signal/u);
+  await expect(platformUnit).toHaveClass(/border-signal/u);
+
+  await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expectSidebarNavigation(page, 64);
   const darkTopBackground = await getBackgroundColor(topActions);
@@ -2513,17 +2596,27 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   expect(layout.gridRight).toBeLessThanOrEqual(layout.scrollRight);
   expect(layout.gridBottom).toBeLessThanOrEqual(layout.scrollBottom);
 
-  await page.locator('[data-demo-id="language-toggle"]').click();
-  await page.locator('[data-demo-id="language-menu"]').getByRole("option").first().click();
-  await navigation.getByRole("button").last().click();
+  await selectDialogRadio(page, "language-toggle", "language-dialog", "ru");
+  await expect(
+    navigation.getByRole("button", { name: ruMessages.Ui.Previous, exact: true }),
+  ).toBeVisible();
+  await expect(
+    navigation.getByRole("button", { name: ruMessages.Ui.Next, exact: true }),
+  ).toBeVisible();
+  await page.locator('[data-calendar-date="2026-07-22"]').click();
+  const localizedDayDialog = page.getByRole("dialog").last();
+  await expect(localizedDayDialog.locator('[data-slot="dialog-title"]')).not.toContainText(
+    "\u0433.",
+  );
+  await localizedDayDialog.getByRole("button", { name: ruMessages.Ui.Close, exact: true }).click();
+  await navigation.getByRole("button", { name: ruMessages.Ui.Next, exact: true }).click();
   const localizedMonthTitle = (
     await page.locator('[data-demo-id="calendar-month-title"]').textContent()
   )?.trim();
   expect(localizedMonthTitle?.split(/\s+/u)).toHaveLength(2);
   expect(localizedMonthTitle?.endsWith("2026")).toBe(true);
-  await navigation.getByRole("button").first().click();
-  await page.locator('[data-demo-id="language-toggle"]').click();
-  await page.locator('[data-demo-id="language-menu"]').getByRole("option").nth(1).click();
+  await navigation.getByRole("button", { name: ruMessages.Ui.Previous, exact: true }).click();
+  await selectDialogRadio(page, "language-toggle", "language-dialog", "en");
   await expect(navigation).toContainText("July 2026");
 
   for (let index = 0; index < 6; index += 1) {

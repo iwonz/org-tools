@@ -53,7 +53,7 @@ function AlertDialogContent({
 function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("grid gap-1.5 bg-card px-5 py-4 text-left", className)}
+      className={cn("grid gap-1.5 bg-card px-5 py-4 text-start", className)}
       data-slot="alert-dialog-header"
       {...props}
     />

@@ -62,7 +62,7 @@ function SidebarTooltip({ children, collapsed }: { children: ReactNode; collapse
   return (
     <span
       className={cn(
-        "pointer-events-none absolute left-[calc(100%+0.625rem)] top-1/2 z-[70] block -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-[0_8px_20px_-16px_rgb(0_0_0/0.55)] transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 lg:hidden",
+        "sidebar-compact-tooltip pointer-events-none absolute top-1/2 z-10 block -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-[0_8px_20px_-16px_rgb(0_0_0/0.55)] transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 lg:hidden",
         collapsed && "lg:block",
       )}
       role="tooltip"
@@ -77,7 +77,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
   const t = useUiText();
   const messageText = useMessageText();
   const runtime = useStateRuntime();
-  const { setLocale } = useAppLocale();
+  const { locale, setLocale } = useAppLocale();
   const { setTheme } = useTheme();
   const [importOpen, setImportOpen] = useState(false);
   const [importState, setImportState] = useState<OrgToolsState | null>(null);
@@ -118,6 +118,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
       >
         <Tabs
           className="min-h-0 min-w-0 flex-1 flex-row"
+          dir={locale === "ar" ? "rtl" : "ltr"}
           onValueChange={(value) => {
             if (
               value === "units" ||
@@ -135,7 +136,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
         >
           <aside
             className={cn(
-              "relative z-30 flex h-full w-16 shrink-0 flex-col overflow-visible bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out motion-reduce:transition-none lg:w-60",
+              "relative z-40 flex h-full w-16 shrink-0 flex-col overflow-visible bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out motion-reduce:transition-none lg:w-60",
               sidebarCollapsed && "lg:w-16",
             )}
             data-collapsed={sidebarCollapsed ? "true" : "false"}
@@ -260,50 +261,52 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
             </div>
           </aside>
           <section className="flex min-w-0 flex-1 flex-col bg-background" data-demo-id="content">
-            <header
-              className="relative z-20 flex h-16 shrink-0 items-center gap-3 bg-background/96 px-5 backdrop-blur-sm"
-              data-demo-id="app-header"
-            >
-              <ActiveNavigationIcon className="size-5 text-muted-foreground" />
-              <h1 className="truncate text-base font-semibold" data-demo-id="app-title">
-                {t(activeNavigationItem.label)}
-              </h1>
-              <div
-                className="ml-auto flex min-h-9 min-w-9 shrink-0 items-center justify-end gap-2"
-                data-demo-id="context-header-action-slot"
+            {store.activeTab !== "orgEditor" && (
+              <header
+                className="relative z-20 flex h-16 shrink-0 items-center gap-3 bg-background/96 px-5 backdrop-blur-sm"
+                data-demo-id="app-header"
               >
-                {contextHeaderActions.map((contextHeaderAction) => {
-                  const ContextHeaderActionIcon = contextHeaderAction.icon;
-                  return (
-                    <div className="group relative flex" key={contextHeaderAction.id}>
-                      <Button
-                        aria-label={contextHeaderAction.label}
-                        className="size-9 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
-                        data-demo-id={contextHeaderAction.dataDemoId}
-                        disabled={contextHeaderAction.disabled}
-                        onClick={contextHeaderAction.onClick}
-                        title={contextHeaderAction.label}
-                        type="button"
-                      >
-                        {contextHeaderAction.iconPlacement !== "trailing" && (
-                          <ContextHeaderActionIcon className="size-4" />
-                        )}
-                        <span className="hidden sm:inline">{contextHeaderAction.label}</span>
-                        {contextHeaderAction.iconPlacement === "trailing" && (
-                          <ContextHeaderActionIcon className="size-4" />
-                        )}
-                      </Button>
-                      <span
-                        className="pointer-events-none absolute right-0 top-11 z-30 hidden whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background group-focus-within:block group-hover:block sm:!hidden"
-                        role="tooltip"
-                      >
-                        {contextHeaderAction.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </header>
+                <ActiveNavigationIcon className="size-5 text-muted-foreground" />
+                <h1 className="truncate text-base font-semibold" data-demo-id="app-title">
+                  {t(activeNavigationItem.label)}
+                </h1>
+                <div
+                  className="ms-auto flex min-h-9 min-w-9 shrink-0 items-center justify-end gap-2"
+                  data-demo-id="context-header-action-slot"
+                >
+                  {contextHeaderActions.map((contextHeaderAction) => {
+                    const ContextHeaderActionIcon = contextHeaderAction.icon;
+                    return (
+                      <div className="group relative flex" key={contextHeaderAction.id}>
+                        <Button
+                          aria-label={contextHeaderAction.label}
+                          className="size-9 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
+                          data-demo-id={contextHeaderAction.dataDemoId}
+                          disabled={contextHeaderAction.disabled}
+                          onClick={contextHeaderAction.onClick}
+                          title={contextHeaderAction.label}
+                          type="button"
+                        >
+                          {contextHeaderAction.iconPlacement !== "trailing" && (
+                            <ContextHeaderActionIcon className="size-4" />
+                          )}
+                          <span className="hidden sm:inline">{contextHeaderAction.label}</span>
+                          {contextHeaderAction.iconPlacement === "trailing" && (
+                            <ContextHeaderActionIcon className="size-4" />
+                          )}
+                        </Button>
+                        <span
+                          className="pointer-events-none absolute end-0 top-11 z-30 hidden whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background group-focus-within:block group-hover:block sm:!hidden"
+                          role="tooltip"
+                        >
+                          {contextHeaderAction.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </header>
+            )}
             {error && (
               <div
                 className="shrink-0 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive"
@@ -360,7 +363,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
       </main>
       {runtime.error && (
         <div
-          className="fixed bottom-5 right-5 z-[80] flex items-center gap-3 rounded-md border border-border/80 bg-popover px-3 py-2 text-sm text-popover-foreground"
+          className="fixed bottom-5 end-5 z-[80] flex items-center gap-3 rounded-md border border-border/80 bg-popover px-3 py-2 text-sm text-popover-foreground"
           data-demo-id="state-write-error"
           role="alert"
         >

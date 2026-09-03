@@ -25,6 +25,24 @@ export type SpatialQueryResult<T> = {
   items: T[];
 };
 
+export const getUnitPointerSelectionIntent = <T extends string>({
+  clickedUnitId,
+  selectedUnitIds,
+  toggle,
+}: {
+  clickedUnitId: T;
+  selectedUnitIds: ReadonlySet<T>;
+  toggle: boolean;
+}) => {
+  const preserveForPotentialGroupDrag =
+    !toggle && selectedUnitIds.has(clickedUnitId) && selectedUnitIds.size > 1;
+
+  return {
+    dragUnitIds: preserveForPotentialGroupDrag ? [...selectedUnitIds] : [clickedUnitId],
+    preserveForPotentialGroupDrag,
+  };
+};
+
 export const createSpatialIndex = <T>(
   items: readonly T[],
   getRect: (item: T) => SpatialRect,

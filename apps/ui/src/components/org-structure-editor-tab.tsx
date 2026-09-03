@@ -60,6 +60,7 @@ import { EmployeeSourcePicker } from "@/components/employee-source-picker";
 import { EmployeeTagPickerPanel } from "@/components/employee-tag-picker";
 import { EmployeeTags } from "@/components/employee-tags";
 import { HighlightedText } from "@/components/highlighted-text";
+import { useAppLocale } from "@/components/locale-provider";
 import { MiddleDot } from "@/components/middle-dot";
 import { OrgEditorExportDialog } from "@/components/org-editor-export-dialog";
 import { OrgEditorHistoryToolbar } from "@/components/org-editor-history-toolbar";
@@ -125,7 +126,11 @@ import {
   type OrgEditorUnitEmployeeSummary,
   setOrgEditorUnitEmployeeRowHeights,
 } from "@/lib/org-editor";
-import { createLatestFrameScheduler, createSpatialIndex } from "@/lib/org-editor-interaction";
+import {
+  createLatestFrameScheduler,
+  createSpatialIndex,
+  getUnitPointerSelectionIntent,
+} from "@/lib/org-editor-interaction";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { cn } from "@/lib/utils";
@@ -189,6 +194,7 @@ type DragState =
     }
   | {
       historySnapshot: OrgEditorHistorySnapshot;
+      selectOnClick: OrgEditorSelectedItem | null;
       selectedUnitIds: OrgEditorUnitId[];
       startCanvasPoint: CanvasPoint;
       startUnitPositions: Array<{ unitId: OrgEditorUnitId; x: number; y: number }>;
@@ -787,14 +793,6 @@ function OrgEditorSearchControl({
       onPointerDown={(event) => event.stopPropagation()}
       ref={rootRef}
     >
-      <OrgEditorToolbarButton
-        ariaLabel={open ? t("Hide search") : t("Search canvas")}
-        dataDemoId="org-editor-search-button"
-        onClick={() => onOpenChange(!open)}
-        title={t("Search canvas")}
-      >
-        <HiOutlineMagnifyingGlass />
-      </OrgEditorToolbarButton>
       <div
         className={cn(
           "grid overflow-hidden transition-all duration-200 ease-out",
@@ -805,7 +803,7 @@ function OrgEditorSearchControl({
         <div className="relative min-w-0">
           <Input
             aria-label={t("Search the Org Editor canvas")}
-            className="h-9 rounded-md border-input bg-background pr-9 shadow-none focus-visible:ring-inset"
+            className="h-9 rounded-md border-input bg-background pe-9 shadow-none focus-visible:ring-inset"
             data-demo-id="org-editor-search-input"
             onChange={(event) => onQueryChange(event.currentTarget.value)}
             placeholder={t("Unit or Employee")}
@@ -815,7 +813,7 @@ function OrgEditorSearchControl({
           {query.length > 0 && (
             <Button
               aria-label={t("Clear search")}
-              className="absolute right-1 top-1 size-7 p-0"
+              className="absolute end-1 top-1 size-7 p-0"
               onClick={() => onQueryChange("")}
               size="icon"
               type="button"
@@ -826,9 +824,17 @@ function OrgEditorSearchControl({
           )}
         </div>
       </div>
+      <OrgEditorToolbarButton
+        ariaLabel={open ? t("Hide search") : t("Search canvas")}
+        dataDemoId="org-editor-search-button"
+        onClick={() => onOpenChange(!open)}
+        title={t("Search canvas")}
+      >
+        <HiOutlineMagnifyingGlass />
+      </OrgEditorToolbarButton>
       {open && hasQuery && (
         <div
-          className="absolute right-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
+          className="absolute end-0 top-11 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-md border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
           data-demo-id="org-editor-search-results"
         >
           {results.length === 0 ? (
@@ -840,7 +846,7 @@ function OrgEditorSearchControl({
 
                 return (
                   <button
-                    className="grid w-full min-w-0 cursor-pointer gap-1 rounded-sm px-2 py-2 text-left outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
+                    className="grid w-full min-w-0 cursor-pointer gap-1 rounded-sm px-2 py-2 text-start outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
                     key={result.id}
                     onClick={() => onSelectResult(result)}
                     type="button"
@@ -861,7 +867,7 @@ function OrgEditorSearchControl({
                       </span>
                     </span>
                     {result.type === "employee" ? (
-                      <span className="grid min-w-0 gap-0.5 pl-[4.5rem] text-xs text-muted-foreground">
+                      <span className="grid min-w-0 gap-0.5 ps-[4.5rem] text-xs text-muted-foreground">
                         <span className="min-w-0 truncate">
                           <HighlightedText queryTokens={queryTokens} text={unitName} />
                         </span>
@@ -956,6 +962,7 @@ function OrgEditorNode({
   onUnitPointerDown,
   selectedItemKeySet,
   summary,
+  textDirection,
   unit,
   visibleWorldRect,
 }: {
@@ -984,6 +991,7 @@ function OrgEditorNode({
   onUnitPointerDown: (event: React.PointerEvent<HTMLFieldSetElement>, unit: OrgEditorUnit) => void;
   selectedItemKeySet: ReadonlySet<string>;
   summary: OrgEditorUnitEmployeeSummary;
+  textDirection: "ltr" | "rtl";
   unit: OrgEditorUnit;
   visibleWorldRect: CanvasRect;
 }) {
@@ -1046,6 +1054,7 @@ function OrgEditorNode({
       data-org-editor-unit-id={unit.id}
       data-org-editor-rendered-employee-count={renderedEmployeeRows.length}
       data-org-editor-total-employee-count={visibleEmployeeIds.length}
+      dir={textDirection}
       onContextMenu={(event) => onUnitContextMenu(event, unit)}
       onDoubleClick={(event) => onUnitDoubleClick(event, unit)}
       onPointerDown={(event) => onUnitPointerDown(event, unit)}
@@ -1168,7 +1177,7 @@ function OrgEditorNode({
               return (
                 <button
                   className={cn(
-                    "flex min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-left text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
+                    "flex min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-start text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
                     unit.liveFilter === null
                       ? "cursor-grab active:cursor-grabbing"
                       : "cursor-default",
@@ -1221,7 +1230,7 @@ function OrgEditorNode({
                     )}
                   </span>
                   <span
-                    className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pr-1"
+                    className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pe-1"
                     data-org-editor-employee-content
                   >
                     <span className="truncate">
@@ -1592,6 +1601,8 @@ function AddEmployeesDialog({
 
 export const OrgStructureEditorTab = observer(() => {
   const t = useUiText();
+  const { locale } = useAppLocale();
+  const textDirection = locale === "ar" ? "rtl" : "ltr";
   const countText = useCountText();
   const format = useAppFormatter();
   const store = useOrgStore();
@@ -2442,6 +2453,10 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if (currentDragState.type === "unit") {
+        const startDistance = Math.hypot(
+          currentScreenPoint.x - currentDragState.startScreenPoint.x,
+          currentScreenPoint.y - currentDragState.startScreenPoint.y,
+        );
         const currentCanvasPoint = screenToCanvasPoint(currentScreenPoint);
         const delta = {
           x: currentCanvasPoint.x - currentDragState.startCanvasPoint.x,
@@ -2449,9 +2464,14 @@ export const OrgStructureEditorTab = observer(() => {
         };
 
         clearUnitDragPreview();
-        if (Math.abs(delta.x) >= 0.01 || Math.abs(delta.y) >= 0.01) {
+        if (startDistance > DRAG_START_THRESHOLD) {
           editor.moveUnitsFromPositions(currentDragState.startUnitPositions, delta);
           editor.commitCommandFromSnapshot(currentDragState.historySnapshot, "Move Units");
+          editor.setSelectedItems(
+            currentDragState.selectedUnitIds.map((unitId) => ({ type: "unit", unitId })),
+          );
+        } else if (currentDragState.selectOnClick) {
+          editor.selectItem(currentDragState.selectOnClick, "replace");
         }
       }
 
@@ -2752,11 +2772,17 @@ export const OrgStructureEditorTab = observer(() => {
 
     const item = { type: "unit", unitId: unit.id } satisfies OrgEditorSelectedItem;
     const mode = selectionModeFromEvent(event);
-    const selectedUnitIdsForDrag = selectedUnitIds.has(unit.id) ? [...selectedUnitIds] : [unit.id];
+    const selectionIntent = getUnitPointerSelectionIntent({
+      clickedUnitId: unit.id,
+      selectedUnitIds,
+      toggle: mode === "toggle",
+    });
+    const selectedUnitIdsForDrag = selectionIntent.dragUnitIds;
 
-    editor.selectItem(item, mode);
+    if (!selectionIntent.preserveForPotentialGroupDrag) editor.selectItem(item, mode);
     setActiveDragState({
       historySnapshot: editor.createCommandSnapshot(),
+      selectOnClick: selectionIntent.preserveForPotentialGroupDrag ? item : null,
       selectedUnitIds: selectedUnitIdsForDrag,
       startCanvasPoint: screenToCanvasPoint(getPointerScreenPoint(event.nativeEvent)),
       startUnitPositions: editor.units
@@ -3046,6 +3072,7 @@ export const OrgStructureEditorTab = observer(() => {
       <section
         className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent"
         data-demo-id="org-structure-editor-tab"
+        dir={textDirection}
       >
         <div
           aria-label={t("Org Editor canvas")}
@@ -3080,6 +3107,7 @@ export const OrgStructureEditorTab = observer(() => {
             className="absolute left-0 top-0"
             data-org-editor-rendered-unit-count={visibleUnits.length}
             data-org-editor-total-unit-count={editor.units.length}
+            dir="ltr"
             style={{
               transform: `translate(${renderViewport.x}px, ${renderViewport.y}px) scale(${renderViewport.scale})`,
               transformOrigin: "0 0",
@@ -3136,6 +3164,7 @@ export const OrgStructureEditorTab = observer(() => {
                     totalCount: unit.employeeIds.length,
                   }
                 }
+                textDirection={textDirection}
                 unit={unit}
                 visibleWorldRect={visibleWorldRect}
               />
@@ -3408,10 +3437,10 @@ export const OrgStructureEditorTab = observer(() => {
         {editor.units.length > 0 && (
           <div
             className={cn(
-              "absolute left-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-start gap-1",
+              "absolute start-3 top-3 z-30 flex items-stretch gap-1",
               ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
             )}
-            data-demo-id="org-editor-actions"
+            data-demo-id="org-editor-history-actions"
           >
             <OrgEditorHistoryToolbar
               canRedo={editor.canRedo}
@@ -3419,60 +3448,67 @@ export const OrgStructureEditorTab = observer(() => {
               onRedo={editor.redo}
               onUndo={editor.undo}
             />
-            {editor.units.length > 0 && (
-              <>
-                <OrgEditorLayoutSwitch layoutMode={editor.layoutMode} onToggle={toggleLayoutMode} />
-                <OrgEditorToolbarButton
-                  dataDemoId="org-editor-align-button"
-                  disabled={editor.units.length === 0}
-                  onClick={() => editor.applyLayout()}
-                  title={t("Arrange the current hierarchy")}
-                >
-                  <HiOutlineSquares2X2 />
-                  <span>{t("Arrange")}</span>
-                </OrgEditorToolbarButton>
-                <OrgEditorToolbarButton
-                  ariaLabel={toggleAllUnitsLabel}
-                  dataDemoId="org-editor-toggle-all-units-button"
-                  disabled={editor.units.length === 0}
-                  onClick={() =>
-                    editor.setUnitsCollapsed(
-                      editor.units.map((unit) => unit.id),
-                      !hasCollapsedUnits,
-                    )
-                  }
-                  title={toggleAllUnitsLabel}
-                >
-                  {hasCollapsedUnits ? (
-                    <HiOutlineArrowsPointingOut />
-                  ) : (
-                    <HiOutlineArrowsPointingIn />
-                  )}
-                  <span>{toggleAllUnitsLabel}</span>
-                </OrgEditorToolbarButton>
-                <OrgEditorSearchControl
-                  onOpenChange={(nextSearchOpen) =>
-                    store.setEditorUi({
-                      searchOpen: nextSearchOpen,
-                      ...(nextSearchOpen ? {} : { searchQuery: "" }),
-                    })
-                  }
-                  onQueryChange={(searchQuery) => store.setEditorUi({ searchQuery })}
-                  onSelectResult={selectOrgEditorSearchResult}
-                  open={searchOpen}
-                  query={searchQuery}
-                  queryTokens={orgEditorSearchTokens}
-                  results={orgEditorSearchResults}
-                />
-              </>
-            )}
           </div>
         )}
 
         {editor.units.length > 0 && (
           <div
             className={cn(
-              "absolute bottom-3 left-3 z-30 flex items-stretch gap-1",
+              "absolute end-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-end gap-1",
+              ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+            )}
+            data-demo-id="org-editor-actions"
+          >
+            <OrgEditorSearchControl
+              onOpenChange={(nextSearchOpen) =>
+                store.setEditorUi({
+                  searchOpen: nextSearchOpen,
+                  ...(nextSearchOpen ? {} : { searchQuery: "" }),
+                })
+              }
+              onQueryChange={(searchQuery) => store.setEditorUi({ searchQuery })}
+              onSelectResult={selectOrgEditorSearchResult}
+              open={searchOpen}
+              query={searchQuery}
+              queryTokens={orgEditorSearchTokens}
+              results={orgEditorSearchResults}
+            />
+            <OrgEditorLayoutSwitch layoutMode={editor.layoutMode} onToggle={toggleLayoutMode} />
+            <OrgEditorToolbarButton
+              dataDemoId="org-editor-align-button"
+              onClick={() =>
+                selectedUnitCount >= 2
+                  ? editor.applyLayoutToUnits(selectedUnitIds)
+                  : editor.applyLayout()
+              }
+              title={
+                selectedUnitCount >= 2 ? t("Arrange selected") : t("Arrange the current hierarchy")
+              }
+            >
+              <HiOutlineSquares2X2 />
+              <span>{t(selectedUnitCount >= 2 ? "Arrange selected" : "Arrange")}</span>
+            </OrgEditorToolbarButton>
+            <OrgEditorToolbarButton
+              ariaLabel={toggleAllUnitsLabel}
+              dataDemoId="org-editor-toggle-all-units-button"
+              onClick={() =>
+                editor.setUnitsCollapsed(
+                  editor.units.map((unit) => unit.id),
+                  !hasCollapsedUnits,
+                )
+              }
+              title={toggleAllUnitsLabel}
+            >
+              {hasCollapsedUnits ? <HiOutlineArrowsPointingOut /> : <HiOutlineArrowsPointingIn />}
+              <span>{toggleAllUnitsLabel}</span>
+            </OrgEditorToolbarButton>
+          </div>
+        )}
+
+        {editor.units.length > 0 && (
+          <div
+            className={cn(
+              "absolute bottom-3 start-3 z-30 flex items-stretch gap-1",
               ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
             )}
             data-demo-id="org-editor-viewport-actions"
