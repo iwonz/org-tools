@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { describe, expect, test } from "vitest";
 
 import {
-  createEmployeeId,
   createEmployeeIdentityKey,
+  createEmployeeUuid,
   isEmployeeId,
   sha256Hex,
 } from "@/lib/employee-id";
@@ -30,8 +30,8 @@ describe("Employee identity", () => {
     const first = { email: " User@Example.Test ", firstName: "ＡNNA", lastName: " Van   Dyke " };
     const second = { email: "user@example.test", firstName: "anna", lastName: "van dyke" };
     expect(createEmployeeIdentityKey(first)).toBe(createEmployeeIdentityKey(second));
-    expect(createEmployeeId(first)).toBe(createEmployeeId(second));
-    expect(isEmployeeId(createEmployeeId(first))).toBe(true);
-    expect(isEmployeeId(`${createEmployeeId(first)}0`)).toBe(false);
+    expect(createEmployeeIdentityKey(first)).toBe(createEmployeeIdentityKey(second));
+    expect(isEmployeeId(createEmployeeUuid())).toBe(true);
+    expect(isEmployeeId(`${createEmployeeUuid()}0`)).toBe(false);
   });
 });

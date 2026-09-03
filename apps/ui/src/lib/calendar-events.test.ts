@@ -8,6 +8,7 @@ import { getCalendarBirthdayEmployees, isCalendarLeapYear } from "@/lib/calendar
 const employee = (id: string): Employee => ({
   avatarBase64Url: null,
   birthday: "29.02.1900",
+  customFieldValues: {},
   email: null,
   firstName: "Leap",
   fullName: `Leap ${id}`,
@@ -38,13 +39,14 @@ describe("calendar event dates", () => {
   });
 
   test("indexes exact tag dates and groups labels without using the date as identity", () => {
+    const tagId = "00000000-0000-4000-8000-000000000010";
     const first = {
       ...employee("00000000-0000-4000-8000-000000000001"),
-      tags: [{ date: "2026-08-12", label: "Last day" }],
+      tags: [{ date: "2026-08-12", label: "Last day", tagId }],
     };
     const second = {
       ...employee("00000000-0000-4000-8000-000000000002"),
-      tags: [{ date: "2026-09-01", label: "last DAY" }],
+      tags: [{ date: "2026-09-01", label: "Last day", tagId }],
     };
     const employees = [first, second];
     const structure = createUiOrgStructure({
@@ -53,6 +55,7 @@ describe("calendar event dates", () => {
       deepUnits: [],
       employeesById: new Map(employees.map((item) => [item.id, item])),
       roots: [],
+      tagDefinitions: [{ color: null, id: tagId, label: "Last day" }],
       unitsById: new Map(),
     });
     expect(structure.indexes.datedTagEventsByDate.get("2026-08-12")?.[0]?.employee.id).toBe(
@@ -71,9 +74,27 @@ describe("calendar event dates", () => {
     const rows = buildCalendarDayDialogRows({
       birthdayEmployees: [second],
       events: [
-        { date: "2026-09-03", employee: second, label: "Release" },
-        { date: "2026-09-03", employee: first, label: "Anniversary" },
-        { date: "2026-09-03", employee: first, label: "Release" },
+        {
+          color: null,
+          date: "2026-09-03",
+          employee: second,
+          label: "Release",
+          tagId: "00000000-0000-4000-8000-000000000010",
+        },
+        {
+          color: null,
+          date: "2026-09-03",
+          employee: first,
+          label: "Anniversary",
+          tagId: "00000000-0000-4000-8000-000000000011",
+        },
+        {
+          color: null,
+          date: "2026-09-03",
+          employee: first,
+          label: "Release",
+          tagId: "00000000-0000-4000-8000-000000000010",
+        },
       ],
       locale: "en",
     });

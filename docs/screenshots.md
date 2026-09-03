@@ -1,6 +1,9 @@
 # Screenshots
 
-The screenshot catalog is generated from the production applications and declared in `docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 40 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion, and no external requests.
+The screenshot catalog is generated from the production applications and declared in
+`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 46
+current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
+and no external requests.
 
 The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and languages, then run it again and compare hashes.
 
@@ -130,7 +133,58 @@ Capabilities: Virtualized catalog, Search and counts, Tags, Contact links, Row a
 
 Compose birthday, gender, position, tag, Team, and text criteria with visible match counts.
 
-Capabilities: Birthday filter, Gender filter, Position filter, Tag filter, Team filter.
+Capabilities: Ordered filters, Complete birthday, Custom values, Not filled, Compound matching.
+
+### Employee model
+
+[![Employee model](screenshots/feature-employees-model.png)](screenshots/feature-employees-model.png)
+
+Inspect the built-in Employee, Unit, and Tag tokens together with configured custom Value and
+Template fields.
+
+Capabilities: Built-in fields, Custom fields, Stable token keys, Value and Template kinds.
+
+### Custom Value field
+
+[![Custom Value field](screenshots/feature-employees-model-value.png)](screenshots/feature-employees-model-value.png)
+
+Configure a named typed Employee value, required behavior, and stable options for forms, filters,
+imports, and output.
+
+Capabilities: Value field, Data type, Required value, Stable options.
+
+### Custom Template field
+
+[![Custom Template field](screenshots/feature-employees-model-template.png)](screenshots/feature-employees-model-template.png)
+
+Compose a derived Employee value from token suggestions and choose local MD5 or SHA-256 hashing.
+
+Capabilities: Template field, Token composition, Dependency validation, Hashing.
+
+### Custom Employee filter
+
+[![Custom Employee filter](screenshots/feature-employees-custom-filter.png)](screenshots/feature-employees-custom-filter.png)
+
+Filter the Employee catalog by computed or stored custom values, including an explicit Not filled
+choice.
+
+Capabilities: Custom fields, Virtualized values, Not filled, Compound filtering.
+
+### Tag catalog
+
+[![Tag catalog](screenshots/feature-employees-tag-catalog.png)](screenshots/feature-employees-tag-catalog.png)
+
+Search centralized Tags and inspect their global color, Employee usage, and dated-assignment counts.
+
+Capabilities: Tag catalog, Search, Global colors, Usage counts.
+
+### Tag catalog editor
+
+[![Tag catalog editor](screenshots/feature-employees-tag-editor.png)](screenshots/feature-employees-tag-editor.png)
+
+Rename a Tag or choose and reset its global semantic color from one controlled catalog.
+
+Capabilities: Rename, Color palette, Reset color, Cascading delete.
 
 ### Employee profile and assignments
 
@@ -181,10 +235,10 @@ Capabilities: Field mapping, Nested paths, Team assignments, Import preview.
 
 [![Employee duplicate resolution](screenshots/feature-employee-import-duplicates.png)](screenshots/feature-employee-import-duplicates.png)
 
-Resolve deterministic identity matches with one bulk policy and sparse per-Employee overrides before
-atomic import.
+Review UUID-preserving additions, normalized identity duplicates, and skipped Employees with one bulk
+policy plus sparse per-Employee overrides before atomic import.
 
-Capabilities: Deterministic identity, Bulk policy, Per-Employee override, Atomic import.
+Capabilities: UUID validation, Identity matching, Three review columns, Atomic import.
 
 ## Editor
 
@@ -289,9 +343,10 @@ Capabilities: Value drill-down, Matching Employees, Employee actions.
 
 [![Employee Calendar](screenshots/demo-calendar.png)](screenshots/demo-calendar.png)
 
-Navigate a monthly calendar with birthdays, uniformly spaced dated-tag counts, events, and a strong current-day state.
+Navigate locale-correct weeks with weekend tones, birthdays, compact dated-tag counts, conditional
+Today navigation, and a strong current-day state.
 
-Capabilities: Monthly navigation, Birthdays, Dated tags, Today state, Tag cloud.
+Capabilities: Localized weekdays, Weekends, Birthdays, Tag indicators, Today state.
 
 ### Calendar day details
 
@@ -306,10 +361,10 @@ Capabilities: Interactive dates, Conditional content, Dated-event cards, Tag his
 
 [![Dated-tag event history](screenshots/feature-calendar-tag-events.png)](screenshots/feature-calendar-tag-events.png)
 
-Open a tag from the bounded cloud to inspect current and future events without a redundant heading,
+Open a Tag from the horizontal header rail to inspect current and future events without a redundant heading,
 plus conditional past events as complete Employee cards with right-aligned actions.
 
-Capabilities: Tag cloud, Conditional history, Complete Employee cards, Employee actions, Virtualized dialog.
+Capabilities: Tag rail, Conditional history, Complete Employee cards, Employee actions, Virtualized dialog.
 
 ## Download
 
@@ -366,7 +421,7 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
 ## Review checklist
 
-- Confirm Import exposes All state and Employees with mapped fields and deterministic duplicate
+- Confirm Import exposes All state and Employees with mapped fields and normalized identity duplicate
   choices; Export must download only the complete state directly with no dialog.
 - Review light and dark themes, English and Russian menus, compact and expanded sidebar geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
@@ -400,4 +455,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 40 PNGs must retain identical hashes. Material differences require review and a deliberate update.
+- Regenerate immediately; all 46 PNGs must retain identical hashes. Material differences require
+  review and a deliberate update.

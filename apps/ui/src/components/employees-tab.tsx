@@ -3,12 +3,18 @@
 import type { Employee } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
 import { useDeferredValue, useMemo, useState } from "react";
-import { HiOutlineUserPlus, HiOutlineUsers } from "react-icons/hi2";
+import {
+  HiOutlineAdjustmentsHorizontal,
+  HiOutlineTag,
+  HiOutlineUserPlus,
+  HiOutlineUsers,
+} from "react-icons/hi2";
 
 import { useContextHeaderAction } from "@/components/context-header-action";
 import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
+import { EmployeeModelDialog } from "@/components/employee-model-dialog";
 import { HighlightedText } from "@/components/highlighted-text";
 import {
   EmployeeSearchInput,
@@ -18,6 +24,7 @@ import {
   hasActiveEmployeeSearchFilters,
 } from "@/components/search-controls";
 import { TopLevelEmptyState } from "@/components/source-empty-state";
+import { TagCatalogDialog } from "@/components/tag-catalog-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +46,24 @@ export const EmployeesTab = observer(() => {
   const units = store.units;
   const { filters, query } = store.employeesUi;
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isModelOpen, setIsModelOpen] = useState(false);
+  const [isTagsOpen, setIsTagsOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  useContextHeaderAction({
+    dataDemoId: "employee-model-button",
+    icon: HiOutlineAdjustmentsHorizontal,
+    id: "employee-model",
+    label: t("Employee model"),
+    onClick: () => setIsModelOpen(true),
+  });
+  useContextHeaderAction({
+    dataDemoId: "employee-tags-button",
+    icon: HiOutlineTag,
+    id: "employee-tags",
+    label: t("Tags"),
+    onClick: () => setIsTagsOpen(true),
+  });
   useContextHeaderAction({
     dataDemoId: "employee-create-button",
     icon: HiOutlineUserPlus,
@@ -200,6 +223,8 @@ export const EmployeesTab = observer(() => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <EmployeeModelDialog onOpenChange={setIsModelOpen} open={isModelOpen} />
+      <TagCatalogDialog onOpenChange={setIsTagsOpen} open={isTagsOpen} />
     </section>
   );
 });

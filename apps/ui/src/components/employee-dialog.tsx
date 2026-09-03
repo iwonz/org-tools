@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  CustomEmployeeFieldValue,
   EditableEmployeeFields,
   Employee,
   EmployeeId,
@@ -64,6 +65,7 @@ import {
 } from "@/lib/birthday";
 import { normalizeEmployeeTags, sortEmployeeTagLabels } from "@/lib/employee-tags";
 import { cn } from "@/lib/utils";
+import { useOrgStore } from "@/stores/org-store-context";
 
 export type EditorEmployeeAssignment = {
   isBoss: boolean;
@@ -100,6 +102,7 @@ type AssignableUnitId = UnitId | OrgEditorUnitId;
 const getInitialFields = (employee: Employee | null | undefined): EditableEmployeeFields => ({
   birthday: employee?.birthday ?? null,
   avatarBase64Url: employee?.avatarBase64Url ?? null,
+  customFieldValues: { ...(employee?.customFieldValues ?? {}) },
   email: employee?.email ?? null,
   firstName: employee?.firstName ?? "",
   gender: employee?.gender ?? "unspecified",
@@ -126,6 +129,7 @@ const Field = ({
 );
 
 export function EmployeeDialog(props: EmployeeDialogProps) {
+  const store = useOrgStore();
   const t = useUiText();
   const format = useAppFormatter();
   const locale = useLocale();
@@ -286,6 +290,14 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
       ...currentPositions,
       [String(unitId)]: value,
     }));
+  };
+  const updateCustomField = (fieldId: string, value: CustomEmployeeFieldValue | undefined) => {
+    setFields((currentFields) => {
+      const customFieldValues = { ...(currentFields.customFieldValues ?? {}) };
+      if (value === undefined || value === null || value === "") delete customFieldValues[fieldId];
+      else customFieldValues[fieldId] = value;
+      return { ...currentFields, customFieldValues };
+    });
   };
   const updateBirthdayMonth = (value: string) => {
     setBirthdayMonth(value);
@@ -552,6 +564,84 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                   </fieldset>
                 </Field>
               </section>
+
+              {store.employeeFieldDefinitions.some((definition) => definition.kind === "value") && (
+                <section
+                  className="grid gap-4 sm:grid-cols-2"
+                  data-demo-id="employee-custom-fields"
+                >
+                  {store.employeeFieldDefinitions.flatMap((definition) => {
+                    if (definition.kind !== "value") return [];
+                    const value = fields.customFieldValues?.[definition.id];
+                    const label = `${definition.name}${definition.required ? " *" : ""}`;
+                    if (definition.valueType === "boolean") {
+                      return [
+                        <div
+                          className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2 text-sm"
+                          key={definition.id}
+                        >
+                          <span>{label}</span>
+                          <Checkbox
+                            aria-label={label}
+                            checked={value === true}
+                            onCheckedChange={(checked) =>
+                              updateCustomField(definition.id, checked === true)
+                            }
+                          />
+                        </div>,
+                      ];
+                    }
+                    if (definition.valueType === "option") {
+                      return [
+                        <Field key={definition.id} label={label}>
+                          <Select
+                            onValueChange={(next) =>
+                              updateCustomField(
+                                definition.id,
+                                next === "__none__" ? undefined : next,
+                              )
+                            }
+                            value={typeof value === "string" ? value : "__none__"}
+                          >
+                            <SelectTrigger aria-label={label}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">{t("Not specified")}</SelectItem>
+                              {definition.options.map((option) => (
+                                <SelectItem key={option.id} value={option.id}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>,
+                      ];
+                    }
+                    return [
+                      <Field key={definition.id} label={label}>
+                        <Input
+                          aria-label={label}
+                          inputMode={definition.valueType === "number" ? "decimal" : undefined}
+                          onChange={(event) =>
+                            updateCustomField(
+                              definition.id,
+                              definition.valueType === "number"
+                                ? event.currentTarget.value === ""
+                                  ? undefined
+                                  : Number(event.currentTarget.value)
+                                : event.currentTarget.value,
+                            )
+                          }
+                          placeholder={definition.valueType === "date" ? "DD.MM.YYYY" : undefined}
+                          type={definition.valueType === "number" ? "number" : "text"}
+                          value={value === undefined || value === null ? "" : String(value)}
+                        />
+                      </Field>,
+                    ];
+                  })}
+                </section>
+              )}
 
               <section className="grid gap-3">
                 <Label>{t("Avatar")}</Label>

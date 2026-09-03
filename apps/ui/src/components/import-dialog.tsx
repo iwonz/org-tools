@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrgToolsState } from "@org-tools/types";
+import type { CustomEmployeeValueType, OrgToolsState } from "@org-tools/types";
 import { useMemo, useState } from "react";
 import {
   HiOutlineArrowPath,
@@ -9,6 +9,7 @@ import {
   HiOutlineBuildingOffice2,
   HiOutlineCircleStack,
   HiOutlineExclamationTriangle,
+  HiOutlinePlus,
   HiOutlineUsers,
 } from "react-icons/hi2";
 
@@ -22,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -39,6 +41,7 @@ import {
   useMessageText,
   useUiText,
 } from "@/i18n/use-ui-text";
+import { createUuid } from "@/lib/employee-data";
 import {
   applyEmployeeImport,
   createSuggestedEmployeeImportMapping,
@@ -74,6 +77,7 @@ const FIELD_LABELS: Record<EmployeeImportField, UiTextKey> = {
   email: "Email",
   firstName: "First name",
   gender: "Gender",
+  id: "UUID",
   lastName: "Last name",
   phone: "Phone",
   profileUrl: "Profile URL",
@@ -136,26 +140,37 @@ function ImportError({ error }: { error: UiMessageDescriptor | null }) {
 }
 
 function MappingGrid({
+  fieldDefinitions,
   mapping,
   onChange,
   paths,
 }: {
+  fieldDefinitions: OrgToolsState["organization"]["employeeFieldDefinitions"];
   mapping: EmployeeImportMapping;
-  onChange: (field: EmployeeImportField, path: string | null) => void;
+  onChange: (mapping: EmployeeImportMapping) => void;
   paths: string[];
 }) {
   const t = useUiText();
+  const [newFieldOpen, setNewFieldOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldKey, setNewFieldKey] = useState("");
+  const [newFieldPath, setNewFieldPath] = useState("__none__");
+  const [newFieldType, setNewFieldType] = useState<CustomEmployeeValueType>("text");
+  const [newFieldOptions, setNewFieldOptions] = useState("");
   return (
     <div className="grid gap-2" data-demo-id="employee-import-mapping">
       {EMPLOYEE_IMPORT_FIELDS.map((field) => {
-        const required = field === "firstName" || field === "lastName" || field === "email";
+        const required =
+          field === "id" || field === "firstName" || field === "lastName" || field === "email";
         return (
           <div
             className="grid min-w-0 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.7fr)]"
             key={field}
           >
             <Select
-              onValueChange={(value) => onChange(field, value === "__none__" ? null : value)}
+              onValueChange={(value) =>
+                onChange({ ...mapping, [field]: value === "__none__" ? null : value })
+              }
               value={mapping[field] ?? "__none__"}
             >
               <SelectTrigger
@@ -184,7 +199,278 @@ function MappingGrid({
           </div>
         );
       })}
+      {fieldDefinitions.flatMap((definition) => {
+        if (definition.kind !== "value") return [];
+        return [
+          <div
+            className="grid min-w-0 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.7fr)]"
+            key={definition.id}
+          >
+            <Select
+              onValueChange={(value) =>
+                onChange({
+                  ...mapping,
+                  customFields: {
+                    ...mapping.customFields,
+                    [definition.id]: value === "__none__" ? null : value,
+                  },
+                })
+              }
+              value={mapping.customFields[definition.id] ?? "__none__"}
+            >
+              <SelectTrigger
+                aria-label={t("Source JSON path for {field}", { field: definition.name })}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t("Do not import")}</SelectItem>
+                {paths.map((path) => (
+                  <SelectItem key={path} value={path}>
+                    {path}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <HiOutlineArrowRight
+              aria-hidden="true"
+              className="mx-auto hidden size-4 text-muted-foreground sm:block"
+            />
+            <div className="min-w-0 rounded-md bg-muted/45 px-3 py-2 text-sm">
+              {definition.name}
+              {definition.required ? " *" : ""}
+            </div>
+          </div>,
+        ];
+      })}
+      {mapping.newValueFields.map((pending) => (
+        <div
+          className="grid min-w-0 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.7fr)]"
+          key={pending.definition.id}
+        >
+          <div className="truncate rounded-md bg-background px-3 py-2 text-sm">{pending.path}</div>
+          <HiOutlineArrowRight
+            aria-hidden="true"
+            className="mx-auto hidden size-4 text-muted-foreground sm:block"
+          />
+          <div className="rounded-md bg-muted/45 px-3 py-2 text-sm">{pending.definition.name}</div>
+        </div>
+      ))}
+      {newFieldOpen ? (
+        <div
+          className="grid gap-2 rounded-md bg-muted/30 p-3"
+          data-demo-id="employee-import-new-field"
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input
+              aria-label={t("Name")}
+              onChange={(event) => setNewFieldName(event.currentTarget.value)}
+              placeholder={t("Name")}
+              value={newFieldName}
+            />
+            <Input
+              aria-label={t("Token key")}
+              onChange={(event) => setNewFieldKey(event.currentTarget.value)}
+              placeholder={t("Token key")}
+              value={newFieldKey}
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Select onValueChange={setNewFieldPath} value={newFieldPath}>
+              <SelectTrigger aria-label={t("Source JSON path")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t("Source JSON path")}</SelectItem>
+                {paths.map((path) => (
+                  <SelectItem key={path} value={path}>
+                    {path}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) => setNewFieldType(value as CustomEmployeeValueType)}
+              value={newFieldType}
+            >
+              <SelectTrigger aria-label={t("Field type")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(["text", "number", "boolean", "date", "option"] as const).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {t(
+                      type === "text"
+                        ? "Text"
+                        : type === "number"
+                          ? "Number"
+                          : type === "boolean"
+                            ? "Flag"
+                            : type === "date"
+                              ? "Date"
+                              : "Option",
+                    )}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {newFieldType === "option" && (
+            <Input
+              aria-label={t("Comma-separated options")}
+              onChange={(event) => setNewFieldOptions(event.currentTarget.value)}
+              placeholder={t("Comma-separated options")}
+              value={newFieldOptions}
+            />
+          )}
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setNewFieldOpen(false)} size="sm" type="button" variant="ghost">
+              {t("Cancel")}
+            </Button>
+            <Button
+              disabled={
+                !newFieldName.trim() ||
+                !newFieldKey.trim() ||
+                newFieldPath === "__none__" ||
+                (newFieldType === "option" && !newFieldOptions.trim())
+              }
+              onClick={() => {
+                onChange({
+                  ...mapping,
+                  newValueFields: [
+                    ...mapping.newValueFields,
+                    {
+                      definition: {
+                        id: createUuid(),
+                        key: newFieldKey.trim(),
+                        kind: "value",
+                        name: newFieldName.trim(),
+                        options:
+                          newFieldType === "option"
+                            ? [
+                                ...new Set(
+                                  newFieldOptions.split(",").map((option) => option.trim()),
+                                ),
+                              ]
+                                .filter(Boolean)
+                                .map((label) => ({ id: createUuid(), label }))
+                            : [],
+                        required: false,
+                        valueType: newFieldType,
+                      },
+                      path: newFieldPath,
+                    },
+                  ],
+                });
+                setNewFieldOpen(false);
+                setNewFieldName("");
+                setNewFieldKey("");
+                setNewFieldPath("__none__");
+                setNewFieldOptions("");
+              }}
+              size="sm"
+              type="button"
+            >
+              <HiOutlinePlus />
+              {t("Add field")}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          className="justify-self-start"
+          onClick={() => setNewFieldOpen(true)}
+          size="sm"
+          type="button"
+          variant="secondary"
+        >
+          <HiOutlinePlus />
+          {t("Create mapped field")}
+        </Button>
+      )}
     </div>
+  );
+}
+
+function ImportReviewColumn({
+  onOverride,
+  policyById,
+  rows,
+  teamsMapped,
+  title,
+}: {
+  onOverride: (employeeId: string, policy: EmployeeImportPolicy) => void;
+  policyById: ReadonlyMap<string, EmployeeImportPolicy>;
+  rows: EmployeeImportPreview["rows"];
+  teamsMapped: boolean;
+  title: string;
+}) {
+  const t = useUiText();
+  const [scrollTop, setScrollTop] = useState(0);
+  const first = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+  const last = Math.min(
+    rows.length,
+    Math.ceil((scrollTop + REVIEW_HEIGHT) / ROW_HEIGHT) + OVERSCAN,
+  );
+  return (
+    <section className="grid min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-2">
+      <h3 className="text-sm font-medium">
+        {title} · {rows.length}
+      </h3>
+      <div
+        className="relative overflow-auto rounded-md border border-border bg-background"
+        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+        style={{ height: REVIEW_HEIGHT }}
+      >
+        {rows.length === 0 ? (
+          <div className="grid h-full place-items-center text-xs text-muted-foreground">
+            {t("No Employees found")}
+          </div>
+        ) : (
+          <div style={{ height: rows.length * ROW_HEIGHT, position: "relative" }}>
+            {rows.slice(first, last).map((row, relativeIndex) => {
+              const index = first + relativeIndex;
+              return (
+                <div
+                  className="absolute flex w-full items-center gap-2 px-3"
+                  key={row.id}
+                  style={{ height: ROW_HEIGHT, transform: `translateY(${index * ROW_HEIGHT}px)` }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">
+                      {[row.fields.firstName, row.fields.lastName].filter(Boolean).join(" ") ||
+                        row.fields.email}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">{row.fields.email}</div>
+                  </div>
+                  <Select
+                    onValueChange={(value) => onOverride(row.id, value as EmployeeImportPolicy)}
+                    value={policyById.get(row.id) ?? (row.matched ? "update" : "add")}
+                  >
+                    <SelectTrigger className="w-28" aria-label={t("Import action")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {row.matched ? (
+                        <>
+                          <SelectItem value="update">{t("Update data")}</SelectItem>
+                          {teamsMapped && (
+                            <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>
+                          )}
+                        </>
+                      ) : (
+                        <SelectItem value="add">{t("Add")}</SelectItem>
+                      )}
+                      <SelectItem value="skip">{t("Skip")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -202,58 +488,51 @@ function MatchReview({
   teamsMapped: boolean;
 }) {
   const t = useUiText();
-  const [scrollTop, setScrollTop] = useState(0);
-  const matches = useMemo(() => preview.rows.filter((row) => row.matched), [preview]);
-  const first = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
-  const last = Math.min(
-    matches.length,
-    Math.ceil((scrollTop + REVIEW_HEIGHT) / ROW_HEIGHT) + OVERSCAN,
-  );
+  const { added, duplicates, policyById, skipped } = useMemo(() => {
+    const nextAdded: EmployeeImportPreview["rows"] = [];
+    const nextDuplicates: EmployeeImportPreview["rows"] = [];
+    const nextSkipped: EmployeeImportPreview["rows"] = [];
+    const nextPolicyById = new Map<string, EmployeeImportPolicy>();
+    for (const row of preview.rows) {
+      const rowPolicy = overrides.get(row.id) ?? (row.matched ? bulkPolicy : "add");
+      nextPolicyById.set(row.id, rowPolicy);
+      if (rowPolicy === "skip") nextSkipped.push(row);
+      else if (row.matched) nextDuplicates.push(row);
+      else nextAdded.push(row);
+    }
+    return {
+      added: nextAdded,
+      duplicates: nextDuplicates,
+      policyById: nextPolicyById,
+      skipped: nextSkipped,
+    };
+  }, [bulkPolicy, overrides, preview.rows]);
   return (
     <div
-      className="relative overflow-auto rounded-md border border-border bg-background"
-      data-demo-id="employee-import-match-review"
-      onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-      style={{ height: Math.min(REVIEW_HEIGHT, matches.length * ROW_HEIGHT || ROW_HEIGHT) }}
+      className="grid min-w-0 gap-3 lg:grid-cols-3"
+      data-demo-id="employee-import-review-columns"
     >
-      <div style={{ height: matches.length * ROW_HEIGHT, position: "relative" }}>
-        {matches.slice(first, last).map((row, relativeIndex) => {
-          const index = first + relativeIndex;
-          const override = overrides.get(row.id);
-          return (
-            <div
-              className="absolute flex w-full items-center gap-3 border-b border-border/60 px-3"
-              key={row.id}
-              style={{ height: ROW_HEIGHT, transform: `translateY(${index * ROW_HEIGHT}px)` }}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">
-                  {[row.fields.firstName, row.fields.lastName].filter(Boolean).join(" ") ||
-                    row.fields.email}
-                </div>
-                <div className="truncate text-xs text-muted-foreground">{row.fields.email}</div>
-              </div>
-              <Select
-                onValueChange={(value) =>
-                  onOverride(row.id, value === "__bulk__" ? null : (value as EmployeeImportPolicy))
-                }
-                value={override ?? "__bulk__"}
-              >
-                <SelectTrigger className="w-44" aria-label={t("Duplicate action")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__bulk__">{t("Use bulk action")}</SelectItem>
-                  <SelectItem value="update">{t("Update data")}</SelectItem>
-                  <SelectItem value="skip">{t("Skip")}</SelectItem>
-                  {teamsMapped && <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>}
-                </SelectContent>
-              </Select>
-              <span className="sr-only">{bulkPolicy}</span>
-            </div>
-          );
-        })}
-      </div>
+      <ImportReviewColumn
+        onOverride={(id, value) => onOverride(id, value)}
+        policyById={policyById}
+        rows={added}
+        teamsMapped={teamsMapped}
+        title={t("Will be added")}
+      />
+      <ImportReviewColumn
+        onOverride={(id, value) => onOverride(id, value)}
+        policyById={policyById}
+        rows={duplicates}
+        teamsMapped={teamsMapped}
+        title={t("Duplicates")}
+      />
+      <ImportReviewColumn
+        onOverride={(id, value) => onOverride(id, value)}
+        policyById={policyById}
+        rows={skipped}
+        teamsMapped={teamsMapped}
+        title={t("Will not be added")}
+      />
     </div>
   );
 }
@@ -290,12 +569,18 @@ export function ImportDialog({
           employeeSource,
           mapping,
           currentState.organization.employees,
+          currentState.organization.employeeFieldDefinitions,
         ),
       };
     } catch (previewError) {
       return { error: describeError(previewError), preview: null };
     }
-  }, [currentState.organization.employees, employeeSource, mapping]);
+  }, [
+    currentState.organization.employeeFieldDefinitions,
+    currentState.organization.employees,
+    employeeSource,
+    mapping,
+  ]);
 
   const reset = () => {
     setMode("state");
@@ -458,11 +743,12 @@ export function ImportDialog({
                       <span>{t("Org Tools field")}</span>
                     </div>
                     <MappingGrid
+                      fieldDefinitions={currentState.organization.employeeFieldDefinitions}
                       mapping={mapping}
-                      onChange={(field, path) => {
-                        setMapping({ ...mapping, [field]: path });
+                      onChange={(nextMapping) => {
+                        setMapping(nextMapping);
                         setOverrides(new Map());
-                        if (field === "teams" && !path && bulkPolicy === "teamsOnly") {
+                        if (!nextMapping.teams && bulkPolicy === "teamsOnly") {
                           setBulkPolicy("update");
                         }
                       }}
@@ -486,39 +772,37 @@ export function ImportDialog({
                     </span>
                   </div>
                   {previewResult.preview.matchedCount > 0 && (
-                    <div className="grid gap-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <Label>{t("Existing Employees")}</Label>
-                        <Select
-                          onValueChange={(value) => setBulkPolicy(value as EmployeeImportPolicy)}
-                          value={bulkPolicy}
-                        >
-                          <SelectTrigger className="w-48" aria-label={t("Bulk duplicate action")}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="update">{t("Update data")}</SelectItem>
-                            <SelectItem value="skip">{t("Skip")}</SelectItem>
-                            {mapping?.teams && (
-                              <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <MatchReview
-                        bulkPolicy={bulkPolicy}
-                        onOverride={(employeeId, policy) => {
-                          const next = new Map(overrides);
-                          if (policy) next.set(employeeId, policy);
-                          else next.delete(employeeId);
-                          setOverrides(next);
-                        }}
-                        overrides={overrides}
-                        preview={previewResult.preview}
-                        teamsMapped={Boolean(mapping?.teams)}
-                      />
+                    <div className="flex items-center justify-between gap-3">
+                      <Label>{t("Existing Employees")}</Label>
+                      <Select
+                        onValueChange={(value) => setBulkPolicy(value as EmployeeImportPolicy)}
+                        value={bulkPolicy}
+                      >
+                        <SelectTrigger className="w-48" aria-label={t("Bulk duplicate action")}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="update">{t("Update data")}</SelectItem>
+                          <SelectItem value="skip">{t("Skip")}</SelectItem>
+                          {mapping?.teams && (
+                            <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
+                  <MatchReview
+                    bulkPolicy={bulkPolicy}
+                    onOverride={(employeeId, policy) => {
+                      const next = new Map(overrides);
+                      if (policy) next.set(employeeId, policy);
+                      else next.delete(employeeId);
+                      setOverrides(next);
+                    }}
+                    overrides={overrides}
+                    preview={previewResult.preview}
+                    teamsMapped={Boolean(mapping?.teams)}
+                  />
                 </>
               )}
             </TabsContent>

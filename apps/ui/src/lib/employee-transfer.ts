@@ -1,5 +1,8 @@
 import type {
+  CustomEmployeeFieldDefinition,
+  CustomEmployeeValueField,
   EditableEmployeeFields,
+  EmployeeFieldId,
   EmployeeId,
   EmployeeTag,
   OrganizationEmployee,
@@ -15,9 +18,10 @@ import {
   isUuid,
   normalizeEditableEmployeeFields,
 } from "@/lib/employee-data";
-import { createEmployeeId, normalizeEmployeeIdentityPart } from "@/lib/employee-id";
+import { createEmployeeIdentityKey, normalizeEmployeeIdentityPart } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { parseOrgToolsState } from "@/lib/org-file";
+import { normalizeSearchValue } from "@/lib/search-index";
 
 export const MAX_EMPLOYEE_IMPORT_BYTES = 25 * 1024 * 1024;
 export const MAX_EMPLOYEE_IMPORT_PREVIEW_BYTES = 128 * 1024;
@@ -31,6 +35,7 @@ export type EmployeeTransferTeam = {
 };
 
 export const EMPLOYEE_IMPORT_FIELDS = [
+  "id",
   "firstName",
   "lastName",
   "email",
@@ -45,8 +50,15 @@ export const EMPLOYEE_IMPORT_FIELDS = [
 ] as const;
 
 export type EmployeeImportField = (typeof EMPLOYEE_IMPORT_FIELDS)[number];
-export type EmployeeImportMapping = Record<EmployeeImportField, string | null>;
-export type EmployeeImportPolicy = "skip" | "teamsOnly" | "update";
+export type EmployeeImportPendingValueField = {
+  definition: CustomEmployeeValueField;
+  path: string;
+};
+export type EmployeeImportMapping = Record<EmployeeImportField, string | null> & {
+  customFields: Record<EmployeeFieldId, string | null>;
+  newValueFields: EmployeeImportPendingValueField[];
+};
+export type EmployeeImportPolicy = "add" | "skip" | "teamsOnly" | "update";
 
 export type EmployeeImportSource = {
   fileName: string;
@@ -61,6 +73,7 @@ export type EmployeeImportSource = {
 export type EmployeeImportRow = {
   fields: EditableEmployeeFields;
   id: EmployeeId;
+  importedId: EmployeeId;
   index: number;
   matched: boolean;
   teams: EmployeeTransferTeam[];
@@ -68,9 +81,11 @@ export type EmployeeImportRow = {
 
 export type EmployeeImportPreview = {
   importsTeams: boolean;
-  mappedFields: Set<Exclude<EmployeeImportField, "teams">>;
+  mappedCustomFieldIds: Set<EmployeeFieldId>;
+  mappedFields: Set<Exclude<EmployeeImportField, "id" | "teams">>;
   matchedCount: number;
   newCount: number;
+  pendingFieldDefinitions: CustomEmployeeValueField[];
   rows: EmployeeImportRow[];
 };
 
@@ -121,7 +136,16 @@ const collectPaths = (
 };
 
 export const createEmptyEmployeeImportMapping = (): EmployeeImportMapping =>
-  Object.fromEntries(EMPLOYEE_IMPORT_FIELDS.map((field) => [field, null])) as EmployeeImportMapping;
+  Object.assign(
+    Object.fromEntries(EMPLOYEE_IMPORT_FIELDS.map((field) => [field, null])) as Record<
+      EmployeeImportField,
+      string | null
+    >,
+    {
+      customFields: {},
+      newValueFields: [],
+    },
+  );
 
 const normalizePathName = (value: string): string =>
   value.replace(/[^a-z0-9]/giu, "").toLowerCase();
@@ -139,6 +163,7 @@ export const createSuggestedEmployeeImportMapping = (
     email: ["email", "mail"],
     firstName: ["firstname", "givenname", "name"],
     gender: ["gender", "sex"],
+    id: ["id", "uuid", "employeeid"],
     lastName: ["lastname", "surname", "familyname"],
     phone: ["phone", "telephone"],
     profileUrl: ["profileurl", "profile"],
@@ -267,23 +292,73 @@ const parseTeams = (value: unknown): EmployeeTransferTeam[] => {
   });
 };
 
+const parseCustomFieldValue = (
+  value: unknown,
+  definition: CustomEmployeeValueField,
+): string | number | boolean | null => {
+  if (value === undefined || value === null || value === "") return null;
+  if (definition.valueType === "text") return requireString(value);
+  if (definition.valueType === "number") {
+    const number = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(number)) throw new Error("Invalid custom number.");
+    return number;
+  }
+  if (definition.valueType === "boolean") {
+    if (typeof value === "boolean") return value;
+    if (value === "true" || value === 1) return true;
+    if (value === "false" || value === 0) return false;
+    throw new Error("Invalid custom flag.");
+  }
+  if (definition.valueType === "date") {
+    const date = requireString(value).trim();
+    if (!/^\d{2}\.\d{2}\.\d{4}$/u.test(date)) throw new Error("Invalid custom date.");
+    return date;
+  }
+  const normalized = normalizeSearchValue(requireString(value));
+  const option = definition.options.find(
+    (candidate) => candidate.id === value || normalizeSearchValue(candidate.label) === normalized,
+  );
+  if (!option) throw new Error("Invalid custom option.");
+  return option.id;
+};
+
 export const deriveEmployeeImportPreview = (
   source: EmployeeImportSource,
   mapping: EmployeeImportMapping,
   currentEmployees: readonly OrganizationEmployee[],
+  currentFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
 ): EmployeeImportPreview => {
-  if (!mapping.firstName || !mapping.lastName || !mapping.email) {
-    throw new LocalizedError(uiMessage("Map first name, last name, and email before continuing."));
+  if (!mapping.id || !mapping.firstName || !mapping.lastName || !mapping.email) {
+    throw new LocalizedError(
+      uiMessage("Map UUID, first name, last name, and email before continuing."),
+    );
   }
-  const currentIds = new Set(currentEmployees.map((employee) => employee.id));
+  const currentById = new Map(currentEmployees.map((employee) => [employee.id, employee]));
+  const currentByIdentity = new Map(
+    currentEmployees.map((employee) => [createEmployeeIdentityKey(employee), employee]),
+  );
   const seenIds = new Set<EmployeeId>();
-  const mappedFields = new Set<Exclude<EmployeeImportField, "teams">>(
+  const seenIdentities = new Set<string>();
+  const mappedFields = new Set<Exclude<EmployeeImportField, "id" | "teams">>(
     EMPLOYEE_IMPORT_FIELDS.filter(
-      (field): field is Exclude<EmployeeImportField, "teams"> =>
-        field !== "teams" && mapping[field] !== null,
+      (field): field is Exclude<EmployeeImportField, "id" | "teams"> =>
+        field !== "id" && field !== "teams" && mapping[field] !== null,
     ),
   );
   const rows: EmployeeImportRow[] = [];
+  const valueDefinitions = [
+    ...currentFieldDefinitions.filter(
+      (definition): definition is CustomEmployeeValueField => definition.kind === "value",
+    ),
+    ...mapping.newValueFields.map((field) => field.definition),
+  ];
+  const customPathByFieldId = new Map<EmployeeFieldId, string>();
+  for (const [fieldId, path] of Object.entries(mapping.customFields)) {
+    if (path) customPathByFieldId.set(fieldId, path);
+  }
+  for (const pending of mapping.newValueFields) {
+    customPathByFieldId.set(pending.definition.id, pending.path);
+  }
   try {
     for (let index = 0; index < source.rows.length; index += 1) {
       const sourceRow = source.rows[index];
@@ -298,6 +373,7 @@ export const deriveEmployeeImportPreview = (
       const fields = normalizeEditableEmployeeFields({
         avatarBase64Url: optionalString(value("avatarBase64Url")),
         birthday: optionalString(value("birthday")),
+        customFieldValues: {},
         email: optionalString(value("email")),
         firstName: requireString(value("firstName")),
         gender: genderValue === undefined ? "unspecified" : genderValue,
@@ -307,16 +383,42 @@ export const deriveEmployeeImportPreview = (
         tags: parseTags(value("tags")),
         username: optionalString(value("username")),
       });
-      const id = createEmployeeId(fields);
-      if (seenIds.has(id)) {
+      for (const definition of valueDefinitions) {
+        const path = customPathByFieldId.get(definition.id);
+        if (!path) continue;
+        const customValue = parseCustomFieldValue(getPathValue(sourceRow, path), definition);
+        if (customValue !== null) fields.customFieldValues[definition.id] = customValue;
+      }
+      const importedIdValue = value("id");
+      if (typeof importedIdValue !== "string" || !isUuid(importedIdValue)) {
+        throw new Error("Invalid Employee UUID.");
+      }
+      const importedId = importedIdValue as EmployeeId;
+      const identityKey = createEmployeeIdentityKey(fields);
+      if (seenIds.has(importedId)) {
+        throw new LocalizedError(
+          uiMessage("Employee import UUID conflicts with another identity."),
+        );
+      }
+      if (seenIdentities.has(identityKey)) {
         throw new LocalizedError(uiMessage("Employee import contains duplicate identities."));
       }
-      seenIds.add(id);
+      const existingByIdentity = currentByIdentity.get(identityKey);
+      const existingById = currentById.get(importedId);
+      if (existingById && existingById !== existingByIdentity) {
+        throw new LocalizedError(
+          uiMessage("Employee import UUID conflicts with another identity."),
+        );
+      }
+      const id = existingByIdentity?.id ?? importedId;
+      seenIds.add(importedId);
+      seenIdentities.add(identityKey);
       rows.push({
         fields,
         id,
+        importedId,
         index,
-        matched: currentIds.has(id),
+        matched: Boolean(existingByIdentity),
         teams: parseTeams(value("teams")),
       });
     }
@@ -331,9 +433,11 @@ export const deriveEmployeeImportPreview = (
   const matchedCount = rows.reduce((count, row) => count + Number(row.matched), 0);
   return {
     importsTeams: mapping.teams !== null,
+    mappedCustomFieldIds: new Set(customPathByFieldId.keys()),
     mappedFields,
     matchedCount,
     newCount: rows.length - matchedCount,
+    pendingFieldDefinitions: mapping.newValueFields.map((field) => field.definition),
     rows,
   };
 };
@@ -378,6 +482,13 @@ export const applyEmployeeImport = ({
   preview: EmployeeImportPreview;
 }): OrgToolsState => {
   const state = parseOrgToolsState(structuredClone(currentState));
+  state.organization.employeeFieldDefinitions.push(
+    ...structuredClone(preview.pendingFieldDefinitions),
+  );
+  for (const definition of preview.pendingFieldDefinitions) {
+    state.ui.download.jsonTopLevelFieldOrder.push(`custom:${definition.id}`);
+    state.ui.download.jsonFieldNames.custom[definition.id] = definition.key;
+  }
   const now = new Date().toISOString();
   const employeeById = new Map(
     state.organization.employees.map((employee) => [employee.id, employee]),
@@ -385,14 +496,31 @@ export const applyEmployeeImport = ({
   const appliedPolicyById = new Map<EmployeeId, EmployeeImportPolicy>();
   for (const row of preview.rows) {
     const existing = employeeById.get(row.id);
-    const policy = existing ? (overrides.get(row.id) ?? bulkPolicy) : "update";
+    const policy = existing
+      ? (overrides.get(row.id) ?? bulkPolicy)
+      : (overrides.get(row.id) ?? "add");
     appliedPolicyById.set(row.id, policy);
-    if (existing && policy === "skip") continue;
+    if (policy === "skip") continue;
     if (!existing) {
+      const tagByLabel = new Map(
+        state.organization.tags.map((tag) => [normalizeSearchValue(tag.label), tag]),
+      );
+      const assignments = row.fields.tags.map((tag) => {
+        const key = normalizeSearchValue(tag.label);
+        let definition = tagByLabel.get(key);
+        if (!definition) {
+          definition = { color: null, id: createUuid(), label: tag.label.trim() };
+          state.organization.tags.push(definition);
+          tagByLabel.set(key, definition);
+        }
+        return { date: tag.date, tagId: definition.id };
+      });
       employeeById.set(row.id, {
         ...structuredClone(row.fields),
         createdAt: now,
+        customFieldValues: (row.fields.customFieldValues ?? {}) as Record<EmployeeFieldId, never>,
         id: row.id,
+        tags: assignments,
         updatedAt: now,
       });
       continue;
@@ -400,8 +528,31 @@ export const applyEmployeeImport = ({
     if (policy === "teamsOnly") continue;
     const next = { ...existing, updatedAt: now };
     for (const field of preview.mappedFields) {
-      Object.assign(next, { [field]: structuredClone(row.fields[field]) });
+      if (field === "tags") {
+        const tagByLabel = new Map(
+          state.organization.tags.map((tag) => [normalizeSearchValue(tag.label), tag]),
+        );
+        next.tags = row.fields.tags.map((tag) => {
+          const key = normalizeSearchValue(tag.label);
+          let definition = tagByLabel.get(key);
+          if (!definition) {
+            definition = { color: null, id: createUuid(), label: tag.label.trim() };
+            state.organization.tags.push(definition);
+            tagByLabel.set(key, definition);
+          }
+          return { date: tag.date, tagId: definition.id };
+        });
+      } else {
+        Object.assign(next, { [field]: structuredClone(row.fields[field]) });
+      }
     }
+    const customFieldValues = { ...next.customFieldValues };
+    for (const fieldId of preview.mappedCustomFieldIds) {
+      const value = row.fields.customFieldValues?.[fieldId];
+      if (value === undefined || value === null || value === "") delete customFieldValues[fieldId];
+      else customFieldValues[fieldId] = value;
+    }
+    next.customFieldValues = customFieldValues;
     employeeById.set(row.id, next);
   }
 

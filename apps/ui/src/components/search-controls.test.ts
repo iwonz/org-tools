@@ -19,12 +19,15 @@ const ALEX_ID = uuid(1);
 const BLAIR_ID = uuid(2);
 const CASEY_ID = uuid(3);
 const DANA_ID = uuid(4);
+const CRITICAL_TAG_ID = uuid(201);
+const DEPARTMENT_FIELD_ID = uuid(301);
 const timestamp = "2026-07-31T00:00:00.000Z";
 
 const employee = (id: string, fields: Partial<OrganizationEmployee>): OrganizationEmployee => ({
   avatarBase64Url: null,
   birthday: null,
   createdAt: timestamp,
+  customFieldValues: {},
   email: null,
   firstName: "Employee",
   id,
@@ -44,7 +47,8 @@ const employees: OrganizationEmployee[] = [
     email: "alex@example.test",
     firstName: "Alex",
     gender: "female",
-    tags: [{ date: null, label: "Critical" }],
+    customFieldValues: { [DEPARTMENT_FIELD_ID]: "Engineering" },
+    tags: [{ date: null, tagId: CRITICAL_TAG_ID }],
     username: "alex",
   }),
   employee(BLAIR_ID, {
@@ -52,6 +56,7 @@ const employees: OrganizationEmployee[] = [
     email: "blair@example.test",
     firstName: "Blair",
     gender: "male",
+    customFieldValues: { [DEPARTMENT_FIELD_ID]: "Operations" },
     username: "blair",
   }),
   employee(CASEY_ID, { firstName: "Casey", gender: "unspecified", username: "casey" }),
@@ -95,7 +100,22 @@ const editorState: OrgEditorState = {
   ],
 };
 
-const structure = buildOrganizationStructure(employees, editorState);
+const structure = buildOrganizationStructure(
+  employees,
+  editorState,
+  [{ color: null, id: CRITICAL_TAG_ID, label: "Critical" }],
+  [
+    {
+      id: DEPARTMENT_FIELD_ID,
+      key: "department",
+      kind: "value",
+      name: "Department",
+      options: [],
+      required: false,
+      valueType: "text",
+    },
+  ],
+);
 const membershipIndex = buildEmployeeUnitMembershipIndex(
   structure.allEmployees,
   structure.indexes.unitsById,
@@ -149,7 +169,7 @@ describe("Employee Unit filters", () => {
       filter({
         ...createEmptyEmployeeSearchFilters(),
         includeWithoutTags: true,
-        selectedTags: ["Critical"],
+        selectedTags: [CRITICAL_TAG_ID],
       }),
     ).toEqual([ALEX_ID, BLAIR_ID, CASEY_ID, DANA_ID]);
   });
@@ -188,12 +208,13 @@ describe("Employee Unit filters", () => {
     expect(
       filter(
         {
-          birthday: { day: 12, month: 3 },
+          birthday: { day: 12, month: 3, year: 1900 },
+          customFields: [],
           includeWithoutTags: false,
           includeWithoutUnits: false,
           selectedGenders: ["female"],
           selectedPositions: ["QA"],
-          selectedTags: ["Critical"],
+          selectedTags: [CRITICAL_TAG_ID],
           selectedUnitIds: [FIRST_TEAM_ID],
         },
         ["alex"],
@@ -218,6 +239,27 @@ describe("Employee Unit filters", () => {
         selectedGenders: ["male", "unspecified"],
       }),
     ).toEqual([BLAIR_ID, CASEY_ID, DANA_ID]);
+  });
+
+  test("ORs custom values within a field and ANDs custom field sections", () => {
+    expect(
+      filter({
+        ...createEmptyEmployeeSearchFilters(),
+        customFields: [
+          {
+            fieldId: DEPARTMENT_FIELD_ID,
+            includeUnset: false,
+            selectedValues: ["Engineering", "Operations"],
+          },
+        ],
+      }),
+    ).toEqual([ALEX_ID, BLAIR_ID]);
+    expect(
+      filter({
+        ...createEmptyEmployeeSearchFilters(),
+        customFields: [{ fieldId: DEPARTMENT_FIELD_ID, includeUnset: true, selectedValues: [] }],
+      }),
+    ).toEqual([CASEY_ID, DANA_ID]);
   });
 
   test("prunes unavailable Unit IDs without changing other filters", () => {

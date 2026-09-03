@@ -69,7 +69,6 @@ export {
 type EmployeeSearchInputProps = BaseSearchInputProps & {
   excludedUnitIds?: ReadonlySet<UnitId>;
   filters: EmployeeSearchFilters;
-  hideGenderFilter?: boolean;
   onFiltersChange: (filters: EmployeeSearchFilters) => void;
   positionButtonDemoId?: string;
   positionOptions: string[];
@@ -78,7 +77,13 @@ type EmployeeSearchInputProps = BaseSearchInputProps & {
   tagOptions: string[];
   unitStructure?: UiOrgStructure;
 };
-type EmployeeFilterSectionId = "birthday" | "gender" | "positions" | "tags" | "units";
+type EmployeeFilterSectionId =
+  | "birthday"
+  | "gender"
+  | "positions"
+  | "tags"
+  | "units"
+  | `custom:${string}`;
 const EMPTY_UNIT_ID_LOOKUP = new Map<UnitId, never>();
 
 export function UnitSearchInput({
@@ -126,6 +131,7 @@ function EmployeeFilterSection({
   icon,
   onClear,
   onToggle,
+  order,
   title,
 }: {
   children: ReactNode;
@@ -134,6 +140,7 @@ function EmployeeFilterSection({
   icon: ReactNode;
   onClear: () => void;
   onToggle: () => void;
+  order?: number;
   title: string;
 }) {
   const contentId = useId();
@@ -144,6 +151,7 @@ function EmployeeFilterSection({
       className={cn("transition-colors", expanded && "rounded-md bg-muted/60")}
       data-filter-section={title}
       data-state={expanded ? "open" : "closed"}
+      style={order === undefined ? undefined : { order }}
     >
       <div className="flex min-w-0 items-center gap-0.5 px-0.5">
         <Button
@@ -474,7 +482,6 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   dataDemoId,
   excludedUnitIds,
   filters,
-  hideGenderFilter = false,
   id,
   onFiltersChange,
   onValueChange,
@@ -494,6 +501,7 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   const [expandedSectionId, setExpandedSectionId] = useState<EmployeeFilterSectionId | null>(null);
   const [birthdayDayValue, setBirthdayDayValue] = useState("none");
   const [birthdayMonthValue, setBirthdayMonthValue] = useState("none");
+  const [birthdayYearValue, setBirthdayYearValue] = useState("none");
   const selectedPositions = filters.selectedPositions;
   const selectedGenders = filters.selectedGenders;
   const selectedTags = filters.selectedTags;
@@ -504,6 +512,13 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
       { id: "unspecified", label: t("Not specified") },
     ],
     [t],
+  );
+  const tagFilterOptions = useMemo(
+    () =>
+      store.tagDefinitions.length > 0
+        ? store.tagDefinitions.map((tag) => ({ id: tag.id, label: tag.label }))
+        : tagOptions.map((label) => ({ id: label, label })),
+    [store.tagDefinitions, tagOptions],
   );
   const unitOptions = useMemo<EmployeeUnitFilterOption<UnitId>[]>(() => {
     if (!isOpen) return [];
@@ -519,6 +534,10 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   }, [excludedUnitIds, isOpen, store.units, unitStructure]);
   const availableUnitIds =
     (unitStructure ?? store.units)?.indexes.unitsById ?? EMPTY_UNIT_ID_LOOKUP;
+  const customFilterCount = filters.customFields.reduce(
+    (count, filter) => count + filter.selectedValues.length + Number(filter.includeUnset),
+    0,
+  );
   const activeFilterCount =
     selectedGenders.length +
     selectedPositions.length +
@@ -526,12 +545,14 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
     filters.selectedUnitIds.length +
     (filters.includeWithoutTags ? 1 : 0) +
     (filters.includeWithoutUnits ? 1 : 0) +
-    (filters.birthday ? 1 : 0);
+    (filters.birthday ? 1 : 0) +
+    customFilterCount;
 
   useEffect(() => {
     if (!isOpen) {
       setBirthdayDayValue(filters.birthday === null ? "none" : String(filters.birthday.day));
       setBirthdayMonthValue(filters.birthday === null ? "none" : String(filters.birthday.month));
+      setBirthdayYearValue(filters.birthday === null ? "none" : String(filters.birthday.year));
     }
   }, [filters.birthday, isOpen]);
 
@@ -548,22 +569,30 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
     onFiltersChange(createEmptyEmployeeSearchFilters());
     setBirthdayDayValue("none");
     setBirthdayMonthValue("none");
+    setBirthdayYearValue("none");
   };
 
   const clearBirthday = () => {
     onFiltersChange({ ...filters, birthday: null });
     setBirthdayDayValue("none");
     setBirthdayMonthValue("none");
+    setBirthdayYearValue("none");
   };
 
   const applyBirthday = () => {
-    if (birthdayDayValue === "none" || birthdayMonthValue === "none") return;
+    if (
+      birthdayDayValue === "none" ||
+      birthdayMonthValue === "none" ||
+      birthdayYearValue === "none"
+    )
+      return;
 
     onFiltersChange({
       ...filters,
       birthday: {
         day: Number(birthdayDayValue),
         month: Number(birthdayMonthValue),
+        year: Number(birthdayYearValue),
       },
     });
   };
@@ -639,9 +668,10 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
               icon={<HiOutlineCalendarDays className="size-4" />}
               onClear={clearBirthday}
               onToggle={() => toggleSection("birthday")}
+              order={5}
               title={t("Birthday")}
             >
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] gap-2">
+              <div className="grid grid-cols-[minmax(0,.7fr)_minmax(0,1.2fr)_minmax(0,.9fr)_auto] gap-2">
                 <Select onValueChange={setBirthdayDayValue} value={birthdayDayValue}>
                   <SelectTrigger className="h-8">
                     <SelectValue placeholder={t("Day")} />
@@ -671,9 +701,30 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                     ))}
                   </SelectContent>
                 </Select>
+                <Select onValueChange={setBirthdayYearValue} value={birthdayYearValue}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder={t("Year")} />
+                  </SelectTrigger>
+                  <SelectContent className="z-[70] max-h-72">
+                    <SelectItem value="none">{t("Year")}</SelectItem>
+                    <SelectItem value="1900">{t("Unknown year")}</SelectItem>
+                    {Array.from(
+                      { length: new Date().getFullYear() - 1900 },
+                      (_, index) => new Date().getFullYear() - index,
+                    ).map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   className="h-8 px-2"
-                  disabled={birthdayDayValue === "none" || birthdayMonthValue === "none"}
+                  disabled={
+                    birthdayDayValue === "none" ||
+                    birthdayMonthValue === "none" ||
+                    birthdayYearValue === "none"
+                  }
                   onClick={applyBirthday}
                   size="sm"
                   type="button"
@@ -683,38 +734,38 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                 </Button>
               </div>
             </EmployeeFilterSection>
-            {!hideGenderFilter && (
-              <EmployeeFilterSection
-                count={selectedGenders.length}
-                expanded={expandedSectionId === "gender"}
-                icon={<HiOutlineIdentification className="size-4" />}
-                onClear={() => onFiltersChange({ ...filters, selectedGenders: [] })}
-                onToggle={() => toggleSection("gender")}
+            <EmployeeFilterSection
+              count={selectedGenders.length}
+              expanded={expandedSectionId === "gender"}
+              icon={<HiOutlineIdentification className="size-4" />}
+              onClear={() => onFiltersChange({ ...filters, selectedGenders: [] })}
+              onToggle={() => toggleSection("gender")}
+              order={4}
+              title={t("Gender")}
+            >
+              <EmployeeFilterOptionList
+                emptyState={t("No Employees found")}
+                onToggle={(gender) =>
+                  onFiltersChange({
+                    ...filters,
+                    selectedGenders: selectedGenders.includes(gender)
+                      ? selectedGenders.filter((selectedGender) => selectedGender !== gender)
+                      : [...selectedGenders, gender],
+                  })
+                }
+                options={genderOptions}
+                queryTokens={[]}
+                selectedValues={selectedGenders}
                 title={t("Gender")}
-              >
-                <EmployeeFilterOptionList
-                  emptyState={t("No Employees found")}
-                  onToggle={(gender) =>
-                    onFiltersChange({
-                      ...filters,
-                      selectedGenders: selectedGenders.includes(gender)
-                        ? selectedGenders.filter((selectedGender) => selectedGender !== gender)
-                        : [...selectedGenders, gender],
-                    })
-                  }
-                  options={genderOptions}
-                  queryTokens={[]}
-                  selectedValues={selectedGenders}
-                  title={t("Gender")}
-                />
-              </EmployeeFilterSection>
-            )}
+              />
+            </EmployeeFilterSection>
             <EmployeeFilterSection
               count={selectedPositions.length}
               expanded={expandedSectionId === "positions"}
               icon={<HiOutlineBriefcase className="size-4" />}
               onClear={() => onFiltersChange({ ...filters, selectedPositions: [] })}
               onToggle={() => toggleSection("positions")}
+              order={3}
               title={t("Positions")}
             >
               <EmployeeTextListFilter
@@ -741,24 +792,34 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                 })
               }
               onToggle={() => toggleSection("tags")}
+              order={2}
               title={t("Tags")}
             >
-              <EmployeeTextListFilter
-                emptyState={t("No tags found")}
-                includeWithoutValues={filters.includeWithoutTags}
-                onIncludeWithoutValuesChange={(includeWithoutTags) =>
-                  onFiltersChange({ ...filters, includeWithoutTags })
-                }
-                onSelectedValuesChange={(selectedTags) =>
-                  onFiltersChange({ ...filters, selectedTags })
-                }
-                options={tagOptions}
-                searchAriaLabel={t("Search tags")}
-                searchPlaceholder={t("Search by tag")}
-                selectedValues={selectedTags}
-                title={t("Tags")}
-                withoutValuesLabel={t("Without tags")}
-              />
+              <div className="grid gap-2">
+                <EmployeeAbsenceFilterOption
+                  checked={filters.includeWithoutTags}
+                  label={t("Without tags")}
+                  onCheckedChange={(includeWithoutTags) =>
+                    onFiltersChange({ ...filters, includeWithoutTags })
+                  }
+                  title={t("Tags")}
+                />
+                <EmployeeFilterOptionList
+                  emptyState={t("No tags found")}
+                  onToggle={(tagId) =>
+                    onFiltersChange({
+                      ...filters,
+                      selectedTags: selectedTags.includes(tagId)
+                        ? selectedTags.filter((id) => id !== tagId)
+                        : [...selectedTags, tagId],
+                    })
+                  }
+                  options={tagFilterOptions}
+                  queryTokens={[]}
+                  selectedValues={selectedTags}
+                  title={t("Tags")}
+                />
+              </div>
             </EmployeeFilterSection>
             <EmployeeFilterSection
               count={filters.selectedUnitIds.length + (filters.includeWithoutUnits ? 1 : 0)}
@@ -772,6 +833,7 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                 })
               }
               onToggle={() => toggleSection("units")}
+              order={1}
               title={t("Units")}
             >
               <EmployeeUnitListFilter
@@ -791,6 +853,57 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                 withoutValuesLabel={t("Without a Unit")}
               />
             </EmployeeFilterSection>
+            {store.employeeFieldDefinitions.map((definition) => {
+              const filter = filters.customFields.find(
+                (candidate) => candidate.fieldId === definition.id,
+              ) ?? { fieldId: definition.id, includeUnset: false, selectedValues: [] };
+              const sectionId = `custom:${definition.id}` as const;
+              const options = store.units?.indexes.customFieldOptionsById.get(definition.id) ?? [];
+              const setFilter = (nextFilter: typeof filter) =>
+                onFiltersChange({
+                  ...filters,
+                  customFields:
+                    nextFilter.includeUnset || nextFilter.selectedValues.length > 0
+                      ? [
+                          ...filters.customFields.filter(
+                            (candidate) => candidate.fieldId !== definition.id,
+                          ),
+                          nextFilter,
+                        ]
+                      : filters.customFields.filter(
+                          (candidate) => candidate.fieldId !== definition.id,
+                        ),
+                });
+              return (
+                <EmployeeFilterSection
+                  count={filter.selectedValues.length + Number(filter.includeUnset)}
+                  expanded={expandedSectionId === sectionId}
+                  icon={<HiOutlineIdentification className="size-4" />}
+                  key={definition.id}
+                  onClear={() => setFilter({ ...filter, includeUnset: false, selectedValues: [] })}
+                  onToggle={() => toggleSection(sectionId)}
+                  order={6}
+                  title={definition.name}
+                >
+                  <EmployeeTextListFilter
+                    emptyState={t("No values found")}
+                    includeWithoutValues={filter.includeUnset}
+                    onIncludeWithoutValuesChange={(includeUnset) =>
+                      setFilter({ ...filter, includeUnset })
+                    }
+                    onSelectedValuesChange={(selectedValues) =>
+                      setFilter({ ...filter, selectedValues })
+                    }
+                    options={options}
+                    searchAriaLabel={t("Search values")}
+                    searchPlaceholder={t("Search values")}
+                    selectedValues={filter.selectedValues}
+                    title={definition.name}
+                    withoutValuesLabel={t("Not filled")}
+                  />
+                </EmployeeFilterSection>
+              );
+            })}
           </div>
         </PopoverContent>
       </Popover>

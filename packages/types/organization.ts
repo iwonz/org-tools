@@ -1,26 +1,42 @@
-import type { EditableEmployeeFields } from "./employee.js";
-import type { EmployeeId, UnitId } from "./ids.js";
+import type {
+  CustomEmployeeFieldValue,
+  EditableEmployeeFields,
+  EmployeeGender,
+  EmployeeTagAssignment,
+} from "./employee.js";
+import type { EmployeeFieldId, EmployeeId, TagId, UnitId } from "./ids.js";
 
 export type EmployeeLiveFilterBirthday = {
   day: number;
   month: number;
+  year: number;
+};
+
+export type EmployeeCustomFieldFilter = {
+  fieldId: EmployeeFieldId;
+  includeUnset: boolean;
+  selectedValues: string[];
 };
 
 /** Persisted rule used to derive the direct membership of a Live Unit. */
 export type EmployeeLiveFilterRule = {
   birthday: EmployeeLiveFilterBirthday | null;
+  customFields: EmployeeCustomFieldFilter[];
   includeWithoutTags: boolean;
   includeWithoutUnits: boolean;
   query: string;
+  selectedGenders: EmployeeGender[];
   selectedPositions: string[];
-  selectedTags: string[];
+  selectedTags: TagId[];
   selectedUnitIds: UnitId[];
 };
 
 /** Materialized global Employee stored by the organization state. */
-export type OrganizationEmployee = EditableEmployeeFields & {
+export type OrganizationEmployee = Omit<EditableEmployeeFields, "customFieldValues" | "tags"> & {
   createdAt: string;
+  customFieldValues: Record<EmployeeFieldId, CustomEmployeeFieldValue>;
   id: EmployeeId;
+  tags: EmployeeTagAssignment[];
   updatedAt: string;
 };
 

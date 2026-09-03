@@ -77,6 +77,7 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
     jsonTagFieldOrder: store.exportJsonTagFieldOrder,
     jsonTopLevelFieldOrder: store.exportJsonTopLevelFieldOrder,
     jsonUnitFieldOrder: store.exportJsonUnitFieldOrder,
+    selectedCustomEmployeeFieldIds: store.exportSelectedCustomEmployeeFieldIds,
     selectedEmployeeFieldKeys: store.exportSelectedEmployeeFieldKeys,
     selectedJsonTagFieldKeys: store.exportSelectedJsonTagFieldKeys,
     selectedJsonUnitFieldKeys: store.exportSelectedJsonUnitFieldKeys,
@@ -146,7 +147,13 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
           ) : (
             <ExportTemplateSettings
               dataDemoId="export-content-template"
-              employeeFields={exportEmployeeFields}
+              employeeFields={[
+                ...exportEmployeeFields,
+                ...store.employeeFieldDefinitions.map((field) => ({
+                  key: field.key,
+                  label: field.name,
+                })),
+              ]}
               format={templateFormat}
               onFormatChange={(value) => store.setExportTemplateFormat(value)}
               previewMeta={

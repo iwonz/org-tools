@@ -5,14 +5,19 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import { useLocale } from "next-intl";
 import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { HiOutlineCalendarDays, HiOutlineTag, HiOutlineUserGroup } from "react-icons/hi2";
+import {
+  HiOutlineCalendarDays,
+  HiOutlineChevronLeft,
+  HiOutlineChevronRight,
+  HiOutlineTag,
+  HiOutlineUserGroup,
+} from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeCardActions } from "@/components/employee-card-actions";
-import { EmployeeCard, EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
+import { EmployeeCard, EmployeeCardList } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { MiddleDot } from "@/components/middle-dot";
-import { TopLevelEmptyState } from "@/components/source-empty-state";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,10 +36,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
+import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
 import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
+import { tagColorClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -51,9 +57,6 @@ type CalendarDay = {
 const EMPTY_BIRTHDAY_EMPLOYEES_BY_KEY = new Map<string, Employee[]>();
 const EMPTY_DATED_EVENTS_BY_DATE = new Map<string, DatedTagEvent[]>();
 const EMPTY_DATED_TAG_GROUPS: DatedTagGroup[] = [];
-const CLOUD_VISIBLE_LIMIT = 10;
-const DAY_EVENT_LIMIT = 2;
-
 const padDatePart = (value: number) => String(value).padStart(2, "0");
 const createIsoDate = (year: number, month: number, day: number) =>
   `${year}-${padDatePart(month)}-${padDatePart(day)}`;
@@ -112,15 +115,16 @@ function BirthdayAvatarStack({ employees }: { employees: Employee[] }) {
 function CalendarDayCell({
   calendarDay,
   isToday,
+  isWeekend,
   onOpen,
 }: {
   calendarDay: CalendarDay;
   isToday: boolean;
+  isWeekend: boolean;
   onOpen: (calendarDay: CalendarDay) => void;
 }) {
   const format = useAppFormatter();
   const hasContent = calendarDay.birthdayEmployees.length > 0 || calendarDay.events.length > 0;
-  const hiddenEventCount = Math.max(0, calendarDay.events.length - DAY_EVENT_LIMIT);
   const content = (
     <>
       <div className="flex items-start justify-between gap-2">
@@ -132,28 +136,18 @@ function CalendarDayCell({
         >
           {calendarDay.day}
         </span>
-        {hasContent && (
-          <span className="text-[10px] font-medium text-muted-foreground">
-            {format.number(calendarDay.birthdayEmployees.length + calendarDay.events.length)}
-          </span>
-        )}
       </div>
       <div className="mt-1.5 grid min-h-0 gap-1">
         {calendarDay.birthdayEmployees.length > 0 && (
           <BirthdayAvatarStack employees={calendarDay.birthdayEmployees} />
         )}
-        {calendarDay.events.slice(0, DAY_EVENT_LIMIT).map((event) => (
+        {calendarDay.events.length > 0 && (
           <span
-            className="flex min-w-0 items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] leading-4 text-amber-800 dark:text-amber-200"
-            key={`${event.employee.id}:${event.label}`}
+            className="flex min-w-0 items-center gap-1 text-[11px] leading-4 text-muted-foreground"
+            data-demo-id="calendar-day-tag-count"
           >
             <HiOutlineTag className="size-3 shrink-0" />
-            <span className="truncate">{event.label}</span>
-          </span>
-        ))}
-        {hiddenEventCount > 0 && (
-          <span className="text-[10px] text-muted-foreground">
-            +{format.number(hiddenEventCount)}
+            <span>{format.number(calendarDay.events.length)}</span>
           </span>
         )}
       </div>
@@ -163,6 +157,7 @@ function CalendarDayCell({
     <button
       className={cn(
         "flex min-h-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg bg-muted/30 p-2.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        isWeekend && "bg-muted/65 hover:bg-muted/80",
         isToday && "bg-signal/15 hover:bg-signal/20",
       )}
       data-calendar-date={calendarDay.date}
@@ -187,9 +182,6 @@ function TagEventSection({
   onUnitContextClick: (unitContext: EmployeeUnitContext) => void;
   unitContextsByEmployeeId: ReadonlyMap<Employee["id"], EmployeeUnitContext[]>;
 }) {
-  const format = useAppFormatter();
-  const eventsByEmployeeId = new Map(events.map((event) => [event.employee.id, event]));
-
   return (
     <EmployeeCardList
       actions={actions}
@@ -199,22 +191,6 @@ function TagEventSection({
       employees={events.map((event) => event.employee)}
       onUnitContextClick={onUnitContextClick}
       resetKey={events.map((event) => `${event.employee.id}:${event.date}`).join("|")}
-      subtitle={(employee) => {
-        const event = eventsByEmployeeId.get(employee.id);
-        return (
-          <>
-            <EmployeeIdentity className="mt-0" employee={employee} />
-            {event && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {format.dateTime(new Date(`${event.date}T00:00:00Z`), {
-                  dateStyle: "long",
-                  timeZone: "UTC",
-                })}
-              </div>
-            )}
-          </>
-        );
-      }}
       unitContextsByEmployeeId={unitContextsByEmployeeId}
     />
   );
@@ -316,7 +292,6 @@ function CalendarDayDialogList({
 export const CalendarTab = observer(() => {
   const store = useOrgStore();
   const t = useUiText();
-  const countText = useCountText();
   const format = useAppFormatter();
   const locale = useLocale();
   const employeesByBirthday =
@@ -333,11 +308,7 @@ export const CalendarTab = observer(() => {
       ),
     [indexedDatedTagGroups, locale],
   );
-  const birthdayEmployeeCount = useMemo(
-    () => [...employeesByBirthday.values()].reduce((sum, employees) => sum + employees.length, 0),
-    [employeesByBirthday],
-  );
-  const { cloudExpanded, monthIndex, year } = store.calendarUi;
+  const { monthIndex, year } = store.calendarUi;
   const [dialogDayKey, setDialogDayKey] = useState<string | null>(null);
   const [dialogTagKey, setDialogTagKey] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -352,7 +323,20 @@ export const CalendarTab = observer(() => {
     () => monthDays.find((day) => day.key === dialogDayKey) ?? null,
     [dialogDayKey, monthDays],
   );
-  const rowCount = Math.ceil(monthDays.length / 7);
+  const startsOnMonday = locale.startsWith("ru");
+  const firstWeekday = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
+  const leadingDayCount = startsOnMonday ? (firstWeekday + 6) % 7 : firstWeekday;
+  const rowCount = Math.ceil((leadingDayCount + monthDays.length) / 7);
+  const weekdayLabels = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const sundayBasedDay = startsOnMonday ? (index + 1) % 7 : index;
+        return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(
+          new Date(Date.UTC(2026, 7, 2 + sundayBasedDay)),
+        );
+      }),
+    [locale, startsOnMonday],
+  );
   const monthTitle = format.dateTime(new Date(Date.UTC(year, monthIndex, 1)), {
     month: "long",
     timeZone: "UTC",
@@ -362,10 +346,8 @@ export const CalendarTab = observer(() => {
     const next = new Date(Date.UTC(year, monthIndex + direction, 1));
     store.setCalendarUi({ monthIndex: next.getUTCMonth(), year: next.getUTCFullYear() });
   };
-  const visibleGroups = cloudExpanded
-    ? datedTagGroups
-    : datedTagGroups.slice(0, CLOUD_VISIBLE_LIMIT);
-  const hiddenGroupCount = Math.max(0, datedTagGroups.length - visibleGroups.length);
+  const now = new Date();
+  const isCurrentMonth = year === now.getFullYear() && monthIndex === now.getMonth();
   const dialogTag = useMemo(
     () => datedTagGroups.find((group) => group.normalizedLabel === dialogTagKey) ?? null,
     [datedTagGroups, dialogTagKey],
@@ -374,19 +356,6 @@ export const CalendarTab = observer(() => {
   const upcomingEvents = selectedTagEvents.filter(({ date }) => date >= todayIso);
   const pastEvents = selectedTagEvents.filter(({ date }) => date < todayIso).reverse();
 
-  if (birthdayEmployeeCount === 0 && datedTagGroups.length === 0) {
-    return (
-      <TopLevelEmptyState
-        action={
-          <Button onClick={() => store.setActiveTab("employees")}>{t("Go to Employees")}</Button>
-        }
-        description={t("Add birthdays or dated tags to Employee profiles to use the calendar.")}
-        icon={<HiOutlineCalendarDays className="size-6" />}
-        title={t("No calendar events yet")}
-      />
-    );
-  }
-
   return (
     <>
       <section
@@ -394,86 +363,123 @@ export const CalendarTab = observer(() => {
         data-demo-id="calendar-tab"
       >
         <div
-          className="flex shrink-0 flex-wrap items-center justify-between gap-3 bg-muted/25 p-4"
+          className="flex shrink-0 flex-col gap-3 bg-muted/25 p-4 md:flex-row md:items-center md:justify-between"
           data-demo-id="calendar-header"
         >
-          <div className="min-w-0">
-            <div className="text-sm font-medium">{t("Employee Calendar")}</div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
-              {countText("calendarEvents", {
-                count:
-                  birthdayEmployeeCount +
-                  [...datedEventsByDate.values()].reduce((sum, events) => sum + events.length, 0),
-              })}
-            </div>
+          <div
+            className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto whitespace-nowrap [scrollbar-width:thin]"
+            data-demo-id="dated-tag-rail"
+          >
+            {datedTagGroups.map((group) => (
+              <Button
+                className="h-8 shrink-0 gap-0 rounded-full px-2.5 text-xs"
+                data-color={group.color ?? "none"}
+                data-demo-id="calendar-dated-tag-group"
+                key={group.tagId}
+                onClick={() => setDialogTagKey(group.normalizedLabel)}
+                size="sm"
+                type="button"
+                variant="secondary"
+              >
+                <span
+                  className={cn("mr-1.5 size-2 rounded-full", tagColorClassName(group.color))}
+                />
+                <HiOutlineTag className="mr-1.5 size-3.5" />
+                <span>{group.label}</span>
+                <MiddleDot />
+                <span>{format.number(group.events.length)}</span>
+              </Button>
+            ))}
           </div>
-          <div className="flex items-center gap-2" data-demo-id="calendar-header-navigation">
+          <div
+            className="flex shrink-0 items-center gap-2"
+            data-demo-id="calendar-header-navigation"
+          >
             <div
               className="mr-1 text-base font-semibold capitalize"
               data-demo-id="calendar-month-title"
             >
               {title}
             </div>
-            <Button onClick={() => step(-1)} type="button" variant="outline">
-              {t("Previous")}
+            {!isCurrentMonth && (
+              <Button
+                onClick={() =>
+                  store.setCalendarUi({ monthIndex: now.getMonth(), year: now.getFullYear() })
+                }
+                type="button"
+                variant="ghost"
+              >
+                <HiOutlineCalendarDays />
+                {t("Today")}
+              </Button>
+            )}
+            <Button
+              aria-label={t("Previous")}
+              onClick={() => step(-1)}
+              size="icon"
+              title={t("Previous")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineChevronLeft />
             </Button>
-            <Button onClick={() => step(1)} type="button" variant="outline">
-              {t("Next")}
+            <Button
+              aria-label={t("Next")}
+              onClick={() => step(1)}
+              size="icon"
+              title={t("Next")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineChevronRight />
             </Button>
           </div>
         </div>
-        {datedTagGroups.length > 0 && (
-          <div
-            className={cn(
-              "flex shrink-0 flex-wrap gap-1.5 overflow-auto bg-muted/15 px-4 py-2.5",
-              cloudExpanded ? "max-h-16" : "max-h-[4.25rem]",
-            )}
-            data-demo-id="dated-tag-cloud"
-          >
-            {visibleGroups.map((group) => (
-              <Button
-                className="h-7 gap-0 rounded-full px-2.5 text-xs"
-                data-demo-id="calendar-dated-tag-group"
-                key={group.normalizedLabel}
-                onClick={() => setDialogTagKey(group.normalizedLabel)}
-                size="sm"
-                type="button"
-                variant="secondary"
-              >
-                <span>{group.label}</span>
-                <MiddleDot className="mx-1" />
-                <span>{format.number(group.events.length)}</span>
-              </Button>
-            ))}
-            {hiddenGroupCount > 0 && (
-              <Button
-                className="h-7 rounded-full px-2.5 text-xs"
-                onClick={() => store.setCalendarUi({ cloudExpanded: true })}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                +{format.number(hiddenGroupCount)}
-              </Button>
-            )}
-          </div>
-        )}
         <div className="min-h-0 flex-1 overflow-auto p-4" data-demo-id="calendar-scroll-area">
-          <div
-            className="grid min-h-full grid-cols-7 gap-2"
-            data-demo-id="calendar-month-grid"
-            data-month={monthIndex + 1}
-            data-year={year}
-            style={{ gridTemplateRows: `repeat(${rowCount}, minmax(76px, 1fr))` }}
-          >
-            {monthDays.map((day) => (
-              <CalendarDayCell
-                calendarDay={day}
-                isToday={day.date === todayDate}
-                key={day.key}
-                onOpen={(calendarDay) => setDialogDayKey(calendarDay.key)}
-              />
-            ))}
+          <div className="flex min-h-full min-w-[640px] flex-col">
+            <div className="mb-2 grid shrink-0 grid-cols-7 gap-2" data-demo-id="calendar-weekdays">
+              {weekdayLabels.map((label, index) => {
+                const isWeekend = startsOnMonday ? index >= 5 : index === 0 || index === 6;
+                return (
+                  <div
+                    className={cn(
+                      "rounded-md px-2 py-1 text-center text-xs font-medium capitalize text-muted-foreground",
+                      isWeekend && "bg-muted/65",
+                    )}
+                    key={label}
+                  >
+                    {label}
+                  </div>
+                );
+              })}
+            </div>
+            <div
+              className="grid min-h-0 flex-1 grid-cols-7 gap-2"
+              data-demo-id="calendar-month-grid"
+              data-month={monthIndex + 1}
+              data-year={year}
+              style={{
+                gridTemplateRows: `repeat(${rowCount}, minmax(76px, 1fr))`,
+                minHeight: rowCount * 76 + (rowCount - 1) * 8,
+              }}
+            >
+              {Array.from({ length: leadingDayCount }, (_, offset) => `offset:${offset + 1}`).map(
+                (offsetKey) => (
+                  <div aria-hidden="true" key={offsetKey} />
+                ),
+              )}
+              {monthDays.map((day) => (
+                <CalendarDayCell
+                  calendarDay={day}
+                  isToday={day.date === todayDate}
+                  isWeekend={[0, 6].includes(
+                    new Date(Date.UTC(day.year, day.month - 1, day.day)).getUTCDay(),
+                  )}
+                  key={day.key}
+                  onOpen={(calendarDay) => setDialogDayKey(calendarDay.key)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -568,20 +574,14 @@ export const CalendarTab = observer(() => {
             <DialogTitle>{dialogTag?.label ?? ""}</DialogTitle>
           </DialogHeader>
           <DialogBody
-            className={cn(
-              "grid min-h-0 flex-1 gap-4 overflow-hidden",
-              pastEvents.length > 0 &&
-                (upcomingEvents.length > 0
-                  ? "grid-rows-[minmax(0,1fr)_minmax(0,1fr)]"
-                  : "grid-rows-[auto_minmax(0,1fr)]"),
-            )}
+            className="grid min-h-0 flex-1 auto-rows-fr gap-4 overflow-hidden"
             data-demo-id="calendar-tag-dialog-body"
           >
-            <section
-              className="flex min-h-0 flex-col gap-2"
-              data-demo-id="calendar-upcoming-events-section"
-            >
-              {upcomingEvents.length > 0 ? (
+            {upcomingEvents.length > 0 && (
+              <section
+                className="flex min-h-0 flex-col gap-2"
+                data-demo-id="calendar-upcoming-events-section"
+              >
                 <TagEventSection
                   actions={(employee) => (
                     <EmployeeCardActions
@@ -597,12 +597,8 @@ export const CalendarTab = observer(() => {
                   onUnitContextClick={(context) => store.selectUnitFromEmployeeCard(context.unitId)}
                   unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
                 />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("No current or upcoming events")}
-                </p>
-              )}
-            </section>
+              </section>
+            )}
             {pastEvents.length > 0 && (
               <section
                 className="flex min-h-0 flex-col gap-2"

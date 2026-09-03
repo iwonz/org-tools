@@ -1,6 +1,13 @@
-import type { Employee, EmployeeSearchDocument, Unit, UnitSearchDocument } from "@org-tools/types";
+import type {
+  CustomEmployeeFieldDefinition,
+  Employee,
+  EmployeeSearchDocument,
+  Unit,
+  UnitSearchDocument,
+} from "@org-tools/types";
 
 import { createBirthdayKey, parseEmployeeBirthday } from "@/lib/birthday";
+import { evaluateCustomEmployeeFields } from "@/lib/custom-employee-fields";
 
 export const EMPTY_POSITION_LABEL = "Position not specified";
 
@@ -27,12 +34,20 @@ const getEmployeeBirthdayKey = (employee: Employee) => {
   return birthday ? createBirthdayKey(birthday.day, birthday.month) : null;
 };
 
-export const createEmployeeSearchDocument = (employee: Employee): EmployeeSearchDocument => {
+export const createEmployeeSearchDocument = (
+  employee: Employee,
+  customFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
+): EmployeeSearchDocument => {
   const positionLabels = getEmployeePositionLabels(employee);
   const tagLabels = employee.tags.map(({ label }) => label);
+  const customValues = evaluateCustomEmployeeFields(employee, customFieldDefinitions);
 
   return {
+    birthday: employee.birthday,
     birthdayKey: getEmployeeBirthdayKey(employee),
+    customFieldValues: new Map(
+      [...customValues].map(([fieldId, value]) => [fieldId, value === null ? null : String(value)]),
+    ),
     employeeId: employee.id,
     gender: employee.gender,
     positionLabelSet: new Set(positionLabels),
@@ -49,7 +64,7 @@ export const createEmployeeSearchDocument = (employee: Employee): EmployeeSearch
         .filter(Boolean)
         .join(" "),
     ),
-    tagLabelSet: new Set(tagLabels),
+    tagIdSet: new Set(employee.tags.flatMap((tag) => (tag.tagId ? [tag.tagId] : []))),
     tagLabels,
   };
 };

@@ -22,14 +22,16 @@ const createTestEmployeeId = (fields: {
   email: string | null;
   firstName: string;
   lastName: string;
-}) =>
-  createHash("sha256")
+}) => {
+  const hash = createHash("sha256")
     .update(
       [fields.firstName, fields.lastName, fields.email]
         .map((value) => (value ?? "").normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase())
         .join("\u001f"),
     )
     .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+};
 
 async function expectNoHorizontalRule(locator: Locator) {
   expect(
@@ -105,6 +107,15 @@ async function createLongRosterState(): Promise<OrgToolsState> {
   const platform = state.organization.structure.units.find((unit) => unit.name === "Platform");
   const avatar = state.organization.employees[0]?.avatarBase64Url ?? null;
   if (!product || !platform) throw new Error("Synthetic hierarchy is unavailable.");
+  const longTagId = "90000000-0000-4000-8000-000000000099";
+  const clientTagId = "90000000-0000-4000-8000-000000000098";
+  const platformTagId = "90000000-0000-4000-8000-000000000097";
+  state.organization.tags.push(
+    { color: "rose", id: longTagId, label: LONG_EXPORT_TAG },
+    { color: null, id: clientTagId, label: "Client Applications" },
+    { color: null, id: platformTagId, label: "Platform" },
+  );
+  const tagIdByLabel = new Map(state.organization.tags.map((tag) => [tag.label, tag.id]));
 
   const addedEmployees = Array.from({ length: 10 }, (_, index) => {
     const suffix = String(index + 1).padStart(2, "0");
@@ -115,6 +126,7 @@ async function createLongRosterState(): Promise<OrgToolsState> {
       avatarBase64Url: index % 3 === 0 ? avatar : null,
       birthday: null,
       createdAt: "2026-01-15T12:00:00.000Z",
+      customFieldValues: {},
       email,
       firstName,
       gender: "unspecified" as const,
@@ -123,11 +135,11 @@ async function createLongRosterState(): Promise<OrgToolsState> {
       phone: `+1-202-555-01${String(10 + index).padStart(2, "0")}`,
       profileUrl: null,
       tags: [
-        ...(index === 0 ? [{ date: "2026-09-01", label: LONG_EXPORT_TAG }] : []),
-        { date: null, label: index % 2 === 0 ? "Client Applications" : "Platform" },
-        { date: null, label: "Accessibility" },
-        { date: null, label: "Engineering" },
-        { date: null, label: "Remote" },
+        ...(index === 0 ? [{ date: "2026-09-01", tagId: longTagId }] : []),
+        { date: null, tagId: index % 2 === 0 ? clientTagId : platformTagId },
+        { date: null, tagId: tagIdByLabel.get("Accessibility") as string },
+        { date: null, tagId: tagIdByLabel.get("Engineering") as string },
+        { date: null, tagId: tagIdByLabel.get("Remote") as string },
       ],
       updatedAt: "2026-01-15T12:00:00.000Z",
       username: `synthetic.person.${suffix}`,
@@ -147,9 +159,11 @@ async function createLongRosterState(): Promise<OrgToolsState> {
   platform.employeePositions = [];
   platform.liveFilter = {
     birthday: null,
+    customFields: [],
     includeWithoutTags: false,
     includeWithoutUnits: false,
     query: "",
+    selectedGenders: [],
     selectedPositions: [],
     selectedTags: [],
     selectedUnitIds: [product.id],
@@ -777,8 +791,8 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
       .locator('[data-demo-id^="tab-"]')
       .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-demo-id"))),
   ).toEqual([
-    "tab-units",
     "tab-employees",
+    "tab-units",
     "tab-org-editor",
     "tab-analytics",
     "tab-calendar",
@@ -789,7 +803,11 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
     await expect(tab).toBeVisible();
     await tab.click();
     await expect(tab).toHaveAttribute("aria-selected", "true");
-    await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+    if (tabName === "Calendar") {
+      await expect(page.locator('[data-demo-id="calendar-month-grid"]')).toBeVisible();
+    } else {
+      await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
+    }
   }
   const unitsTab = page.getByRole("tab", { name: "Units", exact: true });
   await unitsTab.focus();
@@ -1165,6 +1183,7 @@ test("imports complete states and mapped Employee arrays", async ({ page }) => {
           birthday: "29.02.1900",
           contact: { email: "riley.brooks@example.test" },
           firstName: "Riley",
+          id: "00000000-0000-4000-8000-000000000099",
           lastName: "Brooks",
           teams: [],
         },
@@ -1633,6 +1652,7 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await page.getByRole("option", { name: "March", exact: true }).click();
   await createDialog.getByRole("combobox", { name: "Year", exact: true }).click();
   await page.getByRole("option", { name: "Unknown year", exact: true }).click();
+  await createDialog.getByLabel("Department *", { exact: true }).fill("Quality");
   await createDialog.getByRole("button", { name: "Create", exact: true }).click();
   await expect(page.locator('[data-demo-id="employees-total-count"]')).toHaveText("5 Employees");
 
@@ -2106,6 +2126,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     avatarBase64Url: null,
     birthday: null,
     createdAt: timestamp,
+    customFieldValues: {},
     email: `employee-${index + 1}@example.test`,
     firstName: "Employee",
     gender: "unspecified" as const,
@@ -2266,7 +2287,9 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
     (employee) => employee.firstName === "Morgan" && employee.lastName === "Park",
   );
   if (!datedEmployee) throw new Error("Synthetic dated-tag Employee is unavailable.");
-  datedEmployee.tags.push({ date: "2026-07-10", label: "Planning" });
+  const planningTag = state.organization.tags.find((tag) => tag.label === "Planning");
+  if (!planningTag) throw new Error("Synthetic Planning Tag is unavailable.");
+  datedEmployee.tags.push({ date: "2026-07-10", tagId: planningTag.id });
   const importDialog = await openImportDialog(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
@@ -2282,7 +2305,7 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await expect(profileLink).toHaveAttribute("referrerpolicy", "no-referrer");
 
   await page.getByRole("tab", { name: "Calendar", exact: true }).click();
-  await expect(page.getByText("Employee Calendar", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-demo-id="calendar-weekdays"]')).toBeVisible();
   const julyBirthday = page.locator('[data-calendar-date="2026-07-22"]');
   await expect(julyBirthday).toHaveRole("button");
   await julyBirthday.click();
@@ -2348,7 +2371,7 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await planningTagDialog.getByRole("button", { name: "Close" }).click();
   await datedTagDayDialog.getByRole("button", { name: "Close" }).click();
   await page
-    .locator('[data-demo-id="dated-tag-cloud"]')
+    .locator('[data-demo-id="dated-tag-rail"]')
     .getByRole("button", { name: /Remote/ })
     .click();
   const futureTagDialog = page.getByRole("dialog", { name: "Remote" });
@@ -2371,19 +2394,18 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await expect(futureTagDialog.getByText("No past events", { exact: true })).toHaveCount(0);
   await futureTagDialog.getByRole("button", { name: "Close" }).click();
   await page
-    .locator('[data-demo-id="dated-tag-cloud"]')
+    .locator('[data-demo-id="dated-tag-rail"]')
     .getByRole("button", { name: /Operations/ })
     .click();
   const tagDialog = page.getByRole("dialog", { name: "Operations" });
   await expect(tagDialog).toContainText("Morgan Park");
   await expect(tagDialog.getByText("Current and upcoming", { exact: true })).toHaveCount(0);
   await expect(tagDialog).toContainText("Past");
-  const upcomingSection = tagDialog.locator('[data-demo-id="calendar-upcoming-events-section"]');
   const pastSection = tagDialog.locator('[data-demo-id="calendar-past-events-section"]');
   await expect(pastSection).toBeVisible();
-  expect(
-    await upcomingSection.evaluate((element) => element.getBoundingClientRect().height),
-  ).toBeLessThan(await pastSection.evaluate((element) => element.getBoundingClientRect().height));
+  await expect(tagDialog.locator('[data-demo-id="calendar-upcoming-events-section"]')).toHaveCount(
+    0,
+  );
   await expect(tagDialog.locator('[data-slot="dialog-description"]')).toHaveCount(0);
   const tagEmployeeCard = tagDialog
     .locator('[data-demo-id="calendar-tag-event-employee-card"]')
@@ -2407,7 +2429,7 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
 
   const navigation = page.locator('[data-demo-id="calendar-header-navigation"]');
   await expectNoHorizontalRule(page.locator('[data-demo-id="calendar-header"]'));
-  await expectNoHorizontalRule(page.locator('[data-demo-id="dated-tag-cloud"]'));
+  await expectNoHorizontalRule(page.locator('[data-demo-id="dated-tag-rail"]'));
   const emptyDate = page.locator('[data-calendar-date="2026-07-01"]');
   const eventDate = page.locator('[data-calendar-date="2026-07-10"]');
   await expect(emptyDate).toHaveRole("button");
@@ -2441,12 +2463,18 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
       .evaluate((element) => window.getComputedStyle(element).backgroundColor),
   ).not.toBe("rgba(0, 0, 0, 0)");
   await expect(navigation).toContainText("July 2026");
-  await expect(navigation.getByRole("button")).toHaveText(["Previous", "Next"]);
+  await expect(navigation.getByRole("button", { name: "Previous", exact: true })).toBeVisible();
+  await expect(navigation.getByRole("button", { name: "Next", exact: true })).toBeVisible();
+  await expect(navigation.getByRole("button", { name: "Today", exact: true })).toHaveCount(0);
+  await navigation.getByRole("button", { name: "Previous", exact: true }).click();
+  await expect(navigation.getByRole("button", { name: "Today", exact: true })).toBeVisible();
+  await navigation.getByRole("button", { name: "Today", exact: true }).click();
+  await expect(navigation).toContainText("July 2026");
   const datedTagSpacing = await page
     .locator('[data-demo-id="calendar-dated-tag-group"]')
     .evaluateAll((groups) =>
       groups.map((group) => {
-        const [label, dot, count] = [...group.children];
+        const [label, dot, count] = [...group.children].slice(-3);
         if (
           !(label instanceof HTMLElement) ||
           !(dot instanceof HTMLElement) ||

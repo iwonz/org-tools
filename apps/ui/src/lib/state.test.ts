@@ -1,8 +1,9 @@
-import type { EditableEmployeeFields } from "@org-tools/types";
+import type { CustomEmployeeFieldDefinition, EditableEmployeeFields } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
 import { isUuid } from "@/lib/employee-data";
 import { isEmployeeId } from "@/lib/employee-id";
+import { createEmptyEmployeeSearchFilters } from "@/lib/employee-search";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import { createBlankOrgToolsState, parseOrgFileJson, parseOrgToolsState } from "@/lib/org-file";
 import type { OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
@@ -48,8 +49,10 @@ describe("OrgToolsState", () => {
     expect(store.activeTab).toBe("orgEditor");
     expect(store.units?.roots).toEqual([]);
     expect(store.createOrgToolsState().organization).toEqual({
+      employeeFieldDefinitions: [],
       employees: [],
       structure: { layoutMode: "topDown", units: [] },
+      tags: [],
     });
   });
 
@@ -87,7 +90,7 @@ describe("OrgToolsState", () => {
     expect(restored.createOrgToolsState()).toEqual(state);
   });
 
-  test("re-keys all durable Employee references after an identity edit", () => {
+  test("keeps the stable Employee UUID after an identity edit", () => {
     const { employeeId, store, unitId } = populatedStore();
     store.addExportSelection({ employeeId, id: `employee:${employeeId}`, type: "employee" });
     store.orgEditor.setSelectedItems([{ employeeId, type: "employee", unitId }]);
@@ -95,7 +98,7 @@ describe("OrgToolsState", () => {
       { isBoss: true, position: "Lead", unitId },
     ]);
     const nextId = store.organizationEmployees[0]?.id;
-    expect(nextId).not.toBe(employeeId);
+    expect(nextId).toBe(employeeId);
     expect(store.orgEditor.units[0]?.employeeIds).toEqual([nextId]);
     expect(store.orgEditor.units[0]?.bossEmployeeId).toBe(nextId);
     expect(store.orgEditor.selectedItems).toEqual([
@@ -116,7 +119,7 @@ describe("OrgToolsState", () => {
     expect(store.createOrgToolsState()).toEqual(before);
   });
 
-  test("rejects old View state and mismatched Employee hashes", () => {
+  test("rejects old View state and non-UUID Employee IDs", () => {
     const state = populatedStore().store.createOrgToolsState();
     const oldShape = structuredClone(state) as unknown as Record<string, unknown>;
     oldShape.organization = { employees: state.organization.employees, views: [] };
@@ -185,10 +188,106 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(obsolete)).toThrow("invalid durable UI state");
   });
 
-  test("uses SHA-256 IDs for Employees and UUIDs for Units", () => {
+  test("uses UUIDs for Employees and Units", () => {
     const { employeeId, unitId } = populatedStore();
     expect(isEmployeeId(employeeId)).toBe(true);
     expect(isUuid(unitId)).toBe(true);
+  });
+
+  test("enforces required custom values on the next Employee save", () => {
+    const { employeeId, store, unitId } = populatedStore();
+    const definition: CustomEmployeeFieldDefinition = {
+      id: uuid(301),
+      key: "department",
+      kind: "value",
+      name: "Department",
+      options: [],
+      required: true,
+      valueType: "text",
+    };
+    store.saveEmployeeFieldDefinition(definition);
+
+    expect(() =>
+      store.updateEmployee(employeeId, employeeFields(), [
+        { isBoss: true, position: "Lead", unitId },
+      ]),
+    ).toThrow("required custom field");
+
+    store.updateEmployee(
+      employeeId,
+      employeeFields({ customFieldValues: { [definition.id]: "Engineering" } }),
+      [{ isBoss: true, position: "Lead", unitId }],
+    );
+    expect(store.organizationEmployees[0]?.customFieldValues[definition.id]).toBe("Engineering");
+  });
+
+  test("clears incompatible values and filters when a Value field type changes", () => {
+    const { employeeId, store, unitId } = populatedStore();
+    const definition: CustomEmployeeFieldDefinition = {
+      id: uuid(302),
+      key: "department",
+      kind: "value",
+      name: "Department",
+      options: [],
+      required: false,
+      valueType: "text",
+    };
+    store.saveEmployeeFieldDefinition(definition);
+    store.updateEmployee(
+      employeeId,
+      employeeFields({ customFieldValues: { [definition.id]: "Engineering" } }),
+      [{ isBoss: true, position: "Lead", unitId }],
+    );
+    store.setEmployeesUi("", {
+      ...createEmptyEmployeeSearchFilters(),
+      customFields: [
+        { fieldId: definition.id, includeUnset: false, selectedValues: ["Engineering"] },
+      ],
+    });
+    const liveUnitId = store.createUnit({
+      bossEmployeeId: null,
+      liveFilter: {
+        ...createEmptyEmployeeLiveFilterRule(),
+        customFields: [
+          { fieldId: definition.id, includeUnset: false, selectedValues: ["Engineering"] },
+        ],
+      },
+      membershipMode: "live",
+      name: "Department view",
+      positionOverrides: [],
+    });
+
+    store.saveEmployeeFieldDefinition({ ...definition, valueType: "number" });
+
+    expect(store.organizationEmployees[0]?.customFieldValues[definition.id]).toBeUndefined();
+    expect(store.employeesUi.filters.customFields).toEqual([]);
+    expect(store.orgEditor.units.find((unit) => unit.id === liveUnitId)?.liveFilter).toBeNull();
+    expect(() => store.createOrgToolsState()).not.toThrow();
+  });
+
+  test("cascades Tag deletion through assignments and saved filters", () => {
+    const { store } = populatedStore();
+    const tag = store.tagDefinitions[0];
+    if (!tag) throw new Error("Expected a Tag definition.");
+    store.setEmployeesUi("", {
+      ...createEmptyEmployeeSearchFilters(),
+      selectedTags: [tag.id],
+    });
+    const liveUnitId = store.createUnit({
+      bossEmployeeId: null,
+      liveFilter: { ...createEmptyEmployeeLiveFilterRule(), selectedTags: [tag.id] },
+      membershipMode: "live",
+      name: "Tagged Employees",
+      positionOverrides: [],
+    });
+
+    store.deleteTagDefinition(tag.id);
+
+    expect(store.tagDefinitions).toEqual([]);
+    expect(store.organizationEmployees[0]?.tags).toEqual([]);
+    expect(store.employeesUi.filters.selectedTags).toEqual([]);
+    expect(store.orgEditor.units.find((unit) => unit.id === liveUnitId)?.liveFilter).toBeNull();
+    expect(() => store.createOrgToolsState()).not.toThrow();
   });
 
   test("rejects missing references and cyclic Live Unit dependencies", () => {

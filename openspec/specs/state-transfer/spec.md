@@ -8,22 +8,29 @@ Define strict complete-state and mapped-Employee Import/Export.
 ### Requirement: Import supports complete State and mapped Employees
 The global Import action SHALL open a modal with State and Employees tabs. State SHALL accept only a
 strict current `OrgToolsState` no larger than 25 MiB and atomically replace memory after explicit
-confirmation. Employees SHALL accept a top-level JSON array no larger than 25 MiB, require explicit
-mapping for first name, last name, and email, allow optional field, Tag, and Team mappings, preview
-one representative source record, preview new and matched rows, surface invalid rows as a blocking
-localized error, and mutate current state only after one valid confirmed Apply. Mapping rows SHALL
-read from source JSON path on the left toward one fixed Org Tools field on the right. Tags and Teams
-SHALL use the same mapping-row composition as scalar fields.
+confirmation. Employees SHALL accept at most 20,000 JSON records, require source mappings for UUID,
+first name, last name, and email, support standard fields, Tags, Teams, and current Value fields, and
+atomically apply only after valid review. A mapping MAY stage a new Value field definition, which
+SHALL be created only by the same successful Apply. Mapping rows SHALL read from source JSON path on
+the left toward one fixed Org Tools field on the right. Tags and Teams SHALL use the same mapping-row
+composition as scalar fields.
 
 #### Scenario: Import complete State
 - **WHEN** a user selects State, chooses a valid current state, and confirms replacement
-- **THEN** organization and durable UI install atomically, including locale and theme, and the
-  runtime immediately schedules its normal persistence or synchronization behavior
+- **THEN** the new UUID, Tag catalog, custom field, organization, and UI data install atomically
 
 #### Scenario: Map Employee input
 - **WHEN** a user selects Employees and chooses a JSON array
 - **THEN** bounded discovered source paths can be mapped left-to-right to fixed current Employee fields, Tags, and Teams
 - **AND** identity, validity, new count, and existing-match count are recomputed once per mapping change
+
+#### Scenario: Map an existing custom field
+- **WHEN** a source path is mapped to a current Value definition
+- **THEN** every non-skipped valid row receives a typed value while Template fields remain computed
+
+#### Scenario: Stage a new custom field
+- **WHEN** mapping configures a new valid Value definition
+- **THEN** the definition and imported values appear only after the complete Import Apply succeeds
 
 #### Scenario: Inspect the representative record
 - **WHEN** a heterogeneous Employee array is read
@@ -31,8 +38,8 @@ SHALL use the same mapping-row composition as scalar fields.
 - **AND** the preview is explicitly marked when its UTF-8 representation is truncated at 128 KiB
 
 #### Scenario: Reject invalid input
-- **WHEN** JSON is malformed, oversized, not an array for Employees, contains duplicate computed IDs,
-  lacks identity mappings, or produces invalid current fields
+- **WHEN** input is malformed, oversized, has more than 20,000 rows, lacks required mappings, has
+  invalid typed values, or contains ambiguous UUID or identity relationships
 - **THEN** a localized error and file re-selection remain available while current state is unchanged
 
 #### Scenario: Cancel Import
@@ -57,16 +64,28 @@ and mapped Employee Import SHALL remain available as distinct Import tabs.
 - **THEN** complete State and mapped Employees remain the only two Import tabs
 
 ### Requirement: Employee duplicate policies are bulk-selectable and individually overridable
-Existing Employees SHALL be matched only by deterministic Employee ID. The review SHALL provide one
-bulk policy of Update data or Skip, plus Teams only when a Teams source path is mapped, and SHALL
-allow a sparse per-match override. Update SHALL replace mapped core fields and upsert imported Teams
-when mapped; Skip SHALL change nothing; Teams only SHALL retain core data and upsert imported Teams.
-Clearing the Teams mapping MUST reset a Teams-only bulk policy and every incompatible per-row
-override before Apply can continue.
+Existing Employees SHALL be matched by the normalized identity tuple while retaining their current
+UUID. New rows SHALL default to Add and support bulk or individual Skip. Matches SHALL support bulk
+Update, Skip, and Teams only when Teams are mapped, with sparse per-row overrides. Review SHALL use
+virtualized New, Duplicate, and Skipped columns; every skipped row SHALL appear in Skipped. Clearing
+the Teams mapping MUST reset a Teams-only bulk policy and every incompatible per-row override before
+Apply can continue.
 
 #### Scenario: Apply bulk policy
 - **WHEN** matched Employees exist and the user changes the bulk policy
 - **THEN** every match without an individual override uses that policy
+
+#### Scenario: Apply a duplicate update
+- **WHEN** an imported identity matches an Employee and Update is applied
+- **THEN** mapped data changes while the existing UUID remains stable
+
+#### Scenario: Skip a new Employee
+- **WHEN** a new row receives Skip individually or in bulk
+- **THEN** it moves from New to Skipped and creates no Employee
+
+#### Scenario: Apply Teams only
+- **WHEN** a duplicate uses Teams only with a valid Teams mapping
+- **THEN** core and custom fields remain unchanged while assignments are upserted
 
 #### Scenario: Override one match
 - **WHEN** the user chooses a different available policy for one matched Employee
@@ -92,11 +111,9 @@ assignments. It SHALL NOT expose a separate Import Teams switch.
 - **THEN** matching Units are reused, missing manual Units are created, and referenced assignments are upserted atomically
 
 ### Requirement: Large Employee transfer remains bounded
-File analysis SHALL discover paths and choose the representative record in one linear pass over at
-most 20,000 Employees. The representative JSON preview SHALL be capped at 128 KiB. Mapping and
-matching SHALL cache the derived preview until inputs change, render the mapping and source preview
-without horizontal overflow at 390 px, and render matched rows through virtualization. Per-row
-policy state SHALL remain sparse and transfer candidates SHALL be released when the modal closes.
+Import SHALL analyze at most 20,000 records in one indexed pass, retain a 128 KiB representative
+preview, store sparse overrides, and virtualize New, Duplicate, and Skipped columns. Mapping changes
+MUST reuse source analysis and SHALL recompute typed candidates without rendering complete lists.
 
 #### Scenario: Review 20,000 Employees
 - **WHEN** a valid 20,000-row Employee array is read and mapped
@@ -106,6 +123,14 @@ policy state SHALL remain sparse and transfer candidates SHALL be released when 
 #### Scenario: Review mapping on a narrow viewport
 - **WHEN** Employee Import renders at 390 px
 - **THEN** the representative preview and source-to-target mapping stack vertically without horizontal overflow
+
+### Requirement: Mapped Tag Import ignores color
+Mapped Employee Import SHALL consume Tag label and optional date, resolve or create a neutral catalog
+definition by normalized label, and SHALL NOT import or overwrite Tag colors.
+
+#### Scenario: Import an existing colored Tag
+- **WHEN** mapped input references the label of a colored Tag
+- **THEN** the assignment uses the existing definition and its color remains unchanged
 
 ### Requirement: Employee transfer enforces complete birthday values
 Complete-state Import and mapped Employee Import SHALL accept a non-null birthday only as a valid

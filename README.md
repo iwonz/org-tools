@@ -23,10 +23,15 @@ requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 40 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 46 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
+
+Employees have stable UUIDs, a configurable model of typed or derived custom fields, and a shared
+Tag catalog with semantic colors. Custom fields participate in forms, filters, Employee Import,
+structured JSON, and Template output. The Calendar uses locale-aware weeks, weekend tones, a
+compact dated-Tag rail, and direct Today navigation when browsing another month.
 
 Data Download and Editor JSON export use one drag-sortable field list: scalar Employee fields,
 Units, and Tags appear in their exact output order. Editor Image export keeps a compact inline

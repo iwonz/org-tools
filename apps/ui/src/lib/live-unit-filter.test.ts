@@ -25,6 +25,14 @@ const BLAIR_ID = uuid(2);
 const CASEY_ID = uuid(3);
 const MANUAL_ID = uuid(101);
 const LIVE_ID = uuid(102);
+const QA_TAG_ID = uuid(201);
+const CRITICAL_TAG_ID = uuid(202);
+const DESIGN_TAG_ID = uuid(203);
+const tagDefinitions = [
+  { color: null, id: QA_TAG_ID, label: "QA" },
+  { color: null, id: CRITICAL_TAG_ID, label: "Critical" },
+  { color: null, id: DESIGN_TAG_ID, label: "Design" },
+] as const;
 
 const createEmployee = (
   id: string,
@@ -33,6 +41,7 @@ const createEmployee = (
   avatarBase64Url: null,
   birthday: null,
   createdAt: timestamp,
+  customFieldValues: {},
   email: null,
   firstName: "Employee",
   id,
@@ -52,19 +61,19 @@ const employees: OrganizationEmployee[] = [
     email: "alex@example.test",
     firstName: "Alex",
     tags: [
-      { date: "2026-03-12", label: "QA" },
-      { date: null, label: "Critical" },
+      { date: "2026-03-12", tagId: QA_TAG_ID },
+      { date: null, tagId: CRITICAL_TAG_ID },
     ],
     username: "alex",
   }),
   createEmployee(BLAIR_ID, {
     firstName: "Blair",
-    tags: [{ date: null, label: "QA" }],
+    tags: [{ date: null, tagId: QA_TAG_ID }],
     username: "blair",
   }),
   createEmployee(CASEY_ID, {
     firstName: "Casey",
-    tags: [{ date: null, label: "Design" }],
+    tags: [{ date: null, tagId: DESIGN_TAG_ID }],
     username: "casey",
   }),
 ];
@@ -100,14 +109,15 @@ describe("Live Unit resolver", () => {
         }),
         unit(LIVE_ID, {
           liveFilter: rule({
-            birthday: { day: 12, month: 3 },
+            birthday: { day: 12, month: 3, year: 1900 },
             query: "alex qa",
             selectedPositions: ["QA"],
-            selectedTags: ["QA"],
+            selectedTags: [QA_TAG_ID],
             selectedUnitIds: [MANUAL_ID],
           }),
         }),
       ]),
+      tagDefinitions,
     );
 
     expect(structure.indexes.unitsById.get(LIVE_ID)?.directEmployeeIds).toEqual([ALEX_ID]);
@@ -129,15 +139,16 @@ describe("Live Unit resolver", () => {
             { employeeId: BLAIR_ID, position: "Developer" },
           ],
         }),
-        unit(defaultLiveId, { liveFilter: rule({ selectedTags: ["QA"] }) }),
+        unit(defaultLiveId, { liveFilter: rule({ selectedTags: [QA_TAG_ID] }) }),
         unit(overriddenLiveId, {
           employeePositions: [
             { employeeId: ALEX_ID, position: "QA Lead" },
             { employeeId: BLAIR_ID, position: null },
           ],
-          liveFilter: rule({ selectedTags: ["QA"] }),
+          liveFilter: rule({ selectedTags: [QA_TAG_ID] }),
         }),
       ]),
+      tagDefinitions,
     );
     const position = (employeeId: string, unitId: string) =>
       structure.indexes.employeesById
@@ -159,11 +170,11 @@ describe("Live Unit resolver", () => {
     const downstreamId = uuid(107);
     const editorState = state([
       unit(MANUAL_ID, { employeeIds: [ALEX_ID] }),
-      unit(qaLiveId, { liveFilter: rule({ selectedTags: ["QA"] }) }),
+      unit(qaLiveId, { liveFilter: rule({ selectedTags: [QA_TAG_ID] }) }),
       unit(withoutManualId, { liveFilter: rule({ includeWithoutUnits: true }) }),
       unit(downstreamId, { liveFilter: rule({ selectedUnitIds: [qaLiveId] }) }),
     ]);
-    const result = buildOrganizationStructureWithResolution(employees, editorState);
+    const result = buildOrganizationStructureWithResolution(employees, editorState, tagDefinitions);
 
     expect(getLiveUnitTopologicalOrder(editorState.units).map((current) => current.id)).toEqual([
       qaLiveId,
@@ -178,7 +189,7 @@ describe("Live Unit resolver", () => {
   test("rejects empty rules, self references, and indirect cycles", () => {
     const units = [
       unit(MANUAL_ID, { liveFilter: rule({ selectedUnitIds: [LIVE_ID] }) }),
-      unit(LIVE_ID, { liveFilter: rule({ selectedTags: ["QA"] }) }),
+      unit(LIVE_ID, { liveFilter: rule({ selectedTags: [QA_TAG_ID] }) }),
     ];
 
     expect(() =>

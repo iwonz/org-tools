@@ -32,6 +32,7 @@ import type {
   ExportJsonTopLevelFieldKey,
   ExportJsonUnitFieldKey,
 } from "@/stores/org-store";
+import { useOrgStore } from "@/stores/org-store-context";
 
 export type StructuredJsonSettingsValue = ExportJsonSettingsState;
 
@@ -67,6 +68,7 @@ export function StructuredJsonSettings({
   value: StructuredJsonSettingsValue;
 }) {
   const t = useUiText();
+  const store = useOrgStore();
   const [dragState, setDragState] = useState<DragState>(null);
   const dragStateRef = useRef<DragState>(null);
   const update = (patch: Partial<StructuredJsonSettingsValue>) => onChange({ ...value, ...patch });
@@ -81,6 +83,13 @@ export function StructuredJsonSettings({
       jsonFieldNames: {
         ...value.jsonFieldNames,
         employee: { ...value.jsonFieldNames.employee, [key]: name },
+      },
+    });
+  const setCustomFieldName = (fieldId: string, name: string) =>
+    update({
+      jsonFieldNames: {
+        ...value.jsonFieldNames,
+        custom: { ...value.jsonFieldNames.custom, [fieldId]: name },
       },
     });
   const setGroupCollectionName = (group: JsonGroup, name: string) =>
@@ -308,7 +317,11 @@ export function StructuredJsonSettings({
 
   const renderTopLevelField = (key: ExportJsonTopLevelFieldKey) => {
     const group = key === "units" || key === "tags" ? key : null;
-    const employeeKey = group ? null : (key as ExportJsonEmployeeFieldKey);
+    const customFieldId = key.startsWith("custom:") ? key.slice(7) : null;
+    const customDefinition = customFieldId
+      ? store.employeeFieldDefinitions.find((field) => field.id === customFieldId)
+      : null;
+    const employeeKey = group || customFieldId ? null : (key as ExportJsonEmployeeFieldKey);
     const selectedGroupFields =
       group === "units"
         ? value.selectedJsonUnitFieldKeys
@@ -331,16 +344,23 @@ export function StructuredJsonSettings({
           ? true
           : "indeterminate"
       : value.selectedEmployeeFieldKeys.includes(employeeKey as ExportJsonEmployeeFieldKey);
+    const customChecked = customFieldId
+      ? value.selectedCustomEmployeeFieldIds.includes(customFieldId)
+      : false;
     const title =
       group === "units"
         ? t("Units")
         : group === "tags"
           ? t("Tags")
-          : (exportJsonEmployeeFieldByKey.get(employeeKey as ExportJsonEmployeeFieldKey)?.label ??
-            key);
+          : customDefinition
+            ? customDefinition.name
+            : (exportJsonEmployeeFieldByKey.get(employeeKey as ExportJsonEmployeeFieldKey)?.label ??
+              key);
     const fieldName = group
       ? value.jsonFieldNames[group].collection
-      : value.jsonFieldNames.employee[employeeKey as ExportJsonEmployeeFieldKey];
+      : customFieldId
+        ? (value.jsonFieldNames.custom[customFieldId] ?? customDefinition?.key ?? "")
+        : value.jsonFieldNames.employee[employeeKey as ExportJsonEmployeeFieldKey];
 
     return (
       <div className="grid gap-1" key={key}>
@@ -355,7 +375,7 @@ export function StructuredJsonSettings({
           {renderDragHandle("topLevel", key, title)}
           <Checkbox
             aria-label={group ? title : t("Field {name}", { name: title })}
-            checked={checked}
+            checked={customFieldId ? customChecked : checked}
             onCheckedChange={() => {
               if (group) {
                 update(
@@ -371,6 +391,14 @@ export function StructuredJsonSettings({
                           : [...value.jsonTagFieldOrder],
                       },
                 );
+                return;
+              }
+              if (customFieldId) {
+                update({
+                  selectedCustomEmployeeFieldIds: customChecked
+                    ? value.selectedCustomEmployeeFieldIds.filter((id) => id !== customFieldId)
+                    : [...value.selectedCustomEmployeeFieldIds, customFieldId],
+                });
                 return;
               }
               update({
@@ -397,26 +425,32 @@ export function StructuredJsonSettings({
                 : t("Export field name for {name}", { name: title })
             }
             className="h-8 text-xs"
-            disabled={group ? selectedGroupFields?.length === 0 : !checked}
+            disabled={
+              group ? selectedGroupFields?.length === 0 : customFieldId ? !customChecked : !checked
+            }
             onChange={(event) =>
               group
                 ? setGroupCollectionName(group, event.currentTarget.value)
-                : setEmployeeFieldName(
-                    employeeKey as ExportJsonEmployeeFieldKey,
-                    event.currentTarget.value,
-                  )
+                : customFieldId
+                  ? setCustomFieldName(customFieldId, event.currentTarget.value)
+                  : setEmployeeFieldName(
+                      employeeKey as ExportJsonEmployeeFieldKey,
+                      event.currentTarget.value,
+                    )
             }
             value={fieldName}
           />
           {renderReset(
-            fieldName !== key,
+            fieldName !== (customDefinition?.key ?? key),
             () =>
               group
                 ? setGroupCollectionName(group, group)
-                : setEmployeeFieldName(
-                    employeeKey as ExportJsonEmployeeFieldKey,
-                    employeeKey as ExportJsonEmployeeFieldKey,
-                  ),
+                : customFieldId
+                  ? setCustomFieldName(customFieldId, customDefinition?.key ?? customFieldId)
+                  : setEmployeeFieldName(
+                      employeeKey as ExportJsonEmployeeFieldKey,
+                      employeeKey as ExportJsonEmployeeFieldKey,
+                    ),
             title,
           )}
         </div>

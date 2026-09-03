@@ -45,6 +45,7 @@ const childPosition: EmployeeUnitPosition = {
 const createEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   avatarBase64Url: EMBEDDED_AVATAR,
   birthday: "10.12.1985",
+  customFieldValues: {},
   email: "ada@example.test",
   firstName: "Ada",
   fullName: "Ada Lovelace",

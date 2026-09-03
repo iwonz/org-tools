@@ -24,7 +24,9 @@ import {
   toggleEmployeeTagForTargets,
 } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
+import { tagColorClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
+import { useOrgStore } from "@/stores/org-store-context";
 
 const TAG_OPTION_HEIGHT = 44;
 
@@ -48,6 +50,7 @@ export function EmployeeTagPickerPanel({
   tagOptions: readonly string[];
 }) {
   const t = useUiText();
+  const store = useOrgStore();
   const [query, setQuery] = useState("");
   const [sessionOptions, setSessionOptions] = useState(() =>
     sortEmployeeTagLabels(
@@ -147,6 +150,9 @@ export function EmployeeTagPickerPanel({
 
               const checked = getEmployeeTagSelectionState(employees, tag);
               const dateState = getEmployeeTagDateSelectionState(employees, tag);
+              const definition = store.tagDefinitions.find(
+                (candidate) => normalizeSearchValue(candidate.label) === normalizeSearchValue(tag),
+              );
 
               return (
                 <div
@@ -175,7 +181,18 @@ export function EmployeeTagPickerPanel({
                     onClick={() => onApply(toggleEmployeeTagForTargets(employees, tag))}
                     type="button"
                   >
-                    <EmployeeTagDateText date={checked === false ? null : dateState} label={tag} />
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          tagColorClassName(definition?.color),
+                        )}
+                      />
+                      <EmployeeTagDateText
+                        date={checked === false ? null : dateState}
+                        label={tag}
+                      />
+                    </span>
                   </button>
                   {checked !== false && (
                     <EmployeeTagDatePopover

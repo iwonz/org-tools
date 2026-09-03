@@ -1,9 +1,12 @@
 import type {
   AppLocale,
-  EditableEmployeeFields,
+  CustomEmployeeFieldDefinition,
+  CustomEmployeeFieldValue,
   EmployeeId,
   EmployeeLiveFilterRule,
-  EmployeeTag,
+  EmployeeTagAssignment,
+  EmployeeTagColor,
+  EmployeeTagDefinition,
   OrganizationEmployee,
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
@@ -24,8 +27,15 @@ import type {
   UnitId,
 } from "@org-tools/types";
 
-import { isEmployeeGender, isUuid, normalizeEditableEmployeeFields } from "@/lib/employee-data";
-import { createEmployeeId, isEmployeeId } from "@/lib/employee-id";
+import { validateCustomEmployeeFieldDefinitions } from "@/lib/custom-employee-fields";
+import {
+  isEmployeeGender,
+  isSafeAvatarBase64Url,
+  isSafeProfileUrl,
+  isUuid,
+  normalizeBirthday,
+} from "@/lib/employee-data";
+import { createEmployeeIdentityKey, isEmployeeId } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import { createDefaultOrgEditorState } from "@/lib/org-editor";
@@ -35,6 +45,7 @@ export type LoadedOrgFile = { kind: "orgToolsState"; state: OrgToolsState };
 const EMPLOYEE_FIELD_KEYS = [
   "avatarBase64Url",
   "birthday",
+  "customFieldValues",
   "email",
   "firstName",
   "gender",
@@ -62,6 +73,7 @@ const DOWNLOAD_JSON_TOP_LEVEL_FIELD_KEYS = [
   "units",
   "tags",
 ] as const satisfies readonly OrgToolsDownloadJsonTopLevelFieldKey[];
+const TAG_COLORS = ["amber", "blue", "cyan", "green", "orange", "red", "rose", "teal"] as const;
 const DOWNLOAD_TAG_FIELD_KEYS = [
   "label",
   "date",
@@ -111,34 +123,50 @@ const isActiveTab = (value: unknown): value is UiActiveTab =>
 const isLayoutMode = (value: unknown): value is OrgEditorLayoutMode =>
   value === "leftRight" || value === "topDown";
 
-const normalizeTagRecords = (value: unknown): EmployeeTag[] | null => {
+const normalizeTagAssignments = (value: unknown): EmployeeTagAssignment[] | null => {
   if (!Array.isArray(value)) return null;
-  const tags: EmployeeTag[] = [];
-  const dateByNormalizedLabel = new Map<string, string | null>();
+  const tags: EmployeeTagAssignment[] = [];
+  const seen = new Set<string>();
   for (const item of value) {
     if (
       !isRecord(item) ||
-      !hasExactKeys(item, ["date", "label"]) ||
-      !isString(item.label) ||
+      !hasExactKeys(item, ["date", "tagId"]) ||
+      !isUuid(item.tagId) ||
       !(item.date === null || (isString(item.date) && isValidEmployeeTagDate(item.date)))
     ) {
       return null;
     }
-    const label = item.label.trim();
-    const normalizedLabel = label.toLowerCase();
-    if (!normalizedLabel) return null;
-    if (dateByNormalizedLabel.has(normalizedLabel)) {
-      if (dateByNormalizedLabel.get(normalizedLabel) !== item.date) return null;
-      continue;
-    }
-    dateByNormalizedLabel.set(normalizedLabel, item.date);
-    tags.push({ date: item.date, label });
+    if (seen.has(item.tagId)) return null;
+    seen.add(item.tagId);
+    tags.push({ date: item.date, tagId: item.tagId });
   }
   return tags;
 };
 
-const normalizeEmployeeFields = (value: Record<string, unknown>): EditableEmployeeFields | null => {
-  const tags = normalizeTagRecords(value.tags);
+const normalizeCustomFieldValues = (
+  value: unknown,
+): Record<string, CustomEmployeeFieldValue> | null => {
+  if (!isRecord(value)) return null;
+  const result: Record<string, CustomEmployeeFieldValue> = {};
+  for (const [key, fieldValue] of Object.entries(value)) {
+    if (
+      !isUuid(key) ||
+      !(
+        fieldValue === null ||
+        isString(fieldValue) ||
+        typeof fieldValue === "boolean" ||
+        isFiniteNumber(fieldValue)
+      )
+    )
+      return null;
+    result[key] = fieldValue;
+  }
+  return result;
+};
+
+const normalizeEmployeeFields = (value: Record<string, unknown>) => {
+  const tags = normalizeTagAssignments(value.tags);
+  const customFieldValues = normalizeCustomFieldValues(value.customFieldValues);
   if (
     !isNullableString(value.avatarBase64Url) ||
     !isNullableString(value.birthday) ||
@@ -149,23 +177,34 @@ const normalizeEmployeeFields = (value: Record<string, unknown>): EditableEmploy
     !isNullableString(value.phone) ||
     !isNullableString(value.profileUrl) ||
     !tags ||
+    !customFieldValues ||
     !isNullableString(value.username)
   ) {
     return null;
   }
   try {
-    return normalizeEditableEmployeeFields({
-      avatarBase64Url: value.avatarBase64Url,
-      birthday: value.birthday,
-      email: value.email,
-      firstName: value.firstName,
+    const firstName = value.firstName.trim();
+    const lastName = value.lastName.trim();
+    const email = value.email?.trim() || null;
+    const username = value.username?.trim() || null;
+    if (!firstName && !lastName && !username && !email) return null;
+    const avatarBase64Url = value.avatarBase64Url?.trim() || null;
+    const profileUrl = value.profileUrl?.trim() || null;
+    if (avatarBase64Url && !isSafeAvatarBase64Url(avatarBase64Url)) return null;
+    if (profileUrl && !isSafeProfileUrl(profileUrl)) return null;
+    return {
+      avatarBase64Url,
+      birthday: normalizeBirthday(value.birthday),
+      customFieldValues,
+      email,
+      firstName,
       gender: value.gender,
-      lastName: value.lastName,
-      phone: value.phone,
-      profileUrl: value.profileUrl,
+      lastName,
+      phone: value.phone?.trim() || null,
+      profileUrl,
       tags,
-      username: value.username,
-    });
+      username,
+    };
   } catch {
     return null;
   }
@@ -182,7 +221,6 @@ export const normalizeOrganizationEmployee = (value: unknown): OrganizationEmplo
   if (
     !fields ||
     !isEmployeeId(value.id) ||
-    value.id !== createEmployeeId(fields) ||
     !isTimestamp(value.createdAt) ||
     !isTimestamp(value.updatedAt)
   ) {
@@ -191,14 +229,132 @@ export const normalizeOrganizationEmployee = (value: unknown): OrganizationEmplo
   return { ...fields, createdAt: value.createdAt, id: value.id, updatedAt: value.updatedAt };
 };
 
+const normalizeTagDefinitions = (value: unknown): EmployeeTagDefinition[] | null => {
+  if (!Array.isArray(value)) return null;
+  const definitions: EmployeeTagDefinition[] = [];
+  const ids = new Set<string>();
+  const labels = new Set<string>();
+  for (const item of value) {
+    if (
+      !isRecord(item) ||
+      !hasExactKeys(item, ["color", "id", "label"]) ||
+      !isUuid(item.id) ||
+      !isString(item.label)
+    )
+      return null;
+    const label = item.label.normalize("NFKC").trim().replace(/\s+/gu, " ");
+    const normalizedLabel = label.toLocaleLowerCase("en-US");
+    if (!label || ids.has(item.id) || labels.has(normalizedLabel)) return null;
+    if (!(item.color === null || TAG_COLORS.includes(item.color as EmployeeTagColor))) return null;
+    ids.add(item.id);
+    labels.add(normalizedLabel);
+    definitions.push({ color: item.color as EmployeeTagColor | null, id: item.id, label });
+  }
+  return definitions;
+};
+
+const isCanonicalCustomDate = (value: string) => {
+  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
+  if (!match) return false;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+};
+
+const normalizeCustomFieldDefinitions = (
+  value: unknown,
+): CustomEmployeeFieldDefinition[] | null => {
+  if (!Array.isArray(value)) return null;
+  const definitions: CustomEmployeeFieldDefinition[] = [];
+  const ids = new Set<string>();
+  for (const item of value) {
+    if (
+      !isRecord(item) ||
+      !isUuid(item.id) ||
+      !isString(item.name) ||
+      !isString(item.key) ||
+      ids.has(item.id)
+    )
+      return null;
+    ids.add(item.id);
+    if (
+      item.kind === "template" &&
+      hasExactKeys(item, ["hash", "id", "key", "kind", "name", "template"]) &&
+      isString(item.template) &&
+      (item.hash === "none" || item.hash === "md5" || item.hash === "sha256")
+    ) {
+      definitions.push({
+        hash: item.hash,
+        id: item.id,
+        key: item.key,
+        kind: "template",
+        name: item.name,
+        template: item.template,
+      });
+      continue;
+    }
+    if (
+      item.kind === "value" &&
+      hasExactKeys(item, ["id", "key", "kind", "name", "options", "required", "valueType"]) &&
+      typeof item.required === "boolean" &&
+      (item.valueType === "text" ||
+        item.valueType === "number" ||
+        item.valueType === "boolean" ||
+        item.valueType === "date" ||
+        item.valueType === "option") &&
+      Array.isArray(item.options)
+    ) {
+      const optionIds = new Set<string>();
+      const options = item.options.flatMap((option) => {
+        if (
+          !isRecord(option) ||
+          !hasExactKeys(option, ["id", "label"]) ||
+          !isUuid(option.id) ||
+          !isString(option.label) ||
+          !option.label.trim() ||
+          optionIds.has(option.id)
+        )
+          return [];
+        optionIds.add(option.id);
+        return [
+          { id: option.id, label: option.label.normalize("NFKC").trim().replace(/\s+/gu, " ") },
+        ];
+      });
+      if (
+        options.length !== item.options.length ||
+        (item.valueType !== "option" && options.length > 0)
+      )
+        return null;
+      definitions.push({
+        id: item.id,
+        key: item.key,
+        kind: "value",
+        name: item.name,
+        options,
+        required: item.required,
+        valueType: item.valueType,
+      });
+      continue;
+    }
+    return null;
+  }
+  return validateCustomEmployeeFieldDefinitions(definitions) === null ? definitions : null;
+};
+
 const normalizeLiveFilterRule = (value: unknown): EmployeeLiveFilterRule | null => {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, [
       "birthday",
+      "customFields",
       "includeWithoutTags",
       "includeWithoutUnits",
       "query",
+      "selectedGenders",
       "selectedPositions",
       "selectedTags",
       "selectedUnitIds",
@@ -206,8 +362,11 @@ const normalizeLiveFilterRule = (value: unknown): EmployeeLiveFilterRule | null 
     !isString(value.query) ||
     typeof value.includeWithoutTags !== "boolean" ||
     typeof value.includeWithoutUnits !== "boolean" ||
+    !Array.isArray(value.customFields) ||
+    !Array.isArray(value.selectedGenders) ||
+    !value.selectedGenders.every(isEmployeeGender) ||
     !isStringArray(value.selectedPositions) ||
-    !isStringArray(value.selectedTags) ||
+    !isUuidArray(value.selectedTags) ||
     !isUuidArray(value.selectedUnitIds)
   ) {
     return null;
@@ -217,30 +376,67 @@ const normalizeLiveFilterRule = (value: unknown): EmployeeLiveFilterRule | null 
     birthday = null;
   } else if (
     isRecord(value.birthday) &&
-    hasExactKeys(value.birthday, ["day", "month"]) &&
+    hasExactKeys(value.birthday, ["day", "month", "year"]) &&
     Number.isInteger(value.birthday.day) &&
-    Number.isInteger(value.birthday.month)
+    Number.isInteger(value.birthday.month) &&
+    Number.isInteger(value.birthday.year)
   ) {
     const day = value.birthday.day as number;
     const month = value.birthday.month as number;
-    const date = new Date(Date.UTC(2000, month - 1, day));
-    if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
-    birthday = { day, month };
+    const year = value.birthday.year as number;
+    const validationYear = year === 1900 ? 2000 : year;
+    const date = new Date(Date.UTC(validationYear, month - 1, day));
+    if (
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day ||
+      year < 1900 ||
+      year > new Date().getFullYear()
+    )
+      return null;
+    birthday = { day, month, year };
   } else {
     return null;
   }
+  const customFields = normalizeCustomFieldFilters(value.customFields);
+  if (!customFields) return null;
   return {
     birthday,
+    customFields,
     includeWithoutTags: value.includeWithoutTags,
     includeWithoutUnits: value.includeWithoutUnits,
     query: value.query.trim(),
+    selectedGenders: [...value.selectedGenders],
     selectedPositions: [...new Set(value.selectedPositions.map((item) => item.trim()))].filter(
       Boolean,
     ),
-    selectedTags: [...new Set(value.selectedTags.map((item) => item.trim()))].filter(Boolean),
+    selectedTags: [...new Set(value.selectedTags)],
     selectedUnitIds: [...value.selectedUnitIds],
   };
 };
+
+function normalizeCustomFieldFilters(value: unknown) {
+  if (!Array.isArray(value)) return null;
+  const seen = new Set<string>();
+  const result: EmployeeLiveFilterRule["customFields"] = [];
+  for (const item of value) {
+    if (
+      !isRecord(item) ||
+      !hasExactKeys(item, ["fieldId", "includeUnset", "selectedValues"]) ||
+      !isUuid(item.fieldId) ||
+      typeof item.includeUnset !== "boolean" ||
+      !isStringArray(item.selectedValues) ||
+      seen.has(item.fieldId)
+    )
+      return null;
+    seen.add(item.fieldId);
+    result.push({
+      fieldId: item.fieldId,
+      includeUnset: item.includeUnset,
+      selectedValues: [...new Set(item.selectedValues)],
+    });
+  }
+  return result;
+}
 
 const normalizeEmployeePositions = (value: unknown): OrgEditorEmployeePosition[] | null => {
   if (!Array.isArray(value)) return null;
@@ -352,6 +548,7 @@ const normalizeEmployeeSearchFilters = (value: unknown): OrgToolsEmployeeFilters
     !isRecord(value) ||
     !hasExactKeys(value, [
       "birthday",
+      "customFields",
       "includeWithoutTags",
       "includeWithoutUnits",
       "selectedGenders",
@@ -364,7 +561,7 @@ const normalizeEmployeeSearchFilters = (value: unknown): OrgToolsEmployeeFilters
     !Array.isArray(value.selectedGenders) ||
     !value.selectedGenders.every(isEmployeeGender) ||
     !isStringArray(value.selectedPositions) ||
-    !isStringArray(value.selectedTags) ||
+    !isUuidArray(value.selectedTags) ||
     !isUuidArray(value.selectedUnitIds)
   ) {
     return null;
@@ -373,20 +570,32 @@ const normalizeEmployeeSearchFilters = (value: unknown): OrgToolsEmployeeFilters
   if (value.birthday !== null) {
     if (
       !isRecord(value.birthday) ||
-      !hasExactKeys(value.birthday, ["day", "month"]) ||
+      !hasExactKeys(value.birthday, ["day", "month", "year"]) ||
       !Number.isInteger(value.birthday.day) ||
-      !Number.isInteger(value.birthday.month)
+      !Number.isInteger(value.birthday.month) ||
+      !Number.isInteger(value.birthday.year)
     ) {
       return null;
     }
     const day = value.birthday.day as number;
     const month = value.birthday.month as number;
-    const date = new Date(Date.UTC(2000, month - 1, day));
-    if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
-    birthday = { day, month };
+    const year = value.birthday.year as number;
+    const validationYear = year === 1900 ? 2000 : year;
+    const date = new Date(Date.UTC(validationYear, month - 1, day));
+    if (
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day ||
+      year < 1900 ||
+      year > new Date().getFullYear()
+    )
+      return null;
+    birthday = { day, month, year };
   }
+  const customFields = normalizeCustomFieldFilters(value.customFields);
+  if (!customFields) return null;
   return {
     birthday,
+    customFields,
     includeWithoutTags: value.includeWithoutTags,
     includeWithoutUnits: value.includeWithoutUnits,
     selectedGenders: [...value.selectedGenders],
@@ -449,7 +658,12 @@ const normalizeCompleteEnumOrder = <Value extends string>(
 const normalizeDownloadJsonFieldNames = (
   value: unknown,
 ): OrgToolsDownloadState["jsonFieldNames"] | null => {
-  if (!isRecord(value) || !hasExactKeys(value, ["employee", "tags", "units"])) return null;
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["custom", "employee", "tags", "units"]) ||
+    !isRecord(value.custom)
+  )
+    return null;
   if (!isRecord(value.tags) || !hasExactKeys(value.tags, ["collection", "fields"])) return null;
   if (!isRecord(value.units) || !hasExactKeys(value.units, ["collection", "fields"])) return null;
   const employee = normalizeExactStringRecord(value.employee, DOWNLOAD_EMPLOYEE_FIELD_KEYS);
@@ -464,7 +678,13 @@ const normalizeDownloadJsonFieldNames = (
   ) {
     return null;
   }
+  const custom: Record<string, string> = {};
+  for (const [fieldId, name] of Object.entries(value.custom)) {
+    if (!isUuid(fieldId) || !isString(name)) return null;
+    custom[fieldId] = name;
+  }
   return {
+    custom,
     employee,
     tags: { collection: value.tags.collection, fields: tagFields },
     units: { collection: value.units.collection, fields: unitFields },
@@ -485,6 +705,7 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
       "jsonTopLevelFieldOrder",
       "jsonUnitFieldOrder",
       "rowMode",
+      "selectedCustomEmployeeFieldIds",
       "selectedEmployeeFieldKeys",
       "selectedFilters",
       "selectedJsonTagFieldKeys",
@@ -504,6 +725,7 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     !Array.isArray(value.jsonUnitFieldOrder) ||
     (value.rowMode !== "allUnits" && value.rowMode !== "firstUnit") ||
     !Array.isArray(value.selectedEmployeeFieldKeys) ||
+    !isUuidArray(value.selectedCustomEmployeeFieldIds) ||
     !Array.isArray(value.selectedJsonTagFieldKeys) ||
     !Array.isArray(value.selectedJsonUnitFieldKeys) ||
     !isString(value.selectedQuery) ||
@@ -518,10 +740,18 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
   const selectedFilters = normalizeEmployeeSearchFilters(value.selectedFilters);
   const jsonFieldNames = normalizeDownloadJsonFieldNames(value.jsonFieldNames);
   const selections = value.selections.map(normalizeDownloadSelection);
-  const jsonTopLevelFieldOrder = normalizeCompleteEnumOrder(
-    value.jsonTopLevelFieldOrder,
-    DOWNLOAD_JSON_TOP_LEVEL_FIELD_KEYS,
-  );
+  const rawTopLevelFieldOrder = value.jsonTopLevelFieldOrder as unknown[];
+  const jsonTopLevelFieldOrder =
+    rawTopLevelFieldOrder.every(
+      (item) =>
+        isString(item) &&
+        (DOWNLOAD_JSON_TOP_LEVEL_FIELD_KEYS.includes(item as never) ||
+          (item.startsWith("custom:") && isUuid(item.slice(7)))),
+    ) &&
+    new Set(rawTopLevelFieldOrder).size === rawTopLevelFieldOrder.length &&
+    DOWNLOAD_JSON_TOP_LEVEL_FIELD_KEYS.every((key) => rawTopLevelFieldOrder.includes(key))
+      ? (rawTopLevelFieldOrder as OrgToolsDownloadJsonTopLevelFieldKey[])
+      : null;
   const jsonTagFieldOrder = normalizeCompleteEnumOrder(
     value.jsonTagFieldOrder,
     DOWNLOAD_TAG_FIELD_KEYS,
@@ -566,6 +796,7 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     jsonTopLevelFieldOrder,
     jsonUnitFieldOrder,
     rowMode: value.rowMode,
+    selectedCustomEmployeeFieldIds: [...new Set(value.selectedCustomEmployeeFieldIds)],
     selectedEmployeeFieldKeys,
     selectedFilters,
     selectedJsonTagFieldKeys,
@@ -584,11 +815,42 @@ const assertUniqueIds = (ids: readonly string[], message: string): void => {
 
 const validateStateGraph = (state: OrgToolsState): void => {
   const employees = state.organization.employees;
+  const fieldDefinitions = state.organization.employeeFieldDefinitions;
+  const fieldDefinitionById = new Map(
+    fieldDefinitions.map((definition) => [definition.id, definition]),
+  );
+  const tagIds = new Set(state.organization.tags.map((tag) => tag.id));
   const employeeIds = new Set(employees.map((employee) => employee.id));
   assertUniqueIds(
     employees.map((employee) => employee.id),
     "State has duplicate Employee IDs.",
   );
+  const identityKeys = employees.map(createEmployeeIdentityKey);
+  assertUniqueIds(identityKeys, "State has duplicate Employee identities.");
+  for (const employee of employees) {
+    if (employee.tags.some((assignment) => !tagIds.has(assignment.tagId))) {
+      throw new Error("Employee references a missing Tag.");
+    }
+    for (const [fieldId, value] of Object.entries(employee.customFieldValues)) {
+      const definition = fieldDefinitionById.get(fieldId);
+      if (definition?.kind !== "value")
+        throw new Error("Employee references a missing Value field.");
+      if (value === null) continue;
+      if (definition.valueType === "text" && typeof value !== "string")
+        throw new Error("Employee custom text value is invalid.");
+      if (definition.valueType === "number" && !isFiniteNumber(value))
+        throw new Error("Employee custom number value is invalid.");
+      if (definition.valueType === "boolean" && typeof value !== "boolean")
+        throw new Error("Employee custom boolean value is invalid.");
+      if (definition.valueType === "date" && !(isString(value) && isCanonicalCustomDate(value)))
+        throw new Error("Employee custom date value is invalid.");
+      if (
+        definition.valueType === "option" &&
+        !(isString(value) && definition.options.some((option) => option.id === value))
+      )
+        throw new Error("Employee custom option value is invalid.");
+    }
+  }
   const units = state.organization.structure.units;
   const unitIds = new Set(units.map((unit) => unit.id));
   assertUniqueIds(
@@ -649,6 +911,34 @@ const validateStateGraph = (state: OrgToolsState): void => {
   if (state.ui.expandedUnitIds.some((unitId) => !unitIds.has(unitId))) {
     throw new Error("Expanded Units do not exist.");
   }
+  const allFilters = [
+    state.ui.analytics.filters,
+    state.ui.employees.filters,
+    state.ui.units.employeeFilters,
+    state.ui.download.employeeFilters,
+    state.ui.download.selectedFilters,
+  ];
+  for (const unit of units) if (unit.liveFilter) allFilters.push(unit.liveFilter);
+  for (const filters of allFilters) {
+    if (filters.selectedTags.some((tagId) => !tagIds.has(tagId)))
+      throw new Error("Filter references a missing Tag.");
+    if (filters.customFields.some((filter) => !fieldDefinitionById.has(filter.fieldId)))
+      throw new Error("Filter references a missing custom field.");
+  }
+  const customOrderIds = state.ui.download.jsonTopLevelFieldOrder.flatMap((key) =>
+    key.startsWith("custom:") ? [key.slice(7)] : [],
+  );
+  if (
+    customOrderIds.length !== fieldDefinitions.length ||
+    customOrderIds.some((id) => !fieldDefinitionById.has(id))
+  )
+    throw new Error("Download custom field order is invalid.");
+  if (state.ui.download.selectedCustomEmployeeFieldIds.some((id) => !fieldDefinitionById.has(id)))
+    throw new Error("Download selects a missing custom field.");
+  if (
+    Object.keys(state.ui.download.jsonFieldNames.custom).some((id) => !fieldDefinitionById.has(id))
+  )
+    throw new Error("Download names a missing custom field.");
   assertUniqueIds(state.ui.expandedUnitIds, "Expanded Unit IDs must be unique.");
   for (const item of state.ui.editor.selectedItems) {
     if (!unitById.has(item.unitId)) throw new Error("Editor selects a missing Unit.");
@@ -689,8 +979,7 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
     !hasExactKeys(value.analytics, ["filters", "query"]) ||
     !isString(value.analytics.query) ||
     !isRecord(value.calendar) ||
-    !hasExactKeys(value.calendar, ["cloudExpanded", "monthIndex", "year"]) ||
-    typeof value.calendar.cloudExpanded !== "boolean" ||
+    !hasExactKeys(value.calendar, ["monthIndex", "year"]) ||
     !Number.isInteger(value.calendar.monthIndex) ||
     (value.calendar.monthIndex as number) < 0 ||
     (value.calendar.monthIndex as number) > 11 ||
@@ -731,7 +1020,6 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
     activeTab: value.activeTab,
     analytics: { filters: analyticsFilters, query: value.analytics.query },
     calendar: {
-      cloudExpanded: value.calendar.cloudExpanded,
       monthIndex: value.calendar.monthIndex as number,
       year: value.calendar.year as number,
     },
@@ -767,8 +1055,15 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (
     !hasExactKeys(input, ["organization", "ui"]) ||
     !isRecord(input.organization) ||
-    !hasExactKeys(input.organization, ["employees", "structure"]) ||
+    !hasExactKeys(input.organization, [
+      "employeeFieldDefinitions",
+      "employees",
+      "structure",
+      "tags",
+    ]) ||
+    !Array.isArray(input.organization.employeeFieldDefinitions) ||
     !Array.isArray(input.organization.employees) ||
+    !Array.isArray(input.organization.tags) ||
     !isRecord(input.organization.structure) ||
     !hasExactKeys(input.organization.structure, ["layoutMode", "units"]) ||
     !isLayoutMode(input.organization.structure.layoutMode) ||
@@ -776,6 +1071,12 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   ) {
     throw new Error("State has an invalid top-level structure.");
   }
+  const employeeFieldDefinitions = normalizeCustomFieldDefinitions(
+    input.organization.employeeFieldDefinitions,
+  );
+  const tags = normalizeTagDefinitions(input.organization.tags);
+  if (!employeeFieldDefinitions) throw new Error("State contains invalid custom Employee fields.");
+  if (!tags) throw new Error("State contains invalid Tags.");
   const employees = input.organization.employees.map(normalizeOrganizationEmployee);
   if (employees.some((employee) => !employee))
     throw new Error("State contains an invalid Employee.");
@@ -783,11 +1084,13 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (units.some((unit) => !unit)) throw new Error("State contains an invalid Unit structure.");
   const state: OrgToolsState = {
     organization: {
+      employeeFieldDefinitions,
       employees: employees as OrganizationEmployee[],
       structure: {
         layoutMode: input.organization.structure.layoutMode,
         units: units as OrgEditorUnit[],
       },
+      tags,
     },
     ui: parseOrgToolsUiState(input.ui),
   };
@@ -805,6 +1108,7 @@ export const parseOrgFileJson = (value: unknown): LoadedOrgFile => ({
 
 export const createEmptyEmployeeFiltersState = (): OrgToolsEmployeeFilters => ({
   birthday: null,
+  customFields: [],
   includeWithoutTags: false,
   includeWithoutUnits: false,
   selectedGenders: [],
@@ -835,6 +1139,7 @@ export const createBlankDownloadState = (): OrgToolsDownloadState => ({
   excludedJsonTagKeys: [],
   excludedJsonUnitIds: [],
   jsonFieldNames: {
+    custom: {},
     employee: Object.fromEntries(DOWNLOAD_EMPLOYEE_FIELD_KEYS.map((key) => [key, key])) as Record<
       OrgToolsDownloadEmployeeFieldKey,
       string
@@ -857,6 +1162,7 @@ export const createBlankDownloadState = (): OrgToolsDownloadState => ({
   jsonTagFieldOrder: ["label", "date"],
   jsonUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
   rowMode: "allUnits",
+  selectedCustomEmployeeFieldIds: [],
   selectedEmployeeFieldKeys: ["username"],
   selectedFilters: createEmptyEmployeeFiltersState(),
   selectedJsonTagFieldKeys: [],
@@ -876,14 +1182,15 @@ export const createBlankOrgToolsState = (
   const currentDate = new Date();
   return {
     organization: {
+      employeeFieldDefinitions: [],
       employees: [],
       structure: { layoutMode: editor.layoutMode, units: editor.units },
+      tags: [],
     },
     ui: {
       activeTab: "orgEditor",
       analytics: { filters: createEmptyEmployeeFiltersState(), query: "" },
       calendar: {
-        cloudExpanded: false,
         monthIndex: currentDate.getMonth(),
         year: currentDate.getFullYear(),
       },

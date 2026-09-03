@@ -144,14 +144,73 @@
     "featured": false,
     "title": "Compound Employee filters",
     "file": "feature-employees-filters.png",
-    "description": "Compose birthday, gender, position, tag, Team, and text criteria with visible match counts.",
+    "description": "Compose ordered Team, Tag, position, gender, complete birthday, custom-field, and text criteria with visible match counts.",
     "capabilities": [
-      "Birthday filter",
-      "Gender filter",
-      "Position filter",
-      "Tag filter",
-      "Team filter"
+      "Ordered filters",
+      "Complete birthday",
+      "Custom values",
+      "Not filled",
+      "Compound matching"
     ]
+  },
+  {
+    "id": "employees-model",
+    "module": "employees",
+    "featured": false,
+    "title": "Employee model",
+    "file": "feature-employees-model.png",
+    "description": "Inspect built-in Employee, Unit, and Tag tokens together with the configured custom Value and Template fields.",
+    "capabilities": [
+      "Built-in fields",
+      "Custom fields",
+      "Stable token keys",
+      "Value and Template kinds"
+    ]
+  },
+  {
+    "id": "employees-model-value",
+    "module": "employees",
+    "featured": false,
+    "title": "Custom Value field",
+    "file": "feature-employees-model-value.png",
+    "description": "Configure a named typed Employee value, required behavior, and stable options that appear in forms, filters, imports, and output.",
+    "capabilities": ["Value field", "Data type", "Required value", "Stable options"]
+  },
+  {
+    "id": "employees-model-template",
+    "module": "employees",
+    "featured": false,
+    "title": "Custom Template field",
+    "file": "feature-employees-model-template.png",
+    "description": "Compose a derived Employee value from token suggestions and choose local MD5 or SHA-256 hashing.",
+    "capabilities": ["Template field", "Token composition", "Dependency validation", "Hashing"]
+  },
+  {
+    "id": "employees-custom-filter",
+    "module": "employees",
+    "featured": false,
+    "title": "Custom Employee filter",
+    "file": "feature-employees-custom-filter.png",
+    "description": "Filter the Employee catalog by computed or stored custom values, including the explicit Not filled choice.",
+    "capabilities": ["Custom fields", "Virtualized values", "Not filled", "Compound filtering"]
+  },
+  {
+    "id": "employees-tag-catalog",
+    "module": "employees",
+    "featured": false,
+    "title": "Tag catalog",
+    "file": "feature-employees-tag-catalog.png",
+    "description": "Search the centralized Tag catalog and inspect global color, Employee usage, and dated-assignment counts.",
+    "capabilities": ["Tag catalog", "Search", "Global colors", "Usage counts"]
+  },
+  {
+    "id": "employees-tag-editor",
+    "module": "employees",
+    "featured": false,
+    "title": "Tag catalog editor",
+    "file": "feature-employees-tag-editor.png",
+    "description": "Rename a Tag or choose and reset its global semantic color from one controlled catalog.",
+    "capabilities": ["Rename", "Color palette", "Reset color", "Cascading delete"]
   },
   {
     "id": "employees-form",
@@ -235,13 +294,8 @@
     "featured": false,
     "title": "Employee duplicate resolution",
     "file": "feature-employee-import-duplicates.png",
-    "description": "Resolve deterministic identity matches in bulk or override individual Employees before one atomic import.",
-    "capabilities": [
-      "Deterministic identity",
-      "Bulk policy",
-      "Per-Employee override",
-      "Atomic import"
-    ]
+    "description": "Resolve normalized identity-tuple matches in bulk or override individual Employees before one atomic import.",
+    "capabilities": ["Normalized identity", "Bulk policy", "Per-Employee override", "Atomic import"]
   },
   {
     "id": "editor-unit-commands",
@@ -356,8 +410,8 @@
     "featured": true,
     "title": "Employee Calendar",
     "file": "demo-calendar.png",
-    "description": "Navigate a monthly calendar with birthdays, uniformly spaced dated-tag counts, events, and a strong current-day state.",
-    "capabilities": ["Monthly navigation", "Birthdays", "Dated tags", "Today state", "Tag cloud"]
+    "description": "Navigate locale-correct weeks with weekend tones, birthdays, compact dated-tag counts, conditional Today navigation, and a strong current-day state.",
+    "capabilities": ["Localized weekdays", "Weekends", "Birthdays", "Tag indicators", "Today state"]
   },
   {
     "id": "calendar-day-details",
@@ -380,9 +434,9 @@
     "featured": false,
     "title": "Dated-tag event history",
     "file": "feature-calendar-tag-events.png",
-    "description": "Open a tag from the bounded cloud to inspect heading-free current and future events plus conditional past events as complete Employee cards with actions.",
+    "description": "Open a Tag from the horizontal header rail to inspect heading-free current and future events plus conditional past events as complete Employee cards with actions.",
     "capabilities": [
-      "Tag cloud",
+      "Tag rail",
       "Conditional history",
       "Complete Employee cards",
       "Employee actions",

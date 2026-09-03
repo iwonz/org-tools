@@ -17,11 +17,13 @@ The public JSON value has exactly two top-level properties:
 ```ts
 type OrgToolsState = {
   organization: {
+    employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
     structure: {
       layoutMode: OrgEditorLayoutMode;
       units: OrgEditorUnit[];
     };
+    tags: EmployeeTagDefinition[];
   };
   ui: OrgToolsUiState;
 };
@@ -36,16 +38,22 @@ unfinished forms are transient.
 
 State Import parses one detached value, validates exact keys, identifiers, dates, URLs, embedded
 avatars, references, graph invariants, and UI references, then performs one atomic replacement.
-Employee Import maps a flat or nested array, deterministically matches identity, and optionally
-upserts portable Team assignments. Export directly validates and downloads the complete current
-state. Employee birthdays are nullable canonical `DD.MM.YYYY` strings; year `1900` is reserved for
-an unknown year and recurrence indexes derive only their day and month. Old state shapes and former
+Employee Import maps a flat or nested array, preserves imported UUIDs for new Employees, matches
+existing Employees by normalized identity, and optionally upserts portable Team assignments and
+typed custom Value fields. Export directly validates and downloads the complete current state.
+Employee birthdays are nullable canonical `DD.MM.YYYY` strings; year `1900` is reserved for an
+unknown year and recurrence indexes derive only their day and month. Old state shapes and former
 birthday formats are rejected.
 
-An Employee ID is the full SHA-256 of normalized first name, last name, and email separated by
-U+001F. Normalization uses Unicode NFKC, trimmed and collapsed whitespace, and locale-independent
-lowercase before UTF-8 hashing. Create, edit, and Employee Import use the same synchronous
-browser-safe implementation; identity edits re-key every structural and UI reference atomically.
+An Employee ID is a stable UUID v4 and never changes after identity edits. Duplicate detection uses
+first name, last name, and email normalized with Unicode NFKC, trimmed and collapsed whitespace,
+and locale-independent lowercase. Employee Import requires UUID plus all three identity fields,
+keeps the current UUID for an identity match, and blocks UUID collisions with another identity.
+
+Tags are normalized shared catalog entities with stable UUIDs and an optional semantic color;
+Employee records store only `{ tagId, date }` assignments. Custom fields also have UUID identity and
+a unique ASCII token key. Value fields store typed values, while Template fields form an acyclic
+dependency graph and may hash their UTF-8 result with MD5 or SHA-256.
 
 Avatar input is decoded from an explicit local PNG, JPEG, or WebP source. Canvas preparation and the
 512 by 512 crop request WebP first, accept a browser-selected PNG, and explicitly retry PNG when the
@@ -101,7 +109,7 @@ history, collaborative cursors, or remote synchronization.
 
 ## Store and UI boundaries
 
-- `OrgStore` owns the organization catalog, current Unit structure, derived indexes, durable UI projection, and
+- `OrgStore` owns Employees, custom field definitions, the Tag catalog, the current Unit structure, derived indexes, durable UI projection, and
   separate organization/UI change sequences.
 - `OrgEditorStore` owns the single structural document, history, selection, viewport, and commands.
 - `AutomaticStateWriter` owns write serialization and retry state.
@@ -134,9 +142,9 @@ limiting Employees and assignments to Unit-only or subtree scope.
 
 Both runtimes expose the same Import, Export, language, and theme actions and retain identical
 compact/expanded sidebar geometry.
-The header combines the active section icon and title with one effect-registered contextual action
-slot. Units registers **Add Unit**, Employees registers **Add Employee**, and Data Download registers
-**Continue**; inactive sections unregister without updating the shell during render. Thematic icons
+The header combines the active section icon and title with effect-registered contextual actions.
+Units registers **Add Unit**; Employees registers **Employee model**, **Tags**, and **Add Employee**;
+Data Download registers **Continue**. Inactive sections unregister without updating the shell during render. Thematic icons
 precede their labels and collapse to an accessible icon-only control with a tooltip on narrow
 screens. Floating non-modal surfaces use one neutral border and restrained shadow; hover and active
 states change tone without changing geometry.
@@ -150,7 +158,8 @@ Employee card and action composition without redundant current/future or dated-e
 events form one virtualized vertical stream: Birthdays first, then each localized Tag heading and
 its stable Employee list. A selected
 dated tag is stored by normalized key so edits and deletions re-derive current events instead of
-retaining a stale group snapshot.
+retaining a stale group snapshot. The month grid uses locale-aware weekday order, leading empty
+cells, real weekend tones, a horizontal dated-Tag rail, and one Tag icon/count per occupied date.
 
 The Editor keeps pointer and wheel previews outside the MobX structure document. One animation-frame
 scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce

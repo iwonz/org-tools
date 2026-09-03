@@ -19,9 +19,11 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 
 - Persist identifiers and relationships rather than nested Employee copies.
 - Build shared maps, search documents, Unit order, membership, birthday, gender, dated-tag,
-  position, and tag indexes outside React render paths.
+  position, Tag-catalog, and custom-field indexes outside React render paths.
 - Parse each canonical `DD.MM.YYYY` birthday once while building the shared search index; Calendar,
   Analytics, and filters reuse its derived recurring month-day key without duplicating Employee data.
+- Resolve custom Template dependencies once per definition graph and memoize derived Employee
+  values by organization revision. Filter option discovery and output reuse the same cache.
 - Build the current derived structure once per organization change and reuse its indexes.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
@@ -34,8 +36,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid.
 
-Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, bounded inline events,
-and virtualized event dialogs. Editor Employee rows and PNG output use the same deterministic tag
+Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, a constant-size Tag
+indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same deterministic tag
 packing, variable row heights, and prefix geometry. Image export measures each included tag once
 with the loaded output font, retains complete multi-line chip layouts, and builds one immutable
 render entry per included Unit before painting cards and connections without measuring mounted or
@@ -45,15 +47,15 @@ virtualized DOM.
 
 Import reads at most 25 MiB. State mode parses one detached complete state and validates references
 in indexed passes. Employee mode discovers the union of mappable paths and the first richest record
-in one O(n) pass, renders at most 128 KiB of that record, derives IDs and match indexes in O(n),
-validates canonical complete birthdays in the same pass, keeps per-row overrides sparse, and
-virtualizes the matched review. Apply validates one
-candidate before replacement. Global Export computes only the complete state after the explicit
+in one O(n) pass, renders at most 128 KiB of that record, validates UUID and identity indexes plus
+canonical complete birthdays in the same pass, keeps per-row overrides sparse, and virtualizes the
+three review columns. Pending custom Value definitions remain bounded metadata and are committed only
+with a successful atomic Apply. Global Export computes only the complete state after the explicit
 action. Data Download derives only selected sources, caps preview work at 50 records or rows and
 128 KiB, and builds complete JSON or Template output in yielding batches only for Copy or Download.
 The source and selected panes retain equal width on desktop and equal height on narrow screens; their
-geometry does not depend on the current source tab. Template token filtering is bounded by the small
-static token catalog and never serializes organization data.
+geometry does not depend on the current source tab. Template token filtering uses the bounded
+built-in plus custom-field catalog and never serializes organization data.
 Dragging a scalar, Unit, Tag, or nested collection field changes only its bounded order array and
 rebuilds the bounded preview once per completed drop. Unit and Tag exclusions use normalized `Set`
 lookups; searchable selectors virtualize their options and show only an exclusion count in the

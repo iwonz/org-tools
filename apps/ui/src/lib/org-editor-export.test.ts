@@ -28,6 +28,7 @@ import {
 const employee: Employee = {
   avatarBase64Url: "data:image/webp;base64,aGVsbG8=",
   birthday: null,
+  customFieldValues: {},
   email: "avery@example.test",
   firstName: "Avery",
   fullName: "Avery Stone",

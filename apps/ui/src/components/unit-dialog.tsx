@@ -84,9 +84,13 @@ type UnitDialogProps = {
 
 const ruleToFilters = (rule: EmployeeLiveFilterRule): EmployeeSearchFilters => ({
   birthday: rule.birthday ? { ...rule.birthday } : null,
+  customFields: rule.customFields.map((filter) => ({
+    ...filter,
+    selectedValues: [...filter.selectedValues],
+  })),
   includeWithoutTags: rule.includeWithoutTags,
   includeWithoutUnits: rule.includeWithoutUnits,
-  selectedGenders: [],
+  selectedGenders: [...rule.selectedGenders],
   selectedPositions: [...rule.selectedPositions],
   selectedTags: [...rule.selectedTags],
   selectedUnitIds: [...rule.selectedUnitIds],
@@ -94,9 +98,14 @@ const ruleToFilters = (rule: EmployeeLiveFilterRule): EmployeeSearchFilters => (
 
 const createRule = (query: string, filters: EmployeeSearchFilters): EmployeeLiveFilterRule => ({
   birthday: filters.birthday ? { ...filters.birthday } : null,
+  customFields: filters.customFields.map((filter) => ({
+    ...filter,
+    selectedValues: [...filter.selectedValues],
+  })),
   includeWithoutTags: filters.includeWithoutTags,
   includeWithoutUnits: filters.includeWithoutUnits,
   query,
+  selectedGenders: [...filters.selectedGenders],
   selectedPositions: [...filters.selectedPositions],
   selectedTags: [...filters.selectedTags],
   selectedUnitIds: [...filters.selectedUnitIds],
@@ -597,7 +606,6 @@ export function UnitDialog({
                   dataDemoId="live-unit-employee-search"
                   excludedUnitIds={invalidDependencyIds}
                   filters={liveFilters}
-                  hideGenderFilter
                   onFiltersChange={setLiveFilters}
                   onValueChange={setLiveQuery}
                   placeholder={t("Search Employees")}

@@ -80,6 +80,7 @@ describe("createExportText template mode", () => {
     const employee = {
       avatarBase64Url: null,
       birthday: null,
+      customFieldValues: {},
       email: "ada@example.test",
       firstName: "Ada",
       fullName: "Ada Lovelace",
@@ -115,6 +116,7 @@ describe("createExportText template mode", () => {
     const employee = {
       avatarBase64Url: null,
       birthday: null,
+      customFieldValues: {},
       email: null,
       firstName: "Ada",
       fullName: "Ada Lovelace",

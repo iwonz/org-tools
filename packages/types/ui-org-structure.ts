@@ -1,5 +1,11 @@
-import type { EmployeeGender, EmployeeTag } from "./employee.js";
-import type { EmployeeId, UnitId } from "./ids.js";
+import type {
+  CustomEmployeeFieldDefinition,
+  CustomEmployeeFieldValue,
+  EmployeeGender,
+  EmployeeTag,
+  EmployeeTagDefinition,
+} from "./employee.js";
+import type { EmployeeFieldId, EmployeeId, TagId, UnitId } from "./ids.js";
 
 /** Derived organization model used only at runtime. */
 export type UiOrgStructure = {
@@ -8,16 +14,20 @@ export type UiOrgStructure = {
   deepEmployees: Employee[];
   deepUnits: Unit[];
   indexes: UiOrgIndexes;
+  employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
+  tags: EmployeeTagDefinition[];
 };
 
 export type EmployeeSearchDocument = {
+  birthday: string | null;
   birthdayKey: string | null;
+  customFieldValues: Map<EmployeeFieldId, string | null>;
   employeeId: EmployeeId;
   gender: EmployeeGender;
   positionLabelSet: Set<string>;
   positionLabels: string[];
   searchText: string;
-  tagLabelSet: Set<string>;
+  tagIdSet: Set<TagId>;
   tagLabels: string[];
 };
 
@@ -36,26 +46,33 @@ export type UiOrgIndexes = {
   employeeSearchDocuments: EmployeeSearchDocument[];
   employeesByName: Employee[];
   employeesById: Map<EmployeeId, Employee>;
+  employeeFieldDefinitionById: Map<EmployeeFieldId, CustomEmployeeFieldDefinition>;
+  customFieldOptionsById: Map<EmployeeFieldId, string[]>;
   manualEmployeeSearchDocumentByEmployeeId: Map<EmployeeId, EmployeeSearchDocument>;
   manualEmployeeSearchDocuments: EmployeeSearchDocument[];
   manualPositionOptions: string[];
   positionOptions: string[];
   tagOptions: string[];
+  tagsById: Map<TagId, EmployeeTagDefinition>;
   unitOrderById: Map<UnitId, number>;
   unitSearchDocuments: UnitSearchDocument[];
   unitsById: Map<UnitId, Unit>;
 };
 
 export type DatedTagEvent = {
+  color: EmployeeTag["color"];
   date: string;
   employee: Employee;
   label: string;
+  tagId: TagId;
 };
 
 export type DatedTagGroup = {
+  color: EmployeeTag["color"];
   events: DatedTagEvent[];
   label: string;
   normalizedLabel: string;
+  tagId: TagId;
 };
 
 export type Unit = {
@@ -82,6 +99,7 @@ export type UnitPath = {
 export type Employee = {
   avatarBase64Url: string | null;
   birthday: string | null;
+  customFieldValues: Record<EmployeeFieldId, CustomEmployeeFieldValue>;
   email: string | null;
   firstName: string;
   fullName: string;

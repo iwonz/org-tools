@@ -1,5 +1,12 @@
-import type { Employee, EmployeeId, UnitId } from "@org-tools/types";
+import type {
+  CustomEmployeeFieldDefinition,
+  Employee,
+  EmployeeFieldId,
+  EmployeeId,
+  UnitId,
+} from "@org-tools/types";
 
+import { evaluateCustomEmployeeFields } from "@/lib/custom-employee-fields";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { getEmployeeOrgUnitContexts, getTopOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { normalizeSearchValue } from "@/lib/search-index";
@@ -140,13 +147,17 @@ const validateNameGroup = (
 };
 
 export const validateExportFieldNames = ({
+  customEmployeeFieldDefinitions = [],
   jsonFieldNames,
+  selectedCustomEmployeeFieldIds = [],
   selectedEmployeeFieldKeys,
   selectedJsonTagFieldKeys,
   selectedJsonUnitFieldKeys,
   tabMode,
 }: {
+  customEmployeeFieldDefinitions?: readonly CustomEmployeeFieldDefinition[];
   jsonFieldNames: ExportJsonFieldNames;
+  selectedCustomEmployeeFieldIds?: readonly EmployeeFieldId[];
   selectedEmployeeFieldKeys: ExportJsonEmployeeFieldKey[];
   selectedJsonTagFieldKeys: ExportJsonTagFieldKey[];
   selectedJsonUnitFieldKeys: ExportJsonUnitFieldKey[];
@@ -158,6 +169,13 @@ export const validateExportFieldNames = ({
       fieldKey,
       fieldName: jsonFieldNames.employee[fieldKey],
     }));
+  const definitionById = new Map(customEmployeeFieldDefinitions.map((field) => [field.id, field]));
+  for (const fieldId of selectedCustomEmployeeFieldIds) {
+    topLevelEntries.push({
+      fieldKey: `custom:${fieldId}`,
+      fieldName: jsonFieldNames.custom[fieldId] ?? definitionById.get(fieldId)?.key ?? "",
+    });
+  }
   if (selectedJsonUnitFieldKeys.length > 0) {
     topLevelEntries.push({ fieldKey: "units", fieldName: jsonFieldNames.units.collection });
   }
@@ -312,11 +330,13 @@ const rowsByEmployee = (rows: ExportRow[]) => {
 };
 
 export type StructuredJsonExportOptions = {
+  customEmployeeFieldDefinitions?: readonly CustomEmployeeFieldDefinition[];
   excludedJsonTagKeys: readonly string[];
   excludedJsonUnitIds: readonly UnitId[];
   jsonFieldNames: ExportJsonFieldNames;
   jsonTopLevelFieldOrder: readonly ExportJsonTopLevelFieldKey[];
   selectedEmployeeFieldKeys: readonly ExportJsonEmployeeFieldKey[];
+  selectedCustomEmployeeFieldIds?: readonly EmployeeFieldId[];
   selectedJsonTagFieldKeys: readonly ExportJsonTagFieldKey[];
   selectedJsonUnitFieldKeys: readonly ExportJsonUnitFieldKey[];
 };
@@ -332,6 +352,11 @@ export const createStructuredJsonRecords = (
     if (!firstRow) return {};
     const employee = firstRow.employee;
     const selectedEmployeeFields = new Set(options.selectedEmployeeFieldKeys);
+    const selectedCustomFields = new Set(options.selectedCustomEmployeeFieldIds ?? []);
+    const customValues = evaluateCustomEmployeeFields(
+      employee,
+      options.customEmployeeFieldDefinitions ?? [],
+    );
     const entries: Array<[string, unknown]> = [];
     for (const fieldKey of options.jsonTopLevelFieldOrder) {
       if (fieldKey === "units") {
@@ -370,22 +395,45 @@ export const createStructuredJsonRecords = (
         ]);
         continue;
       }
-      if (!selectedEmployeeFields.has(fieldKey)) continue;
+      if (fieldKey.startsWith("custom:")) {
+        const fieldId = fieldKey.slice(7) as EmployeeFieldId;
+        if (!selectedCustomFields.has(fieldId)) continue;
+        const fieldName = options.jsonFieldNames.custom[fieldId]?.trim();
+        if (fieldName) entries.push([fieldName, customValues.get(fieldId) ?? null]);
+        continue;
+      }
+      const employeeFieldKey = fieldKey as ExportJsonEmployeeFieldKey;
+      if (!selectedEmployeeFields.has(employeeFieldKey)) continue;
       entries.push([
-        options.jsonFieldNames.employee[fieldKey].trim(),
-        getExportEmployeeFieldValue(employee, fieldKey),
+        options.jsonFieldNames.employee[employeeFieldKey].trim(),
+        getExportEmployeeFieldValue(employee, employeeFieldKey),
       ]);
     }
     return Object.fromEntries(entries);
   });
 };
 
-export const createTemplateText = (rows: ExportRow[], templateFormat: string) =>
+export const createTemplateText = (
+  rows: ExportRow[],
+  templateFormat: string,
+  customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
+) =>
   rows
-    .map((row) =>
-      renderTemplateFormat({
+    .map((row) => {
+      const customValues = evaluateCustomEmployeeFields(
+        row.employee,
+        customEmployeeFieldDefinitions,
+      );
+      const customDefinitionByKey = new Map(
+        customEmployeeFieldDefinitions.map((definition) => [definition.key, definition]),
+      );
+      return renderTemplateFormat({
         formatValue: asExportText,
         resolveField: (fieldName): TemplateFieldValue => {
+          const customDefinition = customDefinitionByKey.get(fieldName);
+          if (customDefinition) {
+            return { known: true, value: customValues.get(customDefinition.id) ?? null };
+          }
           if (!exportFieldByKey.has(fieldName as ExportFieldKey)) return { known: false };
           if (exportEmployeeFieldByKey.has(fieldName as ExportEmployeeFieldKey)) {
             return {
@@ -399,8 +447,8 @@ export const createTemplateText = (rows: ExportRow[], templateFormat: string) =>
           };
         },
         template: templateFormat,
-      }),
-    )
+      });
+    })
     .join("");
 
 export const createExportText = ({
@@ -415,7 +463,7 @@ export const createExportText = ({
 }) =>
   tabMode === "json"
     ? JSON.stringify(createStructuredJsonRecords(rows, jsonOptions), null, 2)
-    : createTemplateText(rows, templateFormat);
+    : createTemplateText(rows, templateFormat, jsonOptions.customEmployeeFieldDefinitions);
 
 const yieldForExportWork = () =>
   new Promise<void>((resolve) => {
@@ -451,7 +499,13 @@ export const createExportTextAsync = async ({
 
   const parts: string[] = [];
   for (let index = 0; index < rows.length; index += batchSize) {
-    parts.push(createTemplateText(rows.slice(index, index + batchSize), templateFormat));
+    parts.push(
+      createTemplateText(
+        rows.slice(index, index + batchSize),
+        templateFormat,
+        jsonOptions.customEmployeeFieldDefinitions,
+      ),
+    );
     if (index + batchSize < rows.length) await yieldForExportWork();
   }
   return parts.join("");

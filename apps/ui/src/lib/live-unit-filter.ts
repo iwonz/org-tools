@@ -14,9 +14,11 @@ import { getSearchTokens } from "@/lib/search-index";
 
 export const createEmptyEmployeeLiveFilterRule = (): EmployeeLiveFilterRule => ({
   birthday: null,
+  customFields: [],
   includeWithoutTags: false,
   includeWithoutUnits: false,
   query: "",
+  selectedGenders: [],
   selectedPositions: [],
   selectedTags: [],
   selectedUnitIds: [],
@@ -26,9 +28,14 @@ export const cloneEmployeeLiveFilterRule = (
   rule: EmployeeLiveFilterRule,
 ): EmployeeLiveFilterRule => ({
   birthday: rule.birthday ? { ...rule.birthday } : null,
+  customFields: rule.customFields.map((filter) => ({
+    ...filter,
+    selectedValues: [...filter.selectedValues],
+  })),
   includeWithoutTags: rule.includeWithoutTags,
   includeWithoutUnits: rule.includeWithoutUnits,
   query: rule.query,
+  selectedGenders: [...rule.selectedGenders],
   selectedPositions: [...rule.selectedPositions],
   selectedTags: [...rule.selectedTags],
   selectedUnitIds: [...rule.selectedUnitIds],
@@ -39,6 +46,8 @@ export const hasEmployeeLiveFilterCriteria = (rule: EmployeeLiveFilterRule) =>
   rule.birthday !== null ||
   rule.includeWithoutTags ||
   rule.includeWithoutUnits ||
+  rule.selectedGenders.length > 0 ||
+  rule.customFields.some((filter) => filter.includeUnset || filter.selectedValues.length > 0) ||
   rule.selectedPositions.length > 0 ||
   rule.selectedTags.length > 0 ||
   rule.selectedUnitIds.length > 0;
@@ -47,9 +56,13 @@ export const employeeLiveFilterRuleToSearchFilters = (
   rule: EmployeeLiveFilterRule,
 ): EmployeeSearchFilters => ({
   birthday: rule.birthday ? { ...rule.birthday } : null,
+  customFields: rule.customFields.map((filter) => ({
+    ...filter,
+    selectedValues: [...filter.selectedValues],
+  })),
   includeWithoutTags: rule.includeWithoutTags,
   includeWithoutUnits: rule.includeWithoutUnits,
-  selectedGenders: [],
+  selectedGenders: [...rule.selectedGenders],
   selectedPositions: [...rule.selectedPositions],
   selectedTags: [...rule.selectedTags],
   selectedUnitIds: [...rule.selectedUnitIds],

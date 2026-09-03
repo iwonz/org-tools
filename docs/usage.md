@@ -15,10 +15,10 @@ While either runtime resolves its initial state, the shell shows only one center
 without technical status copy. The indicator uses local styles, respects reduced motion, and keeps
 a localized accessible status name.
 
-The compact sidebar contains Units, Employees, Editor, Analytics, Calendar, Data Download, Import,
+The compact sidebar contains Employees, Units, Editor, Analytics, Calendar, Data Download, Import,
 state Export, language, and theme. Its desktop control expands the 64 px icon rail to a 240 px label
-panel without moving icon centers. The header shows the current section icon and title plus its primary action:
-**Add Unit**, **Add Employee**, or enabled **Continue** in the relevant workflow. On narrow screens
+panel without moving icon centers. The header shows the current section icon and title plus its contextual actions:
+**Add Unit**; **Employee model**, **Tags**, and **Add Employee**; or enabled **Continue**. On narrow screens
 the action keeps its accessible name and tooltip while showing only the icon.
 Text-bearing buttons and tabs place their thematic icon before the visible label. Disclosure,
 sorting, removal, status, and count affordances remain trailing when that position communicates
@@ -42,8 +42,11 @@ control.
   align with roster avatars, and direct plus descendant Employees appear in one contiguous list.
   The current roster count appears below search without redundant roster-section headings or counts.
   **Add Unit** is in the shared header.
-- **Employees** manages profiles, gender, complete birthdays, embedded avatar, tags, contact fields,
-  and Unit assignments with compound filters. Gender is a native-radio segmented switcher. Birthday
+- **Employees** manages profiles, gender, complete birthdays, embedded avatar, typed custom fields,
+  shared colored tags, contact fields, and Unit assignments with compound filters. **Employee
+  model** defines stored Value fields or derived Template fields with optional MD5/SHA-256 output;
+  **Tags** manages normalized labels, colors, usage counts, rename, and cascading deletion. Gender is
+  a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
@@ -58,7 +61,8 @@ control.
   hierarchy connections while retaining configurable output styling. Every tag is written in full;
   oversized labels wrap inside their compact chip. Static/Live membership type is not printed.
 - **Analytics** derives organization distributions locally and provides Employee drill-down.
-- **Calendar** combines recurring birthdays and dated tags with interactive dates and Employee
+- **Calendar** combines recurring birthdays and dated tags with localized weekday order, leading
+  month offsets, weekend tones, a horizontal Tag rail, conditional Today navigation, interactive dates, and Employee
   actions. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each
   interactive Tag heading and its full Employee-card list. Day and tag dialogs omit redundant
   descriptions, generic dated-event/current-future headings, special event subtitles, and empty
@@ -79,20 +83,22 @@ control.
 **Import** opens a modal with **All state** and **Employees**. All state accepts the exact current
 state shape up to 25 MiB and replaces it atomically after confirmation. Employees accepts a JSON
 array, shows a bounded preview of the first record with the most mappable properties, maps source
-paths left-to-right into fixed fields, requires first name, last name, and email, and imports nested
-Team assignments only when Teams is mapped. A mapped birthday must be a real `DD.MM.YYYY` value; `1900` means the birth
-year is unknown, including for `29.02.1900`. Existing deterministic identities can be updated, skipped, or limited to
-Teams in bulk with per-Employee overrides. Invalid input never changes current data.
+paths left-to-right into fixed fields, requires UUID, first name, last name, and email, and imports
+nested Team assignments only when Teams is mapped. Existing Value fields may be mapped and new
+Value definitions may be prepared atomically. The review separates additions, identity duplicates,
+and skipped rows. A mapped birthday must be a real `DD.MM.YYYY` value; `1900` means the birth year
+is unknown, including for `29.02.1900`. Existing identities can be updated, skipped, or limited to
+Teams in bulk with per-Employee overrides. UUID collisions with another identity block the import.
+Invalid input never changes current data.
 
 **Export** immediately validates the live state and downloads `org-tools-state.json`; it has no
 dialog or Employee-only mode. The file includes the latest in-memory changes. Data Download and
 Editor artifacts remain separate outputs and cannot be imported as application state or Employee
 transfer.
 
-Employee IDs are deterministic 64-character SHA-256 values derived from normalized first name, last
-name, and email. Unicode NFKC normalization, trimmed and collapsed whitespace, lowercase, U+001F
-separators, UTF-8, and the complete digest make create, edit, Import, and Export use exactly the same
-identity rule. Editing identity fields updates all references atomically; a duplicate is rejected.
+Employee IDs are stable UUID v4 values and identity edits never change them. Duplicate detection is
+separate: first name, last name, and email use Unicode NFKC normalization, trimmed and collapsed
+whitespace, and locale-independent lowercase. A second normalized identity is rejected.
 
 ## Failure recovery
 

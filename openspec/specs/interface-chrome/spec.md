@@ -120,7 +120,7 @@ full-bleed without an outer panel border, radius, shadow, or shell-colored gap. 
 SHALL distinguish source and detail panes through tone, typography, and compact layout without a
 decorative separator. Analytics SHALL group each metric table in one uniform soft tonal section
 whose heading, column header, and row viewport do not stack competing neutral backgrounds or
-outlines. Calendar SHALL group its header, event cloud, and month grid through spacing and tone while
+outlines. Calendar SHALL group its header, Tag rail, and month grid through spacing and tone while
 individual day cells keep semantic boundaries. The Editor SHALL retain an edge-to-edge neutral
 canvas with floating toolbar surfaces and bounded data nodes.
 
@@ -136,7 +136,7 @@ canvas with floating toolbar surfaces and bounded data nodes.
 
 #### Scenario: Calendar workflow
 - **WHEN** Calendar contains birthdays or dated tag events
-- **THEN** its controls, event cloud, and cells read as one bounded workflow while every day cell
+- **THEN** its controls, Tag rail, and cells read as one bounded workflow while every day cell
   remains individually actionable and legible
 
 #### Scenario: Editor workspace
@@ -295,3 +295,20 @@ heading or repeated section count.
 - **WHEN** a selected Unit contains both direct and descendant Employees
 - **THEN** all matching Employee cards appear in one contiguous list without direct or descendant section headings
 - **AND** one summary below search reports the complete total and conditional filtered match count
+
+### Requirement: Employee management actions share the application header
+The Employees section SHALL register Employee model, Tags, and Add Employee actions in the shared
+header with leading thematic icons. Narrow screens SHALL retain accessible icon-only actions and
+tooltips without changing header height.
+
+#### Scenario: Open Employee management
+- **WHEN** a user activates Employee model or Tags
+- **THEN** the corresponding localized modal opens without replacing the Employees workflow
+
+### Requirement: Navigation prioritizes Employees
+The sidebar SHALL order Employees before Units while preserving the existing order of Editor,
+Analytics, Calendar, Data Download, and utility actions.
+
+#### Scenario: Read the primary navigation
+- **WHEN** the sidebar is expanded or compact
+- **THEN** Employees is the first product section and Units is second with unchanged icon geometry

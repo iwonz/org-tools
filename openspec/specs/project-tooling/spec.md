@@ -90,7 +90,7 @@ tracked database artifacts, local paths, organization data, obsolete project rou
 - **THEN** validation fails before publication
 
 ### Requirement: Documentation and automation are publication-ready
-The repository SHALL document the current-only SHA-256 Employee identity, State/Employees transfer,
+The repository SHALL document stable UUID Employee identity, normalized duplicate detection, State/Employees transfer,
 one current Editor structure, local runtimes, privacy, and scale behavior. It SHALL include an
 English README with exactly ten deterministic featured screenshot previews, a comprehensive grouped
 screenshot catalog, contributor and security guidance, license, tests, specifications, detailed
@@ -106,7 +106,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Complete visual capability catalog
 - **WHEN** a visitor opens the detailed screenshot guide
-- **THEN** the 40-frame gallery contains ten featured workflows and only currently visible supporting
+- **THEN** the 46-frame gallery contains ten featured workflows and only currently visible supporting
   behavior, without project, file, Save, autosave, or obsolete conflict frames
 
 #### Scenario: Continuous validation
@@ -117,8 +117,8 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Current-schema policy
 - **WHEN** the state and Employee transfer contracts change
-- **THEN** old View shapes, UUID Employee readers, direct Export, state-only Import, fixtures, docs,
-  and tests are removed together
+- **THEN** old View shapes, digest Employee IDs, inline Tags, obsolete custom/output state, fixtures,
+  docs, and tests are removed together
 
 #### Scenario: Large transfer validation
 - **WHEN** performance coverage maps and reviews 20,000 Employees
@@ -126,7 +126,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Screenshot generation
 - **WHEN** screenshot generation runs against both production runtimes
-- **THEN** it deterministically replaces exactly 40 declared PNGs, including ten featured frames
+- **THEN** it deterministically replaces exactly 46 declared PNGs, including ten featured frames
 
 #### Scenario: Screenshot manifest consistency
 - **WHEN** generation or publication checks inspect the gallery
@@ -232,14 +232,14 @@ runners without deprecation annotations.
 The repository SHALL document the current browser-memory and loopback SQLite runtimes, explicit
 backed-up database recreation, direct State Export, State/Employee Import, structured JSON/Template
 Data Download, Editor Image/JSON/Template export, privacy, performance, usage, and screenshot
-workflows without obsolete integration guidance. The deterministic gallery SHALL contain exactly 40
+workflows without obsolete integration guidance. The deterministic gallery SHALL contain exactly 46
 PNGs covering the current product scenarios, including `database-create-new` and
 `download-template-tokens`. The README SHALL retain exactly ten featured Import, direct Export,
 theme, language, Teams, Employees, Editor, Analytics, Calendar, and Download frames.
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
-- **THEN** it deterministically replaces exactly 40 declared PNGs covering only current product workflows
+- **THEN** it deterministically replaces exactly 46 declared PNGs covering only current product workflows
 
 #### Scenario: Transfer gallery
 - **WHEN** screenshot generation completes
@@ -258,5 +258,24 @@ theme, language, Teams, Employees, Editor, Analytics, Calendar, and Download fra
 - **THEN** the same ten current product previews remain featured and every linked PNG exists
 
 #### Scenario: Deterministic generation
-- **WHEN** the 40-frame gallery is generated twice from unchanged source and fixed fixtures
+- **WHEN** the 46-frame gallery is generated twice from unchanged source and fixed fixtures
 - **THEN** every PNG hash is identical and every owned page has no unexpected console or network diagnostic
+
+### Requirement: Gallery documents Employee schema, Tags, and Calendar
+The deterministic gallery SHALL contain 46 PNG files: the maintained existing workflows refreshed
+for UUIDs, Tag colors, sidebar order, and Calendar, plus supporting Employee filter, Template field,
+Value field, Tag management, custom Employee value, and Import custom mapping scenarios. Every PNG
+SHALL use synthetic data and appear identically across two generations.
+
+#### Scenario: Regenerate the gallery
+- **WHEN** screenshots are generated twice from the same clean production build
+- **THEN** all 46 referenced PNG files exist and their SHA-256 manifests match
+
+### Requirement: Large-model validation remains bounded
+Automated checks SHALL exercise 20,000 Employees and 4,000 Units with identity, Tag, custom field,
+Import, filter, and output indexes, and SHALL fail on organization serialization or complete-list
+rendering caused only by UI interaction.
+
+#### Scenario: Filter the large fixture
+- **WHEN** a custom filter changes on the maintained fixture
+- **THEN** indexed matching and virtualized options respond without rebuilding organization state

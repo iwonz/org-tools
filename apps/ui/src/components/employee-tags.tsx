@@ -5,6 +5,7 @@ import { HighlightedText } from "@/components/highlighted-text";
 import { useAppFormatter } from "@/i18n/use-ui-text";
 import { orderEmployeeTagsForDisplay } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
+import { tagColorClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 
 export function EmployeeTags({
@@ -63,6 +64,9 @@ export function EmployeeTags({
               : undefined
           }
         >
+          <span
+            className={cn("mr-1.5 size-1.5 shrink-0 rounded-full", tagColorClassName(tag.color))}
+          />
           <span>
             <HighlightedText queryTokens={queryTokens} text={tag.label} />
             {tag.date && (

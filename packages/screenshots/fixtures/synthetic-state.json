@@ -1,5 +1,36 @@
 {
   "organization": {
+    "employeeFieldDefinitions": [
+      {
+        "id": "80000000-0000-4000-8000-000000000001",
+        "key": "department",
+        "kind": "value",
+        "name": "Department",
+        "options": [],
+        "required": true,
+        "valueType": "text"
+      },
+      {
+        "id": "80000000-0000-4000-8000-000000000002",
+        "key": "employmentLevel",
+        "kind": "value",
+        "name": "Employment level",
+        "options": [
+          { "id": "70000000-0000-4000-8000-000000000001", "label": "Senior" },
+          { "id": "70000000-0000-4000-8000-000000000002", "label": "Middle" }
+        ],
+        "required": false,
+        "valueType": "option"
+      },
+      {
+        "hash": "sha256",
+        "id": "80000000-0000-4000-8000-000000000003",
+        "key": "directoryKey",
+        "kind": "template",
+        "name": "Directory key",
+        "template": "{firstName}.{lastName}.{department}"
+      }
+    ],
     "employees": [
       {
         "avatarBase64Url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
@@ -8,18 +39,22 @@
         "email": "avery.stone@example.test",
         "firstName": "Avery",
         "gender": "female",
-        "id": "9765671a7e521cb62e7466cb62b7b05e22f125c5a560f5a8c6b8621e02e8ded6",
+        "customFieldValues": {
+          "80000000-0000-4000-8000-000000000001": "Product",
+          "80000000-0000-4000-8000-000000000002": "70000000-0000-4000-8000-000000000001"
+        },
+        "id": "10000000-0000-4000-8000-000000000001",
         "lastName": "Stone",
         "phone": "+1-202-555-0101",
         "profileUrl": "https://example.test/profiles/avery-stone",
         "tags": [
           {
             "date": null,
-            "label": "Design"
+            "tagId": "90000000-0000-4000-8000-000000000001"
           },
           {
             "date": "2026-08-12",
-            "label": "Remote"
+            "tagId": "90000000-0000-4000-8000-000000000002"
           }
         ],
         "updatedAt": "2026-01-15T12:00:00.000Z",
@@ -32,18 +67,22 @@
         "email": "jordan.reed@example.test",
         "firstName": "Jordan",
         "gender": "male",
-        "id": "93945c40e6d892ec931fff9eb8bd5a1487d3f1ccf105904a978dc29acbe69029",
+        "customFieldValues": {
+          "80000000-0000-4000-8000-000000000001": "Engineering",
+          "80000000-0000-4000-8000-000000000002": "70000000-0000-4000-8000-000000000002"
+        },
+        "id": "10000000-0000-4000-8000-000000000002",
         "lastName": "Reed",
         "phone": "+1-202-555-0102",
         "profileUrl": "https://example.test/profiles/jordan-reed",
         "tags": [
           {
             "date": "2026-08-20",
-            "label": "Engineering"
+            "tagId": "90000000-0000-4000-8000-000000000003"
           },
           {
             "date": null,
-            "label": "Mentor"
+            "tagId": "90000000-0000-4000-8000-000000000004"
           }
         ],
         "updatedAt": "2026-01-15T12:00:00.000Z",
@@ -56,14 +95,17 @@
         "email": "morgan.park@example.test",
         "firstName": "Morgan",
         "gender": "unspecified",
-        "id": "80198efe301be493cca757a1828a1957b0b939338802bd38994b1b19e8d0b91d",
+        "customFieldValues": {
+          "80000000-0000-4000-8000-000000000001": "Operations"
+        },
+        "id": "10000000-0000-4000-8000-000000000003",
         "lastName": "Park",
         "phone": "+1-202-555-0103",
         "profileUrl": "https://example.test/profiles/morgan-park",
         "tags": [
           {
             "date": "2026-07-10",
-            "label": "Operations"
+            "tagId": "90000000-0000-4000-8000-000000000005"
           }
         ],
         "updatedAt": "2026-01-15T12:00:00.000Z",
@@ -76,66 +118,84 @@
         "email": "riley.chen@example.test",
         "firstName": "Riley",
         "gender": "female",
-        "id": "dc56d0c7a620074cf2d894e9156e3d8ea2afcedf99c66f4df7d0128f97471745",
+        "customFieldValues": {
+          "80000000-0000-4000-8000-000000000001": "Research",
+          "80000000-0000-4000-8000-000000000002": "70000000-0000-4000-8000-000000000001"
+        },
+        "id": "10000000-0000-4000-8000-000000000004",
         "lastName": "Chen",
         "phone": "+1-202-555-0104",
         "profileUrl": "https://example.test/profiles/riley-chen",
         "tags": [
           {
             "date": null,
-            "label": "Accessibility"
+            "tagId": "90000000-0000-4000-8000-000000000006"
           },
           {
             "date": null,
-            "label": "Content"
+            "tagId": "90000000-0000-4000-8000-000000000007"
           },
           {
             "date": null,
-            "label": "Design"
+            "tagId": "90000000-0000-4000-8000-000000000001"
           },
           {
             "date": null,
-            "label": "Discovery"
+            "tagId": "90000000-0000-4000-8000-000000000008"
           },
           {
             "date": null,
-            "label": "Planning"
+            "tagId": "90000000-0000-4000-8000-000000000009"
           },
           {
             "date": "2026-09-05",
-            "label": "Research"
+            "tagId": "90000000-0000-4000-8000-000000000010"
           },
           {
             "date": null,
-            "label": "Strategy"
+            "tagId": "90000000-0000-4000-8000-000000000011"
           },
           {
             "date": null,
-            "label": "UX"
+            "tagId": "90000000-0000-4000-8000-000000000012"
           }
         ],
         "updatedAt": "2026-01-15T12:00:00.000Z",
         "username": "riley.chen"
       }
     ],
+    "tags": [
+      { "color": "blue", "id": "90000000-0000-4000-8000-000000000001", "label": "Design" },
+      { "color": "teal", "id": "90000000-0000-4000-8000-000000000002", "label": "Remote" },
+      { "color": "cyan", "id": "90000000-0000-4000-8000-000000000003", "label": "Engineering" },
+      { "color": "green", "id": "90000000-0000-4000-8000-000000000004", "label": "Mentor" },
+      { "color": "amber", "id": "90000000-0000-4000-8000-000000000005", "label": "Operations" },
+      { "color": "rose", "id": "90000000-0000-4000-8000-000000000006", "label": "Accessibility" },
+      { "color": null, "id": "90000000-0000-4000-8000-000000000007", "label": "Content" },
+      { "color": "orange", "id": "90000000-0000-4000-8000-000000000008", "label": "Discovery" },
+      { "color": null, "id": "90000000-0000-4000-8000-000000000009", "label": "Planning" },
+      { "color": "red", "id": "90000000-0000-4000-8000-000000000010", "label": "Research" },
+      { "color": null, "id": "90000000-0000-4000-8000-000000000011", "label": "Strategy" },
+      { "color": "blue", "id": "90000000-0000-4000-8000-000000000012", "label": "UX" }
+    ],
     "structure": {
       "layoutMode": "topDown",
       "units": [
         {
-          "bossEmployeeId": "9765671a7e521cb62e7466cb62b7b05e22f125c5a560f5a8c6b8621e02e8ded6",
+          "bossEmployeeId": "10000000-0000-4000-8000-000000000001",
           "collapsed": false,
           "createdAt": "2026-01-15T12:00:00.000Z",
           "employeeIds": [
-            "9765671a7e521cb62e7466cb62b7b05e22f125c5a560f5a8c6b8621e02e8ded6",
-            "dc56d0c7a620074cf2d894e9156e3d8ea2afcedf99c66f4df7d0128f97471745"
+            "10000000-0000-4000-8000-000000000001",
+            "10000000-0000-4000-8000-000000000004"
           ],
           "employeePositions": [
             {
-              "employeeId": "9765671a7e521cb62e7466cb62b7b05e22f125c5a560f5a8c6b8621e02e8ded6",
+              "employeeId": "10000000-0000-4000-8000-000000000001",
               "position": "Product Lead"
             },
             {
-              "employeeId": "dc56d0c7a620074cf2d894e9156e3d8ea2afcedf99c66f4df7d0128f97471745",
+              "employeeId": "10000000-0000-4000-8000-000000000004",
               "position": "Product Designer"
             }
           ],
@@ -149,20 +209,20 @@
           "y": 80
         },
         {
-          "bossEmployeeId": "93945c40e6d892ec931fff9eb8bd5a1487d3f1ccf105904a978dc29acbe69029",
+          "bossEmployeeId": "10000000-0000-4000-8000-000000000002",
           "collapsed": false,
           "createdAt": "2026-01-15T12:00:00.000Z",
           "employeeIds": [
-            "93945c40e6d892ec931fff9eb8bd5a1487d3f1ccf105904a978dc29acbe69029",
-            "80198efe301be493cca757a1828a1957b0b939338802bd38994b1b19e8d0b91d"
+            "10000000-0000-4000-8000-000000000002",
+            "10000000-0000-4000-8000-000000000003"
           ],
           "employeePositions": [
             {
-              "employeeId": "93945c40e6d892ec931fff9eb8bd5a1487d3f1ccf105904a978dc29acbe69029",
+              "employeeId": "10000000-0000-4000-8000-000000000002",
               "position": "Engineering Lead"
             },
             {
-              "employeeId": "80198efe301be493cca757a1828a1957b0b939338802bd38994b1b19e8d0b91d",
+              "employeeId": "10000000-0000-4000-8000-000000000003",
               "position": "Operations Specialist"
             }
           ],
@@ -183,6 +243,7 @@
     "analytics": {
       "filters": {
         "birthday": null,
+        "customFields": [],
         "includeWithoutTags": false,
         "includeWithoutUnits": false,
         "selectedGenders": [],
@@ -193,7 +254,6 @@
       "query": ""
     },
     "calendar": {
-      "cloudExpanded": false,
       "monthIndex": 6,
       "year": 2026
     },
@@ -210,11 +270,15 @@
         "phone",
         "avatarBase64Url",
         "birthday",
+        "custom:80000000-0000-4000-8000-000000000001",
+        "custom:80000000-0000-4000-8000-000000000002",
+        "custom:80000000-0000-4000-8000-000000000003",
         "units",
         "tags"
       ],
       "employeeFilters": {
         "birthday": null,
+        "customFields": [],
         "includeWithoutTags": false,
         "includeWithoutUnits": false,
         "selectedGenders": [],
@@ -227,6 +291,11 @@
       "excludedJsonTagKeys": [],
       "excludedJsonUnitIds": [],
       "jsonFieldNames": {
+        "custom": {
+          "80000000-0000-4000-8000-000000000001": "department",
+          "80000000-0000-4000-8000-000000000002": "employmentLevel",
+          "80000000-0000-4000-8000-000000000003": "directoryKey"
+        },
         "employee": {
           "id": "id",
           "firstName": "firstName",
@@ -258,9 +327,11 @@
       "jsonTagFieldOrder": ["label", "date"],
       "jsonUnitFieldOrder": ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
       "rowMode": "allUnits",
+      "selectedCustomEmployeeFieldIds": [],
       "selectedEmployeeFieldKeys": ["username"],
       "selectedFilters": {
         "birthday": null,
+        "customFields": [],
         "includeWithoutTags": false,
         "includeWithoutUnits": false,
         "selectedGenders": [],
@@ -289,6 +360,7 @@
     "employees": {
       "filters": {
         "birthday": null,
+        "customFields": [],
         "includeWithoutTags": false,
         "includeWithoutUnits": false,
         "selectedGenders": [],
@@ -306,6 +378,7 @@
     "units": {
       "employeeFilters": {
         "birthday": null,
+        "customFields": [],
         "includeWithoutTags": false,
         "includeWithoutUnits": false,
         "selectedGenders": [],

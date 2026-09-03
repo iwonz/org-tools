@@ -123,6 +123,7 @@ export const ExportTab = observer(() => {
   const activeTab = store.exportTabMode;
   const rowMode = store.exportRowMode;
   const selectedEmployeeFieldKeys = store.exportSelectedEmployeeFieldKeys;
+  const selectedCustomEmployeeFieldIds = store.exportSelectedCustomEmployeeFieldIds;
   const selectedJsonUnitFieldKeys = store.exportSelectedJsonUnitFieldKeys;
   const selectedJsonTagFieldKeys = store.exportSelectedJsonTagFieldKeys;
   const jsonFieldNames = store.exportJsonFieldNames;
@@ -324,7 +325,9 @@ export const ExportTab = observer(() => {
   const exportFieldNameValidation = useMemo(
     () =>
       validateExportFieldNames({
+        customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
         jsonFieldNames,
+        selectedCustomEmployeeFieldIds,
         selectedEmployeeFieldKeys,
         selectedJsonTagFieldKeys,
         selectedJsonUnitFieldKeys,
@@ -332,10 +335,12 @@ export const ExportTab = observer(() => {
       }),
     [
       activeTab,
+      selectedCustomEmployeeFieldIds,
       jsonFieldNames,
       selectedEmployeeFieldKeys,
       selectedJsonTagFieldKeys,
       selectedJsonUnitFieldKeys,
+      store.employeeFieldDefinitions,
     ],
   );
   const hasSelectedEmployees = selectedEmployees.length > 0;
@@ -343,12 +348,14 @@ export const ExportTab = observer(() => {
   const createFullExportText = useCallback(
     () =>
       createExportTextAsync({
+        customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
         excludedJsonTagKeys,
         excludedJsonUnitIds,
         jsonFieldNames,
         jsonTopLevelFieldOrder,
         rows,
         selectedEmployeeFieldKeys,
+        selectedCustomEmployeeFieldIds,
         selectedJsonTagFieldKeys,
         selectedJsonUnitFieldKeys,
         tabMode: activeTab,
@@ -361,22 +368,26 @@ export const ExportTab = observer(() => {
       jsonFieldNames,
       jsonTopLevelFieldOrder,
       rows,
+      selectedCustomEmployeeFieldIds,
       selectedEmployeeFieldKeys,
       selectedJsonTagFieldKeys,
       selectedJsonUnitFieldKeys,
       templateFormat,
+      store.employeeFieldDefinitions,
     ],
   );
   const exportPreview = useMemo(
     () =>
       isExportSettingsDialogOpen && canExport
         ? createExportPreview({
+            customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
             excludedJsonTagKeys,
             excludedJsonUnitIds,
             jsonFieldNames,
             jsonTopLevelFieldOrder,
             rows,
             selectedEmployeeFieldKeys,
+            selectedCustomEmployeeFieldIds,
             selectedJsonTagFieldKeys,
             selectedJsonUnitFieldKeys,
             tabMode: activeTab,
@@ -393,10 +404,12 @@ export const ExportTab = observer(() => {
       jsonFieldNames,
       jsonTopLevelFieldOrder,
       rows,
+      selectedCustomEmployeeFieldIds,
       selectedEmployeeFieldKeys,
       selectedJsonTagFieldKeys,
       selectedJsonUnitFieldKeys,
       templateFormat,
+      store.employeeFieldDefinitions,
     ],
   );
   const hasEmployeeSourceContent = (units?.allEmployees.length ?? 0) > 0;

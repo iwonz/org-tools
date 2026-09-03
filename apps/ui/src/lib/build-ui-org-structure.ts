@@ -1,8 +1,10 @@
 import type {
+  CustomEmployeeFieldDefinition,
   DatedTagEvent,
   Employee,
   EmployeeId,
   EmployeeSearchDocument,
+  EmployeeTagDefinition,
   UiOrgStructure,
   Unit,
   UnitId,
@@ -43,6 +45,8 @@ export const createUiOrgStructure = ({
   employeeSearchDocuments: suppliedEmployeeSearchDocuments,
   manualEmployeeSearchDocuments: suppliedManualEmployeeSearchDocuments,
   roots,
+  tagDefinitions = [],
+  customFieldDefinitions = [],
   unitsById,
 }: {
   allEmployees: Employee[];
@@ -52,11 +56,14 @@ export const createUiOrgStructure = ({
   employeeSearchDocuments?: EmployeeSearchDocument[];
   manualEmployeeSearchDocuments?: EmployeeSearchDocument[];
   roots: Unit[];
+  tagDefinitions?: readonly EmployeeTagDefinition[];
+  customFieldDefinitions?: readonly CustomEmployeeFieldDefinition[];
   unitsById: Map<UnitId, Unit>;
 }): UiOrgStructure => {
   const unitOrderById = new Map(deepUnits.map((unit, index) => [unit.id, index]));
   const employeeSearchDocuments =
-    suppliedEmployeeSearchDocuments ?? allEmployees.map(createEmployeeSearchDocument);
+    suppliedEmployeeSearchDocuments ??
+    allEmployees.map((employee) => createEmployeeSearchDocument(employee, customFieldDefinitions));
   const manualEmployeeSearchDocuments =
     suppliedManualEmployeeSearchDocuments ?? employeeSearchDocuments;
   const employeeSearchDocumentByEmployeeId = new Map(
@@ -69,7 +76,13 @@ export const createUiOrgStructure = ({
   const datedTagEventsByDate = new Map<string, DatedTagEvent[]>();
   const datedTagGroupByNormalizedLabel = new Map<
     string,
-    { events: DatedTagEvent[]; label: string; normalizedLabel: string }
+    {
+      color: EmployeeTagDefinition["color"];
+      events: DatedTagEvent[];
+      label: string;
+      normalizedLabel: string;
+      tagId: string;
+    }
   >();
   const bossEmployeeIds = new Set<EmployeeId>();
 
@@ -81,8 +94,14 @@ export const createUiOrgStructure = ({
       birthdayEmployeesByKey.set(birthdayKey, birthdayEmployees);
     }
     for (const tag of employee.tags) {
-      if (!tag.date) continue;
-      const event = { date: tag.date, employee, label: tag.label };
+      if (!tag.date || !tag.tagId) continue;
+      const event = {
+        color: tag.color ?? null,
+        date: tag.date,
+        employee,
+        label: tag.label,
+        tagId: tag.tagId,
+      };
       const dateEvents = datedTagEventsByDate.get(tag.date) ?? [];
       dateEvents.push(event);
       datedTagEventsByDate.set(tag.date, dateEvents);
@@ -91,6 +110,8 @@ export const createUiOrgStructure = ({
         events: [],
         label: tag.label,
         normalizedLabel,
+        color: tag.color ?? null,
+        tagId: tag.tagId,
       };
       group.events.push(event);
       datedTagGroupByNormalizedLabel.set(normalizedLabel, group);
@@ -124,6 +145,7 @@ export const createUiOrgStructure = ({
 
   return {
     allEmployees,
+    employeeFieldDefinitions: [...customFieldDefinitions],
     deepEmployees,
     deepUnits,
     indexes: {
@@ -134,16 +156,36 @@ export const createUiOrgStructure = ({
       employeeSearchDocumentByEmployeeId,
       employeeSearchDocuments,
       employeesById,
+      employeeFieldDefinitionById: new Map(
+        customFieldDefinitions.map((definition) => [definition.id, definition]),
+      ),
+      customFieldOptionsById: new Map(
+        customFieldDefinitions.map((definition) => {
+          const values = new Set<string>();
+          for (const document of employeeSearchDocuments) {
+            const value = document.customFieldValues.get(definition.id);
+            if (value !== null && value !== undefined) values.add(value);
+          }
+          return [
+            definition.id,
+            [...values].sort((a, b) =>
+              a.localeCompare(b, "en", { numeric: true, sensitivity: "base" }),
+            ),
+          ];
+        }),
+      ),
       employeesByName: [...allEmployees].sort(compareEmployeesByName),
       manualEmployeeSearchDocumentByEmployeeId,
       manualEmployeeSearchDocuments,
       manualPositionOptions: getPositionOptionsFromSearchDocuments(manualEmployeeSearchDocuments),
       positionOptions: getPositionOptionsFromSearchDocuments(employeeSearchDocuments),
       tagOptions: getEmployeeTagOptionsFromSearchDocuments(employeeSearchDocuments),
+      tagsById: new Map(tagDefinitions.map((tag) => [tag.id, tag])),
       unitOrderById,
       unitSearchDocuments: deepUnits.map(createUnitSearchDocument),
       unitsById,
     },
     roots,
+    tags: [...tagDefinitions],
   };
 };

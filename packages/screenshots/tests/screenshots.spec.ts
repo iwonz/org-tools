@@ -31,6 +31,7 @@ const screenshotManifest = JSON.parse(await readFile(manifestPath, "utf8")) as S
 const scenariosById = new Map(screenshotManifest.map((scenario) => [scenario.id, scenario]));
 const rasterNoisePixelBudget = 32;
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
+const LONG_EXPORT_TAG_ID = "90000000-0000-4000-8000-000000000099";
 
 test.setTimeout(60_000);
 
@@ -122,15 +123,18 @@ async function replaceWithImageExportState(page: Page) {
   if (!product || !platform || !employee) {
     throw new Error("Synthetic image-export state is unavailable.");
   }
-  employee.tags.push({ date: "2026-09-01", label: LONG_EXPORT_TAG });
+  state.organization.tags.push({ color: "rose", id: LONG_EXPORT_TAG_ID, label: LONG_EXPORT_TAG });
+  employee.tags.push({ date: "2026-09-01", tagId: LONG_EXPORT_TAG_ID });
   platform.bossEmployeeId = null;
   platform.employeeIds = [];
   platform.employeePositions = [];
   platform.liveFilter = {
     birthday: null,
+    customFields: [],
     includeWithoutTags: false,
     includeWithoutUnits: false,
     query: "",
+    selectedGenders: [],
     selectedPositions: [],
     selectedTags: [],
     selectedUnitIds: [product.id],
@@ -208,6 +212,7 @@ test("captures valid and invalid state imports", async ({ page }) => {
         {
           contact: { email: "riley.brooks@example.test", phone: "+1 555-0120" },
           firstName: "Riley",
+          id: "00000000-0000-4000-8000-000000000099",
           lastName: "Brooks",
           teams: [],
         },
@@ -229,11 +234,24 @@ test("captures valid and invalid state imports", async ({ page }) => {
   fileChooserPromise = page.waitForEvent("filechooser");
   await dialog.getByText("Choose file", { exact: true }).click();
   await (await fileChooserPromise).setFiles({
-    buffer: Buffer.from(JSON.stringify([{ ...existingEmployee, teams: [] }])),
+    buffer: Buffer.from(
+      JSON.stringify([
+        {
+          email: existingEmployee.email,
+          firstName: existingEmployee.firstName,
+          id: existingEmployee.id,
+          lastName: existingEmployee.lastName,
+          teams: [],
+        },
+      ]),
+    ),
     mimeType: "application/json",
     name: "existing-employees.json",
   });
   await expect(dialog.getByText("1 existing", { exact: true })).toBeVisible();
+  const reviewColumns = dialog.locator('[data-demo-id="employee-import-review-columns"]');
+  await reviewColumns.scrollIntoViewIfNeeded();
+  await expect(reviewColumns).toBeInViewport();
   await capture(page, "employee-import-duplicates");
 });
 
@@ -330,16 +348,50 @@ test("captures the complete Employee workflow", async ({ page }) => {
   await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Avery Stone");
   await capture(page, "employees");
 
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  let dialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await expect(dialog.getByText("Built-in fields", { exact: true })).toBeVisible();
+  await capture(page, "employees-model");
+  await dialog.getByRole("button", { name: /Department/u }).click();
+  await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(dialog.locator('[data-demo-id="employee-field-editor"]')).toBeVisible();
+  await capture(page, "employees-model-value");
+  await dialog
+    .locator('[data-demo-id="employee-field-editor"]')
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: /Directory key/u }).click();
+  await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await capture(page, "employees-model-template");
+  await dialog.getByRole("button", { name: "Close", exact: true }).first().click();
+
+  await page.locator('[data-demo-id="employee-tags-button"]').click();
+  dialog = page.getByRole("dialog", { name: "Tags", exact: true });
+  await expect(dialog).toContainText("Design");
+  await capture(page, "employees-tag-catalog");
+  await dialog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
+  await expect(dialog.locator('[data-demo-id="tag-catalog-editor"]')).toBeVisible();
+  await capture(page, "employees-tag-editor");
+  await dialog.getByRole("button", { name: "Close", exact: true }).first().click();
+
   await page.locator('[data-demo-id="employees-position-filter"]').click();
   const filters = page.locator('[data-demo-id="employees-position-popover"]');
   await filters.getByRole("button", { name: "Gender", exact: true }).click();
   await filters.getByRole("checkbox", { name: "Gender: Female", exact: true }).click();
   await capture(page, "employees-filters");
 
+  await filters.getByRole("button", { name: "Department", exact: true }).click();
+  await expect(filters.locator('[data-filter-options-list="Department"]')).toBeVisible();
+  await capture(page, "employees-custom-filter");
+
   await filters.getByRole("button", { name: "Clear all", exact: true }).click();
   await page.keyboard.press("Escape");
   await page.locator('[data-demo-id="employee-edit-button"]').first().click();
-  let dialog = page.getByRole("dialog", { name: "Edit Employee" });
+  dialog = page.getByRole("dialog", { name: "Edit Employee" });
   await expect(dialog.getByRole("radio", { name: "Not specified", exact: true })).toBeVisible();
   await capture(page, "employees-form");
   await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
@@ -456,7 +508,7 @@ test("captures Analytics overview, lower groups, and drill-down", async ({ page 
 
 test("captures Calendar overview, day details, and dated-tag history", async ({ page }) => {
   await openSyntheticTab(page, "Calendar");
-  await expect(page.getByText("Employee Calendar", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-demo-id="calendar-weekdays"]')).toBeVisible();
   await capture(page, "calendar");
   await page.locator('[data-calendar-date="2026-07-10"]').click();
   const dayDialog = page.getByRole("dialog", { name: /July 10, 2026/u });
@@ -465,7 +517,7 @@ test("captures Calendar overview, day details, and dated-tag history", async ({ 
   await capture(page, "calendar-day-details");
   await page.keyboard.press("Escape");
   await page
-    .locator('[data-demo-id="dated-tag-cloud"]')
+    .locator('[data-demo-id="dated-tag-rail"]')
     .getByRole("button", { name: /Operations/u })
     .click();
   await expect(page.getByRole("dialog", { name: "Operations" })).toBeVisible();

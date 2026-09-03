@@ -1,31 +1,35 @@
 import type {
   Employee,
+  EmployeeCustomFieldFilter,
   EmployeeGender,
   EmployeeId,
   EmployeeSearchDocument,
+  TagId,
   UnitId,
 } from "@org-tools/types";
 
-import { createBirthdayKey } from "@/lib/birthday";
 import type { EmployeeUnitMembership } from "@/lib/employee-unit-contexts";
 
 export type EmployeeBirthdayFilter = {
   day: number;
   month: number;
+  year: number;
 };
 
 export type EmployeeSearchFilters = {
   birthday: EmployeeBirthdayFilter | null;
+  customFields: EmployeeCustomFieldFilter[];
   includeWithoutTags: boolean;
   includeWithoutUnits: boolean;
   selectedGenders: EmployeeGender[];
   selectedPositions: string[];
-  selectedTags: string[];
+  selectedTags: TagId[];
   selectedUnitIds: UnitId[];
 };
 
 export const createEmptyEmployeeSearchFilters = (): EmployeeSearchFilters => ({
   birthday: null,
+  customFields: [],
   includeWithoutTags: false,
   includeWithoutUnits: false,
   selectedGenders: [],
@@ -44,7 +48,11 @@ export const getEmployeeSearchFiltersKey = (filters: EmployeeSearchFilters) =>
     filters.includeWithoutUnits ? "without-units" : "",
     filters.birthday === null
       ? ""
-      : createBirthdayKey(filters.birthday.day, filters.birthday.month),
+      : `${filters.birthday.day}.${filters.birthday.month}.${filters.birthday.year}`,
+    ...filters.customFields.map(
+      (filter) =>
+        `${filter.fieldId}=${filter.includeUnset ? "unset|" : ""}${filter.selectedValues.join("|")}`,
+    ),
   ].join(":");
 
 export const hasActiveEmployeeSearchFilters = (filters: EmployeeSearchFilters) =>
@@ -54,7 +62,8 @@ export const hasActiveEmployeeSearchFilters = (filters: EmployeeSearchFilters) =
   filters.selectedUnitIds.length > 0 ||
   filters.includeWithoutTags ||
   filters.includeWithoutUnits ||
-  filters.birthday !== null;
+  filters.birthday !== null ||
+  filters.customFields.some((filter) => filter.includeUnset || filter.selectedValues.length > 0);
 
 export const pruneEmployeeSearchFilters = (
   filters: EmployeeSearchFilters,
@@ -94,8 +103,8 @@ export const employeeSearchDocumentMatches = ({
   }
 
   if (filters.selectedTags.length > 0 || filters.includeWithoutTags) {
-    const hasSelectedTag = filters.selectedTags.some((tag) => document.tagLabelSet.has(tag));
-    const matchesWithoutTags = filters.includeWithoutTags && document.tagLabelSet.size === 0;
+    const hasSelectedTag = filters.selectedTags.some((tag) => document.tagIdSet.has(tag));
+    const matchesWithoutTags = filters.includeWithoutTags && document.tagIdSet.size === 0;
 
     if (!hasSelectedTag && !matchesWithoutTags) {
       return false;
@@ -117,9 +126,17 @@ export const employeeSearchDocumentMatches = ({
 
   if (
     filters.birthday !== null &&
-    document.birthdayKey !== createBirthdayKey(filters.birthday.day, filters.birthday.month)
+    document.birthday !==
+      `${String(filters.birthday.day).padStart(2, "0")}.${String(filters.birthday.month).padStart(2, "0")}.${filters.birthday.year}`
   ) {
     return false;
+  }
+
+  for (const filter of filters.customFields) {
+    const value = document.customFieldValues.get(filter.fieldId) ?? null;
+    const matchesValue = value !== null && filter.selectedValues.includes(value);
+    const matchesUnset = value === null && filter.includeUnset;
+    if (!matchesValue && !matchesUnset) return false;
   }
 
   return true;

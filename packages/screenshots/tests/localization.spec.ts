@@ -295,6 +295,7 @@ for (const [locale, messages] of [
           {
             email: "localized.employee@example.test",
             firstName: "Localized",
+            id: "00000000-0000-4000-8000-000000000099",
             lastName: "Employee",
             teams: [],
           },
@@ -419,9 +420,9 @@ for (const [locale, messages] of [
       });
     }
     await page.getByRole("tab", { name: messages.Ui.Calendar, exact: true }).click();
-    await expect(page.getByText(messages.Ui["Employee Calendar"], { exact: true })).toBeVisible();
+    await expect(page.locator('[data-demo-id="calendar-weekdays"]')).toBeVisible();
     await page
-      .locator('[data-demo-id="dated-tag-cloud"]')
+      .locator('[data-demo-id="dated-tag-rail"]')
       .getByRole("button", { name: /Operations/u })
       .click();
     const tagDialog = page.getByRole("dialog", { name: "Operations" });

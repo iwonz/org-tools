@@ -20,8 +20,10 @@ restores the original file family.
 
 Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
 complete state or map an Employee array with optional nested Team assignments; the source, bounded
-richest-record preview, mapping, and duplicate choices are discarded when the modal closes. Birthday validation is local
-and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without inferring one. Export
+richest-record preview, mapping, and duplicate choices are discarded when the modal closes. Birthday
+validation is local and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without
+inferring one. Employee UUID creation, duplicate-key normalization, custom Template evaluation, and
+optional MD5 or SHA-256 output all run locally. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
 dragging a field never transmits or persists organization data. Organization records are never

@@ -1,24 +1,29 @@
-import type { EmployeeGender } from "./employee.js";
-import type { EmployeeId, UnitId } from "./ids.js";
+import type {
+  CustomEmployeeFieldDefinition,
+  EmployeeGender,
+  EmployeeTagDefinition,
+} from "./employee.js";
+import type { EmployeeFieldId, EmployeeId, TagId, UnitId } from "./ids.js";
 import type {
   OrgEditorCanvasViewport,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
   OrgEditorUnit,
 } from "./org-editor.js";
-import type { OrganizationEmployee } from "./organization.js";
+import type { EmployeeCustomFieldFilter, OrganizationEmployee } from "./organization.js";
 
 export type AppLocale = "en" | "ru";
 export type UiTheme = "light" | "dark" | "system";
 export type UiActiveTab = "units" | "employees" | "orgEditor" | "export" | "analytics" | "calendar";
 
 export type OrgToolsEmployeeFilters = {
-  birthday: { day: number; month: number } | null;
+  birthday: { day: number; month: number; year: number } | null;
+  customFields: EmployeeCustomFieldFilter[];
   includeWithoutTags: boolean;
   includeWithoutUnits: boolean;
   selectedGenders: EmployeeGender[];
   selectedPositions: string[];
-  selectedTags: string[];
+  selectedTags: TagId[];
   selectedUnitIds: UnitId[];
 };
 
@@ -41,7 +46,8 @@ export type OrgToolsDownloadEmployeeFieldKey =
 export type OrgToolsDownloadJsonTopLevelFieldKey =
   | OrgToolsDownloadEmployeeFieldKey
   | "tags"
-  | "units";
+  | "units"
+  | `custom:${string}`;
 export type OrgToolsDownloadUnitFieldKey =
   | "unitId"
   | "unitName"
@@ -57,6 +63,7 @@ export type OrgToolsDownloadState = {
   excludedJsonTagKeys: string[];
   excludedJsonUnitIds: UnitId[];
   jsonFieldNames: {
+    custom: Record<EmployeeFieldId, string>;
     employee: Record<OrgToolsDownloadEmployeeFieldKey, string>;
     tags: {
       collection: string;
@@ -72,6 +79,7 @@ export type OrgToolsDownloadState = {
   jsonUnitFieldOrder: OrgToolsDownloadUnitFieldKey[];
   rowMode: "allUnits" | "firstUnit";
   selectedEmployeeFieldKeys: OrgToolsDownloadEmployeeFieldKey[];
+  selectedCustomEmployeeFieldIds: EmployeeFieldId[];
   selectedFilters: OrgToolsEmployeeFilters;
   selectedJsonTagFieldKeys: OrgToolsDownloadTagFieldKey[];
   selectedJsonUnitFieldKeys: OrgToolsDownloadUnitFieldKey[];
@@ -89,7 +97,6 @@ export type OrgToolsUiState = {
     query: string;
   };
   calendar: {
-    cloudExpanded: boolean;
     monthIndex: number;
     year: number;
   };
@@ -118,11 +125,13 @@ export type OrgToolsUiState = {
 
 export type OrgToolsState = {
   organization: {
+    employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
     structure: {
       layoutMode: OrgEditorLayoutMode;
       units: OrgEditorUnit[];
     };
+    tags: EmployeeTagDefinition[];
   };
   ui: OrgToolsUiState;
 };

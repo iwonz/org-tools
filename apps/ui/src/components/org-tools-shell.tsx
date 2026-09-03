@@ -47,8 +47,8 @@ const PRODUCT_NAVIGATION_ITEMS: Array<{
   label: UiTextKey;
   value: ProductTabValue;
 }> = [
-  { icon: HiOutlineFolder, label: "Units", value: "units" },
   { icon: HiOutlineUsers, label: "Employees", value: "employees" },
+  { icon: HiOutlineFolder, label: "Units", value: "units" },
   { icon: HiOutlineBuildingOffice2, label: "Editor", value: "orgEditor" },
   { icon: HiOutlineChartBar, label: "Analytics", value: "analytics" },
   { icon: HiOutlineCalendarDays, label: "Calendar", value: "calendar" },
@@ -82,14 +82,17 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
   const [importOpen, setImportOpen] = useState(false);
   const [importState, setImportState] = useState<OrgToolsState | null>(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
-  const [contextHeaderAction, setContextHeaderAction] = useState<ContextHeaderAction | null>(null);
+  const [contextHeaderActions, setContextHeaderActions] = useState<ContextHeaderAction[]>([]);
   const sidebarCollapsed = store.sidebarCollapsed;
   const registerContextHeaderAction = useCallback((action: ContextHeaderAction) => {
-    setContextHeaderAction(action);
+    setContextHeaderActions((currentActions) => [
+      ...currentActions.filter((currentAction) => currentAction.id !== action.id),
+      action,
+    ]);
 
     return () => {
-      setContextHeaderAction((currentAction) =>
-        currentAction?.id === action.id ? null : currentAction,
+      setContextHeaderActions((currentActions) =>
+        currentActions.filter((currentAction) => currentAction.id !== action.id),
       );
     };
   }, []);
@@ -102,7 +105,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
       value: "orgEditor",
     } satisfies (typeof PRODUCT_NAVIGATION_ITEMS)[number]);
   const ActiveNavigationIcon = activeNavigationItem.icon;
-  const ContextHeaderActionIcon = contextHeaderAction?.icon;
   const sidebarLabelClassName = cn(
     "hidden min-w-0 overflow-hidden truncate whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 ease-out motion-reduce:transition-none lg:inline-block",
     sidebarCollapsed ? "lg:max-w-0 lg:opacity-0" : "lg:max-w-[10rem] lg:opacity-100",
@@ -267,36 +269,39 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                 {t(activeNavigationItem.label)}
               </h1>
               <div
-                className="ml-auto flex min-h-9 min-w-9 shrink-0 items-center justify-end"
+                className="ml-auto flex min-h-9 min-w-9 shrink-0 items-center justify-end gap-2"
                 data-demo-id="context-header-action-slot"
               >
-                {contextHeaderAction && ContextHeaderActionIcon && (
-                  <div className="group relative flex">
-                    <Button
-                      aria-label={contextHeaderAction.label}
-                      className="size-9 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
-                      data-demo-id={contextHeaderAction.dataDemoId}
-                      disabled={contextHeaderAction.disabled}
-                      onClick={contextHeaderAction.onClick}
-                      title={contextHeaderAction.label}
-                      type="button"
-                    >
-                      {contextHeaderAction.iconPlacement !== "trailing" && (
-                        <ContextHeaderActionIcon className="size-4" />
-                      )}
-                      <span className="hidden sm:inline">{contextHeaderAction.label}</span>
-                      {contextHeaderAction.iconPlacement === "trailing" && (
-                        <ContextHeaderActionIcon className="size-4" />
-                      )}
-                    </Button>
-                    <span
-                      className="pointer-events-none absolute right-0 top-11 z-30 hidden whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background group-focus-within:block group-hover:block sm:!hidden"
-                      role="tooltip"
-                    >
-                      {contextHeaderAction.label}
-                    </span>
-                  </div>
-                )}
+                {contextHeaderActions.map((contextHeaderAction) => {
+                  const ContextHeaderActionIcon = contextHeaderAction.icon;
+                  return (
+                    <div className="group relative flex" key={contextHeaderAction.id}>
+                      <Button
+                        aria-label={contextHeaderAction.label}
+                        className="size-9 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
+                        data-demo-id={contextHeaderAction.dataDemoId}
+                        disabled={contextHeaderAction.disabled}
+                        onClick={contextHeaderAction.onClick}
+                        title={contextHeaderAction.label}
+                        type="button"
+                      >
+                        {contextHeaderAction.iconPlacement !== "trailing" && (
+                          <ContextHeaderActionIcon className="size-4" />
+                        )}
+                        <span className="hidden sm:inline">{contextHeaderAction.label}</span>
+                        {contextHeaderAction.iconPlacement === "trailing" && (
+                          <ContextHeaderActionIcon className="size-4" />
+                        )}
+                      </Button>
+                      <span
+                        className="pointer-events-none absolute right-0 top-11 z-30 hidden whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background group-focus-within:block group-hover:block sm:!hidden"
+                        role="tooltip"
+                      >
+                        {contextHeaderAction.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </header>
             {error && (

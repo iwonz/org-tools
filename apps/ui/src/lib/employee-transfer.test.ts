@@ -1,6 +1,5 @@
 import type { EditableEmployeeFields } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
-import { createEmployeeId } from "@/lib/employee-id";
 import {
   applyEmployeeImport,
   createSuggestedEmployeeImportMapping,
@@ -22,6 +21,7 @@ const fields = (email: string, firstName = "Alex"): EditableEmployeeFields => ({
   tags: [],
   username: null,
 });
+const uuid = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 
 const manualUnit = (name: string): OrgEditorUnitConfiguration => ({
   assignments: [],
@@ -73,6 +73,7 @@ describe("Employee transfer", () => {
       JSON.stringify([
         {
           contact: { email: "sam@example.test" },
+          id: uuid(1),
           person: { first: "Sam", last: "River" },
           teams: [
             {
@@ -98,9 +99,7 @@ describe("Employee transfer", () => {
       overrides: new Map(),
       preview,
     });
-    expect(next.organization.employees[0]?.id).toBe(
-      createEmployeeId({ email: "sam@example.test", firstName: "Sam", lastName: "River" }),
-    );
+    expect(next.organization.employees[0]?.id).toBe(uuid(1));
     expect(next.organization.structure.units.map((unit) => unit.name)).toEqual([
       "Product",
       "Research",
@@ -117,6 +116,7 @@ describe("Employee transfer", () => {
     const rows = [
       {
         email: "alex@example.test",
+        id: employeeId,
         firstName: "Alex",
         lastName: "Morgan",
         teams: [
@@ -173,13 +173,78 @@ describe("Employee transfer", () => {
     const source = parseEmployeeImportText(
       "employees.json",
       JSON.stringify([
-        { email: "same@example.test", firstName: "ALICE", lastName: "Stone" },
-        { email: " SAME@example.test ", firstName: "Ａlice", lastName: "Stone" },
+        { email: "same@example.test", firstName: "ALICE", id: uuid(2), lastName: "Stone" },
+        { email: " SAME@example.test ", firstName: "Ａlice", id: uuid(3), lastName: "Stone" },
       ]),
     );
     const mapping = createSuggestedEmployeeImportMapping(source.paths);
     expect(() => deriveEmployeeImportPreview(source, mapping, [])).toThrow("duplicate identities");
     expect(store.createOrgToolsState()).toEqual(before);
+  });
+
+  test("blocks UUID collisions with another identity", () => {
+    const store = new OrgStore();
+    const employeeId = store.createEmployee(fields("first@example.test"), []);
+    const source = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        {
+          email: "second@example.test",
+          firstName: "Second",
+          id: employeeId,
+          lastName: "Person",
+        },
+      ]),
+    );
+    expect(() =>
+      deriveEmployeeImportPreview(
+        source,
+        createSuggestedEmployeeImportMapping(source.paths),
+        store.organizationEmployees,
+      ),
+    ).toThrow("Employee import UUID conflicts with another identity");
+  });
+
+  test("creates and updates mapped Value fields atomically", () => {
+    const store = new OrgStore();
+    const employeeId = store.createEmployee(fields("alex@example.test"), []);
+    const source = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        {
+          department: "Platform",
+          email: "alex@example.test",
+          firstName: "Alex",
+          id: employeeId,
+          lastName: "Morgan",
+        },
+      ]),
+    );
+    const mapping = createSuggestedEmployeeImportMapping(source.paths);
+    const fieldId = uuid(501);
+    mapping.newValueFields = [
+      {
+        definition: {
+          id: fieldId,
+          key: "department",
+          kind: "value",
+          name: "Department",
+          options: [],
+          required: false,
+          valueType: "text",
+        },
+        path: "department",
+      },
+    ];
+    const preview = deriveEmployeeImportPreview(source, mapping, store.organizationEmployees);
+    const next = applyEmployeeImport({
+      bulkPolicy: "update",
+      currentState: store.createOrgToolsState(),
+      overrides: new Map(),
+      preview,
+    });
+    expect(next.organization.employeeFieldDefinitions).toHaveLength(1);
+    expect(next.organization.employees[0]?.customFieldValues[fieldId]).toBe("Platform");
   });
 
   test("imports only complete current birthday values with unknown-year semantics", () => {
@@ -190,6 +255,7 @@ describe("Employee transfer", () => {
           birthday: "29.02.1900",
           email: "leap@example.test",
           firstName: "Leap",
+          id: uuid(4),
           lastName: "Example",
         },
       ]),
@@ -205,6 +271,7 @@ describe("Employee transfer", () => {
           birthday: "02-29",
           email: "legacy@example.test",
           firstName: "Legacy",
+          id: uuid(5),
           lastName: "Example",
         },
       ]),
@@ -219,6 +286,7 @@ describe("Employee transfer", () => {
     const rows = Array.from({ length: 20_000 }, (_, index) => ({
       email: `employee-${index}@example.test`,
       firstName: "Employee",
+      id: uuid(index + 10),
       lastName: String(index),
     }));
     const source = parseEmployeeImportText("large.json", JSON.stringify(rows));

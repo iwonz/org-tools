@@ -1,8 +1,12 @@
 import type {
   AppLocale,
+  CustomEmployeeFieldDefinition,
   EditableEmployeeFields,
+  EmployeeFieldId,
   EmployeeId,
   EmployeeTag,
+  EmployeeTagAssignment,
+  EmployeeTagDefinition,
   OrganizationEmployee,
   OrgToolsState,
   UiActiveTab,
@@ -15,7 +19,18 @@ import { makeAutoObservable, observable, reaction } from "mobx";
 import { LocalizedError, uiMessage } from "@/i18n/messages";
 import { type AnalyticsResult, buildAnalytics } from "@/lib/analytics";
 import { buildOrganizationStructureWithResolution } from "@/lib/build-organization-structure";
-import { createOrganizationEmployeeId, normalizeEditableEmployeeFields } from "@/lib/employee-data";
+import {
+  extractTemplateFieldKeys,
+  normalizeCustomEmployeeFieldKey,
+  rewriteTemplateFieldKey,
+  validateCustomEmployeeFieldDefinitions,
+} from "@/lib/custom-employee-fields";
+import {
+  createOrganizationEmployeeId,
+  createUuid,
+  normalizeEditableEmployeeFields,
+} from "@/lib/employee-data";
+import { createEmployeeIdentityKey } from "@/lib/employee-id";
 import type { EmployeeSearchFilters } from "@/lib/employee-search";
 import { type EmployeeTagUpdate, normalizeEmployeeTags } from "@/lib/employee-tags";
 import {
@@ -24,11 +39,13 @@ import {
   type EmployeeUnitContext,
   type EmployeeUnitMembership,
 } from "@/lib/employee-unit-contexts";
+import { hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import {
   createBlankOrgToolsState,
   createEmptyEmployeeFiltersState,
   parseOrgToolsState,
 } from "@/lib/org-file";
+import { normalizeSearchValue } from "@/lib/search-index";
 import type {
   ExportFieldDropPlacement,
   ExportJsonEmployeeFieldKey,
@@ -92,14 +109,26 @@ const cancelAnalyticsIdleCallback = (handle: AnalyticsIdleHandle) => {
   window.clearTimeout(handle.id);
 };
 
-const areTagsEqual = (firstTags: readonly EmployeeTag[], secondTags: readonly EmployeeTag[]) =>
+const areTagsEqual = (
+  firstTags: readonly EmployeeTagAssignment[],
+  secondTags: readonly EmployeeTagAssignment[],
+) =>
   firstTags.length === secondTags.length &&
   firstTags.every((tag, index) => {
     const other = secondTags[index];
-    return other !== undefined && tag.label === other.label && tag.date === other.date;
+    return other !== undefined && tag.tagId === other.tagId && tag.date === other.date;
   });
 
+const cloneEmployeeFieldDefinition = (
+  definition: CustomEmployeeFieldDefinition,
+): CustomEmployeeFieldDefinition =>
+  definition.kind === "template"
+    ? { ...definition }
+    : { ...definition, options: definition.options.map((option) => ({ ...option })) };
+
 export class OrgStore {
+  employeeFieldDefinitions: CustomEmployeeFieldDefinition[] = [];
+  tagDefinitions: EmployeeTagDefinition[] = [];
   organizationEmployees: OrganizationEmployee[] = [];
   uiOrgStructure: UiOrgStructure | null = null;
   theme: UiTheme = "system";
@@ -117,7 +146,6 @@ export class OrgStore {
   editorUi = { searchOpen: false, searchQuery: "" };
   analyticsUi = { filters: createEmptyEmployeeFiltersState(), query: "" };
   calendarUi = {
-    cloudExpanded: false,
     monthIndex: new Date().getMonth(),
     year: new Date().getFullYear(),
   };
@@ -165,6 +193,8 @@ export class OrgStore {
         isApplyingState: false,
         uiOrgStructure: observable.ref,
         organizationEmployees: observable.shallow,
+        employeeFieldDefinitions: observable.shallow,
+        tagDefinitions: observable.shallow,
       },
       { autoBind: true },
     );
@@ -184,7 +214,13 @@ export class OrgStore {
   }
 
   private get organizationObservation() {
-    return [this.organizationEmployees, this.orgEditor.layoutMode, this.orgEditor.units];
+    return [
+      this.organizationEmployees,
+      this.employeeFieldDefinitions,
+      this.tagDefinitions,
+      this.orgEditor.layoutMode,
+      this.orgEditor.units,
+    ];
   }
 
   private get uiObservation() {
@@ -204,6 +240,7 @@ export class OrgStore {
       this.exportSession.tabMode,
       this.exportSession.rowMode,
       this.exportSession.selectedEmployeeFieldKeys,
+      this.exportSession.selectedCustomEmployeeFieldIds,
       this.exportSession.jsonTopLevelFieldOrder,
       this.exportSession.selectedJsonUnitFieldKeys,
       this.exportSession.jsonUnitFieldOrder,
@@ -247,6 +284,9 @@ export class OrgStore {
   }
   get exportSelectedEmployeeFieldKeys() {
     return this.exportSession.selectedEmployeeFieldKeys;
+  }
+  get exportSelectedCustomEmployeeFieldIds() {
+    return this.exportSession.selectedCustomEmployeeFieldIds;
   }
   get exportJsonTopLevelFieldOrder() {
     return this.exportSession.jsonTopLevelFieldOrder;
@@ -316,10 +356,15 @@ export class OrgStore {
       const result = buildOrganizationStructureWithResolution(
         nextEmployees,
         nextEditor.createState(),
+        state.organization.tags,
+        state.organization.employeeFieldDefinitions,
       );
       nextEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
 
       this.organizationEmployees = nextEmployees;
+      this.employeeFieldDefinitions = structuredClone(state.organization.employeeFieldDefinitions);
+      this.tagDefinitions = structuredClone(state.organization.tags);
+      this.exportSession.synchronizeCustomFields(this.employeeFieldDefinitions);
       this.orgEditor = nextEditor;
       this.uiOrgStructure = result.structure;
       this.theme = state.ui.theme;
@@ -407,6 +452,8 @@ export class OrgStore {
     const result = buildOrganizationStructureWithResolution(
       this.organizationEmployees,
       this.orgEditor.createState(),
+      this.tagDefinitions,
+      this.employeeFieldDefinitions,
     );
     this.orgEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
     this.uiOrgStructure = result.structure;
@@ -685,14 +732,25 @@ export class OrgStore {
   createEmployee(fields: EditableEmployeeFields, unitMemberships: UnitAssignment[]): EmployeeId {
     const now = new Date().toISOString();
     const normalizedFields = normalizeEditableEmployeeFields(fields);
-    const id = createOrganizationEmployeeId(normalizedFields);
-    if (this.organizationEmployees.some((employee) => employee.id === id)) {
+    const identityKey = createEmployeeIdentityKey(normalizedFields);
+    if (
+      this.organizationEmployees.some(
+        (employee) => createEmployeeIdentityKey(employee) === identityKey,
+      )
+    ) {
       throw new LocalizedError(uiMessage("An Employee with this name and email already exists."));
     }
+    const id = createOrganizationEmployeeId();
+    const customFieldValues = this.normalizeCustomFieldValues(
+      normalizedFields.customFieldValues ?? {},
+    );
+    const tags = this.resolveTagDrafts(normalizedFields.tags);
     const employee: OrganizationEmployee = {
       ...normalizedFields,
       createdAt: now,
+      customFieldValues,
       id,
+      tags,
       updatedAt: now,
     };
 
@@ -740,18 +798,31 @@ export class OrgStore {
   }
 
   private normalizeEmployeeTagUpdates(
-    updates: readonly EmployeeTagUpdate[],
-  ): Map<EmployeeId, EmployeeTag[]> {
-    const updateByEmployeeId = new Map<EmployeeId, EmployeeTag[]>();
+    updates: readonly {
+      employeeId: EmployeeId;
+      tags: readonly (EmployeeTag | EmployeeTagAssignment)[];
+    }[],
+  ): Map<EmployeeId, EmployeeTagAssignment[]> {
+    const updateByEmployeeId = new Map<EmployeeId, EmployeeTagAssignment[]>();
 
     for (const update of updates) {
-      updateByEmployeeId.set(update.employeeId, normalizeEmployeeTags(update.tags));
+      const resolved = update.tags.every(
+        (tag): tag is EmployeeTagAssignment => "tagId" in tag && !("label" in tag),
+      )
+        ? update.tags.map((tag) => ({ date: tag.date, tagId: tag.tagId }))
+        : this.resolveTagDrafts(normalizeEmployeeTags(update.tags as EmployeeTag[]));
+      updateByEmployeeId.set(update.employeeId, resolved);
     }
 
     return updateByEmployeeId;
   }
 
-  private applyOrganizationEmployeeTagUpdates(updates: readonly EmployeeTagUpdate[]): boolean {
+  private applyOrganizationEmployeeTagUpdates(
+    updates: readonly {
+      employeeId: EmployeeId;
+      tags: readonly (EmployeeTag | EmployeeTagAssignment)[];
+    }[],
+  ): boolean {
     const updateByEmployeeId = this.normalizeEmployeeTagUpdates(updates);
     if (updateByEmployeeId.size === 0) return false;
 
@@ -780,24 +851,94 @@ export class OrgStore {
   ): void {
     const now = new Date().toISOString();
     const normalizedFields = normalizeEditableEmployeeFields(fields);
-    const nextEmployeeId = createOrganizationEmployeeId(normalizedFields);
+    const identityKey = createEmployeeIdentityKey(normalizedFields);
     if (
-      nextEmployeeId !== employeeId &&
-      this.organizationEmployees.some((employee) => employee.id === nextEmployeeId)
+      this.organizationEmployees.some(
+        (employee) =>
+          employee.id !== employeeId && createEmployeeIdentityKey(employee) === identityKey,
+      )
     ) {
       throw new LocalizedError(uiMessage("An Employee with this name and email already exists."));
     }
-    if (nextEmployeeId !== employeeId) {
-      this.orgEditor.rekeyEmployeeReferences(employeeId, nextEmployeeId, false);
-      this.exportSession.rekeyEmployee(employeeId, nextEmployeeId);
-    }
+    const customFieldValues = this.normalizeCustomFieldValues(
+      normalizedFields.customFieldValues ?? {},
+    );
+    const tags = this.resolveTagDrafts(normalizedFields.tags);
     this.organizationEmployees = this.organizationEmployees.map((employee) =>
       employee.id === employeeId
-        ? { ...employee, ...normalizedFields, id: nextEmployeeId, updatedAt: now }
+        ? { ...employee, ...normalizedFields, customFieldValues, tags, updatedAt: now }
         : employee,
     );
-    this.applyOrganizationEmployeeAssignments(nextEmployeeId, unitMemberships);
+    this.applyOrganizationEmployeeAssignments(employeeId, unitMemberships);
     this.rebuildMainModel();
+  }
+
+  private normalizeCustomFieldValues(
+    values: Record<string, string | number | boolean | null>,
+  ): Record<string, string | number | boolean | null> {
+    const result: Record<string, string | number | boolean | null> = {};
+    for (const definition of this.employeeFieldDefinitions) {
+      if (definition.kind !== "value") continue;
+      const value = values[definition.id] ?? null;
+      if (definition.required && (value === null || value === "")) {
+        throw new LocalizedError(uiMessage("Complete every required custom field."));
+      }
+      if (value === null || value === "") continue;
+      const isValid =
+        (definition.valueType === "text" && typeof value === "string") ||
+        (definition.valueType === "number" &&
+          typeof value === "number" &&
+          Number.isFinite(value)) ||
+        (definition.valueType === "boolean" && typeof value === "boolean") ||
+        (definition.valueType === "date" &&
+          typeof value === "string" &&
+          /^(\d{2})\.(\d{2})\.(\d{4})$/u.test(value) &&
+          (() => {
+            const [dayText, monthText, yearText] = value.split(".");
+            const day = Number(dayText);
+            const month = Number(monthText);
+            const year = Number(yearText);
+            const date = new Date(Date.UTC(year, month - 1, day));
+            return (
+              date.getUTCFullYear() === year &&
+              date.getUTCMonth() === month - 1 &&
+              date.getUTCDate() === day
+            );
+          })()) ||
+        (definition.valueType === "option" &&
+          typeof value === "string" &&
+          definition.options.some((option) => option.id === value));
+      if (!isValid) {
+        throw new LocalizedError(uiMessage("Custom Employee field value is invalid."));
+      }
+      result[definition.id] = value;
+    }
+    return result;
+  }
+
+  private resolveTagDrafts(tags: readonly EmployeeTag[]): EmployeeTagAssignment[] {
+    const definitions = [...this.tagDefinitions];
+    const byId = new Map(definitions.map((definition) => [definition.id, definition]));
+    const byLabel = new Map(
+      definitions.map((definition) => [normalizeSearchValue(definition.label), definition]),
+    );
+    const assignments: EmployeeTagAssignment[] = [];
+    for (const tag of tags) {
+      const normalizedLabel = normalizeSearchValue(tag.label.trim());
+      let definition =
+        (tag.tagId ? byId.get(tag.tagId) : undefined) ?? byLabel.get(normalizedLabel);
+      if (!definition && normalizedLabel) {
+        definition = { color: null, id: createUuid(), label: tag.label.trim() };
+        definitions.push(definition);
+        byId.set(definition.id, definition);
+        byLabel.set(normalizedLabel, definition);
+      }
+      if (definition && !assignments.some((assignment) => assignment.tagId === definition.id)) {
+        assignments.push({ date: tag.date, tagId: definition.id });
+      }
+    }
+    this.tagDefinitions = definitions;
+    return assignments;
   }
 
   private applyOrganizationEmployeeAssignments(
@@ -828,6 +969,210 @@ export class OrgStore {
     this.rebuildMainModel();
   }
 
+  saveEmployeeFieldDefinition(definition: CustomEmployeeFieldDefinition): void {
+    const previous = this.employeeFieldDefinitions.find((field) => field.id === definition.id);
+    const normalized = cloneEmployeeFieldDefinition(definition);
+    normalized.name = normalized.name.trim();
+    normalized.key = normalized.key.trim();
+    if (normalized.kind === "value") {
+      normalized.options = normalized.options.map((option) => ({
+        ...option,
+        label: option.label.trim(),
+      }));
+    }
+    let definitions = previous
+      ? this.employeeFieldDefinitions.map((field) =>
+          field.id === normalized.id ? normalized : cloneEmployeeFieldDefinition(field),
+        )
+      : [...this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition), normalized];
+    if (previous && previous.key !== normalized.key) {
+      definitions = definitions.map((field) =>
+        field.kind === "template"
+          ? {
+              ...field,
+              template: rewriteTemplateFieldKey(field.template, previous.key, normalized.key),
+            }
+          : field,
+      );
+    }
+    const issue = validateCustomEmployeeFieldDefinitions(definitions);
+    if (issue) throw new LocalizedError(uiMessage("Custom Employee field is invalid."));
+    if (previous && previous.key !== normalized.key) {
+      this.exportSession.setTemplateFormat(
+        rewriteTemplateFieldKey(this.exportSession.templateFormat, previous.key, normalized.key),
+      );
+      if (this.exportSession.jsonFieldNames.custom[definition.id] === previous.key) {
+        this.exportSession.setCustomJsonFieldName(definition.id, normalized.key);
+      }
+    }
+
+    const changedValueShape =
+      previous?.kind === "value" &&
+      (normalized.kind !== "value" || previous.valueType !== normalized.valueType);
+    if (changedValueShape) {
+      this.organizationEmployees = this.organizationEmployees.map((employee) => {
+        const customFieldValues = { ...employee.customFieldValues };
+        delete customFieldValues[definition.id];
+        return { ...employee, customFieldValues };
+      });
+      this.clearCustomEmployeeFieldFilters(definition.id);
+    }
+    if (previous?.kind === "value" && normalized.kind === "value") {
+      const optionIds = new Set(normalized.options.map((option) => option.id));
+      const removedOption = previous.options.some((option) => !optionIds.has(option.id));
+      this.organizationEmployees = this.organizationEmployees.map((employee) => {
+        if (
+          previous.valueType !== "option" ||
+          normalized.valueType !== "option" ||
+          employee.customFieldValues[definition.id] == null ||
+          optionIds.has(String(employee.customFieldValues[definition.id]))
+        ) {
+          return employee;
+        }
+        const customFieldValues = { ...employee.customFieldValues };
+        delete customFieldValues[definition.id];
+        return { ...employee, customFieldValues };
+      });
+      if (removedOption) this.clearCustomEmployeeFieldFilters(definition.id);
+    }
+    this.employeeFieldDefinitions = definitions;
+    this.exportSession.synchronizeCustomFields(definitions);
+    this.rebuildMainModel();
+  }
+
+  deleteEmployeeFieldDefinition(fieldId: EmployeeFieldId): void {
+    const target = this.employeeFieldDefinitions.find((field) => field.id === fieldId);
+    if (!target) return;
+    const referenced = this.employeeFieldDefinitions.some(
+      (field) =>
+        field.id !== fieldId &&
+        field.kind === "template" &&
+        extractTemplateFieldKeys(field.template).some(
+          (key) =>
+            normalizeCustomEmployeeFieldKey(key) === normalizeCustomEmployeeFieldKey(target.key),
+        ),
+    );
+    if (
+      referenced ||
+      this.exportSession.selectedCustomEmployeeFieldIds.includes(fieldId) ||
+      extractTemplateFieldKeys(this.exportSession.templateFormat).some(
+        (key) =>
+          normalizeCustomEmployeeFieldKey(key) === normalizeCustomEmployeeFieldKey(target.key),
+      )
+    ) {
+      throw new LocalizedError(uiMessage("Custom Employee field is still in use."));
+    }
+    this.employeeFieldDefinitions = this.employeeFieldDefinitions.filter(
+      (field) => field.id !== fieldId,
+    );
+    this.organizationEmployees = this.organizationEmployees.map((employee) => {
+      const customFieldValues = { ...employee.customFieldValues };
+      delete customFieldValues[fieldId];
+      return { ...employee, customFieldValues };
+    });
+    this.clearCustomEmployeeFieldFilters(fieldId);
+    this.exportSession.synchronizeCustomFields(this.employeeFieldDefinitions);
+    this.rebuildMainModel();
+  }
+
+  private clearCustomEmployeeFieldFilters(fieldId: EmployeeFieldId): void {
+    const clear = (filters: EmployeeSearchFilters): EmployeeSearchFilters => ({
+      ...filters,
+      customFields: filters.customFields.filter((filter) => filter.fieldId !== fieldId),
+    });
+    this.unitsUi = { ...this.unitsUi, employeeFilters: clear(this.unitsUi.employeeFilters) };
+    this.employeesUi = { ...this.employeesUi, filters: clear(this.employeesUi.filters) };
+    this.analyticsUi = { ...this.analyticsUi, filters: clear(this.analyticsUi.filters) };
+    this.downloadUi = {
+      ...this.downloadUi,
+      employeeFilters: clear(this.downloadUi.employeeFilters),
+      selectedFilters: clear(this.downloadUi.selectedFilters),
+    };
+    this.orgEditor.units = this.orgEditor.units.map((unit) => {
+      if (!unit.liveFilter) return unit;
+      const liveFilter = {
+        ...unit.liveFilter,
+        customFields: unit.liveFilter.customFields.filter((filter) => filter.fieldId !== fieldId),
+      };
+      return hasEmployeeLiveFilterCriteria(liveFilter)
+        ? { ...unit, liveFilter }
+        : {
+            ...unit,
+            bossEmployeeId: null,
+            employeeIds: [],
+            employeePositions: [],
+            liveFilter: null,
+          };
+    });
+  }
+
+  saveTagDefinition(definition: EmployeeTagDefinition): void {
+    const previous = this.tagDefinitions.find((tag) => tag.id === definition.id);
+    const normalizedLabel = normalizeSearchValue(definition.label);
+    if (!normalizedLabel) throw new LocalizedError(uiMessage("Tag name is required."));
+    if (
+      this.tagDefinitions.some(
+        (tag) => tag.id !== definition.id && normalizeSearchValue(tag.label) === normalizedLabel,
+      )
+    ) {
+      throw new LocalizedError(uiMessage("A Tag with this name already exists."));
+    }
+    const normalized = { ...definition, label: definition.label.trim() };
+    this.tagDefinitions = this.tagDefinitions.some((tag) => tag.id === definition.id)
+      ? this.tagDefinitions.map((tag) => (tag.id === definition.id ? normalized : tag))
+      : [...this.tagDefinitions, normalized];
+    if (previous && previous.label !== normalized.label) {
+      const previousKey = normalizeSearchValue(previous.label);
+      const nextKey = normalizeSearchValue(normalized.label);
+      this.exportSession.excludedJsonTagKeys = this.exportSession.excludedJsonTagKeys.map((key) =>
+        key === previousKey ? nextKey : key,
+      );
+    }
+    this.rebuildMainModel();
+  }
+
+  deleteTagDefinition(tagId: EmployeeTagDefinition["id"]): void {
+    const target = this.tagDefinitions.find((tag) => tag.id === tagId);
+    if (!target) return;
+    this.tagDefinitions = this.tagDefinitions.filter((tag) => tag.id !== tagId);
+    this.organizationEmployees = this.organizationEmployees.map((employee) => ({
+      ...employee,
+      tags: employee.tags.filter((tag) => tag.tagId !== tagId),
+    }));
+    const clear = (filters: EmployeeSearchFilters): EmployeeSearchFilters => ({
+      ...filters,
+      selectedTags: filters.selectedTags.filter((id) => id !== tagId),
+    });
+    this.unitsUi = { ...this.unitsUi, employeeFilters: clear(this.unitsUi.employeeFilters) };
+    this.employeesUi = { ...this.employeesUi, filters: clear(this.employeesUi.filters) };
+    this.analyticsUi = { ...this.analyticsUi, filters: clear(this.analyticsUi.filters) };
+    this.downloadUi = {
+      ...this.downloadUi,
+      employeeFilters: clear(this.downloadUi.employeeFilters),
+      selectedFilters: clear(this.downloadUi.selectedFilters),
+    };
+    this.orgEditor.units = this.orgEditor.units.map((unit) => {
+      if (!unit.liveFilter) return unit;
+      const liveFilter = {
+        ...unit.liveFilter,
+        selectedTags: unit.liveFilter.selectedTags.filter((id) => id !== tagId),
+      };
+      return hasEmployeeLiveFilterCriteria(liveFilter)
+        ? { ...unit, liveFilter }
+        : {
+            ...unit,
+            bossEmployeeId: null,
+            employeeIds: [],
+            employeePositions: [],
+            liveFilter: null,
+          };
+    });
+    this.exportSession.excludedJsonTagKeys = this.exportSession.excludedJsonTagKeys.filter(
+      (key) => key !== normalizeSearchValue(target.label),
+    );
+    this.rebuildMainModel();
+  }
+
   createOrgToolsState(): OrgToolsState {
     return parseOrgToolsState({
       organization: this.createOrganizationState(),
@@ -837,6 +1182,7 @@ export class OrgStore {
 
   createOrganizationState(): OrgToolsState["organization"] {
     return {
+      employeeFieldDefinitions: this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition),
       employees: this.organizationEmployees.map((employee) => ({
         ...employee,
         tags: employee.tags.map((tag) => ({ ...tag })),
@@ -850,6 +1196,7 @@ export class OrgStore {
           liveFilter: unit.liveFilter ? structuredClone(unit.liveFilter) : null,
         })),
       },
+      tags: this.tagDefinitions.map((tag) => ({ ...tag })),
     };
   }
 

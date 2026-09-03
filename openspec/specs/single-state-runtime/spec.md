@@ -5,16 +5,27 @@ Define the strict singleton state contract, automatic SQLite persistence, privat
 ## Requirements
 ### Requirement: One strict current state contains organization data and durable UI
 The application SHALL use one strict unversioned `OrgToolsState` with exactly `organization` and
-`ui` at the top level. Organization SHALL contain the global Employee catalog and one current
-`{ layoutMode, units }` structure. Durable UI SHALL contain locale, theme, shell state, active
-section, Unit navigation, filters, searches, Calendar and Download settings, plus the one Editor
-viewport and selection. Download settings SHALL store one complete `jsonTopLevelFieldOrder` covering
+`ui` at the top level. Organization SHALL contain UUID Employees with custom values, one current
+`{ layoutMode, units }` structure, UUID-keyed custom field definitions, and a UUID-keyed Tag catalog.
+Durable UI SHALL contain locale, theme, shell state, active section, Unit navigation, complete
+birthday and custom filters, searches, Calendar and Download settings, plus the one Editor viewport
+and selection. Download settings SHALL store one complete `jsonTopLevelFieldOrder` covering
 scalar Employee fields plus Unit and Tag collection keys, ordered nested Unit and Tag fields,
 independently named fields, exact exclusion keys, Template row mode, and Template format. They SHALL
 NOT store a separate Employee-only top-level order, CSV, flat Unit columns, or a Unit-path separator.
 Transient overlays, notifications, unfinished form drafts, complete generated output, and Editor
-export settings MUST NOT enter the state. There SHALL be no View array, View ID, local View Employee,
-override, format discriminator, version, compatibility alias, legacy reader, or partial document.
+export settings MUST NOT enter the state. There SHALL be no deterministic Employee digest, inline
+Tag label, obsolete Calendar cloud state, missing definition reference, View array, View ID, local
+View Employee, override, format discriminator, version, compatibility alias, legacy reader, partial
+document, unknown key, or old custom/output shape.
+
+#### Scenario: Open the current state
+- **WHEN** either runtime receives a fully valid current state
+- **THEN** organization and UI hydrate atomically and all definition references resolve
+
+#### Scenario: Reject an obsolete state
+- **WHEN** persisted or imported data uses the former Employee ID, inline Tag, filter, or Calendar shape
+- **THEN** strict parsing fails without compatibility conversion or partial replacement
 
 #### Scenario: Complete state round trip
 - **WHEN** a current state is exported and imported, synchronized to another tab, or reopened from
@@ -83,7 +94,7 @@ Startup SHALL accept only the current single-structure JSON contract.
 - **THEN** the exact current singleton state table and row are created without a schema-version marker
 
 #### Scenario: Exact current database
-- **WHEN** startup opens the exact table with valid hash-ID Employees and one structure
+- **WHEN** startup opens the exact table with valid UUID Employees and one structure
 - **THEN** the existing state and revision remain available without migration
 
 #### Scenario: Obsolete View snapshot
@@ -190,3 +201,16 @@ include a state version, compatibility reader, or automatic conversion for obsol
 #### Scenario: Open obsolete birthday state
 - **WHEN** persisted or transferred state contains the former birthday representation
 - **THEN** strict validation blocks it without rewriting, resetting, or partially installing the state
+
+### Requirement: Current local state is rewritten once outside runtime
+Delivery SHALL stop the server, preserve a timestamped ignored database-family backup, transform all
+Employee and Tag references, validate the exact new state, and update the singleton row in one
+transaction with one revision increment. No transformation code SHALL remain on the runtime path.
+
+#### Scenario: Rewrite succeeds
+- **WHEN** the current local state transforms and validates
+- **THEN** Employee and Unit counts and timestamps remain stable while IDs and references use the new shape
+
+#### Scenario: Rewrite fails
+- **WHEN** conversion, validation, or SQLite commit fails
+- **THEN** the original transaction remains intact and the backup remains available for restoration

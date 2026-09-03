@@ -24,12 +24,76 @@ export const productTabs = [
 export const localeStorageKey = "org-tools-locale";
 const emptyEmployeeFilters = () => ({
   birthday: null,
+  customFields: [],
   includeWithoutTags: false,
   includeWithoutUnits: false,
   selectedGenders: [],
   selectedPositions: [],
   selectedTags: [],
   selectedUnitIds: [],
+});
+
+const emptyDownloadState = (): OrgToolsState["ui"]["download"] => ({
+  employeeFilters: emptyEmployeeFilters(),
+  employeeQuery: "",
+  excludedEmployeeIds: [],
+  excludedJsonTagKeys: [],
+  excludedJsonUnitIds: [],
+  jsonFieldNames: {
+    custom: {},
+    employee: {
+      avatarBase64Url: "avatarBase64Url",
+      birthday: "birthday",
+      email: "email",
+      firstName: "firstName",
+      fullName: "fullName",
+      gender: "gender",
+      id: "id",
+      lastName: "lastName",
+      phone: "phone",
+      profileUrl: "profileUrl",
+      username: "username",
+    },
+    tags: { collection: "tags", fields: { date: "date", label: "label" } },
+    units: {
+      collection: "units",
+      fields: {
+        isBoss: "isBoss",
+        position: "position",
+        unitFullPath: "unitFullPath",
+        unitId: "unitId",
+        unitName: "unitName",
+      },
+    },
+  },
+  jsonTagFieldOrder: ["label", "date"],
+  jsonTopLevelFieldOrder: [
+    "id",
+    "firstName",
+    "lastName",
+    "fullName",
+    "gender",
+    "username",
+    "profileUrl",
+    "email",
+    "phone",
+    "avatarBase64Url",
+    "birthday",
+    "units",
+    "tags",
+  ],
+  jsonUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
+  rowMode: "allUnits" as const,
+  selectedCustomEmployeeFieldIds: [],
+  selectedEmployeeFieldKeys: ["username"],
+  selectedFilters: emptyEmployeeFilters(),
+  selectedJsonTagFieldKeys: [],
+  selectedJsonUnitFieldKeys: [],
+  selectedQuery: "",
+  selections: [],
+  tabMode: "json" as const,
+  templateFormat: "{email}, ",
+  unitQuery: "",
 });
 
 export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): Promise<string> {
@@ -43,9 +107,11 @@ export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): 
   const state = document.state;
   state.organization.structure.units = [];
   state.organization.employees = [];
+  state.organization.employeeFieldDefinitions = [];
+  state.organization.tags = [];
   state.ui.activeTab = "orgEditor";
   state.ui.analytics = { filters: emptyEmployeeFilters(), query: "" };
-  state.ui.calendar = { cloudExpanded: false, monthIndex: 6, year: 2026 };
+  state.ui.calendar = { monthIndex: 6, year: 2026 };
   state.ui.editor = {
     searchOpen: false,
     searchQuery: "",
@@ -63,13 +129,7 @@ export async function resetServerState(page: Page, locale: "en" | "ru" = "en"): 
     employeeQuery: "",
     unitQuery: "",
   };
-  state.ui.download.employeeFilters = emptyEmployeeFilters();
-  state.ui.download.employeeQuery = "";
-  state.ui.download.excludedEmployeeIds = [];
-  state.ui.download.selectedFilters = emptyEmployeeFilters();
-  state.ui.download.selectedQuery = "";
-  state.ui.download.selections = [];
-  state.ui.download.unitQuery = "";
+  state.ui.download = emptyDownloadState();
   const write = await page.request.put("/api/state", {
     data: { scope: "all", state },
     headers: { Origin: origin },

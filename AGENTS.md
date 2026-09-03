@@ -19,8 +19,8 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
   session storage, local storage, or service workers. Theme and locale are the only allowed browser
   metadata.
 - Employee avatars are bounded embedded PNG, JPEG, or WebP data URLs. Never fetch remote avatars.
-- Employee IDs are the full SHA-256 of the normalized first-name, last-name, and email tuple. Keep
-  this identity rule identical across create, edit, validation, Import, Export, fixtures, and tests.
+- Employee IDs are stable UUID v4 values. Detect duplicates separately through the normalized
+  first-name, last-name, and email tuple; identity edits must never change the Employee ID.
 - The organization has one current Unit structure. Do not reintroduce alternate Views, View-local
   Employees, or selectors for structural documents.
 - Profile and email navigation must require an explicit user action and use referrer protections.

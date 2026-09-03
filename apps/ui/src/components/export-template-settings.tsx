@@ -59,7 +59,9 @@ export function ExportTemplateSettings({
     username: "Template token: username",
   };
   const tokens = [...employeeFields, ...unitFields].map((field) => ({
-    description: t(descriptionKeys[field.key] ?? "Template token value"),
+    description: descriptionKeys[field.key]
+      ? t(descriptionKeys[field.key] as UiTextKey)
+      : field.label,
     key: field.key,
   }));
   return (

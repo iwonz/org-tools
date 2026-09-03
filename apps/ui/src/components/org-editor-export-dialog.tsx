@@ -83,6 +83,7 @@ import {
   defaultExportJsonUnitFieldOrder,
 } from "@/stores/export-session-store";
 import type { ExportRowMode } from "@/stores/org-store";
+import { useOrgStore } from "@/stores/org-store-context";
 
 type OrgEditorExportDialogProps = {
   employeeById: ReadonlyMap<EmployeeId, Employee>;
@@ -132,6 +133,7 @@ export function OrgEditorExportDialog({
   units,
 }: OrgEditorExportDialogProps) {
   const t = useUiText();
+  const store = useOrgStore();
   const locale = useLocale();
   const countText = useCountText();
   const localizedManagerLabel = t("Manager");
@@ -146,11 +148,21 @@ export function OrgEditorExportDialog({
   const [jsonSettings, setJsonSettings] = useState<StructuredJsonSettingsValue>(() => ({
     excludedJsonTagKeys: [],
     excludedJsonUnitIds: [],
-    jsonFieldNames: createDefaultExportJsonFieldNames(),
+    jsonFieldNames: {
+      ...createDefaultExportJsonFieldNames(),
+      custom: Object.fromEntries(
+        store.employeeFieldDefinitions.map((field) => [field.id, field.key]),
+      ),
+    },
     jsonTagFieldOrder: [...defaultExportJsonTagFieldOrder],
-    jsonTopLevelFieldOrder: [...defaultExportJsonTopLevelFieldOrder],
+    jsonTopLevelFieldOrder: [
+      ...defaultExportJsonTopLevelFieldOrder.slice(0, -2),
+      ...store.employeeFieldDefinitions.map((field) => `custom:${field.id}` as const),
+      ...defaultExportJsonTopLevelFieldOrder.slice(-2),
+    ],
     jsonUnitFieldOrder: [...defaultExportJsonUnitFieldOrder],
     selectedEmployeeFieldKeys: [...defaultExportEmployeeFieldKeys],
+    selectedCustomEmployeeFieldIds: [],
     selectedJsonTagFieldKeys: [],
     selectedJsonUnitFieldKeys: [],
   }));
@@ -246,13 +258,15 @@ export function OrgEditorExportDialog({
   const jsonValidation = useMemo(
     () =>
       validateExportFieldNames({
+        customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
         jsonFieldNames: jsonSettings.jsonFieldNames,
+        selectedCustomEmployeeFieldIds: jsonSettings.selectedCustomEmployeeFieldIds,
         selectedEmployeeFieldKeys: jsonSettings.selectedEmployeeFieldKeys,
         selectedJsonTagFieldKeys: jsonSettings.selectedJsonTagFieldKeys,
         selectedJsonUnitFieldKeys: jsonSettings.selectedJsonUnitFieldKeys,
         tabMode: "json",
       }),
-    [jsonSettings],
+    [jsonSettings, store.employeeFieldDefinitions],
   );
   const hasImageBossToken = orgEditorTemplateContainsBossToken(imageSettings.employeeFormat);
   const isImageBossLabelValid =
@@ -261,11 +275,12 @@ export function OrgEditorExportDialog({
     () =>
       createExportPreview({
         ...jsonSettings,
+        customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
         rows: exportRows,
         tabMode: activeTab === "json" ? "json" : "template",
         templateFormat,
       }),
-    [activeTab, exportRows, jsonSettings, templateFormat],
+    [activeTab, exportRows, jsonSettings, store.employeeFieldDefinitions, templateFormat],
   );
   const canExportText = exportRows.length > 0 && (activeTab !== "json" || jsonValidation.isValid);
   const canExportImage = Boolean(unit) && isImageBossLabelValid;
@@ -375,6 +390,7 @@ export function OrgEditorExportDialog({
   const createTextExport = () =>
     createExportTextAsync({
       ...jsonSettings,
+      customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
       rows: exportRows,
       tabMode: activeTab === "json" ? "json" : "template",
       templateFormat,
@@ -807,7 +823,13 @@ export function OrgEditorExportDialog({
             <TabsContent className="mt-0" value="template">
               <ExportTemplateSettings
                 dataDemoId="org-editor-export-template"
-                employeeFields={visibleEmployeeFields}
+                employeeFields={[
+                  ...visibleEmployeeFields,
+                  ...store.employeeFieldDefinitions.map((field) => ({
+                    key: field.key,
+                    label: field.name,
+                  })),
+                ]}
                 format={templateFormat}
                 onFormatChange={(value) => {
                   setTemplateFormat(value);

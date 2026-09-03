@@ -2,7 +2,7 @@ import type { EditableEmployeeFields, EmployeeGender, EmployeeId } from "@org-to
 
 import { LocalizedError, uiMessage } from "@/i18n/messages";
 import { parseEmployeeBirthday } from "@/lib/birthday";
-import { createEmployeeId } from "@/lib/employee-id";
+import { createEmployeeUuid } from "@/lib/employee-id";
 import { normalizeEmployeeTags } from "@/lib/employee-tags";
 
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -24,9 +24,7 @@ export const createUuid = (): string => {
   });
 };
 
-export const createOrganizationEmployeeId = (
-  fields: Pick<EditableEmployeeFields, "email" | "firstName" | "lastName">,
-): EmployeeId => createEmployeeId(fields);
+export const createOrganizationEmployeeId = (): EmployeeId => createEmployeeUuid();
 
 export const EMPLOYEE_GENDERS = ["male", "female", "unspecified"] as const;
 
@@ -112,10 +110,13 @@ export const isSafeProfileUrl = (value: string | null | undefined): value is str
 
 export const normalizeEditableEmployeeFields = (
   fields: EditableEmployeeFields,
-): EditableEmployeeFields => {
-  const normalized: EditableEmployeeFields = {
+): Omit<EditableEmployeeFields, "customFieldValues"> & {
+  customFieldValues: NonNullable<EditableEmployeeFields["customFieldValues"]>;
+} => {
+  const normalized = {
     avatarBase64Url: normalizeAvatarBase64Url(fields.avatarBase64Url),
     birthday: normalizeBirthday(fields.birthday),
+    customFieldValues: { ...(fields.customFieldValues ?? {}) },
     email: normalizeOptionalEmployeeText(fields.email),
     firstName: fields.firstName.trim(),
     gender: normalizeEmployeeGender(fields.gender),

@@ -1,6 +1,8 @@
 import type {
+  CustomEmployeeFieldDefinition,
   Employee,
   EmployeeId,
+  EmployeeTagDefinition,
   EmployeeUnitPosition,
   OrganizationEmployee,
   OrgEditorState,
@@ -18,9 +20,13 @@ import { resolveLiveUnitMemberships } from "@/lib/live-unit-filter";
 import { getEffectiveLiveEmployeePosition } from "@/lib/live-unit-position";
 import { createEmployeeSearchDocument } from "@/lib/search-index";
 
-const createOrganizationEmployee = (employee: OrganizationEmployee): Employee => ({
+const createOrganizationEmployee = (
+  employee: OrganizationEmployee,
+  tagById: ReadonlyMap<string, EmployeeTagDefinition>,
+): Employee => ({
   avatarBase64Url: employee.avatarBase64Url,
   birthday: employee.birthday,
+  customFieldValues: { ...employee.customFieldValues },
   email: employee.email,
   firstName: employee.firstName,
   fullName:
@@ -33,7 +39,10 @@ const createOrganizationEmployee = (employee: OrganizationEmployee): Employee =>
   lastName: employee.lastName,
   phone: employee.phone,
   profileUrl: employee.profileUrl,
-  tags: employee.tags.map((tag) => ({ ...tag })),
+  tags: employee.tags.flatMap((assignment) => {
+    const tag = tagById.get(assignment.tagId);
+    return tag ? [{ ...assignment, color: tag.color, label: tag.label }] : [];
+  }),
   unitIds: [],
   unitPositions: [],
   username: employee.username,
@@ -74,15 +83,21 @@ export type OrganizationStructureBuildResult = {
 export const buildOrganizationStructureWithResolution = (
   organizationEmployees: readonly OrganizationEmployee[],
   state: OrgEditorState,
+  tagDefinitions: readonly EmployeeTagDefinition[] = [],
+  customFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
 ): OrganizationStructureBuildResult => {
   const employeesById = new Map<EmployeeId, Employee>();
+  const tagById = new Map(tagDefinitions.map((tag) => [tag.id, tag]));
 
   for (const organizationEmployee of organizationEmployees) {
     if (employeesById.has(organizationEmployee.id)) {
       throw new Error(`Duplicate employee id: ${organizationEmployee.id}.`);
     }
 
-    employeesById.set(organizationEmployee.id, createOrganizationEmployee(organizationEmployee));
+    employeesById.set(
+      organizationEmployee.id,
+      createOrganizationEmployee(organizationEmployee, tagById),
+    );
   }
 
   const editorUnitById = new Map<UnitId, OrgEditorUnit>();
@@ -176,7 +191,9 @@ export const buildOrganizationStructureWithResolution = (
   }
 
   const allEmployees = [...employeesById.values()];
-  const manualEmployeeSearchDocuments = allEmployees.map(createEmployeeSearchDocument);
+  const manualEmployeeSearchDocuments = allEmployees.map((employee) =>
+    createEmployeeSearchDocument(employee, customFieldDefinitions),
+  );
   const manualMembershipsByEmployeeId = buildEmployeeUnitMembershipIndex(allEmployees);
   const liveResolution = resolveLiveUnitMemberships({
     documents: manualEmployeeSearchDocuments,
@@ -242,7 +259,9 @@ export const buildOrganizationStructureWithResolution = (
   const deepEmployees = [...deepEmployeeIdSet]
     .map((employeeId) => employeesById.get(employeeId))
     .filter((employee): employee is Employee => Boolean(employee));
-  const employeeSearchDocuments = allEmployees.map(createEmployeeSearchDocument);
+  const employeeSearchDocuments = allEmployees.map((employee) =>
+    createEmployeeSearchDocument(employee, customFieldDefinitions),
+  );
 
   return {
     liveEmployeeIdsByUnitId: liveResolution.employeeIdsByUnitId,
@@ -254,6 +273,8 @@ export const buildOrganizationStructureWithResolution = (
       employeesById,
       manualEmployeeSearchDocuments,
       roots,
+      tagDefinitions,
+      customFieldDefinitions,
       unitsById,
     }),
   };
@@ -262,5 +283,12 @@ export const buildOrganizationStructureWithResolution = (
 export const buildOrganizationStructure = (
   organizationEmployees: readonly OrganizationEmployee[],
   state: OrgEditorState,
+  tagDefinitions: readonly EmployeeTagDefinition[] = [],
+  customFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
 ): UiOrgStructure =>
-  buildOrganizationStructureWithResolution(organizationEmployees, state).structure;
+  buildOrganizationStructureWithResolution(
+    organizationEmployees,
+    state,
+    tagDefinitions,
+    customFieldDefinitions,
+  ).structure;

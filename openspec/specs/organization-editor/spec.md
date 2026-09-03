@@ -150,12 +150,14 @@ year `1900` as unknown. Employee create and edit SHALL provide coordinated style
 Year selectors, including an explicit unknown-year choice, and SHALL reject incomplete or impossible
 selections. Calendar SHALL navigate a selected month and year across year boundaries, SHALL project
 February 29 birthdays to February 28 in non-leap years independent of whether their birth year is
-known, SHALL include exact-date Employee tag events, SHALL fit a 31-day grid and bounded tag cloud
-without page scroll at the maintained 1280 by 720 desktop viewport, and SHALL render Analytics as
-six content-sized groups in one full-bleed workflow with compact gaps and one uniform soft tonal
-surface per group. Groups SHALL add no outer border, shadow, nested header fill, or repeated row
-rule. Each Analytics group SHALL show at most eight estimated 42 px rows before using its existing
-virtualized internal scroll container.
+known, SHALL include exact-date Tags, SHALL align dates under locale-ordered weekdays, and SHALL style
+actual Saturday and Sunday headings and cells with one restrained weekend tone. Russian weeks SHALL
+begin Monday and English weeks SHALL begin Sunday. Calendar SHALL fit its week-aligned grid and
+bounded Tag rail without page scroll at the maintained 1280 by 720 desktop viewport. Analytics SHALL
+render six content-sized groups in one full-bleed workflow with compact gaps and one uniform soft
+tonal surface per group. Groups SHALL add no outer border, shadow, nested header fill, or repeated
+row rule. Each Analytics group SHALL show at most eight estimated 42 px rows before using its
+existing virtualized internal scroll container.
 
 #### Scenario: Birthday selection
 - **WHEN** a user creates or edits an Employee birthday
@@ -166,9 +168,17 @@ virtualized internal scroll container.
 - **WHEN** an Employee has a valid birthday and the calendar displays the corresponding year and month
 - **THEN** the Employee appears on the matching recurring day, using February 28 for a February 29 birthday in a non-leap display year, and in birthday aggregates
 
+#### Scenario: Calendar week alignment
+- **WHEN** a month begins after the locale's first weekday
+- **THEN** leading placeholders align every date below its localized weekday heading
+
+#### Scenario: Weekend styling
+- **WHEN** Saturday or Sunday renders in either locale order
+- **THEN** its heading and current-month date cell use the same dedicated tonal surface
+
 #### Scenario: Calendar navigation layout
 - **WHEN** Calendar has birthday or dated-tag data on a maintained desktop viewport
-- **THEN** its header shows month and year followed by Previous and Next, and the remaining cloud and grid fit without horizontal or vertical page overflow
+- **THEN** its header keeps the Tag rail, month, year, Previous, and Next visible while the week-aligned grid fits without horizontal or vertical page overflow
 
 #### Scenario: Tonal Analytics surface
 - **WHEN** Analytics is ready
@@ -186,13 +196,16 @@ virtualized internal scroll container.
 - **THEN** eight rows remain visible and additional virtualized rows are reachable through internal scrolling
 
 ### Requirement: Calendar exposes dated tag events and details
-The Calendar SHALL show exact-date tag events separately from birthday avatars, limit a day cell to
-two inline tag events plus an overflow count, and open a localized day dialog containing one
-vertical virtualized stream of populated content. A nonempty Birthday section SHALL come first.
-Dated events SHALL be grouped under interactive normalized tag headings sorted by localized label,
-and each group SHALL contain complete shared Employee cards with right-aligned Tag, Edit, and Delete
-actions in stable name order. The same Employee SHALL appear in each applicable tag group. Cards
-MUST NOT contain a special event-label subtitle.
+Calendar day cells SHALL retain birthday avatars but SHALL represent all dated Tag assignments with
+one Tag icon and localized assignment count, without inline Tag labels or a duplicate total-event
+count. The day dialog SHALL retain one vertical virtualized stream with Birthdays first and each Tag
+heading followed by complete shared Employee cards. Dated groups SHALL sort by localized label,
+Employees SHALL use stable name order, and the same Employee SHALL appear in each applicable group.
+Cards MUST NOT contain a special event-label subtitle.
+
+#### Scenario: Render a populated day
+- **WHEN** a date contains multiple dated Tag assignments
+- **THEN** its cell shows one Tag icon and total assignment count without any Tag label
 
 #### Scenario: Open a populated day
 - **WHEN** a user activates a day containing birthdays and dated tags
@@ -203,25 +216,39 @@ MUST NOT contain a special event-label subtitle.
 - **WHEN** a user activates a dated-event group heading
 - **THEN** the Calendar opens that label's current, future, and conditional past event history
 
-### Requirement: Calendar provides a bounded dated-tag cloud
-The Calendar SHALL show all dated tag labels from current Employees as localized chips with event counts in at most two rows, disclose overflow without expanding the page, and open a virtualized dialog for the selected label.
+### Requirement: Calendar provides a bounded dated-Tag rail
+Calendar SHALL place dated Tag controls in a single-line horizontally scrollable rail on the left of
+the same desktop header row as fixed month navigation. The Employee Calendar title and aggregate
+event count SHALL NOT render. On narrow screens the rail SHALL stack above navigation.
 
-#### Scenario: Open a tag from the cloud
-- **WHEN** a user activates a dated-tag cloud chip
+#### Scenario: Scroll many dated Tags
+- **WHEN** Tag controls exceed the available desktop width
+- **THEN** only the left rail scrolls horizontally while month navigation remains visible
+
+#### Scenario: Open a Tag from the rail
+- **WHEN** a user activates a dated-Tag rail control
 - **THEN** current and future events appear in ascending date order and past events appear separately in descending date order with localized dates and Employees
 
 #### Scenario: Calendar empty state
 - **WHEN** no current Employee has either a birthday or a dated tag
-- **THEN** the shared Calendar empty state is shown instead of the cloud and grid
+- **THEN** the shared Calendar empty state is shown instead of the rail and grid
 
 ### Requirement: Calendar dated-tag counts use uniform separators
-The Calendar tag cloud SHALL render each dated-tag label, one shared middle-dot separator, and its
+The Calendar Tag rail SHALL render each dated-Tag label, one shared middle-dot separator, and its
 localized count as distinct aligned elements with the same horizontal separator spacing for every
 tag length and count.
 
-#### Scenario: Dated-tag cloud spacing
+#### Scenario: Dated-Tag rail spacing
 - **WHEN** the Calendar renders multiple dated-tag groups with different label lengths and counts
 - **THEN** every middle dot has the same computed left and right spacing and the label and count remain vertically aligned
+
+### Requirement: Calendar returns to the current month
+Month navigation SHALL show a localized Today action only when the displayed local month or year is
+not current. Activating it SHALL restore the current local month and year.
+
+#### Scenario: Return to today
+- **WHEN** a user navigates away from the current month and activates Today
+- **THEN** Calendar displays the current month and the Today action disappears
 
 ### Requirement: Org Editor Employee geometry follows wrapped tags
 The Org Editor SHALL compute Employee row heights from all rendered localized tag chips and SHALL
