@@ -175,8 +175,8 @@ Capabilities: Custom fields, Virtualized values, Not filled, Compound filtering.
 
 [![Tag catalog](screenshots/feature-employees-tag-catalog.png)](screenshots/feature-employees-tag-catalog.png)
 
-Search centralized Tags in flat rows and inspect named or arbitrary global filled colors, Employee
-usage, dated-assignment counts, and the ordered Eye, Color, Edit, and Delete actions.
+Search centralized Tags in padding-free inert rows and inspect named or arbitrary global filled
+colors, Employee usage, dated-assignment counts, and the ordered Eye, Color, Edit, and Delete actions.
 
 Capabilities: Tag catalog, Search, Global colors, Usage counts.
 
@@ -366,8 +366,8 @@ Capabilities: Value drill-down, Matching Employees, Employee actions.
 
 [![Employee Calendar](screenshots/demo-calendar.png)](screenshots/demo-calendar.png)
 
-Navigate locale-correct weeks with soft rose weekend tones, birthdays, compact dated-tag counts, conditional
-Today navigation, and a strong current-day state.
+Navigate locale-correct weeks with soft rose weekend tones, birthdays, compact dated-tag counts,
+conditional Today navigation, non-interactive empty dates, and a strong current-day state.
 
 Capabilities: Localized weekdays, Weekends, Birthdays, Tag indicators, Today state.
 
@@ -450,7 +450,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
-- Confirm Tag rows are flat and expose Eye, Color, Edit, and Delete in order. Rename uses a dedicated
+- Confirm Tag rows are padding-free and have no row-level hover effect while exposing Eye, Color,
+  Edit, and Delete in order. Rename uses a dedicated
   modal; quick Color shows its palette, exact typed format Select above the Popover, named presets,
   and no marker dots or clipping; Eye uses full live Employee cards.
 - Confirm thematic icons precede text in buttons and tabs while disclosure, sorting, removal,
@@ -459,6 +460,7 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   descendant Employees form one contiguous list, and its count sits below search without roster-section headings.
 - Confirm Calendar day details are one scroll with Birthdays first and each dated Tag as an
   interactive heading followed by complete Employee cards with Tag, Edit, and Delete actions.
+- Confirm empty Calendar dates do not expose a pointer, hover treatment, or day-details dialog.
 - Confirm Calendar tag history omits the Current and upcoming heading and exposes complete Employee
   cards while retaining the conditional Past section.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in

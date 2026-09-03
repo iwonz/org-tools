@@ -123,7 +123,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                     const count = counts.get(tag.id) ?? { dated: 0, employees: 0 };
                     return (
                       <div
-                        className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-accent/40"
+                        className="flex items-center gap-3"
                         data-demo-id="tag-catalog-row"
                         key={tag.id}
                       >

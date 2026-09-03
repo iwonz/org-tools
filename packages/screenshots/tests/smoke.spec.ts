@@ -2579,17 +2579,19 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   const emptyDate = page.locator('[data-calendar-date="2026-07-01"]');
   const eventDate = page.locator('[data-calendar-date="2026-07-10"]');
   const weekendDate = page.locator('[data-calendar-date="2026-07-04"]');
-  await expect(emptyDate).toHaveRole("button");
+  await expect(emptyDate).not.toHaveRole("button");
   await expect(eventDate).toHaveRole("button");
   await expect(emptyDate).toHaveCSS("border-top-width", "0px");
-  await expect(emptyDate).toHaveCSS("cursor", "pointer");
+  await expect(emptyDate).not.toHaveCSS("cursor", "pointer");
   await expect(eventDate).toHaveCSS("cursor", "pointer");
   expect(await getBackgroundColor(weekendDate)).not.toBe(await getBackgroundColor(emptyDate));
   const weekendHeadings = page.locator('[data-demo-id="calendar-weekdays"] > .bg-calendar-weekend');
   await expect(weekendHeadings).toHaveCount(2);
   const emptyRestingBackground = await getBackgroundColor(emptyDate);
   await expectStableHoverGeometry(emptyDate);
-  await expect.poll(() => getBackgroundColor(emptyDate)).not.toBe(emptyRestingBackground);
+  expect(await getBackgroundColor(emptyDate)).toBe(emptyRestingBackground);
+  await emptyDate.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const eventRestingBackground = await getBackgroundColor(eventDate);
   await expectStableHoverGeometry(eventDate);
   await expect.poll(() => getBackgroundColor(eventDate)).not.toBe(eventRestingBackground);
@@ -2789,7 +2791,13 @@ test("uses the configured Tag color as fill without leading marker dots", async 
     .first();
   await expect(tagRow).toHaveCSS("border-width", "0px");
   await expectTransparentBackground(tagRow);
+  await expect(tagRow).toHaveCSS("padding-top", "0px");
+  await expect(tagRow).toHaveCSS("padding-right", "0px");
+  await expect(tagRow).toHaveCSS("padding-bottom", "0px");
+  await expect(tagRow).toHaveCSS("padding-left", "0px");
+  const tagRowRestingBackground = await getBackgroundColor(tagRow);
   await expectStableHoverGeometry(tagRow);
+  expect(await getBackgroundColor(tagRow)).toBe(tagRowRestingBackground);
   expect(
     await tagRow
       .getByRole("button")

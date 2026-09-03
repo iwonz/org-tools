@@ -379,16 +379,21 @@ Unit filters.
 
 ### Requirement: Calendar dates use consistent interaction geometry
 The Calendar SHALL format its month heading through the active locale with a bare numeric year,
-render every in-month date as an actionable button with a fixed date-number row, and distinguish
-real Saturday and Sunday headings and cells through a stable theme-aware light rose treatment. A
-current weekend SHALL retain that rose surface while the signal date badge remains the dominant
-current-day cue. A day-dialog title SHALL preserve locale order while omitting the abbreviated
-Russian year suffix. Previous and Next navigation SHALL use the reviewed labels from the active
-catalog.
+render every in-month date with a fixed date-number row, and expose a day as an actionable button
+only when it contains at least one current birthday or dated Tag assignment. Empty dates SHALL not
+open a dialog or present pointer/hover interaction. Real Saturday and Sunday headings and cells
+SHALL use a stable theme-aware light rose treatment. A current weekend SHALL retain that rose
+surface while the signal date badge remains the dominant current-day cue. A day-dialog title SHALL
+preserve locale order while omitting the abbreviated Russian year suffix. Previous and Next
+navigation SHALL use the reviewed labels from the active catalog.
 
 #### Scenario: Empty and populated dates
 - **WHEN** one empty date and one event date render in the same month
-- **THEN** both are buttons with aligned numbers and stable hover feedback
+- **THEN** both keep aligned numbers while only the event date is an actionable button with hover feedback
+
+#### Scenario: Activate an empty date
+- **WHEN** a user clicks or presses an in-month date with no birthday or dated Tag assignment
+- **THEN** no day dialog opens and no Calendar state changes
 
 #### Scenario: Weekend dates
 - **WHEN** a displayed date falls on Saturday or Sunday
@@ -408,7 +413,7 @@ catalog.
   abbreviated or full year suffix
 
 #### Scenario: Open localized date details
-- **WHEN** a user opens a day in any supported locale
+- **WHEN** a user opens a populated day in any supported locale
 - **THEN** the title follows that locale and contains no obsolete Russian year suffix
 
 #### Scenario: Navigate in Russian

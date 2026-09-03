@@ -29,11 +29,11 @@ Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly mean
 recurring day and month are known.
 
 Employees have stable UUIDs, a configurable model of typed or derived custom fields, and a shared
-Tag catalog with flat rows, dedicated rename and Employee-list dialogs, quick row-level color actions,
+Tag catalog with padding-free inert rows, dedicated rename and Employee-list dialogs, quick row-level color actions,
 named presets, a full palette, and exact HTML Keyword, HEX, RGB, or RGBA entry rendered as filled surfaces without decorative marker dots. Custom colors
 are normalized to canonical HEX, including retained alpha. Custom fields participate in forms, filters, Employee Import,
 structured JSON, Template output, and colored PNG chips. The Calendar uses locale-aware weeks, soft rose weekend tones, a
-compact dated-Tag rail, and direct Today navigation when browsing another month.
+compact dated-Tag rail, direct Today navigation when browsing another month, and day details only for dates containing events.
 
 The complete interface is bundled in English, Simplified Chinese, Russian, Spanish, French, and
 Modern Standard Arabic. The language dialog uses bundled local flags. New in-memory states follow the first supported browser language, Arabic

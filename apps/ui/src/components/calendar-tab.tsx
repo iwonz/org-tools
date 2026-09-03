@@ -154,15 +154,32 @@ function CalendarDayCell({
       </div>
     </>
   );
+  const cellClassName = cn(
+    "flex min-h-0 flex-col items-stretch overflow-hidden rounded-lg bg-muted/30 p-2.5 text-start",
+    hasContent &&
+      "cursor-pointer outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+    isWeekend && "bg-calendar-weekend",
+    hasContent && isWeekend && "hover:bg-calendar-weekend-hover",
+    isToday && !isWeekend && "bg-signal/15",
+    hasContent && isToday && !isWeekend && "hover:bg-signal/20",
+  );
+  if (!hasContent) {
+    return (
+      <div
+        className={cellClassName}
+        data-calendar-date={calendarDay.date}
+        data-has-content="false"
+        data-today={isToday ? "true" : undefined}
+      >
+        {content}
+      </div>
+    );
+  }
   return (
     <button
-      className={cn(
-        "flex min-h-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg bg-muted/30 p-2.5 text-start outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-        isWeekend && "bg-calendar-weekend hover:bg-calendar-weekend-hover",
-        isToday && !isWeekend && "bg-signal/15 hover:bg-signal/20",
-      )}
+      className={cellClassName}
       data-calendar-date={calendarDay.date}
-      data-has-content={hasContent ? "true" : "false"}
+      data-has-content="true"
       data-today={isToday ? "true" : undefined}
       onClick={() => onOpen(calendarDay)}
       type="button"

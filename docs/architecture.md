@@ -178,7 +178,8 @@ its stable Employee list. A selected
 dated tag is stored by normalized key so edits and deletions re-derive current events instead of
 retaining a stale group snapshot. The month grid uses locale-aware weekday order, leading empty
 cells, dedicated light/dark rose weekend tones, a horizontal dated-Tag rail, and one Tag icon/count per occupied date.
-Calendar day titles are assembled from locale parts; Russian omits its abbreviated year suffix.
+Only occupied dates expose the day-dialog button; empty dates retain cell geometry without hover or
+activation. Calendar day titles are assembled from locale parts; Russian omits its abbreviated year suffix.
 
 Analytics derives birth-year counts and `all`, `male`, and `female` completed-age cohorts in the same
 linear Employee pass as the existing distributions. Missing and `1900` birthdays are excluded.

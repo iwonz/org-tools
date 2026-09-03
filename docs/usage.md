@@ -82,8 +82,8 @@ control.
   unknown-year sentinel are excluded. Every Eye drill-down uses current full Employee cards with
   Tag, Edit, and Delete actions.
 - **Calendar** combines recurring birthdays and dated tags with localized weekday order, leading
-  month offsets, soft rose weekend tones, a horizontal Tag rail, conditional Today navigation, interactive dates, and Employee
-  actions. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each
+  month offsets, soft rose weekend tones, a horizontal Tag rail, conditional Today navigation, event-bearing interactive dates, and Employee
+  actions. Empty dates remain non-interactive and open no dialog. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each
   interactive Tag heading and its full Employee-card list. Day and tag dialogs omit redundant
   descriptions, generic dated-event/current-future headings, special event subtitles, and empty
   Birthday, dated-event, or Past sections. Both day details and dated-tag
