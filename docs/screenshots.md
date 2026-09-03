@@ -1,7 +1,7 @@
 # Screenshots
 
 The screenshot catalog is generated from the production applications and declared in
-`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 48
+`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 52
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
@@ -267,18 +267,20 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 [![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png)
 
-Arrange opaque Unit cards on the adaptive snap grid with frame-bounded gestures, hierarchy lines, zoom, history, and normal-weight layout controls.
+Arrange opaque Unit cards with complete wrapping Tag footers on the adaptive snap grid, including
+bounded edge-pan, hierarchy lines, zoom, history, and normal-weight layout controls.
 
-Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse.
+Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse, Complete Tag
+footers.
 
 ### Editor View selector
 
 [![Editor View selector](screenshots/feature-editor-view-selector.png)](screenshots/feature-editor-view-selector.png)
 
-Switch between the protected system Units structure and independent planning Views from the compact
-canvas toolbar.
+Switch between the protected system Units structure and independent planning Views after a copied
+Unit group has been pasted across View boundaries with regenerated identity.
 
-Capabilities: System View, Custom Views, Localized selector, Canvas context.
+Capabilities: System View, Custom Views, Cross-View clipboard, Target-only history.
 
 ### Create or copy a View
 
@@ -503,12 +505,18 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
   both themes.
 - Confirm the Editor system View is the same Unit document used by Units; custom Views isolate Units,
-  assignments, rules, geometry, history, clipboard, selection, and viewport while global Employee
-  and Tag edits remain visible everywhere. System View lifecycle actions stay disabled.
+  assignments, rules, geometry, history, selection, and viewport while global Employee and Tag edits
+  remain visible everywhere. Copy in one View and Paste in another regenerates Unit IDs and leaves
+  Undo isolated to the target; state replacement clears the transient shared clipboard. System View
+  lifecycle actions stay disabled, and View controls show no hover or native tooltip.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
   heights, content-sized direct-Employee Tag footer chips with equal insets, and connection endpoints without card overlap,
   membership-type labels, or transient editing chrome.
+- Confirm Unit, Employee, connection, and marquee drags keep moving through smooth bounded edge-pan,
+  retain document-anchored previews, and commit no more than one viewport and one structural update.
+- Confirm deleting nested and overlapping Unit selections produces no diagnostics after reload and
+  leaves no stale Editor, Units, filter, expansion, or active Download references.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field

@@ -25,6 +25,34 @@ export type SpatialQueryResult<T> = {
   items: T[];
 };
 
+export type EdgePanVelocity = { x: number; y: number };
+
+export const getOrgEditorEdgePanVelocity = (
+  pointer: { x: number; y: number },
+  bounds: { bottom: number; left: number; right: number; top: number },
+  edgeSize = 64,
+  maxSpeed = 6,
+): EdgePanVelocity => {
+  if (edgeSize <= 0 || maxSpeed <= 0) return { x: 0, y: 0 };
+  const axisVelocity = (coordinate: number, start: number, end: number) => {
+    if (coordinate < start + edgeSize) {
+      const penetration = Math.min(1, Math.max(0, (start + edgeSize - coordinate) / edgeSize));
+      return maxSpeed * penetration * penetration;
+    }
+    if (coordinate > end - edgeSize) {
+      const penetration = Math.min(1, Math.max(0, (coordinate - (end - edgeSize)) / edgeSize));
+      return -maxSpeed * penetration * penetration;
+    }
+    return 0;
+  };
+  const x = axisVelocity(pointer.x, bounds.left, bounds.right);
+  const y = axisVelocity(pointer.y, bounds.top, bounds.bottom);
+  const magnitude = Math.hypot(x, y);
+  if (magnitude <= maxSpeed || magnitude === 0) return { x, y };
+  const scale = maxSpeed / magnitude;
+  return { x: x * scale, y: y * scale };
+};
+
 export const getUnitPointerSelectionIntent = <T extends string>({
   clickedUnitId,
   selectedUnitIds,

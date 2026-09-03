@@ -1,4 +1,6 @@
 import type {
+  EmployeeId,
+  EmployeeLiveFilterRule,
   OrgEditorState,
   OrgToolsViewDocument,
   OrgToolsViewUiState,
@@ -12,7 +14,11 @@ import { createUuid } from "@/lib/employee-data";
 import { cloneEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import { createDefaultOrgEditorState, createOrgEditorUnitId } from "@/lib/org-editor";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { OrgEditorStore } from "@/stores/org-editor-store";
+import {
+  type OrgEditorClipboard,
+  type OrgEditorClipboardController,
+  OrgEditorStore,
+} from "@/stores/org-editor-store";
 
 export type NewOrgViewSource = { type: "blank" } | { type: "copy"; viewId: ViewId };
 
@@ -54,14 +60,24 @@ export class OrgViewsStore {
   editorByViewId = new Map<ViewId, OrgEditorStore>();
   documentRevisionByViewId = new Map<ViewId, number>();
   activeViewId: ViewId = "";
+  clipboard: OrgEditorClipboard | null = null;
   readonly onViewDocumentChange: (viewId: ViewId, kind: "custom" | "system") => void;
+  readonly clipboardController: OrgEditorClipboardController;
   private isLoading = false;
 
   constructor(onViewDocumentChange: (viewId: ViewId, kind: "custom" | "system") => void) {
     this.onViewDocumentChange = onViewDocumentChange;
+    this.clipboardController = {
+      get: () => this.clipboard,
+      set: (clipboard) => {
+        this.clipboard = clipboard;
+      },
+    };
     makeAutoObservable(
       this,
       {
+        clipboard: observable.ref,
+        clipboardController: false,
         documentRevisionByViewId: observable.shallow,
         editorByViewId: observable.shallow,
         onViewDocumentChange: false,
@@ -99,13 +115,18 @@ export class OrgViewsStore {
     activeViewId: ViewId,
   ): void {
     const uiByViewId = new Map(viewUiStates.map((viewUi) => [viewUi.viewId, viewUi]));
+    this.clipboard = null;
     this.isLoading = true;
     try {
       this.viewRecords = views.map(({ structure: _structure, ...view }) => ({ ...view }));
       this.editorByViewId = new Map();
       this.documentRevisionByViewId = new Map();
       for (const view of views) {
-        const editor = new OrgEditorStore(() => this.handleDocumentChange(view.id, view.kind));
+        const editor = new OrgEditorStore(
+          () => this.handleDocumentChange(view.id, view.kind),
+          this.clipboardController,
+          view.id,
+        );
         const viewUi = uiByViewId.get(view.id);
         editor.loadState({
           layoutMode: view.structure.layoutMode,
@@ -139,7 +160,11 @@ export class OrgViewsStore {
     const nextState = sourceEditor
       ? cloneStateWithRemappedUnits(sourceEditor.createState())
       : createDefaultOrgEditorState();
-    const editor = new OrgEditorStore(() => this.handleDocumentChange(id, "custom"));
+    const editor = new OrgEditorStore(
+      () => this.handleDocumentChange(id, "custom"),
+      this.clipboardController,
+      id,
+    );
     const record: OrgViewRecord = {
       createdAt: now,
       id,
@@ -217,6 +242,55 @@ export class OrgViewsStore {
 
   forEachEditor(callback: (editor: OrgEditorStore, viewId: ViewId) => void): void {
     for (const [viewId, editor] of this.editorByViewId) callback(editor, viewId);
+  }
+
+  purgeClipboardEmployee(employeeId: EmployeeId): void {
+    if (!this.clipboard) return;
+    const removeEmployee = (employeeIds: EmployeeId[]) =>
+      employeeIds.filter((currentEmployeeId) => currentEmployeeId !== employeeId);
+    this.clipboard = {
+      ...this.clipboard,
+      employeeIds: removeEmployee(this.clipboard.employeeIds),
+      resolvedEmployeeIdsByUnitId: new Map(
+        [...this.clipboard.resolvedEmployeeIdsByUnitId].map(([unitId, employeeIds]) => [
+          unitId,
+          removeEmployee(employeeIds),
+        ]),
+      ),
+      units: this.clipboard.units.map((unit) => ({
+        ...unit,
+        bossEmployeeId: unit.bossEmployeeId === employeeId ? null : unit.bossEmployeeId,
+        employeeIds: removeEmployee(unit.employeeIds),
+        employeePositions: unit.employeePositions.filter(
+          (position) => position.employeeId !== employeeId,
+        ),
+      })),
+    };
+  }
+
+  materializeClipboardLiveUnits(
+    dependsOnRemovedValue: (rule: EmployeeLiveFilterRule) => boolean,
+  ): void {
+    if (!this.clipboard) return;
+    this.clipboard = {
+      ...this.clipboard,
+      units: this.clipboard.units.map((unit) => {
+        if (!unit.liveFilter || !dependsOnRemovedValue(unit.liveFilter)) return unit;
+        const employeeIds = this.clipboard?.resolvedEmployeeIdsByUnitId.get(unit.id) ?? [];
+        return {
+          ...unit,
+          bossEmployeeId:
+            unit.bossEmployeeId !== null && employeeIds.includes(unit.bossEmployeeId)
+              ? unit.bossEmployeeId
+              : null,
+          employeeIds: [...employeeIds],
+          employeePositions: unit.employeePositions.filter((position) =>
+            employeeIds.includes(position.employeeId),
+          ),
+          liveFilter: null,
+        };
+      }),
+    };
   }
 
   private handleDocumentChange(viewId: ViewId, kind: "custom" | "system"): void {

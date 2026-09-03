@@ -43,6 +43,7 @@ import {
 import { hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import {
   buildOrgEditorUnitTagSummary,
+  getOrgEditorUnitDescendantIds,
   getOrgEditorUnitTagFooterHeight,
   getOrgEditorUnitWidth,
   setOrgEditorUnitTagFooterHeight,
@@ -934,11 +935,81 @@ export class OrgStore {
   }
 
   deleteUnit(unitId: UnitId): void {
-    const previousSelection = this.mainOrgEditor.selectedItems;
     this.mainOrgEditor.setSelectedItems([{ type: "unit", unitId }]);
-    this.mainOrgEditor.deleteSelected();
-    this.mainOrgEditor.setSelectedItems(previousSelection.filter((item) => item.unitId !== unitId));
-    if (this.selectedUnitId === unitId) this.selectedUnitId = this.rootUnit?.id ?? null;
+    this.deleteEditorSelection(this.systemOrgViewId);
+  }
+
+  deleteEditorSelection(viewId: ViewId = this.activeOrgViewId): void {
+    const editor = this.orgViews.editorByViewId.get(viewId);
+    if (!editor) return;
+    const unitsBefore = editor.units;
+    const unitById = new Map(unitsBefore.map((unit) => [unit.id, unit] as const));
+    const deletedUnitIds = new Set<UnitId>();
+    for (const unitId of editor.selectedUnitIds) {
+      for (const descendantId of getOrgEditorUnitDescendantIds(unitsBefore, unitId)) {
+        deletedUnitIds.add(descendantId);
+      }
+    }
+
+    let selectedUnitFallback: UnitId | null = this.selectedUnitId;
+    const selectedUnitWasDeleted =
+      viewId === this.systemOrgViewId &&
+      selectedUnitFallback !== null &&
+      deletedUnitIds.has(selectedUnitFallback);
+    if (selectedUnitWasDeleted && selectedUnitFallback !== null) {
+      let ancestorId = unitById.get(selectedUnitFallback)?.parentId ?? null;
+      while (ancestorId !== null && deletedUnitIds.has(ancestorId)) {
+        ancestorId = unitById.get(ancestorId)?.parentId ?? null;
+      }
+      selectedUnitFallback = ancestorId;
+    }
+
+    const clipboardUnitIds = new Set(this.orgViews.clipboard?.units.map((unit) => unit.id) ?? []);
+    this.orgViews.materializeClipboardLiveUnits((rule) =>
+      rule.selectedUnitIds.some(
+        (unitId) => deletedUnitIds.has(unitId) && !clipboardUnitIds.has(unitId),
+      ),
+    );
+
+    editor.deleteSelected();
+    if (deletedUnitIds.size === 0) return;
+
+    const removeDeletedUnitsFromFilters = <Filters extends EmployeeSearchFilters>(
+      filters: Filters,
+    ): Filters => ({
+      ...filters,
+      selectedUnitIds: filters.selectedUnitIds.filter((unitId) => !deletedUnitIds.has(unitId)),
+    });
+
+    if (viewId === this.systemOrgViewId) {
+      if (selectedUnitWasDeleted && selectedUnitFallback === null) {
+        selectedUnitFallback =
+          editor.units.find((unit) => unit.parentId === null)?.id ?? editor.units[0]?.id ?? null;
+      }
+      if (selectedUnitWasDeleted) this.selectedUnitId = selectedUnitFallback;
+      this.expandedUnitIds = this.expandedUnitIds.filter((unitId) => !deletedUnitIds.has(unitId));
+      this.unitsUi = {
+        ...this.unitsUi,
+        employeeFilters: removeDeletedUnitsFromFilters(this.unitsUi.employeeFilters),
+      };
+      this.employeesUi = {
+        ...this.employeesUi,
+        filters: removeDeletedUnitsFromFilters(this.employeesUi.filters),
+      };
+      this.analyticsUi = {
+        ...this.analyticsUi,
+        filters: removeDeletedUnitsFromFilters(this.analyticsUi.filters),
+      };
+    }
+
+    if (this.downloadSourceViewId === viewId) {
+      this.downloadUi = {
+        ...this.downloadUi,
+        employeeFilters: removeDeletedUnitsFromFilters(this.downloadUi.employeeFilters),
+        selectedFilters: removeDeletedUnitsFromFilters(this.downloadUi.selectedFilters),
+      };
+      this.exportSession.purgeUnits(deletedUnitIds);
+    }
   }
 
   createEmployee(
@@ -1185,6 +1256,7 @@ export class OrgStore {
 
   deleteOrganizationEmployee(employeeId: EmployeeId): void {
     if (!this.organizationEmployees.some((candidate) => candidate.id === employeeId)) return;
+    this.orgViews.purgeClipboardEmployee(employeeId);
     this.orgViews.forEachEditor((editor) => editor.purgeEmployeeReferences(employeeId));
     this.organizationEmployees = this.organizationEmployees.filter(
       (candidate) => candidate.id !== employeeId,
@@ -1286,6 +1358,9 @@ export class OrgStore {
     ) {
       throw new LocalizedError(uiMessage("Custom Employee field is still in use."));
     }
+    this.orgViews.materializeClipboardLiveUnits((rule) =>
+      rule.customFields.some((filter) => filter.fieldId === fieldId),
+    );
     this.employeeFieldDefinitions = this.employeeFieldDefinitions.filter(
       (field) => field.id !== fieldId,
     );
@@ -1366,6 +1441,7 @@ export class OrgStore {
   deleteTagDefinition(tagId: EmployeeTagDefinition["id"]): void {
     const target = this.tagDefinitions.find((tag) => tag.id === tagId);
     if (!target) return;
+    this.orgViews.materializeClipboardLiveUnits((rule) => rule.selectedTags.includes(tagId));
     this.tagDefinitions = this.tagDefinitions.filter((tag) => tag.id !== tagId);
     this.organizationEmployees = this.organizationEmployees.map((employee) => ({
       ...employee,

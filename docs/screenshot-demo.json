@@ -274,13 +274,14 @@
     "featured": true,
     "title": "Visual organization Editor",
     "file": "demo-editor.png",
-    "description": "Arrange opaque Unit cards on the adaptive snap grid with frame-bounded gestures, hierarchy lines, zoom, history, and normal-weight layout controls.",
+    "description": "Arrange opaque Unit cards with complete wrapping Tag footers on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, and normal-weight layout controls.",
     "capabilities": [
       "Canvas layout",
       "Adaptive snap grid",
       "Hierarchy",
       "Zoom",
-      "Arrange and collapse"
+      "Arrange and collapse",
+      "Complete Tag footers"
     ]
   },
   {
@@ -289,8 +290,8 @@
     "featured": false,
     "title": "Editor View selector",
     "file": "feature-editor-view-selector.png",
-    "description": "Switch between the system Units structure and independent planning Views from the compact canvas toolbar.",
-    "capabilities": ["System View", "Custom Views", "Localized selector", "Canvas context"]
+    "description": "Switch between the system Units structure and independent planning Views after pasting a copied Unit group across View boundaries.",
+    "capabilities": ["System View", "Custom Views", "Cross-View clipboard", "Target-only history"]
   },
   {
     "id": "editor-view-create-copy",

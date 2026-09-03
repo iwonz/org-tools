@@ -466,10 +466,6 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor");
 
   const viewSelect = page.locator('[data-demo-id="org-editor-view-select"]');
-  await viewSelect.click();
-  await capture(page, "editor-view-selector");
-  await page.keyboard.press("Escape");
-
   await page.locator('[data-demo-id="org-editor-create-view"]').click();
   let viewDialog = page.getByRole("dialog", { name: "Create View", exact: true });
   await viewDialog.getByLabel("View name", { exact: true }).fill("Growth scenario");
@@ -483,8 +479,22 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   const unitDialog = page.getByRole("dialog", { name: "Edit Unit", exact: true });
   await unitDialog.getByLabel("Name", { exact: true }).fill("Future Product");
   await unitDialog.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toBeVisible();
+  const futureProduct = page.locator('fieldset[aria-label="Canvas Unit Future Product"]');
+  await expect(futureProduct).toBeVisible();
   await capture(page, "editor-view-isolated");
+
+  await futureProduct.click({ position: { x: 80, y: 54 } });
+  await page.keyboard.press("Control+c");
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Units", exact: true }).click();
+  await page.keyboard.press("Control+v");
+  await expect(futureProduct).toBeVisible();
+  await viewSelect.click();
+  await capture(page, "editor-view-selector");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+z");
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Growth scenario", exact: true }).click();
 
   await page.locator('[data-demo-id="org-editor-rename-view"]').click();
   viewDialog = page.getByRole("dialog", { name: "Rename View", exact: true });

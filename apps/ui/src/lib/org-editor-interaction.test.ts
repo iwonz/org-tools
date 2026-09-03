@@ -4,6 +4,7 @@ import { ORG_EDITOR_GRID_SIZE, snapOrgEditorPoint } from "@/lib/org-editor";
 import {
   createLatestFrameScheduler,
   createSpatialIndex,
+  getOrgEditorEdgePanVelocity,
   getUnitPointerSelectionIntent,
 } from "@/lib/org-editor-interaction";
 
@@ -115,5 +116,25 @@ describe("Editor Unit pointer selection", () => {
       dragUnitIds: ["third"],
       preserveForPotentialGroupDrag: false,
     });
+  });
+});
+
+describe("Editor edge pan", () => {
+  const bounds = { bottom: 720, left: 0, right: 1280, top: 0 };
+
+  it("is idle outside the edge zone and grows quadratically toward each edge", () => {
+    expect(getOrgEditorEdgePanVelocity({ x: 640, y: 360 }, bounds)).toEqual({ x: 0, y: 0 });
+    expect(getOrgEditorEdgePanVelocity({ x: 32, y: 360 }, bounds)).toEqual({ x: 1.5, y: 0 });
+    expect(getOrgEditorEdgePanVelocity({ x: 0, y: 360 }, bounds)).toEqual({ x: 6, y: 0 });
+    expect(getOrgEditorEdgePanVelocity({ x: 1280, y: 360 }, bounds)).toEqual({ x: -6, y: 0 });
+    expect(getOrgEditorEdgePanVelocity({ x: 640, y: 720 }, bounds)).toEqual({ x: 0, y: -6 });
+  });
+
+  it("caps the diagonal velocity at the same maximum magnitude", () => {
+    const velocity = getOrgEditorEdgePanVelocity({ x: 0, y: 0 }, bounds);
+
+    expect(Math.hypot(velocity.x, velocity.y)).toBeCloseTo(6);
+    expect(velocity.x).toBeGreaterThan(0);
+    expect(velocity.y).toBeGreaterThan(0);
   });
 });

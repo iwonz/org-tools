@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-
+import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import {
   createDefaultOrgEditorState,
   createOrgEditorUnitFromScratch,
@@ -111,5 +111,45 @@ describe("OrgEditorStore grid geometry", () => {
         .map(({ id, x, y }) => ({ id, x, y })),
     ).toEqual(beforeSelected);
     expect(store.selectedUnitIds).toEqual(new Set([root.id, child.id]));
+  });
+});
+
+describe("OrgEditorStore deletion", () => {
+  test("deletes overlapping ancestor selections once and materializes surviving Live dependencies", () => {
+    const store = new OrgEditorStore();
+    const employeeId = "employee-visible";
+    const rootId = store.addUnit({ employeeIds: [employeeId], name: "Root", x: 0, y: 0 });
+    const childId = store.addUnit({ name: "Child", parentId: rootId, x: 0, y: 240 });
+    const otherId = store.addUnit({ name: "Other", x: 720, y: 0 });
+    const liveId = store.addUnit({
+      liveFilter: {
+        ...createEmptyEmployeeLiveFilterRule(),
+        selectedUnitIds: [rootId],
+      },
+      name: "Dependent Live",
+      x: 1080,
+      y: 0,
+    });
+    store.synchronizeLiveResolution(new Map([[liveId, [employeeId]]]));
+    store.setSelectedItems([
+      { type: "unit", unitId: rootId },
+      { type: "unit", unitId: childId },
+      { type: "unit", unitId: otherId },
+    ]);
+
+    store.deleteSelected();
+
+    expect(store.units).toHaveLength(1);
+    expect(store.units[0]).toMatchObject({
+      employeeIds: [employeeId],
+      id: liveId,
+      liveFilter: null,
+    });
+    expect(store.selectedItems).toEqual([]);
+
+    store.undo();
+    expect(new Set(store.units.map((unit) => unit.id))).toEqual(
+      new Set([rootId, childId, otherId, liveId]),
+    );
   });
 });

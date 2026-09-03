@@ -117,7 +117,7 @@ export function OrgViewToolbar({
           icon={<HiOutlinePlus />}
           label={t("Create View")}
           onClick={() => openDialog("create")}
-          tooltip={t("Create View")}
+          showTooltip={false}
         />
         <ActionIconButton
           dataDemoId="org-editor-rename-view"
@@ -125,7 +125,7 @@ export function OrgViewToolbar({
           icon={<HiOutlinePencilSquare />}
           label={t("Rename View")}
           onClick={() => openDialog("rename")}
-          tooltip={t("Rename View")}
+          showTooltip={false}
         />
         <ActionIconButton
           dataDemoId="org-editor-delete-view"
@@ -133,7 +133,7 @@ export function OrgViewToolbar({
           icon={<HiOutlineTrash />}
           label={t("Delete View")}
           onClick={() => openDialog("delete")}
-          tooltip={t("Delete View")}
+          showTooltip={false}
         />
       </div>
 

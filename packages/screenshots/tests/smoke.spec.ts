@@ -2139,6 +2139,13 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
 
   const viewSelect = page.locator('[data-demo-id="org-editor-view-select"]');
   await expect(viewSelect).toContainText("Units");
+  const viewToolbar = page.locator('[data-demo-id="org-editor-view-toolbar"]');
+  const createViewButton = page.locator('[data-demo-id="org-editor-create-view"]');
+  await createViewButton.hover();
+  await expect(viewToolbar.getByRole("tooltip")).toHaveCount(0);
+  await expect(createViewButton).not.toHaveAttribute("title");
+  await createViewButton.focus();
+  await expect(viewToolbar.getByRole("tooltip")).toHaveCount(0);
   await page.locator('[data-demo-id="org-editor-create-view"]').click();
   let dialog = page.getByRole("dialog", { name: "Create View", exact: true });
   await dialog.getByLabel("View name", { exact: true }).fill("Scenario A");
@@ -2154,10 +2161,18 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await dialog.getByLabel("Name", { exact: true }).fill("Future Product");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toBeVisible();
+  await page
+    .locator('fieldset[aria-label="Canvas Unit Future Product"]')
+    .click({ position: { x: 80, y: 54 } });
+  await page.keyboard.press("Control+c");
 
   await viewSelect.click();
   await page.getByRole("option", { name: "Units", exact: true }).click();
   await expect(page.locator('fieldset[aria-label="Canvas Unit Product"]')).toBeVisible();
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+  await page.keyboard.press("Control+v");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toBeVisible();
+  await page.keyboard.press("Control+z");
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
   await viewSelect.click();
   await page.getByRole("option", { name: "Scenario A", exact: true }).click();
@@ -2182,6 +2197,24 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await assertLocalRequests();
 });
 
+test("deletes nested and overlapping Editor selections as one valid state", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  const product = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  const platform = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
+  await product.click({ position: { x: 72, y: 56 } });
+  await platform.click({ modifiers: ["Control"], position: { x: 72, y: 56 } });
+  await page.keyboard.press("Delete");
+  await expect(product).toHaveCount(0);
+  await expect(platform).toHaveCount(0);
+  await page.waitForTimeout(500);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-demo-id="org-editor-empty-canvas-add"]')).toBeVisible();
+  await assertLocalRequests();
+});
+
 test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
@@ -2198,6 +2231,29 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
 
   const product = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   const firstRow = product.locator("[data-org-editor-employee-row]").first();
+  const longTagFooter = product.locator("[data-org-editor-unit-tag-footer]");
+  await expect(longTagFooter).not.toContainText("…");
+  const longTagChip = longTagFooter.locator(
+    `:scope > span[data-tag-label=${JSON.stringify(LONG_EXPORT_TAG)}]`,
+  );
+  await expect(longTagChip).toBeVisible();
+  expect(
+    await longTagChip.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      clientWidth: element.clientWidth,
+      scrollHeight: element.scrollHeight,
+      scrollWidth: element.scrollWidth,
+    })),
+  ).toMatchObject({
+    clientHeight: expect.any(Number),
+    clientWidth: expect.any(Number),
+  });
+  const longTagOverflow = await longTagChip.evaluate((element) => ({
+    horizontal: element.scrollWidth - element.clientWidth,
+    vertical: element.scrollHeight - element.clientHeight,
+  }));
+  expect(longTagOverflow.horizontal).toBeLessThanOrEqual(1);
+  expect(longTagOverflow.vertical).toBeLessThanOrEqual(1);
   const geometry = await product.evaluate((unitElement) => {
     const unit = unitElement.getBoundingClientRect();
     const header = unitElement.querySelector("[data-org-editor-unit-header]");
@@ -2472,6 +2528,64 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   expect(Math.abs(committedPosition.y % 24)).toBe(0);
   expect(Number(await canvas.getAttribute("data-spatial-candidate-count"))).toBeLessThan(200);
   page.off("request", onRequest);
+  await assertLocalRequests();
+});
+
+test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
+  const canvasBox = await canvas.boundingBox();
+  if (!canvasBox) throw new Error("Editor canvas is unavailable.");
+  const rightEdgeX = canvasBox.x + canvasBox.width - 2;
+  const viewportX = async () => Number(await canvas.getAttribute("data-viewport-x"));
+  const panDragToRightEdge = async (start: { x: number; y: number }) => {
+    const before = await viewportX();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await expect(canvas).not.toHaveAttribute("data-active-drag-type", "none");
+    await page.mouse.move(rightEdgeX, start.y, { steps: 6 });
+    await expect.poll(viewportX).toBeLessThan(before - 1);
+    await page.mouse.up();
+  };
+  const focusPrimary = async () => {
+    await page.locator('[data-demo-id="org-editor-focus-primary-unit-button"]').click();
+  };
+
+  const product = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  let bounds = await product.boundingBox();
+  if (!bounds) throw new Error("Product Unit is unavailable.");
+  await panDragToRightEdge({ x: bounds.x + 80, y: bounds.y + 56 });
+
+  await focusPrimary();
+  const employeeRow = product.locator("[data-org-editor-employee-row]").first();
+  bounds = await employeeRow.boundingBox();
+  if (!bounds) throw new Error("Editor Employee row is unavailable.");
+  await panDragToRightEdge({ x: bounds.x + 40, y: bounds.y + bounds.height / 2 });
+
+  await focusPrimary();
+  const connectionHandle = product.getByRole("button", { name: "Drag Unit connection" });
+  bounds = await connectionHandle.boundingBox();
+  if (!bounds) throw new Error("Editor connection handle is unavailable.");
+  await panDragToRightEdge({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 });
+
+  await focusPrimary();
+  const beforeMarquee = await viewportX();
+  const marqueeStart = {
+    x: canvasBox.x + canvasBox.width / 2,
+    y: canvasBox.y + canvasBox.height - 96,
+  };
+  await page.keyboard.down("Control");
+  await page.mouse.move(marqueeStart.x, marqueeStart.y);
+  await page.mouse.down();
+  await page.mouse.move(rightEdgeX, marqueeStart.y, { steps: 6 });
+  await expect.poll(viewportX).toBeLessThan(beforeMarquee - 1);
+  await expect(page.locator("[data-org-editor-selection-rect]")).toBeVisible();
+  await page.mouse.up();
+  await page.keyboard.up("Control");
   await assertLocalRequests();
 });
 

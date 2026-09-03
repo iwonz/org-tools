@@ -125,8 +125,12 @@ history, collaborative cursors, or remote synchronization.
   commits on Enter or blur, and cancel or invalid input does not mutate the Tag. Edit is a separate
   rename-only modal. Eye resolves the current `tagId` into a virtualized full Employee-card list.
 - `OrgViewsStore` owns View lifecycle, normalized names, document revisions, per-View editor state,
-  and copy-time Unit ID remapping. Each View has one `OrgEditorStore` with isolated structure,
-  history, selection, viewport, and clipboard.
+  and one transient tab-local clipboard shared by every View. Copy captures resolved membership;
+  cross-View Paste regenerates Unit IDs, remaps internal hierarchy and Live references, and
+  materializes a Live Unit when its source dependency is outside the copied closure. Each View has
+  one `OrgEditorStore` with isolated structure, history, selection, and viewport. Complete state
+  replacement clears the clipboard, which is never persisted, broadcast, or written to the system
+  clipboard.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
   and write observation; the SQLite transport is imported only by `apps/ui`.
@@ -159,8 +163,10 @@ viewer. Image titles, backgrounds, fonts, icon-only alignment, scope, radius, Em
 and Editor JSON settings remain output-only session settings and do not mutate the active View.
 Image template tokens exclude avatar bytes, while painted avatars remain available.
 Unit footer chips use one deterministic mixed-script glyph metric plus equal fixed insets for their
-live width, row packing, card bounds, connections, collision geometry, and PNG painting. This keeps
-the summary content-sized without a font-loading measurement pass or a second layout commit.
+live width, grapheme-safe multi-line wrapping, row packing, card bounds, connections, collision
+geometry, and PNG painting. The count suffix stays indivisible and no footer label uses an ellipsis.
+This keeps short summaries content-sized and long summaries complete without a font-loading
+measurement pass or a second layout commit.
 Editor JSON and Template use the same formatter and sortable field controls as Data Download while
 limiting Employees and assignments to Unit-only or subtree scope.
 
@@ -202,11 +208,22 @@ scheduler presents the latest viewport or Unit delta, while pointer release or w
 performs the single snapped command and persistence observation. A geometry-keyed spatial index
 limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
 document geometry changes.
+Unit, Employee, connection, and marquee drags share one edge-pan loop. After the movement threshold,
+the last 64 screen pixels accelerate quadratically to a bounded six-pixel-per-frame viewport delta;
+diagonal motion uses the same total cap. Drag and document-anchored marquee previews remain
+transient, pointer release commits at most one viewport change and one structural command, and
+cancel restores the gesture-start viewport.
 Dragging an already selected Unit past the movement threshold preserves the whole selection.
 Selected-only Arrange lays out the induced selected hierarchy, keeps its center, avoids unselected
 bounds, and commits one snapped history operation without moving other Units. Expanded Unit cards
 derive a catalog-ordered footer from direct Employees only; its wrapped chip geometry participates
 in bounds, snapping, spatial indexing, connections, overlap resolution, and PNG output.
+
+Every Unit deletion entry point uses the same organization coordinator. It deduplicates selected
+ancestor and descendant closures, materializes surviving Live dependencies from their pre-delete
+membership, removes the structure, and prunes Editor, system Unit, expanded, filter, and active
+Download references before automatic persistence can observe the result. System selection falls
+back to the nearest surviving ancestor, then the first root, then no selection.
 
 The system View and Units are the same document. A custom View may start empty or clone any View;
 copying regenerates all Unit IDs and View-local references while retaining global Employee IDs.

@@ -21,6 +21,7 @@ import type { OrgEditorSourceIndex } from "@/lib/org-editor";
 import {
   buildOrgEditorUnitEmployeeSummaryById,
   buildOrgEditorUnitTagSummary,
+  createOrgEditorUnitTagFooterLayout,
   getOrgEditorEmployeePosition,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorEmployeeVisualGeometry,
@@ -29,7 +30,6 @@ import {
   getOrgEditorUnitDescendantIds,
   getOrgEditorUnitDisplayName,
   getOrgEditorUnitHeightForEmployeeRows,
-  getOrgEditorUnitTagFooterChipWidth,
   getOrgEditorUnitTagFooterHeight,
   getOrgEditorVisibleEmployeeIds,
   ORG_EDITOR_EMPLOYEE_AVATAR_SIZE,
@@ -40,9 +40,9 @@ import {
   ORG_EDITOR_UNIT_BORDER_WIDTH,
   ORG_EDITOR_UNIT_CONTENT_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
-  ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
-  ORG_EDITOR_UNIT_TAG_FOOTER_GAP,
+  ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP,
+  ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
   type OrgEditorUnitEmployeeSummary,
   type OrgEditorUnitTagSummary,
@@ -1403,41 +1403,45 @@ export const createOrgEditorUnitImageBlob = async ({
       context.font = getCanvasFont(settings.fontFamily, 400, 10);
       context.textAlign = "start";
       context.textBaseline = "middle";
-      let chipX = unit.x + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
-      let chipY = footerY + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
       const availableWidth = width - ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2;
-      for (const tag of tagSummaries) {
-        const text = `${tag.label} · ${tag.count}`;
-        const chipWidth = getOrgEditorUnitTagFooterChipWidth(tag, availableWidth);
-        if (
-          chipX > unit.x + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING &&
-          chipX + chipWidth > unit.x + width - ORG_EDITOR_UNIT_TAG_FOOTER_PADDING
-        ) {
-          chipX = unit.x + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
-          chipY += ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
-        }
+      const footerLayout = createOrgEditorUnitTagFooterLayout(tagSummaries, availableWidth);
+      for (const chip of footerLayout.chips) {
+        const chipX = unit.x + chip.x;
+        const chipY = footerY + chip.y;
         drawRoundedRect(
           context,
           {
-            height: ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
-            width: chipWidth,
+            height: chip.height,
+            width: chip.width,
             x: chipX,
             y: chipY,
           },
           6,
         );
-        const colorStyle = getTagColorCanvasStyle(tag.color);
+        const colorStyle = getTagColorCanvasStyle(chip.color);
         context.fillStyle = colorStyle.fillStyle;
         context.fill();
         context.fillStyle = colorStyle.textStyle;
-        drawTrimmedText(
-          context,
-          text,
-          chipX + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
-          chipY + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT / 2 + 0.5,
-          chipWidth - ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2,
-        );
-        chipX += chipWidth + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
+        const firstLineCenterY =
+          chipY +
+          (chip.height - chip.lines.length * ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT) / 2 +
+          ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT / 2;
+        chip.lines.forEach((line, lineIndex) => {
+          const textX = chipX + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING;
+          const textY = firstLineCenterY + lineIndex * ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT;
+          if (line.label) context.fillText(line.label, textX, textY);
+          if (line.suffix) {
+            const suffixX =
+              textX +
+              (line.label
+                ? context.measureText(line.label).width + ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP
+                : 0);
+            context.save();
+            context.globalAlpha *= 0.7;
+            context.fillText(line.suffix, suffixX, textY);
+            context.restore();
+          }
+        });
       }
     }
   }

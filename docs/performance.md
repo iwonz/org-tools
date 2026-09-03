@@ -33,15 +33,20 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
   the ordinary Employee virtualizer; do not create virtual header rows or repeat count formatting.
-- Coalesce pan, zoom, and Unit-drag samples through one latest-value animation-frame scheduler.
-- Keep viewport and Unit deltas in transient render previews; write the MobX document once after
-  pointer release or wheel debounce, then run snapping, overlap resolution, history, and persistence.
+- Coalesce pan, zoom, and Unit, Employee, connection, or marquee drag samples through one
+  latest-value animation-frame scheduler. Edge-pan uses only the sampled pointer and canvas bounds;
+  it never walks the Unit collection per frame.
+- Keep viewport, Unit, connection, drop-target, and document-anchored marquee deltas in transient
+  render previews; write the MobX document once after pointer release or wheel debounce, then run
+  snapping, overlap resolution, history, and persistence. Cancellation restores the starting
+  viewport without a durable write.
 - Query visible Unit and connection candidates through a geometry-keyed spatial index that is not
   rebuilt for pointer samples.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
-  View; a deterministic glyph-aware width packs their content-sized chips, and the cached wrapped
-  footer heights participate in the same geometry pass without DOM measurement.
+  View; a deterministic glyph-aware width packs intrinsic short chips and grapheme-safe long lines,
+  and the cached wrapped footer heights participate in the same geometry pass without DOM
+  measurement. DOM and PNG consume the same line rectangles and indivisible count suffix.
 
 Analytics builds every count group, known birth-year index, and gender age cohort in one Employee
 pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys
@@ -88,4 +93,7 @@ tab synchronization, Export, and UI-only updates. Treat blocking interaction, un
 per-row network work, organization serialization during UI-only actions, or full Unit scans during
 pointer previews as regressions. The browser suite exercises 20,000 Employees and 4,000 Units,
 requires bounded spatial candidates, observes no state write during preview, and allows one final
-write for each completed pan or Unit drag.
+write for each completed pan or structural drag. The shared cross-View clipboard stores only the
+copied closure and resolved membership in current-tab memory, is sanitized on catalog changes, and
+is cleared on complete state replacement. Atomic Unit deletion computes its closure and dependent
+Live materialization once before exposing the valid final state to persistence.

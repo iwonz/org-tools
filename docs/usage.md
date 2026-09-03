@@ -68,8 +68,11 @@ control.
   grid, including search, history, layout, bulk commands, Image, JSON, and Template output. A View
   can start empty or copy any existing View; custom Views may be renamed or deleted, while the
   system View is protected and stays synchronized with Units. Unit hierarchy, assignments, rules,
-  history, clipboard, and geometry are View-local; Employee profiles, custom fields, and Tags are
-  global. Undo/Redo sit beside the View selector at the logical start, while Search, layout,
+  history, selection, and geometry are View-local; Employee profiles, custom fields, and Tags are
+  global. Copy and Paste share one transient clipboard across Views in the current tab, regenerate
+  Unit identity on Paste, and keep Undo limited to the target View. A copied Live Unit whose source
+  is outside the copied group is pasted as a static snapshot of its visible membership. Undo/Redo
+  sit beside the View selector at the logical start, while Search, layout,
   Arrange, and Collapse/Expand are at the logical end. Search expands inward without moving the
   other controls. Dragging one Unit in an existing multi-selection keeps the group selected;
   **Arrange selected** moves only those Units in one undoable snapped operation. Closing Search
@@ -78,9 +81,12 @@ control.
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights,
   direct-membership Tag summary footer, and hierarchy connections while retaining configurable
   output styling. Footer chips use equal compact insets and follow their own label/count width rather
-  than reserving trailing space. Every Employee-row tag is written in full; oversized labels wrap
-  inside their compact chip. Static/Live membership type is not printed. Editor exports always use
-  the active View.
+  than reserving trailing space. Long footer and Employee-row Tags wrap completely without an
+  ellipsis, including mixed scripts and emoji; the count suffix stays together. Static/Live
+  membership type is not printed. Dragging Units, Employees, connections, or a marquee near the
+  canvas edge smoothly pans in that direction without ending the gesture. Deleting a nested or
+  multi-Unit selection is one atomic operation that removes stale selections, filters, and output
+  references before automatic storage. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
   reports known birth years and completed ages, including one-decimal averages plus deterministic
   youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`

@@ -504,6 +504,15 @@ export class ExportSessionStore {
     this.excludedJsonUnitIds = [...new Set(unitIds)];
   }
 
+  purgeUnits(unitIds: Iterable<UnitId>): void {
+    const unitIdSet = new Set(unitIds);
+    if (unitIdSet.size === 0) return;
+    this.excludedJsonUnitIds = this.excludedJsonUnitIds.filter((unitId) => !unitIdSet.has(unitId));
+    this.selections = this.selections.filter(
+      (selection) => selection.type !== "unit" || !unitIdSet.has(selection.unitId),
+    );
+  }
+
   setExcludedJsonTagKeys(tagKeys: string[]): void {
     this.excludedJsonTagKeys = [...new Set(tagKeys)];
   }

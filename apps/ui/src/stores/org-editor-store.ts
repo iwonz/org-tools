@@ -8,6 +8,7 @@ import type {
   OrgEditorState,
   OrgEditorUnit,
   OrgEditorUnitId,
+  ViewId,
 } from "@org-tools/types";
 import { makeAutoObservable, observable } from "mobx";
 
@@ -33,9 +34,16 @@ import {
 
 type SelectionMode = "add" | "replace" | "toggle";
 
-type OrgEditorClipboard = {
+export type OrgEditorClipboard = {
   employeeIds: EmployeeId[];
+  resolvedEmployeeIdsByUnitId: Map<OrgEditorUnitId, EmployeeId[]>;
+  sourceViewId: ViewId | null;
   units: OrgEditorUnit[];
+};
+
+export type OrgEditorClipboardController = {
+  get: () => OrgEditorClipboard | null;
+  set: (clipboard: OrgEditorClipboard | null) => void;
 };
 
 export type OrgEditorHistorySnapshot = {
@@ -428,21 +436,30 @@ export class OrgEditorStore {
   selectedItems: OrgEditorSelectedItem[] = [];
   viewport: OrgEditorCanvasViewport = createDefaultOrgEditorState().viewport;
   layoutMode: OrgEditorLayoutMode = createDefaultOrgEditorState().layoutMode;
-  clipboard: OrgEditorClipboard | null = null;
+  localClipboard: OrgEditorClipboard | null = null;
   undoStack: OrgEditorCommand[] = [];
   redoStack: OrgEditorCommand[] = [];
   resolvedLiveEmployeeIdsByUnitId = new Map<OrgEditorUnitId, EmployeeId[]>();
   commandDepth = 0;
   readonly onDocumentChange: (() => void) | undefined;
+  readonly clipboardController: OrgEditorClipboardController | undefined;
+  readonly viewId: ViewId | null;
 
-  constructor(onDocumentChange?: () => void) {
+  constructor(
+    onDocumentChange?: () => void,
+    clipboardController?: OrgEditorClipboardController,
+    viewId: ViewId | null = null,
+  ) {
     this.loadState(createDefaultOrgEditorState());
     this.onDocumentChange = onDocumentChange;
+    this.clipboardController = clipboardController;
+    this.viewId = viewId;
     makeAutoObservable(
       this,
       {
-        clipboard: observable.ref,
+        clipboardController: false,
         commandDepth: false,
+        localClipboard: observable.ref,
         onDocumentChange: false,
         redoStack: observable.shallow,
         resolvedLiveEmployeeIdsByUnitId: observable.shallow,
@@ -450,6 +467,7 @@ export class OrgEditorStore {
         undoStack: observable.shallow,
         units: observable.shallow,
         viewport: observable.ref,
+        viewId: false,
       },
       { autoBind: true },
     );
@@ -457,6 +475,18 @@ export class OrgEditorStore {
 
   get selectedUnitIds() {
     return getSelectionUnitIds(this.selectedItems);
+  }
+
+  get clipboard() {
+    return this.clipboardController?.get() ?? this.localClipboard;
+  }
+
+  private setClipboard(clipboard: OrgEditorClipboard | null): void {
+    if (this.clipboardController) {
+      this.clipboardController.set(clipboard);
+    } else {
+      this.localClipboard = clipboard;
+    }
   }
 
   get firstSelectedUnit() {
@@ -539,7 +569,7 @@ export class OrgEditorStore {
 
   reset(): void {
     this.loadState(createDefaultOrgEditorState());
-    this.clipboard = null;
+    this.setClipboard(null);
   }
 
   createCommandSnapshot(): OrgEditorHistorySnapshot {
@@ -1218,9 +1248,15 @@ export class OrgEditorStore {
         : item,
     );
     if (this.clipboard) {
-      this.clipboard = {
+      this.setClipboard({
         ...this.clipboard,
         employeeIds: this.clipboard.employeeIds.map(replace),
+        resolvedEmployeeIdsByUnitId: new Map(
+          [...this.clipboard.resolvedEmployeeIdsByUnitId].map(([unitId, employeeIds]) => [
+            unitId,
+            employeeIds.map(replace),
+          ]),
+        ),
         units: this.clipboard.units.map((unit) => ({
           ...unit,
           bossEmployeeId:
@@ -1231,7 +1267,7 @@ export class OrgEditorStore {
             employeeId: replace(position.employeeId),
           })),
         })),
-      };
+      });
     }
     if (notify) this.onDocumentChange?.();
   }
@@ -1455,6 +1491,9 @@ export class OrgEditorStore {
     this.runCommand("Delete selection", () => {
       const selectedUnitIds = this.selectedUnitIds;
       const deletedUnitIds = new Set<OrgEditorUnitId>();
+      const resolvedEmployeeIdsByUnitId = new Map(
+        this.units.map((unit) => [unit.id, [...this.getUnitEmployeeIds(unit.id)]] as const),
+      );
 
       for (const unitId of selectedUnitIds) {
         for (const deletedUnitId of getOrgEditorUnitDescendantIds(this.units, unitId)) {
@@ -1484,26 +1523,38 @@ export class OrgEditorStore {
         if (rootUnitId) affectedRootUnitIds.add(rootUnitId);
       }
 
+      const now = new Date().toISOString();
       this.units = this.units
         .filter((unit) => !deletedUnitIds.has(unit.id))
         .map((unit) => {
           const removableEmployeeIds = removableEmployeesByUnitId.get(unit.id);
+          const materializeLiveUnit = Boolean(
+            unit.liveFilter?.selectedUnitIds.some((unitId) => deletedUnitIds.has(unitId)),
+          );
+          const materializedEmployeeIds = materializeLiveUnit
+            ? (resolvedEmployeeIdsByUnitId.get(unit.id) ?? [])
+            : unit.employeeIds;
 
-          if (!removableEmployeeIds) return unit;
+          if (!removableEmployeeIds && !materializeLiveUnit) return unit;
 
           return {
             ...unit,
             bossEmployeeId:
-              unit.bossEmployeeId !== null && removableEmployeeIds.has(unit.bossEmployeeId)
+              unit.bossEmployeeId !== null &&
+              (removableEmployeeIds?.has(unit.bossEmployeeId) ||
+                (materializeLiveUnit && !materializedEmployeeIds.includes(unit.bossEmployeeId)))
                 ? null
                 : unit.bossEmployeeId,
-            employeeIds: unit.employeeIds.filter(
-              (employeeId) => !removableEmployeeIds.has(employeeId),
+            employeeIds: materializedEmployeeIds.filter(
+              (employeeId) => !removableEmployeeIds?.has(employeeId),
             ),
             employeePositions: unit.employeePositions.filter(
-              (employeePosition) => !removableEmployeeIds.has(employeePosition.employeeId),
+              (employeePosition) =>
+                materializedEmployeeIds.includes(employeePosition.employeeId) &&
+                !removableEmployeeIds?.has(employeePosition.employeeId),
             ),
-            updatedAt: new Date().toISOString(),
+            liveFilter: materializeLiveUnit ? null : unit.liveFilter,
+            updatedAt: now,
           };
         });
       this.realignRootSubtrees(affectedRootUnitIds);
@@ -1533,13 +1584,17 @@ export class OrgEditorStore {
       }
     }
 
-    this.clipboard = {
+    this.setClipboard({
       employeeIds: [...selectedEmployeeIds],
+      resolvedEmployeeIdsByUnitId: new Map(
+        [...copiedUnitIds].map((unitId) => [unitId, [...this.getUnitEmployeeIds(unitId)]]),
+      ),
+      sourceViewId: this.viewId,
       units: [...copiedUnitIds]
         .map((unitId) => unitsById.get(unitId))
         .filter((unit): unit is OrgEditorUnit => Boolean(unit))
         .map(cloneUnit),
-    };
+    });
   }
 
   pasteAt(point: { x: number; y: number }): void {
@@ -1550,6 +1605,8 @@ export class OrgEditorStore {
 
       const pastedUnits: OrgEditorUnit[] = [];
       const unitIdMap = new Map<OrgEditorUnitId, OrgEditorUnitId>();
+      const isCrossViewPaste =
+        this.clipboard.sourceViewId !== null && this.clipboard.sourceViewId !== this.viewId;
       const unitBounds = this.clipboard.units.map(getOrgEditorUnitBounds);
       const copiedBounds =
         unitBounds.length > 0
@@ -1575,6 +1632,13 @@ export class OrgEditorStore {
         const nextUnitId = unitIdMap.get(unit.id);
         if (!nextUnitId) continue;
         const nextParentId = unit.parentId ? (unitIdMap.get(unit.parentId) ?? null) : null;
+        const hasExternalLiveDependency = Boolean(
+          isCrossViewPaste &&
+            unit.liveFilter?.selectedUnitIds.some((unitId) => !unitIdMap.has(unitId)),
+        );
+        const materializedEmployeeIds = hasExternalLiveDependency
+          ? [...(this.clipboard.resolvedEmployeeIdsByUnitId.get(unit.id) ?? [])]
+          : unit.employeeIds;
 
         pastedUnits.push({
           ...cloneUnit(unit),
@@ -1590,14 +1654,26 @@ export class OrgEditorStore {
                   0,
                 ) + pastedUnits.filter((candidate) => candidate.parentId === null).length
               : unit.order,
-          liveFilter: unit.liveFilter
-            ? {
-                ...cloneEmployeeLiveFilterRule(unit.liveFilter),
-                selectedUnitIds: unit.liveFilter.selectedUnitIds.map(
-                  (unitId) => unitIdMap.get(unitId) ?? unitId,
-                ),
-              }
-            : null,
+          bossEmployeeId: hasExternalLiveDependency
+            ? unit.bossEmployeeId !== null && materializedEmployeeIds.includes(unit.bossEmployeeId)
+              ? unit.bossEmployeeId
+              : null
+            : unit.bossEmployeeId,
+          employeeIds: materializedEmployeeIds,
+          employeePositions: hasExternalLiveDependency
+            ? unit.employeePositions.filter((position) =>
+                materializedEmployeeIds.includes(position.employeeId),
+              )
+            : unit.employeePositions.map((position) => ({ ...position })),
+          liveFilter:
+            unit.liveFilter && !hasExternalLiveDependency
+              ? {
+                  ...cloneEmployeeLiveFilterRule(unit.liveFilter),
+                  selectedUnitIds: unit.liveFilter.selectedUnitIds.map(
+                    (unitId) => unitIdMap.get(unitId) ?? unitId,
+                  ),
+                }
+              : null,
           parentId: nextParentId,
           updatedAt: new Date().toISOString(),
           x: unit.x + offset.x,

@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildOrgEditorUnitEmployeeSummaryById,
   buildOrgEditorUnitTagSummary,
+  createOrgEditorUnitTagFooterLayout,
   findOrgEditorEmployeeRowIndex,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
@@ -221,7 +222,7 @@ describe("Org Editor Unit Tag footer", () => {
     expect(chip("Cafe\u0301")).toBe(chip("Café"));
     expect(chip("团队")).toBeGreaterThan(chip("UI"));
     expect(chip("فريق")).toBeGreaterThan(40);
-    expect(chip("A very long Tag name", 12, 72)).toBe(72);
+    expect(chip("A very long Tag name", 12, 72)).toBeLessThanOrEqual(72);
     expect(ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING).toBe(8);
 
     const summaries = ["TeamLead", "Vue", "Backend", "PHP"].map((label, index) => ({
@@ -232,6 +233,35 @@ describe("Org Editor Unit Tag footer", () => {
     }));
     expect(getOrgEditorUnitTagFooterHeight(summaries, 264)).toBe(
       ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT * 2 + 4,
+    );
+  });
+
+  test.each([
+    "A deliberately long Latin Tag name",
+    "\u041e\u0447\u0435\u043d\u044c \u0434\u043b\u0438\u043d\u043d\u043e\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043a\u0438\u0440\u0438\u043b\u043b\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u0442\u0435\u0433\u0430",
+    "اسم علامة عربية طويل للغاية",
+    "非常に長いチームタグ名",
+    "Platform 🚀🧑🏽‍💻 reliability",
+  ])("wraps the complete multilingual label without an ellipsis: %s", (label) => {
+    const layout = createOrgEditorUnitTagFooterLayout(
+      [{ color: "blue", count: 12, label, tagId: "tag-long" }],
+      96,
+    );
+    const chipLayout = layout.chips[0];
+
+    expect(chipLayout).toBeDefined();
+    expect(chipLayout?.width).toBeLessThanOrEqual(96);
+    expect(chipLayout?.lines.length).toBeGreaterThan(1);
+    expect(
+      chipLayout?.lines
+        .map((line) => line.label)
+        .join("")
+        .replace(/\s+/gu, ""),
+    ).toBe(label.normalize("NFC").replace(/\s+/gu, ""));
+    expect(chipLayout?.lines.some((line) => line.suffix === "· 12")).toBe(true);
+    expect(chipLayout?.lines.some((line) => line.label.includes("…"))).toBe(false);
+    expect(layout.height).toBeGreaterThan(
+      ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
     );
   });
 

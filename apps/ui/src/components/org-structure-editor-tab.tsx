@@ -106,6 +106,7 @@ import {
   buildOrgEditorUnitEmployeeSummaryById,
   buildOrgEditorUnitTagSummary,
   createOrgEditorSelectedItemKey,
+  createOrgEditorUnitTagFooterLayout,
   findOrgEditorEmployeeRowIndex,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
@@ -117,7 +118,6 @@ import {
   getOrgEditorUnitDescendantIds,
   getOrgEditorUnitDisplayName,
   getOrgEditorUnitHeight,
-  getOrgEditorUnitTagFooterChipWidth,
   getOrgEditorUnitTagFooterHeight,
   getOrgEditorUnitWidth,
   getOrgEditorVisibleEmployeeIds,
@@ -126,7 +126,6 @@ import {
   ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
-  ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
   ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP,
   ORG_EDITOR_UNIT_VERTICAL_GAP,
   type OrgEditorUnitEmployeeSummary,
@@ -137,6 +136,7 @@ import {
 import {
   createLatestFrameScheduler,
   createSpatialIndex,
+  getOrgEditorEdgePanVelocity,
   getUnitPointerSelectionIntent,
 } from "@/lib/org-editor-interaction";
 import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
@@ -199,6 +199,7 @@ type DragState =
       selectedItems: OrgEditorSelectedItem[];
       startCanvasPoint: CanvasPoint;
       startScreenPoint: ScreenPoint;
+      startViewport: OrgEditorCanvasViewport;
       type: "employee";
     }
   | {
@@ -206,19 +207,24 @@ type DragState =
       selectOnClick: OrgEditorSelectedItem | null;
       selectedUnitIds: OrgEditorUnitId[];
       startCanvasPoint: CanvasPoint;
+      currentScreenPoint: ScreenPoint;
       startUnitPositions: Array<{ unitId: OrgEditorUnitId; x: number; y: number }>;
       startScreenPoint: ScreenPoint;
+      startViewport: OrgEditorCanvasViewport;
       type: "unit";
     }
   | {
       currentScreenPoint: ScreenPoint;
       startScreenPoint: ScreenPoint;
+      startViewport: OrgEditorCanvasViewport;
       unitId: OrgEditorUnitId;
       type: "connection";
     }
   | {
       currentScreenPoint: ScreenPoint;
+      startCanvasPoint: CanvasPoint;
       startScreenPoint: ScreenPoint;
+      startViewport: OrgEditorCanvasViewport;
       type: "select";
     };
 
@@ -238,6 +244,8 @@ type OrgEditorSearchResult =
 const MIN_CANVAS_SCALE = 0.1;
 const MAX_CANVAS_SCALE = 2.2;
 const DRAG_START_THRESHOLD = 4;
+const ORG_EDITOR_EDGE_PAN_SIZE = 64;
+const ORG_EDITOR_EDGE_PAN_MAX_SPEED = 6;
 const CANVAS_VIEWPORT_OVERSCAN_PX = 420;
 const ORG_EDITOR_SPATIAL_CELL_SIZE = 512;
 const ORG_EDITOR_WHEEL_COMMIT_DELAY_MS = 140;
@@ -1015,9 +1023,10 @@ function OrgEditorNode({
   const unitWidth = getOrgEditorUnitWidth(unit);
   const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById);
   const employeeRowLayout = getOrgEditorEmployeeRowLayout(unit);
-  const tagFooterHeight = unit.collapsed
-    ? 0
-    : getOrgEditorUnitTagFooterHeight(tagSummary, unitWidth - 16);
+  const tagFooterLayout = unit.collapsed
+    ? { chips: [], height: 0, rowCount: 0 }
+    : createOrgEditorUnitTagFooterLayout(tagSummary, unitWidth - 16);
+  const tagFooterHeight = tagFooterLayout.height;
   const shouldRenderEmployeeList = !unit.collapsed || visibleEmployeeIds.length > 0;
   const employeeListHeight = Math.max(
     0,
@@ -1273,31 +1282,42 @@ function OrgEditorNode({
       )}
       {!unit.collapsed && tagSummary.length > 0 && (
         <div
-          className="mt-auto flex shrink-0 flex-wrap content-start gap-1 rounded-b-[7px] bg-muted/45 p-2"
+          className="relative mt-auto shrink-0 rounded-b-[7px] bg-muted/45"
           data-org-editor-unit-tag-footer
-          style={{ minHeight: tagFooterHeight }}
+          style={{ height: tagFooterHeight }}
         >
-          {tagSummary.map((tag) => (
+          {tagFooterLayout.chips.map((chip) => (
             <span
               className={cn(
-                "inline-flex h-5 max-w-full items-center rounded-md text-[10px] leading-none",
-                tagColorSurfaceClassName(tag.color),
+                "absolute inline-flex max-w-full flex-col justify-center rounded-md px-2 text-[10px] leading-3",
+                tagColorSurfaceClassName(chip.color),
               )}
-              data-tag-color={tag.color ?? "none"}
-              key={tag.tagId}
+              data-tag-color={chip.color ?? "none"}
+              data-tag-label={chip.label}
+              key={chip.tagId}
               style={{
-                ...customTagColorSurfaceStyle(tag.color),
-                paddingInline: ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
-                width: getOrgEditorUnitTagFooterChipWidth(tag, getOrgEditorUnitWidth(unit) - 16),
+                ...customTagColorSurfaceStyle(chip.color),
+                height: chip.height,
+                left: chip.x,
+                top: chip.y,
+                width: chip.width,
               }}
             >
-              <span className="truncate">{tag.label}</span>
-              <span
-                className="opacity-70"
-                style={{ marginInlineStart: ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP }}
-              >
-                · {tag.count}
-              </span>
+              {chip.lines.map((line) => (
+                <span className="inline-flex min-w-0 whitespace-nowrap" key={line.id}>
+                  {line.label && <span>{line.label}</span>}
+                  {line.suffix && (
+                    <span
+                      className="shrink-0 opacity-70"
+                      style={{
+                        marginInlineStart: line.label ? ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP : 0,
+                      }}
+                    >
+                      {line.suffix}
+                    </span>
+                  )}
+                </span>
+              ))}
             </span>
           ))}
         </div>
@@ -1663,6 +1683,7 @@ export const OrgStructureEditorTab = observer(() => {
     unitId: OrgEditorUnitId;
   } | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [selectionPreview, setSelectionPreview] = useState<OrgEditorSelectedItem[] | null>(null);
   const [contextMenu, setContextMenu] = useState<OrgEditorContextMenu | null>(null);
   const [addEmployeesTarget, setAddEmployeesTarget] = useState<AddEmployeesTarget | null>(null);
   const [unitDialog, setUnitDialog] = useState<UnitDialogState | null>(null);
@@ -1682,12 +1703,19 @@ export const OrgStructureEditorTab = observer(() => {
   const viewportFrameSchedulerRef = useRef<ReturnType<
     typeof createLatestFrameScheduler<OrgEditorCanvasViewport>
   > | null>(null);
+  const dragStateFrameSchedulerRef = useRef<ReturnType<
+    typeof createLatestFrameScheduler<DragState>
+  > | null>(null);
+  const selectionPreviewFrameSchedulerRef = useRef<ReturnType<
+    typeof createLatestFrameScheduler<OrgEditorSelectedItem[]>
+  > | null>(null);
   const wheelCommitTimeoutRef = useRef<number | null>(null);
   const [unitDragDelta, setUnitDragDelta] = useState<CanvasPoint | null>(null);
   const unitDragDeltaRef = useRef<CanvasPoint | null>(null);
   const unitDragFrameSchedulerRef = useRef<ReturnType<
     typeof createLatestFrameScheduler<CanvasPoint>
   > | null>(null);
+  const edgePanFrameIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     viewportFrameSchedulerRef.current = createLatestFrameScheduler({
@@ -1709,15 +1737,33 @@ export const OrgStructureEditorTab = observer(() => {
       },
       requestFrame: (callback) => window.requestAnimationFrame(callback),
     });
+    dragStateFrameSchedulerRef.current = createLatestFrameScheduler({
+      cancelFrame: (frameId) => window.cancelAnimationFrame(frameId),
+      onFrame: setDragState,
+      requestFrame: (callback) => window.requestAnimationFrame(callback),
+    });
+    selectionPreviewFrameSchedulerRef.current = createLatestFrameScheduler({
+      cancelFrame: (frameId) => window.cancelAnimationFrame(frameId),
+      onFrame: setSelectionPreview,
+      requestFrame: (callback) => window.requestAnimationFrame(callback),
+    });
 
     return () => {
       viewportFrameSchedulerRef.current?.cancel();
       viewportFrameSchedulerRef.current = null;
       unitDragFrameSchedulerRef.current?.cancel();
       unitDragFrameSchedulerRef.current = null;
+      dragStateFrameSchedulerRef.current?.cancel();
+      dragStateFrameSchedulerRef.current = null;
+      selectionPreviewFrameSchedulerRef.current?.cancel();
+      selectionPreviewFrameSchedulerRef.current = null;
       if (wheelCommitTimeoutRef.current !== null) {
         window.clearTimeout(wheelCommitTimeoutRef.current);
         wheelCommitTimeoutRef.current = null;
+      }
+      if (edgePanFrameIdRef.current !== null) {
+        window.cancelAnimationFrame(edgePanFrameIdRef.current);
+        edgePanFrameIdRef.current = null;
       }
     };
   }, []);
@@ -1765,6 +1811,20 @@ export const OrgStructureEditorTab = observer(() => {
     setUnitDragDelta(null);
   }, []);
 
+  const setTransientSelectionPreview = useCallback((items: OrgEditorSelectedItem[] | null) => {
+    if (items === null) {
+      selectionPreviewFrameSchedulerRef.current?.cancel();
+      setSelectionPreview(null);
+      return;
+    }
+    const scheduler = selectionPreviewFrameSchedulerRef.current;
+    if (scheduler) {
+      scheduler.schedule(items);
+    } else {
+      setSelectionPreview(items);
+    }
+  }, []);
+
   useEffect(() => {
     if (dragStateRef.current?.type === "pan" || wheelCommitTimeoutRef.current !== null) return;
 
@@ -1776,8 +1836,8 @@ export const OrgStructureEditorTab = observer(() => {
     );
   }, [editor, editor.viewport]);
   const selectedItemKeySet = useMemo(
-    () => new Set(editor.selectedItems.map(createOrgEditorSelectedItemKey)),
-    [editor.selectedItems],
+    () => new Set((selectionPreview ?? editor.selectedItems).map(createOrgEditorSelectedItemKey)),
+    [editor.selectedItems, selectionPreview],
   );
   const selectedUnitIds = editor.selectedUnitIds;
   const activeEditorStructure = units;
@@ -1942,6 +2002,15 @@ export const OrgStructureEditorTab = observer(() => {
     return {
       x: (point.x - (bounds?.left ?? 0) - viewport.x) / viewport.scale,
       y: (point.y - (bounds?.top ?? 0) - viewport.y) / viewport.scale,
+    };
+  }, []);
+
+  const canvasToScreenPoint = useCallback((point: CanvasPoint): ScreenPoint => {
+    const bounds = canvasRef.current?.getBoundingClientRect();
+    const viewport = pendingViewportRef.current ?? renderViewportRef.current;
+    return {
+      x: (bounds?.left ?? 0) + viewport.x + point.x * viewport.scale,
+      y: (bounds?.top ?? 0) + viewport.y + point.y * viewport.scale,
     };
   }, []);
 
@@ -2286,19 +2355,14 @@ export const OrgStructureEditorTab = observer(() => {
     [visibleUnits],
   );
 
-  const getUnitsInsideScreenRect = useCallback(
-    (screenRect: { height: number; width: number; x: number; y: number }) => {
+  const getUnitsInsideCanvasRect = useCallback(
+    (firstPoint: CanvasPoint, secondPoint: CanvasPoint) => {
       const selectedItems: OrgEditorSelectedItem[] = [];
-      const canvasTopLeft = screenToCanvasPoint({ x: screenRect.x, y: screenRect.y });
-      const canvasBottomRight = screenToCanvasPoint({
-        x: screenRect.x + screenRect.width,
-        y: screenRect.y + screenRect.height,
-      });
       const canvasRect = {
-        height: Math.abs(canvasBottomRight.y - canvasTopLeft.y),
-        width: Math.abs(canvasBottomRight.x - canvasTopLeft.x),
-        x: Math.min(canvasTopLeft.x, canvasBottomRight.x),
-        y: Math.min(canvasTopLeft.y, canvasBottomRight.y),
+        height: Math.abs(secondPoint.y - firstPoint.y),
+        width: Math.abs(secondPoint.x - firstPoint.x),
+        x: Math.min(firstPoint.x, secondPoint.x),
+        y: Math.min(firstPoint.y, secondPoint.y),
       };
 
       for (const unit of unitSpatialIndex.query(canvasRect).items) {
@@ -2307,19 +2371,36 @@ export const OrgStructureEditorTab = observer(() => {
 
       return selectedItems;
     },
-    [screenToCanvasPoint, unitSpatialIndex],
+    [unitSpatialIndex],
   );
+  const getConnectionDropTargetRef = useRef(getConnectionDropTarget);
+  const getEmployeeDropTargetRef = useRef(getEmployeeDropTarget);
+  const getUnitsInsideCanvasRectRef = useRef(getUnitsInsideCanvasRect);
+  getConnectionDropTargetRef.current = getConnectionDropTarget;
+  getEmployeeDropTargetRef.current = getEmployeeDropTarget;
+  getUnitsInsideCanvasRectRef.current = getUnitsInsideCanvasRect;
 
   const setActiveDragState = useCallback((nextDragState: DragState | null) => {
+    dragStateFrameSchedulerRef.current?.cancel();
     dragStateRef.current = nextDragState;
     setDragState(nextDragState);
+  }, []);
+
+  const scheduleActiveDragState = useCallback((nextDragState: DragState) => {
+    dragStateRef.current = nextDragState;
+    const scheduler = dragStateFrameSchedulerRef.current;
+    if (scheduler) {
+      scheduler.schedule(nextDragState);
+    } else {
+      setDragState(nextDragState);
+    }
   }, []);
 
   const connectionDropTargetUnit =
     dragState?.type === "connection"
       ? getConnectionDropTarget(dragState.unitId, screenToCanvasPoint(dragState.currentScreenPoint))
       : null;
-  const connectionDragPath = useMemo(() => {
+  const connectionDragPath = (() => {
     if (dragState?.type !== "connection") return null;
 
     const unit = unitById.get(dragState.unitId);
@@ -2347,7 +2428,7 @@ export const OrgStructureEditorTab = observer(() => {
     const middleY = startPoint.y + (currentPoint.y - startPoint.y) / 2;
 
     return `M ${startPoint.x} ${startPoint.y} C ${startPoint.x} ${middleY}, ${currentPoint.x} ${middleY}, ${currentPoint.x} ${currentPoint.y}`;
-  }, [dragState, editor.layoutMode, screenToCanvasPoint, unitById]);
+  })();
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -2403,6 +2484,65 @@ export const OrgStructureEditorTab = observer(() => {
   }, [dragState]);
 
   useEffect(() => {
+    const stopEdgePan = () => {
+      if (edgePanFrameIdRef.current !== null) {
+        window.cancelAnimationFrame(edgePanFrameIdRef.current);
+        edgePanFrameIdRef.current = null;
+      }
+    };
+
+    const updateDragPreview = (currentDragState: Exclude<DragState, { type: "pan" }>) => {
+      if (currentDragState.type === "select") {
+        setTransientSelectionPreview(
+          getUnitsInsideCanvasRectRef.current(
+            currentDragState.startCanvasPoint,
+            screenToCanvasPoint(currentDragState.currentScreenPoint),
+          ),
+        );
+        return;
+      }
+      if (currentDragState.type !== "unit") return;
+      const currentCanvasPoint = screenToCanvasPoint(currentDragState.currentScreenPoint);
+      scheduleUnitDragPreview({
+        x: currentCanvasPoint.x - currentDragState.startCanvasPoint.x,
+        y: currentCanvasPoint.y - currentDragState.startCanvasPoint.y,
+      });
+    };
+
+    const runEdgePanFrame = () => {
+      edgePanFrameIdRef.current = null;
+      const currentDragState = dragStateRef.current;
+      if (!currentDragState || currentDragState.type === "pan") return;
+      const dragDistance = Math.hypot(
+        currentDragState.currentScreenPoint.x - currentDragState.startScreenPoint.x,
+        currentDragState.currentScreenPoint.y - currentDragState.startScreenPoint.y,
+      );
+      const canvasBounds = canvasRef.current?.getBoundingClientRect();
+      if (dragDistance <= DRAG_START_THRESHOLD || !canvasBounds) return;
+      const velocity = getOrgEditorEdgePanVelocity(
+        currentDragState.currentScreenPoint,
+        canvasBounds,
+        ORG_EDITOR_EDGE_PAN_SIZE,
+        ORG_EDITOR_EDGE_PAN_MAX_SPEED,
+      );
+      if (velocity.x === 0 && velocity.y === 0) return;
+
+      const currentViewport = pendingViewportRef.current ?? renderViewportRef.current;
+      scheduleViewportPreview({
+        ...currentViewport,
+        x: currentViewport.x + velocity.x,
+        y: currentViewport.y + velocity.y,
+      });
+      updateDragPreview(currentDragState);
+      edgePanFrameIdRef.current = window.requestAnimationFrame(runEdgePanFrame);
+    };
+
+    const ensureEdgePan = () => {
+      if (edgePanFrameIdRef.current === null) {
+        edgePanFrameIdRef.current = window.requestAnimationFrame(runEdgePanFrame);
+      }
+    };
+
     const handlePointerMove = (event: PointerEvent) => {
       const currentDragState = dragStateRef.current;
       if (!currentDragState) return;
@@ -2425,37 +2565,35 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if (currentDragState.type === "select") {
-        const screenRect = getSelectionRect(currentDragState.startScreenPoint, currentScreenPoint);
-
-        editor.setSelectedItems(getUnitsInsideScreenRect(screenRect));
-        setActiveDragState({ ...currentDragState, currentScreenPoint });
+        const nextDragState = { ...currentDragState, currentScreenPoint };
+        scheduleActiveDragState(nextDragState);
+        updateDragPreview(nextDragState);
+        ensureEdgePan();
         return;
       }
 
       if (currentDragState.type === "employee") {
-        setActiveDragState({ ...currentDragState, currentScreenPoint });
+        scheduleActiveDragState({ ...currentDragState, currentScreenPoint });
+        ensureEdgePan();
         return;
       }
 
       if (currentDragState.type === "connection") {
-        setActiveDragState({ ...currentDragState, currentScreenPoint });
+        scheduleActiveDragState({ ...currentDragState, currentScreenPoint });
+        ensureEdgePan();
         return;
       }
 
-      const currentCanvasPoint = screenToCanvasPoint(currentScreenPoint);
-      const delta = {
-        x: currentCanvasPoint.x - currentDragState.startCanvasPoint.x,
-        y: currentCanvasPoint.y - currentDragState.startCanvasPoint.y,
-      };
-
-      if (Math.abs(delta.x) < 0.01 && Math.abs(delta.y) < 0.01) return;
-
-      scheduleUnitDragPreview(delta);
+      const nextDragState = { ...currentDragState, currentScreenPoint };
+      scheduleActiveDragState(nextDragState);
+      updateDragPreview(nextDragState);
+      ensureEdgePan();
     };
 
     const handlePointerUp = (event: PointerEvent) => {
       const currentDragState = dragStateRef.current;
       if (!currentDragState) return;
+      stopEdgePan();
 
       const currentScreenPoint = getPointerScreenPoint(event);
 
@@ -2474,9 +2612,13 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if (currentDragState.type === "select") {
-        const screenRect = getSelectionRect(currentDragState.startScreenPoint, currentScreenPoint);
-
-        editor.setSelectedItems(getUnitsInsideScreenRect(screenRect));
+        editor.setSelectedItems(
+          getUnitsInsideCanvasRectRef.current(
+            currentDragState.startCanvasPoint,
+            screenToCanvasPoint(currentScreenPoint),
+          ),
+        );
+        setTransientSelectionPreview(null);
       }
 
       if (currentDragState.type === "connection") {
@@ -2486,7 +2628,7 @@ export const OrgStructureEditorTab = observer(() => {
         );
 
         if (startDistance > DRAG_START_THRESHOLD) {
-          const targetUnit = getConnectionDropTarget(
+          const targetUnit = getConnectionDropTargetRef.current(
             currentDragState.unitId,
             screenToCanvasPoint(currentScreenPoint),
           );
@@ -2502,7 +2644,7 @@ export const OrgStructureEditorTab = observer(() => {
         );
 
         if (startDistance > DRAG_START_THRESHOLD) {
-          const targetUnit = getEmployeeDropTarget(
+          const targetUnit = getEmployeeDropTargetRef.current(
             screenToCanvasPoint(currentScreenPoint),
             getOrgEditorEmployeeDragSourceUnitIds(currentDragState.selectedItems),
           );
@@ -2536,15 +2678,21 @@ export const OrgStructureEditorTab = observer(() => {
         }
       }
 
+      if (currentDragState.type !== "pan") {
+        commitViewport(pendingViewportRef.current ?? renderViewportRef.current);
+      }
+
       setActiveDragState(null);
     };
 
     const handlePointerCancel = () => {
       const currentDragState = dragStateRef.current;
       if (!currentDragState) return;
+      stopEdgePan();
 
-      if (currentDragState.type === "pan") commitViewport(currentDragState.startViewport);
+      commitViewport(currentDragState.startViewport);
       if (currentDragState.type === "unit") clearUnitDragPreview();
+      if (currentDragState.type === "select") setTransientSelectionPreview(null);
       setActiveDragState(null);
     };
 
@@ -2553,6 +2701,7 @@ export const OrgStructureEditorTab = observer(() => {
     window.addEventListener("pointercancel", handlePointerCancel);
 
     return () => {
+      stopEdgePan();
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
@@ -2561,13 +2710,12 @@ export const OrgStructureEditorTab = observer(() => {
     clearUnitDragPreview,
     commitViewport,
     editor,
-    getConnectionDropTarget,
-    getEmployeeDropTarget,
-    getUnitsInsideScreenRect,
     scheduleUnitDragPreview,
     scheduleViewportPreview,
     screenToCanvasPoint,
+    scheduleActiveDragState,
     setActiveDragState,
+    setTransientSelectionPreview,
   ]);
 
   useEffect(() => {
@@ -2613,7 +2761,7 @@ export const OrgStructureEditorTab = observer(() => {
 
       if (event.key === "Backspace" || event.key === "Delete") {
         event.preventDefault();
-        editor.deleteSelected();
+        store.deleteEditorSelection();
       }
     };
 
@@ -2793,9 +2941,12 @@ export const OrgStructureEditorTab = observer(() => {
 
     if (event.metaKey || event.ctrlKey) {
       event.preventDefault();
+      const screenPoint = getPointerScreenPoint(event.nativeEvent);
       setActiveDragState({
-        currentScreenPoint: getPointerScreenPoint(event.nativeEvent),
-        startScreenPoint: getPointerScreenPoint(event.nativeEvent),
+        currentScreenPoint: screenPoint,
+        startCanvasPoint: screenToCanvasPoint(screenPoint),
+        startScreenPoint: screenPoint,
+        startViewport: { ...renderViewportRef.current },
         type: "select",
       });
       return;
@@ -2850,13 +3001,15 @@ export const OrgStructureEditorTab = observer(() => {
       toggle: mode === "toggle",
     });
     const selectedUnitIdsForDrag = selectionIntent.dragUnitIds;
+    const screenPoint = getPointerScreenPoint(event.nativeEvent);
 
     if (!selectionIntent.preserveForPotentialGroupDrag) editor.selectItem(item, mode);
     setActiveDragState({
       historySnapshot: editor.createCommandSnapshot(),
       selectOnClick: selectionIntent.preserveForPotentialGroupDrag ? item : null,
       selectedUnitIds: selectedUnitIdsForDrag,
-      startCanvasPoint: screenToCanvasPoint(getPointerScreenPoint(event.nativeEvent)),
+      currentScreenPoint: screenPoint,
+      startCanvasPoint: screenToCanvasPoint(screenPoint),
       startUnitPositions: editor.units
         .filter((currentUnit) => selectedUnitIdsForDrag.includes(currentUnit.id))
         .map((currentUnit) => ({
@@ -2864,7 +3017,8 @@ export const OrgStructureEditorTab = observer(() => {
           x: currentUnit.x,
           y: currentUnit.y,
         })),
-      startScreenPoint: getPointerScreenPoint(event.nativeEvent),
+      startScreenPoint: screenPoint,
+      startViewport: { ...renderViewportRef.current },
       type: "unit",
     });
   };
@@ -2903,6 +3057,7 @@ export const OrgStructureEditorTab = observer(() => {
     setActiveDragState({
       currentScreenPoint: screenPoint,
       startScreenPoint: screenPoint,
+      startViewport: { ...renderViewportRef.current },
       type: "connection",
       unitId: unit.id,
     });
@@ -3033,13 +3188,15 @@ export const OrgStructureEditorTab = observer(() => {
         editor.units.find((candidateUnit) => candidateUnit.id === selectedItem.unitId)
           ?.liveFilter === null,
     );
+    const screenPoint = getPointerScreenPoint(event.nativeEvent);
 
     editor.setSelectedItems(selectedItemsForDrag);
     setActiveDragState({
-      currentScreenPoint: getPointerScreenPoint(event.nativeEvent),
+      currentScreenPoint: screenPoint,
       selectedItems: selectedItemsForDrag,
-      startCanvasPoint: screenToCanvasPoint(getPointerScreenPoint(event.nativeEvent)),
-      startScreenPoint: getPointerScreenPoint(event.nativeEvent),
+      startCanvasPoint: screenToCanvasPoint(screenPoint),
+      startScreenPoint: screenPoint,
+      startViewport: { ...renderViewportRef.current },
       type: "employee",
     });
   };
@@ -3123,7 +3280,10 @@ export const OrgStructureEditorTab = observer(() => {
           : t("Paste Employees");
   const selectionRect =
     dragState?.type === "select"
-      ? getSelectionRect(dragState.startScreenPoint, dragState.currentScreenPoint)
+      ? getSelectionRect(
+          canvasToScreenPoint(dragState.startCanvasPoint),
+          dragState.currentScreenPoint,
+        )
       : null;
   const employeeDragPreview = getOrgEditorEmployeeDragPreview(dragState, employeeById);
   const employeeDragSourceUnitIds =
@@ -3153,10 +3313,13 @@ export const OrgStructureEditorTab = observer(() => {
             editor.units.length > 0 && "cursor-grab active:cursor-grabbing",
           )}
           data-demo-id="org-editor-canvas"
+          data-active-drag-type={dragState?.type ?? "none"}
           data-grid-base-size={ORG_EDITOR_GRID_SIZE}
           data-grid-screen-size={canvasGridScreenSize}
           data-grid-size={canvasGridSize}
           data-spatial-candidate-count={visibleUnitQuery.candidateCount}
+          data-viewport-x={renderViewport.x}
+          data-viewport-y={renderViewport.y}
           onAuxClick={(event) => event.preventDefault()}
           onContextMenu={handleCanvasContextMenu}
           onPointerDown={handleCanvasPointerDown}
@@ -3392,7 +3555,7 @@ export const OrgStructureEditorTab = observer(() => {
                   </OrgEditorMenuButton>
                   <OrgEditorMenuButton
                     onClick={() => {
-                      editor.deleteSelected();
+                      store.deleteEditorSelection();
                       setContextMenu(null);
                     }}
                     variant="destructive"

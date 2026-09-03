@@ -113,6 +113,27 @@ test("runs the complete state editor at the repository base path without APIs or
     expect(inset.labelScrollWidth).toBeLessThanOrEqual(inset.labelClientWidth + 1);
   }
 
+  const viewToolbar = page.locator('[data-demo-id="org-editor-view-toolbar"]');
+  const createViewButton = page.locator('[data-demo-id="org-editor-create-view"]');
+  await createViewButton.hover();
+  await expect(viewToolbar.getByRole("tooltip")).toHaveCount(0);
+  await expect(createViewButton).not.toHaveAttribute("title");
+
+  const productUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await productUnit.click({ position: { x: 80, y: 54 } });
+  await page.keyboard.press("Control+c");
+  await createViewButton.click();
+  const createViewDialog = page.getByRole("dialog", { name: "Create View", exact: true });
+  await createViewDialog.getByLabel("View name", { exact: true }).fill("Clipboard target");
+  await createViewDialog.getByRole("button", { name: "Create", exact: true }).click();
+  await page.keyboard.press("Control+v");
+  await expect(productUnit).toBeVisible();
+  await page.keyboard.press("Control+z");
+  await expect(productUnit).toHaveCount(0);
+  await page.locator('[data-demo-id="org-editor-view-select"]').click();
+  await page.getByRole("option", { name: "Units", exact: true }).click();
+  await expect(productUnit).toBeVisible();
+
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   const coloredTag = page.locator('[data-tag-color-surface][data-tag-color="blue"]').first();
   const neutralTag = page.locator('[data-tag-color-surface][data-tag-color="none"]').first();

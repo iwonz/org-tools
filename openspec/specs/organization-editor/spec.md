@@ -92,10 +92,14 @@ the base step. Opening an existing workspace SHALL NOT mutate legacy coordinates
 editor operation affects them. Grid rendering SHALL remain a constant-cost background operation and
 SHALL NOT change PNG dimensions, connection behavior, selection behavior, or organization data.
 Pointer and wheel input SHALL replace the pending transient sample and render at most once per
-animation frame. Pan, zoom, and Unit drag SHALL preview without mutating the durable viewport or
-document on every pointer event. The final gesture SHALL commit at most one viewport update or one
-organization command. Viewport visibility SHALL use a geometry index built only when Unit bounds
-change rather than scanning every Unit on each interaction frame.
+animation frame. Pan, zoom, Unit drag, Employee drag, connection drag, and marquee selection SHALL
+preview without mutating the durable viewport or document on every pointer event. A drag that enters
+the final 64 screen pixels of a canvas edge after the 4 px drag threshold SHALL pan quadratically
+from zero to at most 6 screen pixels per frame toward that edge; a diagonal SHALL retain the same
+maximum vector magnitude. The final gesture SHALL commit at most one viewport update and at most one
+organization command. Cancellation SHALL restore its starting viewport and discard every transient
+preview. Viewport visibility SHALL use a geometry index built only when Unit bounds change rather
+than scanning every Unit on each interaction frame.
 
 #### Scenario: Adaptive zoom density
 - **WHEN** the user zooms the Editor from its minimum to maximum supported scale
@@ -126,6 +130,15 @@ change rather than scanning every Unit on each interaction frame.
 - **WHEN** one or more Units move across multiple pointer events
 - **THEN** preview positions and affected connections update without replacing the document Unit collection or running overlap avoidance per event
 - **AND** release performs one snapped overlap-resolved command and one organization write
+
+#### Scenario: Edge-pan every drag mode
+- **WHEN** a Unit, Employee, connection, or selection-box drag crosses the threshold and remains inside a canvas edge zone
+- **THEN** one animation-frame loop advances the transient viewport and keeps the dragged document target attached to the pointer
+- **AND** no durable organization or viewport write occurs before release
+
+#### Scenario: Cancel edge-pan
+- **WHEN** an edge-panning gesture is cancelled
+- **THEN** the gesture-start viewport and document are restored without a persistence notification
 
 #### Scenario: Indexed large canvas
 - **WHEN** the current structure contains 4,000 Units and the viewport changes
@@ -555,11 +568,13 @@ Create SHALL accept a name and either Blank or Copy with any current View as sou
 ### Requirement: Expanded Unit cards summarize direct Tags
 An expanded Unit with tagged direct Employees SHALL render a compact borderless tonal footer after
 its Employee list. The footer SHALL show every catalog-ordered Tag as a filled wrapping chip with its
-label and unique direct-Employee count. Each chip SHALL be content-sized from one deterministic
-shared text metric with equal compact horizontal insets and SHALL NOT reserve a fixed trailing area
-beyond its label and count. Descendants SHALL NOT contribute. Live Units SHALL use their resolved
-direct membership. Dates SHALL NOT split a Tag count. Collapsed and tagless Units SHALL have no
-footer.
+complete label and unique direct-Employee count. Short chips SHALL be content-sized with equal
+compact insets. A long chip SHALL use no more than the footer width, wrap by words and then grapheme
+clusters, and keep the `middle dot + count` suffix unbroken on the last fitting line or its own line.
+Ellipsis MUST NOT be used. One deterministic shared layout SHALL drive DOM rendering, PNG rendering,
+Unit height, bounds, connections, spatial indexing, snapping, and collision geometry. Descendants
+SHALL NOT contribute. Live Units SHALL use their resolved direct membership. Dates SHALL NOT split a
+Tag count. Collapsed and tagless Units SHALL have no footer.
 
 #### Scenario: Count manual Unit Tags
 - **WHEN** direct Employees in a manual Unit share one or more Tags
@@ -571,7 +586,11 @@ footer.
 
 #### Scenario: Size chips by content
 - **WHEN** footer Tags have labels and counts of different lengths
-- **THEN** every chip uses the same compact insets and only the width required by its own content
+- **THEN** every short chip uses the same compact insets and only the width required by its own content
+
+#### Scenario: Wrap a long multilingual Tag
+- **WHEN** a Latin, Cyrillic, Arabic, CJK, or emoji Tag is wider than the footer
+- **THEN** its complete label wraps without an ellipsis and its count suffix remains indivisible
 
 #### Scenario: Wrap many Tags
 - **WHEN** measured Tag chips exceed the Unit width
@@ -579,4 +598,24 @@ footer.
 
 #### Scenario: Export the footer
 - **WHEN** Editor PNG is rendered for a Unit with a Tag footer
-- **THEN** the same Tag labels, counts, colors, compact widths, wrapping, and geometry appear in the image
+- **THEN** the same complete Tag labels, counts, colors, compact widths, line wrapping, and geometry appear in the image
+
+### Requirement: Unit deletion produces one valid final state
+Every keyboard, context-menu, Editor, and Units-surface deletion SHALL use one coordinator. The
+coordinator SHALL delete a deduplicated descendant closure, materialize remaining Live Units that
+reference deleted Units with their pre-delete visible direct membership, and remove all deleted IDs
+from Editor selection, system Unit selection and expansion, Unit filters, and active Download
+selection, filters, and exclusions before persistence can observe the result. System selection SHALL
+fall back to its closest surviving ancestor, then the first surviving root, then `null`.
+
+#### Scenario: Delete an ancestor and selected descendants
+- **WHEN** the selected deletion set contains a parent, one of its descendants, and Units from another branch
+- **THEN** every affected Unit is deleted exactly once and the resulting strict state contains no stale Unit reference
+
+#### Scenario: Materialize a dependent Live Unit
+- **WHEN** a surviving Live Unit references a Unit in the deletion closure
+- **THEN** it becomes static with its visible direct membership from immediately before deletion
+
+#### Scenario: Persist only a valid deletion
+- **WHEN** deletion completes
+- **THEN** change notification and automatic persistence run only after organization and bounded UI projections validate together

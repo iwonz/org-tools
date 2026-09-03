@@ -50,7 +50,9 @@ export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT = 20;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING = 8;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP = 4;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_GAP = 4;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT = 12;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_PADDING = 8;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_VERTICAL_PADDING = 4;
 export const ORG_EDITOR_DEFAULT_LAYOUT_MODE: OrgEditorLayoutMode = "topDown";
 export const ORG_EDITOR_GRID_SIZE = 24;
 export const ORG_EDITOR_GRID_MIN_SCREEN_SIZE = 24;
@@ -82,7 +84,33 @@ export type OrgEditorUnitTagSummary = {
   tagId: TagId;
 };
 
+export type OrgEditorUnitTagFooterLine = {
+  id: string;
+  label: string;
+  suffix: string | null;
+  width: number;
+};
+
+export type OrgEditorUnitTagFooterChipLayout = {
+  color: EmployeeTagColor | null;
+  count: number;
+  height: number;
+  label: string;
+  lines: OrgEditorUnitTagFooterLine[];
+  tagId: TagId;
+  width: number;
+  x: number;
+  y: number;
+};
+
+export type OrgEditorUnitTagFooterLayout = {
+  chips: OrgEditorUnitTagFooterChipLayout[];
+  height: number;
+  rowCount: number;
+};
+
 const COMPACT_FOOTER_TEXT_SAFETY = 3;
+const WRAPPED_FOOTER_RENDER_SAFETY = 4;
 
 const getCompactFooterGlyphWidth = (glyph: string) => {
   if (/\p{Mark}/u.test(glyph)) return 0;
@@ -106,6 +134,114 @@ const measureCompactFooterText = (value: string) =>
     (width, glyph) => width + getCompactFooterGlyphWidth(glyph),
     0,
   );
+
+const measureCompactFooterLabel = (value: string) =>
+  measureCompactFooterText(value) + ([...value].length <= 3 ? 0 : COMPACT_FOOTER_TEXT_SAFETY);
+
+const getGraphemes = (value: string) => {
+  if (typeof Intl.Segmenter === "function") {
+    return [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(value)].map(
+      ({ segment }) => segment,
+    );
+  }
+  return [...value];
+};
+
+const wrapCompactFooterLabel = (label: string, maxWidth: number) => {
+  const normalizedLabel = label.normalize("NFC").trim();
+  if (!normalizedLabel) return [""];
+  const lines: string[] = [];
+  let line = "";
+
+  const pushWord = (word: string) => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (measureCompactFooterText(candidate) <= maxWidth) {
+      line = candidate;
+      return;
+    }
+    if (line) {
+      lines.push(line);
+      line = "";
+    }
+    if (measureCompactFooterText(word) <= maxWidth) {
+      line = word;
+      return;
+    }
+    let chunk = "";
+    for (const grapheme of getGraphemes(word)) {
+      const nextChunk = `${chunk}${grapheme}`;
+      if (chunk && measureCompactFooterText(nextChunk) > maxWidth) {
+        lines.push(chunk);
+        chunk = grapheme;
+      } else {
+        chunk = nextChunk;
+      }
+    }
+    line = chunk;
+  };
+
+  for (const word of normalizedLabel.split(/\s+/u)) pushWord(word);
+  if (line || lines.length === 0) lines.push(line);
+  return lines;
+};
+
+const createOrgEditorUnitTagFooterChipDraft = (
+  summary: OrgEditorUnitTagSummary,
+  availableWidth: number,
+) => {
+  const safeWidth = Math.max(1, availableWidth);
+  const maxTextWidth = Math.max(
+    1,
+    safeWidth - ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2,
+  );
+  // Keep the shared metric comfortably inside the browser-rendered Noto glyph width.
+  // The same wrapped lines are consumed by DOM and canvas export, so this safety
+  // allowance prevents a platform font rasterizer from clipping the final grapheme.
+  const wrapTextWidth = Math.max(1, maxTextWidth - 24);
+  const suffix = `· ${summary.count}`;
+  const suffixWidth = measureCompactFooterText(suffix);
+  const label = summary.label.normalize("NFC").trim();
+  const labelWidth = measureCompactFooterLabel(label);
+  const naturalContentWidth = labelWidth + ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP + suffixWidth;
+  let lines: OrgEditorUnitTagFooterLine[];
+
+  if (naturalContentWidth <= maxTextWidth) {
+    lines = [{ id: `${summary.tagId}:0`, label, suffix, width: naturalContentWidth }];
+  } else {
+    const wrappedLabels = wrapCompactFooterLabel(label, wrapTextWidth);
+    lines = wrappedLabels.map((lineLabel, index) => ({
+      id: `${summary.tagId}:${index}`,
+      label: lineLabel,
+      suffix: null,
+      width: measureCompactFooterLabel(lineLabel),
+    }));
+    const lastLine = lines.at(-1);
+    if (
+      lastLine &&
+      lastLine.width + ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP + suffixWidth <= wrapTextWidth
+    ) {
+      lastLine.suffix = suffix;
+      lastLine.width += ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP + suffixWidth;
+    } else {
+      lines.push({ id: `${summary.tagId}:${lines.length}`, label: "", suffix, width: suffixWidth });
+    }
+  }
+
+  const contentWidth =
+    Math.max(...lines.map((line) => line.width)) +
+    (lines.length > 1 ? WRAPPED_FOOTER_RENDER_SAFETY : 0);
+  const width = Math.min(
+    safeWidth,
+    Math.max(40, Math.ceil(contentWidth + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2)),
+  );
+  const height = Math.max(
+    ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
+    lines.length * ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT +
+      ORG_EDITOR_UNIT_TAG_FOOTER_VERTICAL_PADDING * 2,
+  );
+
+  return { ...summary, height, lines, width };
+};
 
 export const snapOrgEditorCoordinate = (value: number) =>
   Math.round(value / ORG_EDITOR_GRID_SIZE) * ORG_EDITOR_GRID_SIZE;
@@ -173,41 +309,64 @@ export const buildOrgEditorUnitTagSummary = (
 export const getOrgEditorUnitTagFooterHeight = (
   summaries: readonly OrgEditorUnitTagSummary[],
   availableWidth: number,
-) => {
-  if (summaries.length === 0) return 0;
-  let rows = 1;
-  let usedWidth = 0;
-  for (const summary of summaries) {
-    const width = getOrgEditorUnitTagFooterChipWidth(summary, availableWidth);
-    if (usedWidth > 0 && usedWidth + ORG_EDITOR_UNIT_TAG_FOOTER_GAP + width > availableWidth) {
-      rows += 1;
-      usedWidth = width;
-    } else {
-      usedWidth += (usedWidth > 0 ? ORG_EDITOR_UNIT_TAG_FOOTER_GAP : 0) + width;
-    }
+) => createOrgEditorUnitTagFooterLayout(summaries, availableWidth).height;
+
+export const createOrgEditorUnitTagFooterLayout = (
+  summaries: readonly OrgEditorUnitTagSummary[],
+  availableWidth: number,
+): OrgEditorUnitTagFooterLayout => {
+  if (summaries.length === 0 || availableWidth <= 0) {
+    return { chips: [], height: 0, rowCount: 0 };
   }
-  return (
-    ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 +
-    rows * ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT +
-    (rows - 1) * ORG_EDITOR_UNIT_TAG_FOOTER_GAP
+  const safeWidth = Math.max(1, availableWidth);
+  const drafts = summaries.map((summary) =>
+    createOrgEditorUnitTagFooterChipDraft(summary, safeWidth),
   );
+  const chips: OrgEditorUnitTagFooterChipLayout[] = [];
+  let rowCount = 1;
+  let rowHeight = 0;
+  let x = ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
+  let y = ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
+
+  for (const draft of drafts) {
+    const rowStart = ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
+    const rowEnd = rowStart + safeWidth;
+    if (x > rowStart && x + draft.width > rowEnd) {
+      y += rowHeight + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
+      x = rowStart;
+      rowHeight = 0;
+      rowCount += 1;
+    }
+    chips.push({
+      color: draft.color,
+      count: draft.count,
+      height: draft.height,
+      label: draft.label,
+      lines: draft.lines,
+      tagId: draft.tagId,
+      width: draft.width,
+      x,
+      y,
+    });
+    rowHeight = Math.max(rowHeight, draft.height);
+    x += draft.width + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
+  }
+
+  return {
+    chips,
+    height: y + rowHeight + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
+    rowCount,
+  };
 };
 
 export const getOrgEditorUnitTagFooterChipWidth = (
   summary: Pick<OrgEditorUnitTagSummary, "count" | "label">,
   availableWidth: number,
-) => {
-  const normalizedLabel = summary.label.normalize("NFC");
-  const textSafety = [...normalizedLabel].length <= 3 ? 0 : COMPACT_FOOTER_TEXT_SAFETY;
-  const contentWidth =
-    measureCompactFooterText(normalizedLabel) +
-    textSafety +
-    ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP +
-    measureCompactFooterText(`· ${summary.count}`) +
-    ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2;
-
-  return Math.min(availableWidth, Math.max(40, Math.ceil(contentWidth)));
-};
+) =>
+  createOrgEditorUnitTagFooterChipDraft(
+    { color: null, count: summary.count, label: summary.label, tagId: "" },
+    availableWidth,
+  ).width;
 
 export const setOrgEditorUnitTagFooterHeight = (unitId: OrgEditorUnitId, height: number): void => {
   tagFooterHeightByUnitId.set(unitId, height);
