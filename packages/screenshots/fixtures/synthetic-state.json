@@ -182,65 +182,74 @@
       { "color": null, "id": "90000000-0000-4000-8000-000000000011", "label": "Strategy" },
       { "color": "blue", "id": "90000000-0000-4000-8000-000000000012", "label": "UX" }
     ],
-    "structure": {
-      "layoutMode": "topDown",
-      "units": [
-        {
-          "bossEmployeeId": "10000000-0000-4000-8000-000000000001",
-          "collapsed": false,
-          "createdAt": "2026-01-15T12:00:00.000Z",
-          "employeeIds": [
-            "10000000-0000-4000-8000-000000000001",
-            "10000000-0000-4000-8000-000000000004"
-          ],
-          "employeePositions": [
+    "views": [
+      {
+        "createdAt": "2026-01-15T12:00:00.000Z",
+        "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "kind": "system",
+        "name": null,
+        "structure": {
+          "layoutMode": "topDown",
+          "units": [
             {
-              "employeeId": "10000000-0000-4000-8000-000000000001",
-              "position": "Product Lead"
+              "bossEmployeeId": "10000000-0000-4000-8000-000000000001",
+              "collapsed": false,
+              "createdAt": "2026-01-15T12:00:00.000Z",
+              "employeeIds": [
+                "10000000-0000-4000-8000-000000000001",
+                "10000000-0000-4000-8000-000000000004"
+              ],
+              "employeePositions": [
+                {
+                  "employeeId": "10000000-0000-4000-8000-000000000001",
+                  "position": "Product Lead"
+                },
+                {
+                  "employeeId": "10000000-0000-4000-8000-000000000004",
+                  "position": "Product Designer"
+                }
+              ],
+              "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "liveFilter": null,
+              "name": "Product",
+              "order": 0,
+              "parentId": null,
+              "updatedAt": "2026-01-15T12:00:00.000Z",
+              "x": 120,
+              "y": 80
             },
             {
-              "employeeId": "10000000-0000-4000-8000-000000000004",
-              "position": "Product Designer"
+              "bossEmployeeId": "10000000-0000-4000-8000-000000000002",
+              "collapsed": false,
+              "createdAt": "2026-01-15T12:00:00.000Z",
+              "employeeIds": [
+                "10000000-0000-4000-8000-000000000002",
+                "10000000-0000-4000-8000-000000000003"
+              ],
+              "employeePositions": [
+                {
+                  "employeeId": "10000000-0000-4000-8000-000000000002",
+                  "position": "Engineering Lead"
+                },
+                {
+                  "employeeId": "10000000-0000-4000-8000-000000000003",
+                  "position": "Operations Specialist"
+                }
+              ],
+              "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              "liveFilter": null,
+              "name": "Platform",
+              "order": 0,
+              "parentId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              "updatedAt": "2026-01-15T12:00:00.000Z",
+              "x": 120,
+              "y": 432
             }
-          ],
-          "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-          "liveFilter": null,
-          "name": "Product",
-          "order": 0,
-          "parentId": null,
-          "updatedAt": "2026-01-15T12:00:00.000Z",
-          "x": 120,
-          "y": 80
+          ]
         },
-        {
-          "bossEmployeeId": "10000000-0000-4000-8000-000000000002",
-          "collapsed": false,
-          "createdAt": "2026-01-15T12:00:00.000Z",
-          "employeeIds": [
-            "10000000-0000-4000-8000-000000000002",
-            "10000000-0000-4000-8000-000000000003"
-          ],
-          "employeePositions": [
-            {
-              "employeeId": "10000000-0000-4000-8000-000000000002",
-              "position": "Engineering Lead"
-            },
-            {
-              "employeeId": "10000000-0000-4000-8000-000000000003",
-              "position": "Operations Specialist"
-            }
-          ],
-          "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-          "liveFilter": null,
-          "name": "Platform",
-          "order": 0,
-          "parentId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-          "updatedAt": "2026-01-15T12:00:00.000Z",
-          "x": 120,
-          "y": 360
-        }
-      ]
-    }
+        "updatedAt": "2026-01-15T12:00:00.000Z"
+      }
+    ]
   },
   "ui": {
     "activeTab": "orgEditor",
@@ -349,17 +358,24 @@
       "selections": [],
       "tabMode": "json",
       "templateFormat": "{email}, ",
-      "unitQuery": ""
+      "unitQuery": "",
+      "sourceViewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
     },
     "editor": {
+      "activeViewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       "searchOpen": false,
       "searchQuery": "",
-      "selectedItems": [],
-      "viewport": {
-        "scale": 1,
-        "x": 0,
-        "y": 0
-      }
+      "views": [
+        {
+          "selectedItems": [],
+          "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "viewport": {
+            "scale": 1,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ]
     },
     "employees": {
       "filters": {

@@ -515,6 +515,24 @@
     "Arabic": "阿拉伯语",
     "Choose interface language": "选择界面语言。",
     "Choose interface theme": "选择界面外观。",
-    "Arrange selected": "整理所选团队"
+    "Arrange selected": "整理所选团队",
+    "A View with this name already exists.": "已存在同名视图。",
+    "Enter a View name.": "请输入视图名称。",
+    "The source View is unavailable.": "源视图不可用。",
+    "The system View is unavailable.": "系统视图不可用。",
+    "View names can contain at most 100 characters.": "视图名称最多可包含 100 个字符。",
+    "Copy View": "复制视图",
+    "Create View": "创建视图",
+    "Delete View": "删除视图",
+    "Delete View confirmation": "删除“{name}”？其中的团队、分配、规则和布局将被移除。",
+    "Empty View": "空视图",
+    "Rename": "重命名",
+    "Rename View": "重命名视图",
+    "Source View": "源视图",
+    "Organization View": "组织结构视图",
+    "View name": "视图名称",
+    "View source": "视图来源",
+    "Assign Employees in this View before configuring an export.": "请先在此视图中分配员工，再配置导出。",
+    "Go to Editor": "前往编辑器"
   }
 }

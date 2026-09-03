@@ -123,8 +123,9 @@ async function expectTextBeforeTrailingIcon(locator: Locator) {
 
 async function createLongRosterState(): Promise<OrgToolsState> {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const product = state.organization.structure.units.find((unit) => unit.name === "Product");
-  const platform = state.organization.structure.units.find((unit) => unit.name === "Platform");
+  const systemView = state.organization.views.find((view) => view.kind === "system");
+  const product = systemView?.structure.units.find((unit) => unit.name === "Product");
+  const platform = systemView?.structure.units.find((unit) => unit.name === "Platform");
   const avatar = state.organization.employees[0]?.avatarBase64Url ?? null;
   if (!product || !platform) throw new Error("Synthetic hierarchy is unavailable.");
   const longTagId = "90000000-0000-4000-8000-000000000099";
@@ -1847,6 +1848,7 @@ test("renders split Org Editor controls and reveals search to the left", async (
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
 
   const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
+  const viewActions = page.locator('[data-demo-id="org-editor-view-toolbar"]');
   const historyActions = page.locator('[data-demo-id="org-editor-history-actions"]');
   const topActions = page.locator('[data-demo-id="org-editor-actions"]');
   const viewportActions = page.locator('[data-demo-id="org-editor-viewport-actions"]');
@@ -1895,7 +1897,10 @@ test("renders split Org Editor controls and reveals search to the left", async (
   await expect(canvas).toHaveAttribute("data-grid-base-size", "24");
   await expect(canvas).toHaveAttribute("data-grid-size", "24");
   expect(Number(await canvas.getAttribute("data-grid-screen-size"))).toBe(24);
-  await expect(topActions.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
+  await expect(viewActions).toBeVisible();
+  await expect(viewActions.locator('[data-demo-id="org-editor-view-select"]')).toContainText(
+    "Units",
+  );
   expect(
     await topActions.evaluate(
       (element) => element.firstElementChild?.getAttribute("data-demo-id") ?? null,
@@ -2000,9 +2005,11 @@ test("renders split Org Editor controls and reveals search to the left", async (
   const canvasBox = await canvas.boundingBox();
   const topActionsBox = await topActions.boundingBox();
   const historyActionsBox = await historyActions.boundingBox();
+  const viewActionsBox = await viewActions.boundingBox();
   expect(canvasBox).not.toBeNull();
   expect(topActionsBox).not.toBeNull();
   expect(historyActionsBox).not.toBeNull();
+  expect(viewActionsBox).not.toBeNull();
   const sidebar = page.locator('[data-demo-id="app-sidebar"]');
   expect(
     Number.parseInt(
@@ -2023,7 +2030,8 @@ test("renders split Org Editor controls and reveals search to the left", async (
   expect(tooltipBox).not.toBeNull();
   expect(tooltipBox?.x ?? -1).toBeGreaterThanOrEqual(0);
   expect((tooltipBox?.x ?? 0) + (tooltipBox?.width ?? 0)).toBeLessThanOrEqual(1280);
-  expect(Math.abs((historyActionsBox?.x ?? 0) - (canvasBox?.x ?? 0) - 12)).toBeLessThanOrEqual(1);
+  expect(Math.abs((viewActionsBox?.x ?? 0) - (canvasBox?.x ?? 0) - 18)).toBeLessThanOrEqual(1);
+  expect(historyActionsBox?.x ?? 0).toBeGreaterThan((viewActionsBox?.x ?? 0) + 40);
   expect(
     Math.abs(
       (topActionsBox?.x ?? 0) +
@@ -2064,6 +2072,12 @@ test("renders split Org Editor controls and reveals search to the left", async (
   await platformUnit.click({ modifiers: ["Control"], position: { x: 72, y: 64 } });
   await expect(editorUnit).toHaveClass(/border-signal/u);
   await expect(platformUnit).toHaveClass(/border-signal/u);
+
+  const tagFooter = editorUnit.locator("[data-org-editor-unit-tag-footer]");
+  await expect(tagFooter).toContainText("Design");
+  await expect(tagFooter).toContainText("· 2");
+  await expect(tagFooter).toHaveCSS("border-width", "0px");
+  await expect(tagFooter).toHaveCSS("box-shadow", "none");
   await expect(editorCommand).toHaveText("Arrange selected");
   const dragBox = await editorUnit.boundingBox();
   if (!dragBox) throw new Error("Selected Editor Unit is unavailable for group drag.");
@@ -2089,6 +2103,57 @@ test("renders split Org Editor controls and reveals search to the left", async (
   expect(darkUnitHover).toEqual(darkUnitResting);
   expect(darkUnitHover.alpha).toBe(1);
   expect(darkUnitHover.opacity).toBe("1");
+  await assertLocalRequests();
+});
+
+test("creates, isolates, renames, restores, and deletes Editor Views", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+
+  const viewSelect = page.locator('[data-demo-id="org-editor-view-select"]');
+  await expect(viewSelect).toContainText("Units");
+  await page.locator('[data-demo-id="org-editor-create-view"]').click();
+  let dialog = page.getByRole("dialog", { name: "Create View", exact: true });
+  await dialog.getByLabel("View name", { exact: true }).fill("Scenario A");
+  await dialog.getByLabel("View source", { exact: true }).click();
+  await page.getByRole("option", { name: "Copy a View", exact: true }).click();
+  await dialog.getByRole("button", { name: "Create", exact: true }).click();
+
+  await expect(viewSelect).toContainText("Scenario A");
+  const copiedProduct = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await copiedProduct.click({ button: "right", position: { x: 20, y: 20 } });
+  await page.locator('[data-demo-id="org-editor-edit-unit-action"]').click();
+  dialog = page.getByRole("dialog", { name: "Edit Unit", exact: true });
+  await dialog.getByLabel("Name", { exact: true }).fill("Future Product");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toBeVisible();
+
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Units", exact: true }).click();
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Product"]')).toBeVisible();
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Scenario A", exact: true }).click();
+
+  await page.locator('[data-demo-id="org-editor-rename-view"]').click();
+  dialog = page.getByRole("dialog", { name: "Rename View", exact: true });
+  await dialog.getByLabel("View name", { exact: true }).fill("Scenario B");
+  await dialog.getByRole("button", { name: "Rename", exact: true }).click();
+  await expect(viewSelect).toContainText("Scenario B");
+  await page.waitForTimeout(500);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(viewSelect).toContainText("Scenario B");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toBeVisible();
+
+  await page.locator('[data-demo-id="org-editor-delete-view"]').click();
+  dialog = page.getByRole("dialog", { name: "Delete View", exact: true });
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(viewSelect).toContainText("Units");
+  await viewSelect.click();
+  await expect(page.getByRole("option", { name: "Scenario B", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await assertLocalRequests();
 });
 
@@ -2258,6 +2323,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   await page.setViewportSize({ width: 1280, height: 720 });
   await openBlankState(page);
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const systemView = state.organization.views.find((view) => view.kind === "system");
   const timestamp = "2026-08-31T12:00:00.000Z";
   const uuid = (group: string, index: number) =>
     `00000000-0000-${group}-8000-${index.toString(16).padStart(12, "0")}`;
@@ -2284,7 +2350,8 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     updatedAt: timestamp,
     username: `employee-${index + 1}`,
   }));
-  state.organization.structure.units = Array.from({ length: 4_000 }, (_, index) => {
+  if (!systemView) throw new Error("System View is unavailable.");
+  systemView.structure.units = Array.from({ length: 4_000 }, (_, index) => {
     const firstEmployeeIndex = index * 5;
     const employeeIds = Array.from({ length: 5 }, (_, offset) =>
       employeeId(firstEmployeeIndex + offset),
@@ -2311,8 +2378,14 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   state.ui.activeTab = "orgEditor";
   state.ui.expandedUnitIds = [];
   state.ui.selectedUnitId = null;
-  state.ui.editor.selectedItems = [];
-  state.ui.editor.viewport = { scale: 1, x: 0, y: 0 };
+  state.ui.editor.activeViewId = systemView.id;
+  state.ui.editor.views = [
+    {
+      selectedItems: [],
+      viewId: systemView.id,
+      viewport: { scale: 1, x: 0, y: 0 },
+    },
+  ];
   const dialog = await openImportDialog(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
@@ -2789,6 +2862,10 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   let tagRow = catalog
     .locator('[data-demo-id="tag-catalog-row"]:has([data-tag-color="#7c3aed"])')
     .first();
+  await expect(catalog.locator('[data-demo-id="tag-catalog-row"]').first().locator("..")).toHaveCSS(
+    "row-gap",
+    "12px",
+  );
   await expect(tagRow).toHaveCSS("border-width", "0px");
   await expectTransparentBackground(tagRow);
   await expect(tagRow).toHaveCSS("padding-top", "0px");

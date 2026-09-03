@@ -21,8 +21,9 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
 - Employee avatars are bounded embedded PNG, JPEG, or WebP data URLs. Never fetch remote avatars.
 - Employee IDs are stable UUID v4 values. Detect duplicates separately through the normalized
   first-name, last-name, and email tuple; identity edits must never change the Employee ID.
-- The organization has one current Unit structure. Do not reintroduce alternate Views, View-local
-  Employees, or selectors for structural documents.
+- The system View is the canonical Unit structure used by Units, Employee Import, and Analytics.
+  Custom Editor Views may own isolated Unit documents, assignments, rules, history, and geometry,
+  while Employees, custom fields, and Tags remain one global catalog shared by every View.
 - Profile and email navigation must require an explicit user action and use referrer protections.
 - Source comments, fixtures, tests, specifications, and documentation are English. Non-English
   product copy is allowed only in its matching catalog under `apps/ui/messages/{locale}.json` for

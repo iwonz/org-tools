@@ -1,6 +1,7 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTagColor,
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
@@ -8,6 +9,7 @@ import type {
   OrgEditorState,
   OrgEditorUnit,
   OrgEditorUnitId,
+  TagId,
   Unit,
 } from "@org-tools/types";
 import { createUuid } from "@/lib/employee-data";
@@ -44,6 +46,9 @@ export const ORG_EDITOR_UNIT_LAYER_GAP = 64;
 export const ORG_EDITOR_UNIT_ROOT_GAP = 64;
 export const ORG_EDITOR_UNIT_MIN_HEIGHT = 120;
 export const ORG_EDITOR_UNIT_COLLAPSED_HEIGHT = ORG_EDITOR_UNIT_HEADER_HEIGHT;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT = 20;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_GAP = 4;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_PADDING = 8;
 export const ORG_EDITOR_DEFAULT_LAYOUT_MODE: OrgEditorLayoutMode = "topDown";
 export const ORG_EDITOR_GRID_SIZE = 24;
 export const ORG_EDITOR_GRID_MIN_SCREEN_SIZE = 24;
@@ -66,6 +71,13 @@ export type OrgEditorUnitEmployeeSummary = {
   directCount: number;
   hasChildUnits: boolean;
   totalCount: number;
+};
+
+export type OrgEditorUnitTagSummary = {
+  color: EmployeeTagColor | null;
+  count: number;
+  label: string;
+  tagId: TagId;
 };
 
 export const snapOrgEditorCoordinate = (value: number) =>
@@ -97,6 +109,75 @@ const employeeRowLayoutSourceByUnitId = new Map<
   OrgEditorUnitId,
   { heightByEmployeeId: ReadonlyMap<EmployeeId, number>; orderedEmployeeIds: readonly EmployeeId[] }
 >();
+const tagFooterHeightByUnitId = new Map<OrgEditorUnitId, number>();
+
+export const buildOrgEditorUnitTagSummary = (
+  unit: Pick<OrgEditorUnit, "employeeIds">,
+  employeeById: ReadonlyMap<EmployeeId, Employee>,
+  tagOrder: readonly TagId[],
+): OrgEditorUnitTagSummary[] => {
+  const countByTagId = new Map<TagId, number>();
+  const tagById = new Map<TagId, { color: EmployeeTagColor | null; label: string }>();
+  for (const employeeId of new Set(unit.employeeIds)) {
+    const seen = new Set<TagId>();
+    for (const tag of employeeById.get(employeeId)?.tags ?? []) {
+      if (!tag.tagId || seen.has(tag.tagId)) continue;
+      seen.add(tag.tagId);
+      countByTagId.set(tag.tagId, (countByTagId.get(tag.tagId) ?? 0) + 1);
+      tagById.set(tag.tagId, { color: tag.color ?? null, label: tag.label });
+    }
+  }
+  const orderByTagId = new Map(tagOrder.map((tagId, index) => [tagId, index]));
+  return [...countByTagId]
+    .map(([tagId, count]) => ({
+      color: tagById.get(tagId)?.color ?? null,
+      count,
+      label: tagById.get(tagId)?.label ?? "",
+      tagId,
+    }))
+    .sort(
+      (first, second) =>
+        (orderByTagId.get(first.tagId) ?? Number.MAX_SAFE_INTEGER) -
+          (orderByTagId.get(second.tagId) ?? Number.MAX_SAFE_INTEGER) ||
+        first.label.localeCompare(second.label),
+    );
+};
+
+export const getOrgEditorUnitTagFooterHeight = (
+  summaries: readonly OrgEditorUnitTagSummary[],
+  availableWidth: number,
+) => {
+  if (summaries.length === 0) return 0;
+  let rows = 1;
+  let usedWidth = 0;
+  for (const summary of summaries) {
+    const width = getOrgEditorUnitTagFooterChipWidth(summary, availableWidth);
+    if (usedWidth > 0 && usedWidth + ORG_EDITOR_UNIT_TAG_FOOTER_GAP + width > availableWidth) {
+      rows += 1;
+      usedWidth = width;
+    } else {
+      usedWidth += (usedWidth > 0 ? ORG_EDITOR_UNIT_TAG_FOOTER_GAP : 0) + width;
+    }
+  }
+  return (
+    ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 +
+    rows * ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT +
+    (rows - 1) * ORG_EDITOR_UNIT_TAG_FOOTER_GAP
+  );
+};
+
+export const getOrgEditorUnitTagFooterChipWidth = (
+  summary: Pick<OrgEditorUnitTagSummary, "count" | "label">,
+  availableWidth: number,
+) =>
+  Math.min(
+    availableWidth,
+    Math.max(44, summary.label.length * 6.2 + String(summary.count).length * 6 + 36),
+  );
+
+export const setOrgEditorUnitTagFooterHeight = (unitId: OrgEditorUnitId, height: number): void => {
+  tagFooterHeightByUnitId.set(unitId, height);
+};
 
 export const packOrgEditorTagLabels = (
   labels: readonly string[],
@@ -309,10 +390,12 @@ export const getOrgEditorUnitHeight = (
   unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds" | "id">,
 ) => {
   const rowLayout = getOrgEditorEmployeeRowLayout(unit);
-  return getOrgEditorUnitHeightForEmployeeRows({
-    collapsed: unit.collapsed,
-    employeeRowHeights: rowLayout.heights,
-  });
+  return (
+    getOrgEditorUnitHeightForEmployeeRows({
+      collapsed: unit.collapsed,
+      employeeRowHeights: rowLayout.heights,
+    }) + (unit.collapsed ? 0 : (tagFooterHeightByUnitId.get(unit.id) ?? 0))
+  );
 };
 
 export const getOrgEditorUnitDisplayName = (unit: Pick<OrgEditorUnit, "name">) =>

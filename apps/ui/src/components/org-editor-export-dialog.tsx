@@ -1,6 +1,12 @@
 "use client";
 
-import type { Employee, EmployeeId, OrgEditorLayoutMode, OrgEditorUnit } from "@org-tools/types";
+import type {
+  Employee,
+  EmployeeId,
+  OrgEditorLayoutMode,
+  OrgEditorUnit,
+  TagId,
+} from "@org-tools/types";
 import Image from "next/image";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -91,6 +97,7 @@ type OrgEditorExportDialogProps = {
   onOpenChange: (open: boolean) => void;
   open: boolean;
   sourceIndex: OrgEditorSourceIndex;
+  tagOrder: readonly TagId[];
   unit: OrgEditorUnit | null;
   units: OrgEditorUnit[];
 };
@@ -129,6 +136,7 @@ export function OrgEditorExportDialog({
   onOpenChange,
   open,
   sourceIndex,
+  tagOrder,
   unit,
   units,
 }: OrgEditorExportDialogProps) {
@@ -312,6 +320,7 @@ export function OrgEditorExportDialog({
       rootUnit: unit,
       scope,
       settings: imageSettings,
+      tagOrder,
       units,
     })
       .then((blob) => {
@@ -345,6 +354,7 @@ export function OrgEditorExportDialog({
     locale,
     open,
     scope,
+    tagOrder,
     unit,
     units,
   ]);
@@ -383,6 +393,7 @@ export function OrgEditorExportDialog({
       rootUnit: unit,
       scope,
       settings: imageSettings,
+      tagOrder,
       units,
     });
   };

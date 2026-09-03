@@ -3,7 +3,7 @@ import type {
   EmployeeGender,
   EmployeeTagDefinition,
 } from "./employee.js";
-import type { EmployeeFieldId, EmployeeId, TagId, UnitId } from "./ids.js";
+import type { EmployeeFieldId, EmployeeId, TagId, UnitId, ViewId } from "./ids.js";
 import type {
   OrgEditorCanvasViewport,
   OrgEditorLayoutMode,
@@ -88,6 +88,26 @@ export type OrgToolsDownloadState = {
   tabMode: "json" | "template";
   templateFormat: string;
   unitQuery: string;
+  sourceViewId: ViewId;
+};
+
+type OrgToolsViewDocumentBase = {
+  createdAt: string;
+  id: ViewId;
+  structure: {
+    layoutMode: OrgEditorLayoutMode;
+    units: OrgEditorUnit[];
+  };
+  updatedAt: string;
+};
+
+export type OrgToolsViewDocument = OrgToolsViewDocumentBase &
+  ({ kind: "custom"; name: string } | { kind: "system"; name: null });
+
+export type OrgToolsViewUiState = {
+  selectedItems: OrgEditorSelectedItem[];
+  viewId: ViewId;
+  viewport: OrgEditorCanvasViewport;
 };
 
 export type OrgToolsUiState = {
@@ -102,10 +122,10 @@ export type OrgToolsUiState = {
   };
   download: OrgToolsDownloadState;
   editor: {
+    activeViewId: ViewId;
     searchOpen: boolean;
     searchQuery: string;
-    selectedItems: OrgEditorSelectedItem[];
-    viewport: OrgEditorCanvasViewport;
+    views: OrgToolsViewUiState[];
   };
   employees: {
     filters: OrgToolsEmployeeFilters;
@@ -127,11 +147,8 @@ export type OrgToolsState = {
   organization: {
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
-    structure: {
-      layoutMode: OrgEditorLayoutMode;
-      units: OrgEditorUnit[];
-    };
     tags: EmployeeTagDefinition[];
+    views: OrgToolsViewDocument[];
   };
   ui: OrgToolsUiState;
 };

@@ -13,20 +13,19 @@ type OrgToolsState = {
   organization: {
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
-    structure: {
-      layoutMode: "leftRight" | "topDown";
-      units: OrgEditorUnit[];
-    };
     tags: EmployeeTagDefinition[]; // null, a named preset, or canonical lowercase #rrggbb[aa]
+    views: OrgToolsViewDocument[];
   };
   ui: OrgToolsUiState;
 };
 ```
 
 No additional top-level properties are accepted. There is no `kind`, `content`, version, partial
-scope, compatibility alias, or migration reader. Older View-based state files are rejected without
-mutation. Import validates one detached candidate up to 25 MiB and atomically replaces the current
-state after confirmation. Export downloads `org-tools-state.json`.
+scope, compatibility alias, or migration reader. Exactly one View is the protected system **Units**
+document; custom Views contain independent Unit documents while Employees, fields, and Tags remain
+global. Older single-structure state files are rejected without mutation. Import validates one
+detached candidate up to 25 MiB and atomically replaces the current state after confirmation.
+Export downloads `org-tools-state.json` with every View.
 
 ## Employees
 
@@ -49,7 +48,8 @@ type EmployeeImportRecord = Record<string, unknown> & {
 The Employee `id` mapping is mandatory and contains a UUID. `path` is the portable root-to-Team name
 path. A Team `id` can identify an existing Team from the current state.
 
-The optional mapped `birthday` field is either null or one zero-padded `DD.MM.YYYY` string. A real
+Portable Team assignments always target the system View; Employee Import never creates or changes a
+custom View. The optional mapped `birthday` field is either null or one zero-padded `DD.MM.YYYY` string. A real
 known year starts at 1901 and cannot be in the future. `1900` is reserved to mean that only day and
 month are known; `29.02.1900` is valid unknown-year data. `MM-DD`, ISO dates, timestamps, partial
 dates, and locale-dependent text are rejected without conversion.

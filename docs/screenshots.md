@@ -271,6 +271,41 @@ Arrange opaque Unit cards on the adaptive snap grid with frame-bounded gestures,
 
 Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse.
 
+### Editor View selector
+
+[![Editor View selector](screenshots/feature-editor-view-selector.png)](screenshots/feature-editor-view-selector.png)
+
+Switch between the protected system Units structure and independent planning Views from the compact
+canvas toolbar.
+
+Capabilities: System View, Custom Views, Localized selector, Canvas context.
+
+### Create or copy a View
+
+[![Create or copy a View](screenshots/feature-editor-view-create-copy.png)](screenshots/feature-editor-view-create-copy.png)
+
+Create a blank planning canvas or copy any existing View with remapped Unit identity and isolated
+history.
+
+Capabilities: Blank View, Copy View, Source selection, Unique names.
+
+### Isolated organization scenario
+
+[![Isolated organization scenario](screenshots/feature-editor-view-isolated.png)](screenshots/feature-editor-view-isolated.png)
+
+Edit the Unit hierarchy, assignments, rules, and geometry inside a custom View without changing the
+system Units structure.
+
+Capabilities: Isolated Units, Global Employees, Independent layout, View-local history.
+
+### Rename and delete a View
+
+[![Rename and delete a View](screenshots/feature-editor-view-manage.png)](screenshots/feature-editor-view-manage.png)
+
+Rename or deliberately delete a custom View while the protected system Units View remains immutable.
+
+Capabilities: Rename, Delete confirmation, Protected system View, Localized validation.
+
 ### Editor search
 
 [![Editor search](screenshots/feature-editor-search.png)](screenshots/feature-editor-search.png)
@@ -300,9 +335,10 @@ Capabilities: Multi-selection, Boss assignment, Bulk tags, Edit, Copy, Delete.
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping colored tags,
-localized boss marker, and connections follow the live canvas without printing Static/Live
-membership type, then choose transparent, solid, or gradient backgrounds in the same dialog.
+Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping colored
+tags, direct-membership Tag footer, localized boss marker, and connections follow the live canvas
+without printing Static/Live membership type, then choose transparent, solid, or gradient
+backgrounds in the same dialog.
 
 Capabilities: Inline PNG preview, Complete colored tags, Membership-neutral cards, Hierarchy,
 Localized boss marker, Iconic scope, Background presets.
@@ -412,9 +448,10 @@ Capabilities: Discoverable shortcut, Caret menu, Localized descriptions, Keyboar
 
 [![Download source selection](screenshots/feature-download-source-selection.png)](screenshots/feature-download-source-selection.png)
 
-Select Employees from Teams or the catalog, inspect and filter the resulting set, then continue from the shared header.
+Choose a system or custom View, select its assigned Employees from Units or the catalog, inspect the
+resulting set, then continue from the shared header.
 
-Capabilities: Team sources, Employee sources, Selected set, Search and filters, Exclusions.
+Capabilities: View source, Team sources, Employee sources, Selected set, Search and filters, Exclusions.
 
 ### JSON Unit and Tag exclusions
 
@@ -465,12 +502,13 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   cards while retaining the conditional Past section.
 - Confirm an unselected Editor Unit keeps its resting background and opacity during passive hover in
   both themes.
-- Confirm the Editor operates directly on the one current Unit structure and exposes no View
-  selector, create, rename, or delete controls.
+- Confirm the Editor system View is the same Unit document used by Units; custom Views isolate Units,
+  assignments, rules, geometry, history, clipboard, selection, and viewport while global Employee
+  and Tag edits remain visible everywhere. System View lifecycle actions stay disabled.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
-  heights, and connection endpoints without card overlap, membership-type labels, or transient
-  editing chrome.
+  heights, direct-Employee Tag footer, and connection endpoints without card overlap,
+  membership-type labels, or transient editing chrome.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
@@ -485,5 +523,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 48 PNGs must retain identical hashes. Material differences require
+- Regenerate immediately; all 52 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

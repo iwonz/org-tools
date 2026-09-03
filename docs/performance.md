@@ -5,8 +5,8 @@ The maintained target is 20,000 Employees and 4,000 Units on a modern desktop br
 ## State and persistence
 
 Organization and durable UI observations are separate. UI-only actions serialize only bounded
-scalars, filters, selection, and viewport. They never traverse the Employee catalog, Unit graph,
-Live rules, or editor document. Text input is coalesced by the 300 ms UI delay. Organization
+scalars, filters, active View, and per-View selection/viewport. They never traverse the Employee
+catalog, View Unit graphs, Live rules, or editor documents. Text input is coalesced by the 300 ms UI delay. Organization
 snapshots are created for logical organization actions and are kept behind a single-flight write
 queue; a newer pending snapshot replaces an older pending snapshot.
 
@@ -28,7 +28,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   Analytics, and filters reuse its derived recurring month-day key without duplicating Employee data.
 - Resolve custom Template dependencies once per definition graph and memoize derived Employee
   values by organization revision. Filter option discovery and output reuse the same cache.
-- Build the current derived structure once per organization change and reuse its indexes.
+- Cache derived structures by View document revision and global Employee/Tag/field references.
+  Materialize only the system View, active Editor View, and selected Download View at once.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
   the ordinary Employee virtualizer; do not create virtual header rows or repeat count formatting.
@@ -38,7 +39,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Query visible Unit and connection candidates through a geometry-keyed spatial index that is not
   rebuilt for pointer samples.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
-  commands to the 24-unit document grid.
+  commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
+  View and their cached wrapped footer heights participate in the same geometry pass.
 
 Analytics builds every count group, known birth-year index, and gender age cohort in one Employee
 pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys
@@ -57,7 +59,7 @@ in one O(n) pass, renders at most 128 KiB of that record, validates UUID and ide
 canonical complete birthdays in the same pass, keeps per-row overrides sparse, and virtualizes the
 three review columns. Pending custom Value definitions remain bounded metadata and are committed only
 with a successful atomic Apply. Global Export computes only the complete state after the explicit
-action. Data Download derives only selected sources, caps preview work at 50 records or rows and
+action. Data Download derives only the selected View/source, caps preview work at 50 records or rows and
 128 KiB, and builds complete JSON or Template output in yielding batches only for Copy or Download.
 The source and selected panes retain equal width on desktop and equal height on narrow screens; their
 geometry does not depend on the current source tab. Template token filtering uses the bounded

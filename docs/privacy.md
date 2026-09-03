@@ -19,7 +19,8 @@ retains the database plus any existing sidecars under timestamped backup names. 
 restores the original file family.
 
 Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
-complete state or map an Employee array with optional nested Team assignments; the source, bounded
+complete state (including every View) or map an Employee array with optional nested Team assignments
+into the system View; the source, bounded
 richest-record preview, virtualized source-to-target mapping, pending custom fields, and duplicate choices are discarded when the modal closes. Birthday
 validation is local and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without
 inferring one. Employee UUID creation, duplicate-key normalization, custom Template evaluation, and
@@ -29,7 +30,8 @@ ordering, bounded previews, image painting, copying, and downloads all remain in
 the full Tag color palette and exact HTML Keyword, HEX, RGB, or RGBA parser run locally and persist
 only canonical lowercase six- or eight-digit HEX without contacting a palette, color, or asset
 service. Palette gestures commit only their final valid color; invalid or canceled drafts are discarded without changing state. Bundled language flags never create network requests. Dragging a field never transmits or
-persists organization data. Organization records are never
+persists organization data. Custom Views contain references to the same global Employee catalog and
+never duplicate profile or avatar payloads. Organization records are never
 copied to browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs;
 remote avatars are never fetched. Crop encoding prefers WebP and falls back only to the browser's
 local PNG canvas encoder; neither path uploads the source or result. Profile and email navigation

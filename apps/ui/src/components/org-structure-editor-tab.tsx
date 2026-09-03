@@ -64,6 +64,7 @@ import { useAppLocale } from "@/components/locale-provider";
 import { MiddleDot } from "@/components/middle-dot";
 import { OrgEditorExportDialog } from "@/components/org-editor-export-dialog";
 import { OrgEditorHistoryToolbar } from "@/components/org-editor-history-toolbar";
+import { OrgViewToolbar } from "@/components/org-view-toolbar";
 import {
   createEmptyEmployeeSearchFilters,
   filterEmployeesBySearch,
@@ -103,6 +104,7 @@ import {
 import type { OrgEditorSourceIndex } from "@/lib/org-editor";
 import {
   buildOrgEditorUnitEmployeeSummaryById,
+  buildOrgEditorUnitTagSummary,
   createOrgEditorSelectedItemKey,
   findOrgEditorEmployeeRowIndex,
   getAdaptiveOrgEditorGridSize,
@@ -115,6 +117,8 @@ import {
   getOrgEditorUnitDescendantIds,
   getOrgEditorUnitDisplayName,
   getOrgEditorUnitHeight,
+  getOrgEditorUnitTagFooterChipWidth,
+  getOrgEditorUnitTagFooterHeight,
   getOrgEditorUnitWidth,
   getOrgEditorVisibleEmployeeIds,
   isPointInsideRect,
@@ -124,13 +128,16 @@ import {
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
   ORG_EDITOR_UNIT_VERTICAL_GAP,
   type OrgEditorUnitEmployeeSummary,
+  type OrgEditorUnitTagSummary,
   setOrgEditorUnitEmployeeRowHeights,
+  setOrgEditorUnitTagFooterHeight,
 } from "@/lib/org-editor";
 import {
   createLatestFrameScheduler,
   createSpatialIndex,
   getUnitPointerSelectionIntent,
 } from "@/lib/org-editor-interaction";
+import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { cn } from "@/lib/utils";
@@ -962,6 +969,7 @@ function OrgEditorNode({
   onUnitPointerDown,
   selectedItemKeySet,
   summary,
+  tagSummary,
   textDirection,
   unit,
   visibleWorldRect,
@@ -991,6 +999,7 @@ function OrgEditorNode({
   onUnitPointerDown: (event: React.PointerEvent<HTMLFieldSetElement>, unit: OrgEditorUnit) => void;
   selectedItemKeySet: ReadonlySet<string>;
   summary: OrgEditorUnitEmployeeSummary;
+  tagSummary: OrgEditorUnitTagSummary[];
   textDirection: "ltr" | "rtl";
   unit: OrgEditorUnit;
   visibleWorldRect: CanvasRect;
@@ -1004,8 +1013,14 @@ function OrgEditorNode({
   const unitWidth = getOrgEditorUnitWidth(unit);
   const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById);
   const employeeRowLayout = getOrgEditorEmployeeRowLayout(unit);
+  const tagFooterHeight = unit.collapsed
+    ? 0
+    : getOrgEditorUnitTagFooterHeight(tagSummary, unitWidth - 16);
   const shouldRenderEmployeeList = !unit.collapsed || visibleEmployeeIds.length > 0;
-  const employeeListHeight = Math.max(0, unitHeight - ORG_EDITOR_UNIT_HEADER_HEIGHT);
+  const employeeListHeight = Math.max(
+    0,
+    unitHeight - ORG_EDITOR_UNIT_HEADER_HEIGHT - tagFooterHeight,
+  );
   const shouldVirtualizeEmployees =
     !unit.collapsed && visibleEmployeeIds.length > EMPLOYEE_LIST_VIRTUALIZATION_THRESHOLD;
   const visibleListTop =
@@ -1252,6 +1267,31 @@ function OrgEditorNode({
               );
             })
           )}
+        </div>
+      )}
+      {!unit.collapsed && tagSummary.length > 0 && (
+        <div
+          className="mt-auto flex shrink-0 flex-wrap content-start gap-1 rounded-b-[7px] bg-muted/45 p-2"
+          data-org-editor-unit-tag-footer
+          style={{ minHeight: tagFooterHeight }}
+        >
+          {tagSummary.map((tag) => (
+            <span
+              className={cn(
+                "inline-flex h-5 max-w-full items-center rounded-md px-2 text-[10px] leading-none",
+                tagColorSurfaceClassName(tag.color),
+              )}
+              data-tag-color={tag.color ?? "none"}
+              key={tag.tagId}
+              style={{
+                ...customTagColorSurfaceStyle(tag.color),
+                width: getOrgEditorUnitTagFooterChipWidth(tag, getOrgEditorUnitWidth(unit) - 16),
+              }}
+            >
+              <span className="truncate">{tag.label}</span>
+              <span className="ms-1 opacity-70">· {tag.count}</span>
+            </span>
+          ))}
         </div>
       )}
       {isEmployeeDropTarget && (
@@ -1606,7 +1646,7 @@ export const OrgStructureEditorTab = observer(() => {
   const countText = useCountText();
   const format = useAppFormatter();
   const store = useOrgStore();
-  const units = store.units;
+  const units = store.editorUnits;
   const editor = store.orgEditor;
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
@@ -1726,7 +1766,7 @@ export const OrgStructureEditorTab = observer(() => {
     setRenderViewport((currentViewport) =>
       areViewportsEqual(currentViewport, editor.viewport) ? currentViewport : editor.viewport,
     );
-  }, [editor.viewport]);
+  }, [editor, editor.viewport]);
   const selectedItemKeySet = useMemo(
     () => new Set(editor.selectedItems.map(createOrgEditorSelectedItemKey)),
     [editor.selectedItems],
@@ -1751,6 +1791,7 @@ export const OrgStructureEditorTab = observer(() => {
     activeEditorStructure?.indexes.employeeSearchDocumentByEmployeeId ?? EMPTY_SEARCH_DOCUMENT_MAP;
   const positionOptions = activeEditorStructure?.indexes.positionOptions ?? [];
   const tagOptions = activeEditorStructure?.indexes.tagOptions ?? [];
+  const tagOrder = useMemo(() => store.tagDefinitions.map((tag) => tag.id), [store.tagDefinitions]);
   const resolvedLiveEmployeeIdsByUnitId = editor.resolvedLiveEmployeeIdsByUnitId;
   const displayUnits = useMemo(
     () =>
@@ -1790,6 +1831,18 @@ export const OrgStructureEditorTab = observer(() => {
       setOrgEditorUnitEmployeeRowHeights(unit.id, heights, orderedEmployeeIds);
     }
   }, [displayUnits, employeeById, format]);
+  const unitTagSummaryByUnitId = useMemo(() => {
+    const summaryByUnitId = new Map<OrgEditorUnitId, OrgEditorUnitTagSummary[]>();
+    for (const unit of displayUnits) {
+      const summary = buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder);
+      const footerHeight = unit.collapsed
+        ? 0
+        : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16);
+      summaryByUnitId.set(unit.id, summary);
+      setOrgEditorUnitTagFooterHeight(unit.id, footerHeight);
+    }
+    return summaryByUnitId;
+  }, [displayUnits, employeeById, tagOrder]);
   const unitById = useMemo(
     () => new Map(displayUnits.map((unit) => [unit.id, unit] as const)),
     [displayUnits],
@@ -2561,6 +2614,47 @@ export const OrgStructureEditorTab = observer(() => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
+  const handleWheel = useCallback(
+    (event: WheelEvent) => {
+      event.preventDefault();
+      const currentViewport = pendingViewportRef.current ?? renderViewportRef.current;
+      const nextScale = clamp(
+        currentViewport.scale * (event.deltaY > 0 ? 0.92 : 1.08),
+        MIN_CANVAS_SCALE,
+        MAX_CANVAS_SCALE,
+      );
+      const screenPoint = { x: event.clientX, y: event.clientY };
+      const bounds = canvasRef.current?.getBoundingClientRect();
+      const canvasPoint = {
+        x: (screenPoint.x - (bounds?.left ?? 0) - currentViewport.x) / currentViewport.scale,
+        y: (screenPoint.y - (bounds?.top ?? 0) - currentViewport.y) / currentViewport.scale,
+      };
+      const nextViewport = {
+        scale: nextScale,
+        x: screenPoint.x - (bounds?.left ?? 0) - canvasPoint.x * nextScale,
+        y: screenPoint.y - (bounds?.top ?? 0) - canvasPoint.y * nextScale,
+      };
+
+      scheduleViewportPreview(nextViewport);
+      if (wheelCommitTimeoutRef.current !== null) {
+        window.clearTimeout(wheelCommitTimeoutRef.current);
+      }
+      wheelCommitTimeoutRef.current = window.setTimeout(() => {
+        wheelCommitTimeoutRef.current = null;
+        commitViewport(pendingViewportRef.current ?? renderViewportRef.current);
+      }, ORG_EDITOR_WHEEL_COMMIT_DELAY_MS);
+    },
+    [commitViewport, scheduleViewportPreview],
+  );
+
+  useEffect(() => {
+    if (!units) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, [handleWheel, units]);
+
   if (!units) return null;
 
   const openCreateUnit = (point: CanvasPoint, parentId: OrgEditorUnitId | null = null) => {
@@ -2663,36 +2757,6 @@ export const OrgStructureEditorTab = observer(() => {
       x: screenX - canvasPoint.x * nextScale,
       y: screenY - canvasPoint.y * nextScale,
     });
-  };
-
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const currentViewport = pendingViewportRef.current ?? renderViewportRef.current;
-    const nextScale = clamp(
-      currentViewport.scale * (event.deltaY > 0 ? 0.92 : 1.08),
-      MIN_CANVAS_SCALE,
-      MAX_CANVAS_SCALE,
-    );
-    const screenPoint = { x: event.clientX, y: event.clientY };
-    const bounds = canvasRef.current?.getBoundingClientRect();
-    const canvasPoint = {
-      x: (screenPoint.x - (bounds?.left ?? 0) - currentViewport.x) / currentViewport.scale,
-      y: (screenPoint.y - (bounds?.top ?? 0) - currentViewport.y) / currentViewport.scale,
-    };
-    const nextViewport = {
-      scale: nextScale,
-      x: screenPoint.x - (bounds?.left ?? 0) - canvasPoint.x * nextScale,
-      y: screenPoint.y - (bounds?.top ?? 0) - canvasPoint.y * nextScale,
-    };
-
-    scheduleViewportPreview(nextViewport);
-    if (wheelCommitTimeoutRef.current !== null) {
-      window.clearTimeout(wheelCommitTimeoutRef.current);
-    }
-    wheelCommitTimeoutRef.current = window.setTimeout(() => {
-      wheelCommitTimeoutRef.current = null;
-      commitViewport(pendingViewportRef.current ?? renderViewportRef.current);
-    }, ORG_EDITOR_WHEEL_COMMIT_DELAY_MS);
   };
 
   const finishWheelPreview = () => {
@@ -3088,7 +3152,6 @@ export const OrgStructureEditorTab = observer(() => {
           onAuxClick={(event) => event.preventDefault()}
           onContextMenu={handleCanvasContextMenu}
           onPointerDown={handleCanvasPointerDown}
-          onWheel={handleWheel}
           ref={canvasRef}
           role="application"
           style={{
@@ -3164,6 +3227,7 @@ export const OrgStructureEditorTab = observer(() => {
                     totalCount: unit.employeeIds.length,
                   }
                 }
+                tagSummary={unitTagSummaryByUnitId.get(unit.id) ?? []}
                 textDirection={textDirection}
                 unit={unit}
                 visibleWorldRect={visibleWorldRect}
@@ -3434,27 +3498,36 @@ export const OrgStructureEditorTab = observer(() => {
           )}
         </div>
 
-        {editor.units.length > 0 && (
-          <div
-            className={cn(
-              "absolute start-3 top-3 z-30 flex items-stretch gap-1",
-              ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
-            )}
-            data-demo-id="org-editor-history-actions"
-          >
-            <OrgEditorHistoryToolbar
-              canRedo={editor.canRedo}
-              canUndo={editor.canUndo}
-              onRedo={editor.redo}
-              onUndo={editor.undo}
+        <div className="absolute start-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] min-w-0 items-stretch gap-2">
+          <div className={ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME}>
+            <OrgViewToolbar
+              activeViewId={store.activeOrgViewId}
+              onCreate={store.createOrgView}
+              onDelete={store.deleteOrgView}
+              onRename={store.renameOrgView}
+              onSelect={store.selectOrgView}
+              views={store.orgViewList}
             />
           </div>
-        )}
+          {editor.units.length > 0 && (
+            <div
+              className={ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME}
+              data-demo-id="org-editor-history-actions"
+            >
+              <OrgEditorHistoryToolbar
+                canRedo={editor.canRedo}
+                canUndo={editor.canUndo}
+                onRedo={editor.redo}
+                onUndo={editor.undo}
+              />
+            </div>
+          )}
+        </div>
 
         {editor.units.length > 0 && (
           <div
             className={cn(
-              "absolute end-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-end gap-1",
+              "absolute end-3 top-16 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-end gap-1 sm:top-3",
               ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
             )}
             data-demo-id="org-editor-actions"
@@ -3610,9 +3683,14 @@ export const OrgStructureEditorTab = observer(() => {
           onOpenChange={(open) => !open && setEmployeeDialogState(null)}
           onSave={(fields, assignments) => {
             if (!employeeDialogState.employee) {
-              store.createEmployee(fields, assignments);
+              store.createEmployee(fields, assignments, store.activeOrgViewId);
             } else {
-              store.updateEmployee(employeeDialogState.employee.id, fields, assignments);
+              store.updateEmployee(
+                employeeDialogState.employee.id,
+                fields,
+                assignments,
+                store.activeOrgViewId,
+              );
             }
           }}
           open={Boolean(employeeDialogState)}
@@ -3628,6 +3706,7 @@ export const OrgStructureEditorTab = observer(() => {
         }}
         open={Boolean(exportUnit)}
         sourceIndex={sourceIndex}
+        tagOrder={tagOrder}
         unit={exportUnit}
         units={displayUnits}
       />

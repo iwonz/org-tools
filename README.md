@@ -23,7 +23,7 @@ requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 48 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 52 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
@@ -42,7 +42,10 @@ dialogs. No font or translation asset is loaded from the network.
 
 Data Download and Editor JSON export use one drag-sortable field list: scalar Employee fields,
 Units, and Tags appear in their exact output order. Editor Image export keeps a compact inline
-preview with localized boss text and no secondary image viewer.
+preview with localized boss text, direct-Employee Tag summaries, and no secondary image viewer.
+The Editor exposes the protected system **Units** View plus isolated blank or copied planning Views;
+Employees and Tags remain global while each View keeps its own Units, assignments, rules, layout,
+history, selection, and viewport. Data Download can use any View as its source.
 Analytics includes known birth-year distributions plus average, youngest, and oldest age summaries
 for the whole catalog, men, and women; unknown `1900` years are excluded.
 Template formats in Data Download, Editor export, and the Employee model place a help affordance

@@ -5,6 +5,7 @@ import type {
   OrgEditorLayoutMode,
   OrgEditorUnit,
   OrgEditorUnitId,
+  TagId,
 } from "@org-tools/types";
 import { isSafeAvatarBase64Url } from "@/lib/employee-data";
 import { sortEmployeeTags } from "@/lib/employee-tags";
@@ -19,6 +20,7 @@ import {
 import type { OrgEditorSourceIndex } from "@/lib/org-editor";
 import {
   buildOrgEditorUnitEmployeeSummaryById,
+  buildOrgEditorUnitTagSummary,
   getOrgEditorEmployeePosition,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorEmployeeVisualGeometry,
@@ -27,6 +29,8 @@ import {
   getOrgEditorUnitDescendantIds,
   getOrgEditorUnitDisplayName,
   getOrgEditorUnitHeightForEmployeeRows,
+  getOrgEditorUnitTagFooterChipWidth,
+  getOrgEditorUnitTagFooterHeight,
   getOrgEditorVisibleEmployeeIds,
   ORG_EDITOR_EMPLOYEE_AVATAR_SIZE,
   ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE,
@@ -36,7 +40,11 @@ import {
   ORG_EDITOR_UNIT_BORDER_WIDTH,
   ORG_EDITOR_UNIT_CONTENT_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
+  ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
+  ORG_EDITOR_UNIT_TAG_FOOTER_GAP,
+  ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
   type OrgEditorUnitEmployeeSummary,
+  type OrgEditorUnitTagSummary,
   sortOrgEditorEmployeeIds,
 } from "@/lib/org-editor";
 import { getTagColorCanvasStyle } from "@/lib/tag-color";
@@ -103,7 +111,9 @@ type OrgEditorImageUnitRenderData = {
   employeeRowHeights: number[];
   employeeRowOffsets: number[];
   employeeTagLayouts: OrgEditorExportEmployeeTagLayout[];
+  footerHeight: number;
   height: number;
+  tagSummaries: OrgEditorUnitTagSummary[];
   unit: OrgEditorUnit;
   width: number;
 };
@@ -1031,6 +1041,7 @@ export const createOrgEditorUnitImageBlob = async ({
   rootUnit,
   scope,
   settings,
+  tagOrder = [],
   units,
 }: {
   avatarLoadLimit?: number;
@@ -1042,6 +1053,7 @@ export const createOrgEditorUnitImageBlob = async ({
   rootUnit: OrgEditorUnit;
   scope: OrgEditorExportScope;
   settings: OrgEditorImageExportSettings;
+  tagOrder?: readonly TagId[];
   units: OrgEditorUnit[];
 }) => {
   const titleFontSize = Math.min(Math.max(settings.titleFontSize, 12), 48);
@@ -1085,15 +1097,22 @@ export const createOrgEditorUnitImageBlob = async ({
       rowOffset += height;
     }
 
+    const tagSummaries = buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder);
+    const footerHeight = unit.collapsed
+      ? 0
+      : getOrgEditorUnitTagFooterHeight(tagSummaries, width - 16);
     return {
       employeeIds,
       employeeRowHeights,
       employeeRowOffsets,
       employeeTagLayouts,
-      height: getOrgEditorUnitHeightForEmployeeRows({
-        collapsed: unit.collapsed,
-        employeeRowHeights,
-      }),
+      footerHeight,
+      height:
+        getOrgEditorUnitHeightForEmployeeRows({
+          collapsed: unit.collapsed,
+          employeeRowHeights,
+        }) + footerHeight,
+      tagSummaries,
       unit,
       width,
     } satisfies OrgEditorImageUnitRenderData;
@@ -1218,7 +1237,9 @@ export const createOrgEditorUnitImageBlob = async ({
     employeeRowHeights,
     employeeRowOffsets,
     employeeTagLayouts,
+    footerHeight,
     height,
+    tagSummaries,
     unit,
     width,
   } of imageUnitRenderData) {
@@ -1371,6 +1392,51 @@ export const createOrgEditorUnitImageBlob = async ({
           x: employeeGeometry.textX,
           y: employeeGeometry.tagY,
         });
+      }
+    }
+
+    if (footerHeight > 0 && tagSummaries.length > 0) {
+      const footerY = unit.y + height - footerHeight;
+      context.fillStyle = "#f1f5f9";
+      context.fillRect(unit.x + 1, footerY, width - 2, footerHeight - 1);
+      context.font = getCanvasFont(settings.fontFamily, 400, 10);
+      context.textAlign = "start";
+      context.textBaseline = "middle";
+      let chipX = unit.x + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
+      let chipY = footerY + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
+      const availableWidth = width - ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2;
+      for (const tag of tagSummaries) {
+        const text = `${tag.label} · ${tag.count}`;
+        const chipWidth = getOrgEditorUnitTagFooterChipWidth(tag, availableWidth);
+        if (
+          chipX > unit.x + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING &&
+          chipX + chipWidth > unit.x + width - ORG_EDITOR_UNIT_TAG_FOOTER_PADDING
+        ) {
+          chipX = unit.x + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
+          chipY += ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
+        }
+        drawRoundedRect(
+          context,
+          {
+            height: ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
+            width: chipWidth,
+            x: chipX,
+            y: chipY,
+          },
+          6,
+        );
+        const colorStyle = getTagColorCanvasStyle(tag.color);
+        context.fillStyle = colorStyle.fillStyle;
+        context.fill();
+        context.fillStyle = colorStyle.textStyle;
+        drawTrimmedText(
+          context,
+          text,
+          chipX + 8,
+          chipY + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT / 2 + 0.5,
+          chipWidth - 16,
+        );
+        chipX += chipWidth + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
       }
     }
   }

@@ -19,22 +19,21 @@ type OrgToolsState = {
   organization: {
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
-    structure: {
-      layoutMode: OrgEditorLayoutMode;
-      units: OrgEditorUnit[];
-    };
     tags: EmployeeTagDefinition[];
+    views: OrgToolsViewDocument[];
   };
   ui: OrgToolsUiState;
 };
 ```
 
 There is no kind, content discriminator, version, compatibility alias, or partial transfer scope.
-The organization has one current Unit structure. Viewport and selection live in the bounded
-`ui.editor` projection so ordinary interface writes do not serialize the Employee catalog or Unit
-graph. The UI projection also contains locale, theme, sidebar mode, active section, filters, searches,
-calendar period, Analytics settings, and Data Download settings. Open surfaces, notifications, and
-unfinished forms are transient.
+Exactly one View is the unnamed system document displayed as **Units**; Units, Employee Import, and
+Analytics use it directly. Custom Views have normalized unique names and isolated Unit documents,
+assignments, Live rules, hierarchy, layout, and geometry. Employees, custom fields, and Tags remain
+global references shared by every View. Viewport and selection live per View in the bounded
+`ui.editor` projection, while Data Download persists its selected source View. Ordinary interface
+writes therefore do not serialize Employees or structural documents. Open surfaces, notifications,
+search suggestions, and unfinished forms are transient.
 
 State Import parses one detached value, validates exact keys, identifiers, dates, URLs, embedded
 avatars, references, graph invariants, and UI references, then performs one atomic replacement.
@@ -116,15 +115,18 @@ history, collaborative cursors, or remote synchronization.
 
 ## Store and UI boundaries
 
-- `OrgStore` owns Employees, custom field definitions, the Tag catalog, the current Unit structure, derived indexes, durable UI projection, and
-  separate organization/UI change sequences.
+- `OrgStore` owns global Employees, custom field definitions, the Tag catalog, derived indexes,
+  durable UI projection, and separate organization/UI change sequences. It materializes only the
+  system, active Editor, and selected Download Views.
 - Shared Tag color helpers keep named palette classes static and derive bounded light/dark and canvas
   fill/foreground pairs for named, custom, alpha, and neutral values. Flat catalog rows expose Eye,
   Color, Edit, and Delete in that order. The row-level color Popover owns transient HSV selection plus
   exact HTML Keyword, HEX, RGB, or RGBA input; pointer gestures commit once on completion, exact input
   commits on Enter or blur, and cancel or invalid input does not mutate the Tag. Edit is a separate
   rename-only modal. Eye resolves the current `tagId` into a virtualized full Employee-card list.
-- `OrgEditorStore` owns the single structural document, history, selection, viewport, and commands.
+- `OrgViewsStore` owns View lifecycle, normalized names, document revisions, per-View editor state,
+  and copy-time Unit ID remapping. Each View has one `OrgEditorStore` with isolated structure,
+  history, selection, viewport, and clipboard.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
   and write observation; the SQLite transport is imported only by `apps/ui`.
@@ -133,8 +135,11 @@ history, collaborative cursors, or remote synchronization.
   virtualized source-driven `JSON path → Org Tools target` mapping stay transient. Each target is
   unique, selecting it transfers it from the previous path, and a pending Value definition remains
   transactional with the final Apply. Global Export validates and
-  downloads the complete current state only after an explicit action.
-- Data Download is a separate reporting pipeline for structured JSON and separator templates.
+  downloads the complete current state, including every View, only after an explicit action.
+- Data Download is a separate reporting pipeline whose source is the system or any custom View.
+  Changing the source clears Employee/Unit selections, Unit exclusions, and source-specific filters
+  while preserving field names, format, and global Tag exclusions. It produces structured JSON and
+  separator templates.
   JSON creates one record per Employee from one sortable top-level list of scalar Employee fields
   and optional Unit and Tag arrays. Unit and Tag rows use the same geometry as scalar fields, retain
   independently sortable nested fields, and support naming plus exact exclusions. Template retains
@@ -148,11 +153,11 @@ headers, roster padding, centered avatars, Employee text columns, compact tag pa
 heights, and hierarchy anchors. The selected export font measures one immutable tag layout per
 Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
 drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
-Employee summary, Tag tonal colors, and boss treatment while excluding Static/Live membership type, transient
+Employee summary, direct-membership Tag footer, Tag tonal colors, and boss treatment while excluding Static/Live membership type, transient
 selection, hover, handles, and menus. Its bounded inline preview has no secondary full-image
 viewer. Image titles, backgrounds, fonts, icon-only alignment, scope, radius, Employee templates,
-and Editor JSON settings remain output-only session settings and do not mutate the current
-structure. Image template tokens exclude avatar bytes, while painted avatars remain available.
+and Editor JSON settings remain output-only session settings and do not mutate the active View.
+Image template tokens exclude avatar bytes, while painted avatars remain available.
 Editor JSON and Template use the same formatter and sortable field controls as Data Download while
 limiting Employees and assignments to Unit-only or subtree scope.
 
@@ -186,20 +191,24 @@ linear Employee pass as the existing distributions. Missing and `1900` birthdays
 Drill-down stores only a stable group/entry key and re-resolves current full Employee cards after an
 edit or deletion.
 
-The Editor omits the shared content header. History controls occupy a dedicated logical-start
-surface; search and canvas commands occupy the logical end and mirror around the LTR world in
-Arabic. The Editor keeps pointer and wheel previews outside the MobX structure document. One animation-frame
+The Editor omits the shared content header. A styled View selector plus Create, Rename, and Delete
+actions occupy the logical start beside Undo/Redo; the system View cannot be renamed or deleted.
+Search and canvas commands occupy the logical end and mirror around the LTR world in Arabic. The
+Editor keeps pointer and wheel previews outside the MobX structure document. One animation-frame
 scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce
 performs the single snapped command and persistence observation. A geometry-keyed spatial index
 limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
 document geometry changes.
 Dragging an already selected Unit past the movement threshold preserves the whole selection.
 Selected-only Arrange lays out the induced selected hierarchy, keeps its center, avoids unselected
-bounds, and commits one snapped history operation without moving other Units.
+bounds, and commits one snapped history operation without moving other Units. Expanded Unit cards
+derive a catalog-ordered footer from direct Employees only; its wrapped chip geometry participates
+in bounds, snapping, spatial indexing, connections, overlap resolution, and PNG output.
 
-The Editor always presents the current Unit structure. It has no View selector, View-local Employee
-copies, alternate structure documents, or View lifecycle. Data Download uses the same current
-structure directly.
+The system View and Units are the same document. A custom View may start empty or clone any View;
+copying regenerates all Unit IDs and View-local references while retaining global Employee IDs.
+Editing an Employee or Tag updates every View immediately, while assigning or removing an Employee
+from a custom Unit affects that View only. Editor export always uses the active View.
 
 ## Builds and development
 

@@ -57,7 +57,9 @@ export const parseStateImportText = (
       fileName,
       fileSizeBytes,
       state,
-      unitCount: state.organization.structure.units.length,
+      unitCount:
+        state.organization.views.find((view) => view.kind === "system")?.structure.units.length ??
+        0,
     };
   } catch (error) {
     if (error instanceof LocalizedError) throw error;

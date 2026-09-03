@@ -284,6 +284,52 @@
     ]
   },
   {
+    "id": "editor-view-selector",
+    "module": "editor",
+    "featured": false,
+    "title": "Editor View selector",
+    "file": "feature-editor-view-selector.png",
+    "description": "Switch between the system Units structure and independent planning Views from the compact canvas toolbar.",
+    "capabilities": ["System View", "Custom Views", "Localized selector", "Canvas context"]
+  },
+  {
+    "id": "editor-view-create-copy",
+    "module": "editor",
+    "featured": false,
+    "title": "Create or copy a View",
+    "file": "feature-editor-view-create-copy.png",
+    "description": "Create a blank planning canvas or copy any existing View with remapped Unit identity and isolated history.",
+    "capabilities": ["Blank View", "Copy View", "Source selection", "Unique names"]
+  },
+  {
+    "id": "editor-view-isolated",
+    "module": "editor",
+    "featured": false,
+    "title": "Isolated organization scenario",
+    "file": "feature-editor-view-isolated.png",
+    "description": "Edit the Unit hierarchy, assignments, rules, and geometry inside a custom View without changing the system Units structure.",
+    "capabilities": [
+      "Isolated Units",
+      "Global Employees",
+      "Independent layout",
+      "View-local history"
+    ]
+  },
+  {
+    "id": "editor-view-manage",
+    "module": "editor",
+    "featured": false,
+    "title": "Rename and delete a View",
+    "file": "feature-editor-view-manage.png",
+    "description": "Rename or deliberately delete a custom View while the protected system Units View remains immutable.",
+    "capabilities": [
+      "Rename",
+      "Delete confirmation",
+      "Protected system View",
+      "Localized validation"
+    ]
+  },
+  {
     "id": "employee-import-mapping",
     "module": "import",
     "featured": false,
@@ -493,8 +539,9 @@
     "featured": false,
     "title": "Download source selection",
     "file": "feature-download-source-selection.png",
-    "description": "Select Employees from Teams or the catalog, inspect and filter the resulting set, then continue from the shared header.",
+    "description": "Choose a system or custom View, select its assigned Employees from Units or the catalog, inspect the resulting set, then continue from the shared header.",
     "capabilities": [
+      "View source",
       "Team sources",
       "Employee sources",
       "Selected set",

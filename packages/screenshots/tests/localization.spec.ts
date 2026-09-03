@@ -297,18 +297,21 @@ for (const [locale, messages] of [
       await productUnit.evaluate((element) => window.getComputedStyle(element).fontFamily),
     ).toContain(expectedFont);
     if (locale === "ar") {
-      const [canvasBox, historyBox, actionBox] = await Promise.all([
+      const [canvasBox, viewBox, historyBox, actionBox] = await Promise.all([
         editorCanvas.boundingBox(),
+        page.locator('[data-demo-id="org-editor-view-toolbar"]').boundingBox(),
         page.locator('[data-demo-id="org-editor-history-actions"]').boundingBox(),
         page.locator('[data-demo-id="org-editor-actions"]').boundingBox(),
       ]);
       expect(canvasBox).not.toBeNull();
+      expect(viewBox).not.toBeNull();
       expect(historyBox).not.toBeNull();
       expect(actionBox).not.toBeNull();
-      expect((historyBox?.x ?? 0) + (historyBox?.width ?? 0)).toBeCloseTo(
-        (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) - 12,
+      expect((viewBox?.x ?? 0) + (viewBox?.width ?? 0)).toBeCloseTo(
+        (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) - 18,
         0,
       );
+      expect((historyBox?.x ?? 0) + (historyBox?.width ?? 0)).toBeLessThan(viewBox?.x ?? 0);
       expect(actionBox?.x ?? 0).toBeCloseTo((canvasBox?.x ?? 0) + 12, 0);
     }
     await productUnit.click({ button: "right", position: { x: 20, y: 20 } });

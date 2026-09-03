@@ -515,6 +515,24 @@
     "Arabic": "العربية",
     "Choose interface language": "اختر لغة الواجهة.",
     "Choose interface theme": "اختر مظهر الواجهة.",
-    "Arrange selected": "ترتيب الفرق المحددة"
+    "Arrange selected": "ترتيب الفرق المحددة",
+    "A View with this name already exists.": "يوجد عرض بهذا الاسم بالفعل.",
+    "Enter a View name.": "أدخل اسم العرض.",
+    "The source View is unavailable.": "العرض المصدر غير متاح.",
+    "The system View is unavailable.": "عرض النظام غير متاح.",
+    "View names can contain at most 100 characters.": "يمكن أن يحتوي اسم العرض على 100 حرف كحد أقصى.",
+    "Copy View": "نسخة من عرض",
+    "Create View": "إنشاء عرض",
+    "Delete View": "حذف العرض",
+    "Delete View confirmation": "هل تريد حذف «{name}»؟ ستتم إزالة فرقه وتعييناته وقواعده وتخطيطه.",
+    "Empty View": "عرض فارغ",
+    "Rename": "إعادة التسمية",
+    "Rename View": "إعادة تسمية العرض",
+    "Source View": "العرض المصدر",
+    "Organization View": "عرض الهيكل التنظيمي",
+    "View name": "اسم العرض",
+    "View source": "مصدر العرض",
+    "Assign Employees in this View before configuring an export.": "عيّن موظفين في هذا العرض قبل إعداد التنزيل.",
+    "Go to Editor": "الانتقال إلى المحرر"
   }
 }

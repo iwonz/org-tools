@@ -60,11 +60,15 @@ describe("OrgToolsState", () => {
     const store = new OrgStore();
     expect(store.activeTab).toBe("orgEditor");
     expect(store.units?.roots).toEqual([]);
-    expect(store.createOrgToolsState().organization).toEqual({
-      employeeFieldDefinitions: [],
-      employees: [],
+    const organization = store.createOrgToolsState().organization;
+    expect(organization.employeeFieldDefinitions).toEqual([]);
+    expect(organization.employees).toEqual([]);
+    expect(organization.tags).toEqual([]);
+    expect(organization.views).toHaveLength(1);
+    expect(organization.views[0]).toMatchObject({
+      kind: "system",
+      name: null,
       structure: { layoutMode: "topDown", units: [] },
-      tags: [],
     });
   });
 
@@ -100,6 +104,126 @@ describe("OrgToolsState", () => {
       unitId,
     });
     expect(restored.createOrgToolsState()).toEqual(state);
+  });
+
+  test("clones isolated Views while keeping Employees global", () => {
+    const { employeeId, store, unitId } = populatedStore();
+    const systemViewId = store.systemOrgViewId;
+    store.mainOrgEditor.setViewport({ scale: 1.2, x: 48, y: -24 });
+    store.mainOrgEditor.setSelectedItems([{ type: "unit", unitId }]);
+
+    const customViewId = store.createOrgView("Scenario A", {
+      type: "copy",
+      viewId: systemViewId,
+    });
+    const copiedUnit = store.orgEditor.units[0];
+    expect(copiedUnit?.id).not.toBe(unitId);
+    expect(store.orgEditor.viewport).toEqual({ scale: 1.2, x: 48, y: -24 });
+    expect(store.orgEditor.selectedItems).toEqual([]);
+
+    store.orgEditor.addUnit({ name: "Scenario only", x: 480, y: 0 });
+    expect(store.mainOrgEditor.units).toHaveLength(1);
+    expect(store.orgEditor.units).toHaveLength(2);
+
+    store.updateEmployee(
+      employeeId,
+      employeeFields({ firstName: "Avery" }),
+      copiedUnit ? [{ isBoss: true, position: "Lead", unitId: copiedUnit.id }] : [],
+      customViewId,
+    );
+    expect(store.uiOrgStructure?.indexes.employeesById.get(employeeId)?.firstName).toBe("Avery");
+    expect(store.editorUnits?.indexes.employeesById.get(employeeId)?.firstName).toBe("Avery");
+
+    store.renameOrgView(customViewId, "Scenario B");
+    expect(store.activeOrgView?.name).toBe("Scenario B");
+    store.deleteOrgView(customViewId);
+    expect(store.activeOrgViewId).toBe(systemViewId);
+    expect(store.orgViewList).toHaveLength(1);
+  });
+
+  test("keeps View UI isolated and restores the active View", () => {
+    const { store, unitId } = populatedStore();
+    store.mainOrgEditor.setViewport({ scale: 1.1, x: 24, y: 48 });
+    store.mainOrgEditor.setSelectedItems([{ type: "unit", unitId }]);
+    const customViewId = store.createOrgView("Scenario", { type: "blank" });
+    const customUnitId = store.orgEditor.addUnit({ name: "Future", x: 240, y: 120 });
+    store.orgEditor.setViewport({ scale: 0.8, x: -96, y: 72 });
+    store.orgEditor.setSelectedItems([{ type: "unit", unitId: customUnitId }]);
+
+    const restored = new OrgStore();
+    restored.loadOrgToolsState(store.createOrgToolsState(), null, null);
+
+    expect(restored.activeOrgViewId).toBe(customViewId);
+    expect(restored.orgEditor.viewport).toEqual({ scale: 0.8, x: -96, y: 72 });
+    expect(restored.orgEditor.selectedItems).toEqual([{ type: "unit", unitId: customUnitId }]);
+    expect(restored.mainOrgEditor.viewport).toEqual({ scale: 1.1, x: 24, y: 48 });
+    expect(restored.mainOrgEditor.selectedItems).toEqual([{ type: "unit", unitId }]);
+  });
+
+  test("normalizes unique custom View names and protects the system View", () => {
+    const store = new OrgStore();
+    const customViewId = store.createOrgView("  Future   organization  ", { type: "blank" });
+    expect(store.activeOrgView?.name).toBe("Future organization");
+    expect(() => store.createOrgView("ＦＵＴＵＲＥ ORGANIZATION", { type: "blank" })).toThrow(
+      "already exists",
+    );
+    expect(() => store.renameOrgView(customViewId, " ")).toThrow("Enter a View name");
+    store.renameOrgView(store.systemOrgViewId, "Renamed system");
+    store.deleteOrgView(store.systemOrgViewId);
+    expect(store.orgViewList.find((view) => view.kind === "system")).toBeDefined();
+  });
+
+  test("clears source-specific Download state when switching Views", () => {
+    const { employeeId, store, unitId } = populatedStore();
+    const customViewId = store.createOrgView("Alternative", { type: "blank" });
+    store.addExportSelection({ employeeId, id: `employee:${employeeId}`, type: "employee" });
+    store.setExportExcludedJsonUnitIds([unitId]);
+    store.setDownloadUi({ employeeQuery: "Alex", selectedQuery: "Morgan", unitQuery: "Platform" });
+
+    store.selectDownloadOrgView(customViewId);
+
+    expect(store.exportSelections).toEqual([]);
+    expect(store.exportExcludedJsonUnitIds).toEqual([]);
+    expect(store.downloadUi).toMatchObject({
+      employeeQuery: "",
+      selectedQuery: "",
+      unitQuery: "",
+    });
+  });
+
+  test("rejects old structures and invalid View graphs", () => {
+    const oldState = createBlankOrgToolsState() as unknown as Record<string, unknown>;
+    const organization = structuredClone(oldState.organization) as Record<string, unknown>;
+    delete organization.views;
+    organization.structure = { layoutMode: "topDown", units: [] };
+    expect(() => parseOrgToolsState({ ...oldState, organization })).toThrow();
+
+    const duplicateSystem = createBlankOrgToolsState();
+    const sourceSystem = duplicateSystem.organization.views[0];
+    if (!sourceSystem) throw new Error("Expected the system View.");
+    duplicateSystem.organization.views.push({
+      ...structuredClone(sourceSystem),
+      id: uuid(998),
+    });
+    expect(() => parseOrgToolsState(duplicateSystem)).toThrow("exactly one system View");
+
+    const { store } = populatedStore();
+    const customViewId = store.createOrgView("Duplicate Unit", {
+      type: "copy",
+      viewId: store.systemOrgViewId,
+    });
+    const duplicateUnitState = store.createOrgToolsState();
+    const systemUnitId = duplicateUnitState.organization.views.find(
+      (view) => view.kind === "system",
+    )?.structure.units[0]?.id;
+    const customView = duplicateUnitState.organization.views.find(
+      (view) => view.id === customViewId,
+    );
+    if (!systemUnitId || !customView?.structure.units[0]) {
+      throw new Error("Expected Units in both Views.");
+    }
+    customView.structure.units[0].id = systemUnitId;
+    expect(() => parseOrgToolsState(duplicateUnitState)).toThrow("duplicate Unit IDs across Views");
   });
 
   test("keeps the stable Employee UUID after an identity edit", () => {
@@ -312,20 +436,33 @@ describe("OrgToolsState", () => {
       name: "Tagged Employees",
       positionOverrides: [],
     });
+    const customViewId = store.createOrgView("Tagged scenario", {
+      type: "copy",
+      viewId: store.systemOrgViewId,
+    });
+    const customLiveUnitId = store.orgEditor.units.find(
+      (unit) => unit.name === "Tagged Employees",
+    )?.id;
 
     store.deleteTagDefinition(tag.id);
 
     expect(store.tagDefinitions).toEqual([]);
     expect(store.organizationEmployees[0]?.tags).toEqual([]);
     expect(store.employeesUi.filters.selectedTags).toEqual([]);
-    expect(store.orgEditor.units.find((unit) => unit.id === liveUnitId)?.liveFilter).toBeNull();
+    expect(store.mainOrgEditor.units.find((unit) => unit.id === liveUnitId)?.liveFilter).toBeNull();
+    expect(
+      store.orgViews.editorByViewId
+        .get(customViewId)
+        ?.units.find((unit) => unit.id === customLiveUnitId)?.liveFilter,
+    ).toBeNull();
     expect(() => store.createOrgToolsState()).not.toThrow();
   });
 
   test("rejects missing references and cyclic Live Unit dependencies", () => {
     const { store } = populatedStore();
     const invalid = structuredClone(store.createOrgToolsState());
-    const unit = invalid.organization.structure.units[0];
+    const unit = invalid.organization.views.find((view) => view.kind === "system")?.structure
+      .units[0];
     if (!unit) throw new Error("Expected a Unit.");
     unit.parentId = uuid(999);
     expect(() => parseOrgToolsState(invalid)).toThrow("missing parent Unit");
@@ -338,7 +475,9 @@ describe("OrgToolsState", () => {
       ...createEmptyEmployeeLiveFilterRule(),
       selectedUnitIds,
     });
-    state.organization.structure.units = [
+    const systemView = state.organization.views.find((view) => view.kind === "system");
+    if (!systemView) throw new Error("Expected the system View.");
+    systemView.structure.units = [
       {
         bossEmployeeId: null,
         collapsed: false,

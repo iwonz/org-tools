@@ -3,9 +3,7 @@
 ## Purpose
 Define bounded organization analytics, birth-year and age summaries, and actionable current-data
 drill-downs.
-
 ## Requirements
-
 ### Requirement: Analytics reports known birth years and completed ages
 Analytics SHALL derive a birth-year distribution and age summary from valid known Employee
 birthdays. A missing birthday and year `1900` MUST be excluded from both outputs. Age SHALL be the
@@ -53,3 +51,16 @@ or a total-Employee subtitle inside its workflow body.
 #### Scenario: Open populated Analytics
 - **WHEN** the shared application header already identifies Analytics
 - **THEN** the body begins with the age and count surfaces without another Analytics heading
+
+### Requirement: Analytics remains bound to the system View
+Analytics SHALL derive Unit-scoped membership and position context exclusively from the system View
+and SHALL NOT expose a View selector. Custom View selection or mutation SHALL NOT change Analytics
+until a global Employee field changes.
+
+#### Scenario: Open Analytics after selecting a custom View
+- **WHEN** the Editor has a custom View active
+- **THEN** Analytics continues to show the canonical system organization
+
+#### Scenario: Rearrange only a custom View
+- **WHEN** custom Units or memberships change without a global Employee mutation
+- **THEN** the system Analytics cache and results remain unchanged

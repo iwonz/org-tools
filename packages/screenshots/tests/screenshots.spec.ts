@@ -115,8 +115,9 @@ async function openSyntheticTab(page: Page, tab: string) {
 
 async function replaceWithImageExportState(page: Page) {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const product = state.organization.structure.units.find((unit) => unit.name === "Product");
-  const platform = state.organization.structure.units.find((unit) => unit.name === "Platform");
+  const units = state.organization.views.find((view) => view.kind === "system")?.structure.units;
+  const product = units?.find((unit) => unit.name === "Product");
+  const platform = units?.find((unit) => unit.name === "Platform");
   const employee = state.organization.employees.find((candidate) =>
     product?.employeeIds.includes(candidate.id),
   );
@@ -463,6 +464,36 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await openSyntheticState(page);
   await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
   await capture(page, "editor");
+
+  const viewSelect = page.locator('[data-demo-id="org-editor-view-select"]');
+  await viewSelect.click();
+  await capture(page, "editor-view-selector");
+  await page.keyboard.press("Escape");
+
+  await page.locator('[data-demo-id="org-editor-create-view"]').click();
+  let viewDialog = page.getByRole("dialog", { name: "Create View", exact: true });
+  await viewDialog.getByLabel("View name", { exact: true }).fill("Growth scenario");
+  await viewDialog.getByLabel("View source", { exact: true }).click();
+  await page.getByRole("option", { name: "Copy a View", exact: true }).click();
+  await capture(page, "editor-view-create-copy");
+  await viewDialog.getByRole("button", { name: "Create", exact: true }).click();
+  const scenarioProduct = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await scenarioProduct.click({ button: "right", position: { x: 20, y: 20 } });
+  await page.locator('[data-demo-id="org-editor-edit-unit-action"]').click();
+  const unitDialog = page.getByRole("dialog", { name: "Edit Unit", exact: true });
+  await unitDialog.getByLabel("Name", { exact: true }).fill("Future Product");
+  await unitDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toBeVisible();
+  await capture(page, "editor-view-isolated");
+
+  await page.locator('[data-demo-id="org-editor-rename-view"]').click();
+  viewDialog = page.getByRole("dialog", { name: "Rename View", exact: true });
+  await capture(page, "editor-view-manage");
+  await viewDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.locator('[data-demo-id="org-editor-delete-view"]').click();
+  viewDialog = page.getByRole("dialog", { name: "Delete View", exact: true });
+  await viewDialog.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(viewSelect).toContainText("Units");
 
   await page.locator('[data-demo-id="org-editor-search-button"]').click();
   await page.locator('[data-demo-id="org-editor-search-input"]').fill("Avery");

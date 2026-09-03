@@ -64,18 +64,21 @@ control.
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
   rest of the form.
-- **Editor** manages the current Unit structure on an adaptive snapped grid, including search,
-  history, layout, bulk commands, Image, JSON, and Template output. It uses the full content height:
-  Undo/Redo are at the logical start, while Search, layout, Arrange, and Collapse/Expand are at the
-  logical end. Search expands inward without moving the other controls. Dragging one Unit in an
-  existing multi-selection keeps the group selected; **Arrange selected** moves only those Units in
-  one undoable snapped operation. There is no alternate View or
-  structure selector: Units and Editor always operate on the same organization. Closing Search
+- **Editor** manages the system **Units** View and isolated planning Views on an adaptive snapped
+  grid, including search, history, layout, bulk commands, Image, JSON, and Template output. A View
+  can start empty or copy any existing View; custom Views may be renamed or deleted, while the
+  system View is protected and stays synchronized with Units. Unit hierarchy, assignments, rules,
+  history, clipboard, and geometry are View-local; Employee profiles, custom fields, and Tags are
+  global. Undo/Redo sit beside the View selector at the logical start, while Search, layout,
+  Arrange, and Collapse/Expand are at the logical end. Search expands inward without moving the
+  other controls. Dragging one Unit in an existing multi-selection keeps the group selected;
+  **Arrange selected** moves only those Units in one undoable snapped operation. Closing Search
   clears its query. Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
-  the live Unit header, roster spacing, centered avatars, boss marker, variable row heights, and
-  hierarchy connections while retaining configurable output styling. Every tag is written in full;
-  oversized labels wrap inside their compact chip. Static/Live membership type is not printed.
+  the live Unit header, roster spacing, centered avatars, boss marker, variable row heights,
+  direct-membership Tag summary footer, and hierarchy connections while retaining configurable
+  output styling. Every tag is written in full; oversized labels wrap inside their compact chip.
+  Static/Live membership type is not printed. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
   reports known birth years and completed ages, including one-decimal averages plus deterministic
   youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`
@@ -91,8 +94,10 @@ control.
   retaining bounded scrolling and tag-history navigation.
   Day-dialog titles follow the active locale; Russian titles omit the abbreviated year suffix and
   use the catalog's corrected backward/forward navigation labels.
-- **Data Download** uses equal source and selected-Employee panes whose geometry stays fixed when
-  switching sources, then produces structured JSON or Template output.
+- **Data Download** first selects the system or a custom View, then uses equal source and
+  selected-Employee panes whose geometry stays fixed when switching Team/Employee sources. Changing
+  View clears source-specific selections, Unit exclusions, and filters, then produces structured
+  JSON or Template output from Employees assigned in that View.
   JSON always produces one record per Employee. Drag handles order scalar fields and the ordinary
   Unit and Tag rows in one list; enabled Unit and Tag arrays expose their own reorderable fields,
   names, and searchable exclusion menus. Template retains All Units and First Unit row modes through

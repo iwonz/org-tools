@@ -128,11 +128,10 @@ describe("Employee transfer", () => {
       preview,
     });
     expect(next.organization.employees[0]?.id).toBe(uuid(1));
-    expect(next.organization.structure.units.map((unit) => unit.name)).toEqual([
-      "Product",
-      "Research",
-    ]);
-    expect(next.organization.structure.units[1]?.employeePositions[0]?.position).toBe("Analyst");
+    const nextUnits = next.organization.views.find((view) => view.kind === "system")?.structure
+      .units;
+    expect(nextUnits?.map((unit) => unit.name)).toEqual(["Product", "Research"]);
+    expect(nextUnits?.[1]?.employeePositions[0]?.position).toBe("Analyst");
   });
 
   test("supports update, skip, and Teams-only duplicate policies without replacing assignments", () => {
@@ -171,8 +170,10 @@ describe("Employee transfer", () => {
       preview,
     });
     expect(updated.organization.employees[0]?.username).toBe("changed");
-    expect(updated.organization.structure.units).toHaveLength(2);
-    expect(updated.organization.structure.units[0]?.employeeIds).toContain(employeeId);
+    const updatedUnits = updated.organization.views.find((view) => view.kind === "system")
+      ?.structure.units;
+    expect(updatedUnits).toHaveLength(2);
+    expect(updatedUnits?.[0]?.employeeIds).toContain(employeeId);
 
     const teamsOnly = applyEmployeeImport({
       bulkPolicy: "teamsOnly",
@@ -181,8 +182,10 @@ describe("Employee transfer", () => {
       preview,
     });
     expect(teamsOnly.organization.employees[0]?.username).toBeNull();
-    expect(teamsOnly.organization.structure.units).toHaveLength(2);
-    expect(teamsOnly.organization.structure.units[0]?.employeeIds).toContain(employeeId);
+    const teamsOnlyUnits = teamsOnly.organization.views.find((view) => view.kind === "system")
+      ?.structure.units;
+    expect(teamsOnlyUnits).toHaveLength(2);
+    expect(teamsOnlyUnits?.[0]?.employeeIds).toContain(employeeId);
 
     const skipped = applyEmployeeImport({
       bulkPolicy: "update",
@@ -191,8 +194,10 @@ describe("Employee transfer", () => {
       preview,
     });
     expect(skipped.organization.employees[0]?.username).toBeNull();
-    expect(skipped.organization.structure.units).toHaveLength(1);
-    expect(skipped.organization.structure.units[0]?.employeeIds).toContain(employeeId);
+    const skippedUnits = skipped.organization.views.find((view) => view.kind === "system")
+      ?.structure.units;
+    expect(skippedUnits).toHaveLength(1);
+    expect(skippedUnits?.[0]?.employeeIds).toContain(employeeId);
   });
 
   test("rejects duplicate imported identities and leaves current state untouched", () => {

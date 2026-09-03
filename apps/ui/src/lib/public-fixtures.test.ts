@@ -17,6 +17,8 @@ describe("public synthetic fixtures", () => {
     expect(Object.keys(state).sort()).toEqual(["organization", "ui"]);
     expect(state).not.toHaveProperty("formatVersion");
     expect(state.organization.employees).toHaveLength(4);
-    expect(state.organization.structure.units).toHaveLength(2);
+    expect(
+      state.organization.views.find((view) => view.kind === "system")?.structure.units,
+    ).toHaveLength(2);
   });
 });

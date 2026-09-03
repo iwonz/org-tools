@@ -9,15 +9,16 @@ surfaces in that visual and keyboard order, with Editor active for a blank works
 wordmark or brand icon, and consistent actionable top-level empty states. A populated Employees
 surface SHALL show the total catalog count below search and SHALL additionally show the visible match
 count only while search or filters are active. The populated Editor SHALL place layout, hierarchy,
-and search controls in one compact top-left toolbar surface and viewport controls in one compact
-bottom-left toolbar surface. It SHALL NOT show a View selector, View name, create, rename, or delete
-actions. Editor and Units SHALL always operate on the same current Unit structure. The Editor canvas
-SHALL retain a distinct neutral-gray background while the sidebar, context header, and ordinary
-workflows use the layered shell system. Selected Team nodes SHALL retain the same opaque background
-as their resting state and communicate selection only through the existing semantic boundary.
-Arrange and hierarchy commands SHALL use normal text weight and place their thematic icon before the
-label. Closing Editor Search SHALL clear its query, and an empty query SHALL render no explanatory
-result surface.
+and search controls in one compact logical-end toolbar surface, a View selector and lifecycle actions
+beside separate history controls at the logical start, and viewport controls in one compact
+bottom-left toolbar surface. Editor and Units SHALL operate on the same Unit document only while the
+system View is active; custom Views SHALL keep independent Unit documents over the global Employee
+catalog. The Editor canvas SHALL retain a distinct neutral-gray background while the sidebar,
+context header, and ordinary workflows use the layered shell system. Selected Team nodes SHALL
+retain the same opaque background as their resting state and communicate selection only through the
+existing semantic boundary. Arrange and hierarchy commands SHALL use normal text weight and place
+their thematic icon before the label. Closing Editor Search SHALL clear its query, and an empty query
+SHALL render no explanatory result surface.
 
 #### Scenario: Product navigation order
 - **WHEN** the product shell renders in any supported locale
@@ -32,8 +33,8 @@ result surface.
 - **THEN** the surface omits its data chrome and offers one relevant action through the header or shared empty layout
 
 #### Scenario: Empty Org Editor
-- **WHEN** the current structure contains no Units
-- **THEN** layout and zoom controls are absent and one add-to-canvas action is available without View management
+- **WHEN** the active View contains no Units
+- **THEN** layout and zoom controls are absent while View management and one add-to-canvas action remain available
 
 #### Scenario: Sidebar application shell
 - **WHEN** the product shell renders in light or dark theme
@@ -80,19 +81,6 @@ result surface.
 - **WHEN** the Org Editor is visible in light or dark theme
 - **THEN** its canvas uses a neutral-gray canvas background distinct from the root application surface
 - **AND** Team nodes, selection, connectors, search, and viewport controls remain legible
-
-### Requirement: The Editor owns one current structure
-The Editor SHALL preserve Live Units, undo/redo, drag-and-drop, layout, adaptive grid, transient
-gesture previews, viewport, selection, search, templates, and PNG output for one current structure.
-Custom Views, local View Employees, overrides, View switching, and View management SHALL NOT exist.
-
-#### Scenario: Edit current structure
-- **WHEN** a Unit or global Employee assignment is edited in Editor
-- **THEN** Units, Analytics, Calendar, and Download observe the same current organization change
-
-#### Scenario: Durable Editor UI
-- **WHEN** selection or viewport changes
-- **THEN** the single `ui.editor` projection stores it without serializing organization data
 
 ### Requirement: Editor coordinates follow an adaptive snap grid
 The Org Editor SHALL use one 24-unit document-space base grid for visible grid lines and every
@@ -550,3 +538,39 @@ retains LTR coordinates.
 #### Scenario: Match toolbar heights
 - **WHEN** top and bottom Editor surfaces render
 - **THEN** history, canvas command, and viewport controls use the same total height
+
+### Requirement: The Editor exposes accessible View management
+The Editor SHALL show a styled View Select and Create action in every canvas state. Custom Views
+SHALL also expose Rename and Delete actions, while Undo/Redo remain a separate adjacent surface.
+Create SHALL accept a name and either Blank or Copy with any current View as source.
+
+#### Scenario: Manage an empty custom View
+- **WHEN** an active custom View contains no Units
+- **THEN** its Select, Create, Rename, and Delete controls remain available
+
+#### Scenario: Cancel View deletion
+- **WHEN** the user closes or cancels the confirmation
+- **THEN** the View, active selection, Download source, and documents remain unchanged
+
+### Requirement: Expanded Unit cards summarize direct Tags
+An expanded Unit with tagged direct Employees SHALL render a compact borderless tonal footer after
+its Employee list. The footer SHALL show every catalog-ordered Tag as a filled wrapping chip with its
+label and unique direct-Employee count. Descendants SHALL NOT contribute. Live Units SHALL use their
+resolved direct membership. Dates SHALL NOT split a Tag count. Collapsed and tagless Units SHALL have
+no footer.
+
+#### Scenario: Count manual Unit Tags
+- **WHEN** direct Employees in a manual Unit share one or more Tags
+- **THEN** each Tag footer chip shows the number of distinct direct Employees with that Tag
+
+#### Scenario: Exclude descendants
+- **WHEN** only Employees in descendant Units carry a Tag
+- **THEN** the parent Unit footer does not show or count that Tag
+
+#### Scenario: Wrap many Tags
+- **WHEN** Tag chips exceed the Unit width
+- **THEN** all chips wrap to additional rows and the Unit height, bounds, connections, and collision geometry expand by the shared measured footer height
+
+#### Scenario: Export the footer
+- **WHEN** Editor PNG is rendered for a Unit with a Tag footer
+- **THEN** the same Tag labels, counts, colors, wrapping, and geometry appear in the image

@@ -118,7 +118,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                   {t("No tags found")}
                 </div>
               ) : (
-                <div className="grid gap-1">
+                <div className="grid gap-3">
                   {visible.map((tag) => {
                     const count = counts.get(tag.id) ?? { dated: 0, employees: 0 };
                     return (

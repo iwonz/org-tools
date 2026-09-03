@@ -27,7 +27,7 @@ export type OrgEditorEmployeePosition = {
   position: string | null;
 };
 
-/** Unit persisted by the current organization structure. */
+/** Unit persisted inside one organization View document. */
 export type OrgEditorUnit = {
   id: OrgEditorUnitId;
   parentId: OrgEditorUnitId | null;

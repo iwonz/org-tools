@@ -4,3 +4,4 @@ export type EmployeeFieldId = string;
 export type EmployeeFieldOptionId = string;
 export type TagId = string;
 export type UnitId = string;
+export type ViewId = string;

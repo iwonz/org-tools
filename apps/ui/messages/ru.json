@@ -515,6 +515,24 @@
     "Arabic": "Арабский",
     "Choose interface language": "Выберите язык интерфейса.",
     "Choose interface theme": "Выберите оформление интерфейса.",
-    "Arrange selected": "Упорядочить выбранные"
+    "Arrange selected": "Упорядочить выбранные",
+    "A View with this name already exists.": "Представление с таким названием уже существует.",
+    "Enter a View name.": "Введите название представления.",
+    "The source View is unavailable.": "Исходное представление недоступно.",
+    "The system View is unavailable.": "Системное представление недоступно.",
+    "View names can contain at most 100 characters.": "Название представления может содержать не более 100 символов.",
+    "Copy View": "Копия представления",
+    "Create View": "Создать представление",
+    "Delete View": "Удалить представление",
+    "Delete View confirmation": "Удалить «{name}»? Его команды, назначения, правила и компоновка будут удалены.",
+    "Empty View": "Пустое представление",
+    "Rename": "Переименовать",
+    "Rename View": "Переименовать представление",
+    "Source View": "Исходное представление",
+    "Organization View": "Представление оргструктуры",
+    "View name": "Название представления",
+    "View source": "Основа представления",
+    "Assign Employees in this View before configuring an export.": "Назначьте сотрудников в этом представлении перед настройкой выгрузки.",
+    "Go to Editor": "Перейти в Редактор"
   }
 }

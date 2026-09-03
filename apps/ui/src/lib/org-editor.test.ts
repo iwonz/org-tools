@@ -1,8 +1,9 @@
-import type { OrgEditorUnit } from "@org-tools/types";
+import type { Employee, OrgEditorUnit } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
 import {
   buildOrgEditorUnitEmployeeSummaryById,
+  buildOrgEditorUnitTagSummary,
   findOrgEditorEmployeeRowIndex,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
@@ -12,12 +13,14 @@ import {
   getOrgEditorEmployeeVisualGeometry,
   getOrgEditorUnitHeight,
   getOrgEditorUnitHeightForEmployeeRows,
+  getOrgEditorUnitTagFooterHeight,
   layoutOrgEditorUnits,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_GRID_MIN_SCREEN_SIZE,
   ORG_EDITOR_GRID_SIZE,
   type OrgEditorUnitEmployeeSummary,
   setOrgEditorUnitEmployeeRowHeights,
+  setOrgEditorUnitTagFooterHeight,
   snapOrgEditorCoordinate,
 } from "@/lib/org-editor";
 
@@ -199,5 +202,52 @@ describe("Org Editor variable Employee geometry", () => {
     expect(layout.offsets.at(-1)).toBe(layout.totalHeight - 48);
     expect(findOrgEditorEmployeeRowIndex(layout, layout.totalHeight - 1)).toBe(19_999);
     expect(getOrgEditorUnitHeight(unit)).toBeGreaterThan(layout.totalHeight);
+  });
+});
+
+describe("Org Editor Unit Tag footer", () => {
+  test("counts direct Employees once and follows catalog order", () => {
+    const employee = (id: string, tags: Employee["tags"]): Employee => ({ id, tags }) as Employee;
+    const employees = new Map([
+      [
+        "employee-1",
+        employee("employee-1", [
+          { color: "blue", date: null, label: "Platform", tagId: "tag-platform" },
+          { color: "rose", date: "2026-09-03", label: "On call", tagId: "tag-on-call" },
+        ]),
+      ],
+      [
+        "employee-2",
+        employee("employee-2", [
+          { color: "blue", date: null, label: "Platform", tagId: "tag-platform" },
+        ]),
+      ],
+      [
+        "descendant-only",
+        employee("descendant-only", [
+          { color: "green", date: null, label: "Child", tagId: "tag-child" },
+        ]),
+      ],
+    ]);
+    const unit = createUnit({
+      employeeIds: ["employee-1", "employee-1", "employee-2"],
+      id: "tag-footer",
+    });
+    const summary = buildOrgEditorUnitTagSummary(unit, employees, [
+      "tag-on-call",
+      "tag-platform",
+      "tag-child",
+    ]);
+
+    expect(summary.map(({ count, label }) => ({ count, label }))).toEqual([
+      { count: 1, label: "On call" },
+      { count: 2, label: "Platform" },
+    ]);
+    const footerHeight = getOrgEditorUnitTagFooterHeight(summary, 120);
+    const baseHeight = getOrgEditorUnitHeight(unit);
+    setOrgEditorUnitTagFooterHeight(unit.id, footerHeight);
+    expect(getOrgEditorUnitHeight(unit)).toBe(baseHeight + footerHeight);
+    unit.collapsed = true;
+    expect(getOrgEditorUnitHeight(unit)).toBe(72);
   });
 });

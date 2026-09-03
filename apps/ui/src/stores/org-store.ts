@@ -14,6 +14,7 @@ import type {
   UiTheme,
   UnitAssignment,
   UnitId,
+  ViewId,
 } from "@org-tools/types";
 import { makeAutoObservable, observable, reaction } from "mobx";
 import { LocalizedError, uiMessage } from "@/i18n/messages";
@@ -41,6 +42,12 @@ import {
 } from "@/lib/employee-unit-contexts";
 import { hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import {
+  buildOrgEditorUnitTagSummary,
+  getOrgEditorUnitTagFooterHeight,
+  getOrgEditorUnitWidth,
+  setOrgEditorUnitTagFooterHeight,
+} from "@/lib/org-editor";
+import {
   createBlankOrgToolsState,
   createEmptyEmployeeFiltersState,
   parseOrgToolsState,
@@ -59,8 +66,17 @@ import type {
 } from "@/stores/export-session-store";
 import { ExportSessionStore } from "@/stores/export-session-store";
 import { OrgEditorStore, type OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
+import { type NewOrgViewSource, OrgViewsStore } from "@/stores/org-views-store";
 
 type AnalyticsIdleHandle = { id: number; type: "idle" | "timeout" };
+
+type CachedViewModel = {
+  documentRevision: number;
+  employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
+  employees: OrganizationEmployee[];
+  structure: UiOrgStructure;
+  tags: EmployeeTagDefinition[];
+};
 
 export type AnalyticsBuildStatus = "building" | "idle" | "ready" | "scheduled";
 export type {
@@ -159,7 +175,11 @@ export class OrgStore {
   employeeUnitContextsByEmployeeId = new Map<EmployeeId, EmployeeUnitContext[]>();
   employeeUnitMembershipsByEmployeeId = new Map<EmployeeId, EmployeeUnitMembership>();
   exportSession = new ExportSessionStore();
-  orgEditor = new OrgEditorStore(() => this.handleStructureDocumentChange());
+  fallbackEditor = new OrgEditorStore();
+  orgViews = new OrgViewsStore((viewId, kind) => this.handleViewDocumentChange(viewId, kind));
+  activeViewOrgStructure: UiOrgStructure | null = null;
+  downloadViewOrgStructure: UiOrgStructure | null = null;
+  downloadSourceViewId: ViewId = "";
   analyticsResult: AnalyticsResult | null = null;
   analyticsBuildStatus: AnalyticsBuildStatus = "idle";
   analyticsBuildFrameId: number | null = null;
@@ -170,6 +190,7 @@ export class OrgStore {
   isApplyingState = false;
   organizationChangeSequence = 0;
   uiChangeSequence = 0;
+  readonly viewModelCache = new Map<ViewId, CachedViewModel>();
 
   constructor() {
     makeAutoObservable(
@@ -189,8 +210,12 @@ export class OrgStore {
         calendarUi: observable.ref,
         downloadUi: observable.ref,
         exportSession: observable.ref,
-        orgEditor: observable.ref,
+        fallbackEditor: observable.ref,
+        orgViews: observable.ref,
+        activeViewOrgStructure: observable.ref,
+        downloadViewOrgStructure: observable.ref,
         isApplyingState: false,
+        viewModelCache: false,
         uiOrgStructure: observable.ref,
         organizationEmployees: observable.shallow,
         employeeFieldDefinitions: observable.shallow,
@@ -218,8 +243,11 @@ export class OrgStore {
       this.organizationEmployees,
       this.employeeFieldDefinitions,
       this.tagDefinitions,
-      this.orgEditor.layoutMode,
-      this.orgEditor.units,
+      this.orgViews.viewRecords,
+      ...this.orgViews.views.flatMap((view) => {
+        const editor = this.orgViews.editorByViewId.get(view.id);
+        return editor ? [editor.layoutMode, editor.units] : [];
+      }),
     ];
   }
 
@@ -252,8 +280,12 @@ export class OrgStore {
       this.exportSession.templateFormat,
       this.exportSession.selections,
       this.exportSession.excludedEmployeeIds,
-      this.orgEditor.selectedItems,
-      this.orgEditor.viewport,
+      this.orgViews.activeViewId,
+      this.downloadSourceViewId,
+      ...this.orgViews.views.flatMap((view) => {
+        const editor = this.orgViews.editorByViewId.get(view.id);
+        return editor ? [editor.selectedItems, editor.viewport] : [];
+      }),
     ];
   }
 
@@ -273,7 +305,35 @@ export class OrgStore {
   }
 
   get mainOrgEditor() {
-    return this.orgEditor;
+    return this.orgViews.systemEditor ?? this.fallbackEditor;
+  }
+
+  get orgEditor() {
+    return this.orgViews.activeEditor ?? this.mainOrgEditor;
+  }
+
+  get orgViewList() {
+    return this.orgViews.views;
+  }
+
+  get activeOrgView() {
+    return this.orgViews.activeView;
+  }
+
+  get activeOrgViewId() {
+    return this.orgViews.activeViewId;
+  }
+
+  get systemOrgViewId() {
+    return this.orgViews.systemView?.id ?? "";
+  }
+
+  get editorUnits() {
+    return this.activeViewOrgStructure ?? this.uiOrgStructure;
+  }
+
+  get downloadUnits() {
+    return this.downloadViewOrgStructure ?? this.uiOrgStructure;
   }
 
   get exportTabMode() {
@@ -343,30 +403,70 @@ export class OrgStore {
       ...employee,
       tags: employee.tags.map((tag) => ({ ...tag })),
     }));
-    const nextEditor = new OrgEditorStore(() => this.handleStructureDocumentChange());
+    const nextViews = new OrgViewsStore((viewId, kind) =>
+      this.handleViewDocumentChange(viewId, kind),
+    );
     const previousIsApplyingState = this.isApplyingState;
     this.isApplyingState = true;
     try {
-      nextEditor.loadState({
-        layoutMode: state.organization.structure.layoutMode,
-        selectedItems: state.ui.editor.selectedItems,
-        units: state.organization.structure.units,
-        viewport: state.ui.editor.viewport,
-      });
-      const result = buildOrganizationStructureWithResolution(
-        nextEmployees,
-        nextEditor.createState(),
-        state.organization.tags,
-        state.organization.employeeFieldDefinitions,
-      );
-      nextEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
+      nextViews.load(state.organization.views, state.ui.editor.views, state.ui.editor.activeViewId);
+      const buildView = (viewId: ViewId) => {
+        const editor = nextViews.editorByViewId.get(viewId);
+        if (!editor) throw new Error("View document is unavailable.");
+        const result = buildOrganizationStructureWithResolution(
+          nextEmployees,
+          editor.createState(),
+          state.organization.tags,
+          state.organization.employeeFieldDefinitions,
+        );
+        editor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
+        const tagOrder = state.organization.tags.map((tag) => tag.id);
+        for (const unit of editor.units) {
+          const displayUnit =
+            unit.liveFilter === null
+              ? unit
+              : {
+                  ...unit,
+                  employeeIds: result.liveEmployeeIdsByUnitId.get(unit.id) ?? [],
+                };
+          const summary = buildOrgEditorUnitTagSummary(
+            displayUnit,
+            result.structure.indexes.employeesById,
+            tagOrder,
+          );
+          setOrgEditorUnitTagFooterHeight(
+            unit.id,
+            unit.collapsed
+              ? 0
+              : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16),
+          );
+        }
+        return result.structure;
+      };
+      const systemViewId = nextViews.systemView?.id;
+      if (!systemViewId) throw new Error("System View is unavailable.");
+      const systemStructure = buildView(systemViewId);
+      const activeStructure =
+        nextViews.activeViewId === systemViewId
+          ? systemStructure
+          : buildView(nextViews.activeViewId);
+      const downloadStructure =
+        state.ui.download.sourceViewId === systemViewId
+          ? systemStructure
+          : state.ui.download.sourceViewId === nextViews.activeViewId
+            ? activeStructure
+            : buildView(state.ui.download.sourceViewId);
 
       this.organizationEmployees = nextEmployees;
       this.employeeFieldDefinitions = structuredClone(state.organization.employeeFieldDefinitions);
       this.tagDefinitions = structuredClone(state.organization.tags);
       this.exportSession.synchronizeCustomFields(this.employeeFieldDefinitions);
-      this.orgEditor = nextEditor;
-      this.uiOrgStructure = result.structure;
+      this.orgViews = nextViews;
+      this.viewModelCache.clear();
+      this.uiOrgStructure = systemStructure;
+      this.activeViewOrgStructure = activeStructure;
+      this.downloadViewOrgStructure = downloadStructure;
+      this.downloadSourceViewId = state.ui.download.sourceViewId;
       this.theme = state.ui.theme;
       this.locale = state.ui.locale;
       this.activeTab = state.ui.activeTab;
@@ -443,20 +543,84 @@ export class OrgStore {
     this.activeTab = activeTab;
   }
 
-  private handleStructureDocumentChange(): void {
-    if (this.isApplyingState) return;
-    this.rebuildMainModel();
-  }
-
-  private rebuildMainModel(): void {
+  private buildViewModel(viewId: ViewId): UiOrgStructure | null {
+    const editor = this.orgViews.editorByViewId.get(viewId);
+    if (!editor) return null;
+    const documentRevision = this.orgViews.getDocumentRevision(viewId);
+    const cached = this.viewModelCache.get(viewId);
+    if (
+      cached?.documentRevision === documentRevision &&
+      cached.employees === this.organizationEmployees &&
+      cached.employeeFieldDefinitions === this.employeeFieldDefinitions &&
+      cached.tags === this.tagDefinitions
+    ) {
+      return cached.structure;
+    }
     const result = buildOrganizationStructureWithResolution(
       this.organizationEmployees,
-      this.orgEditor.createState(),
+      editor.createState(),
       this.tagDefinitions,
       this.employeeFieldDefinitions,
     );
-    this.orgEditor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
-    this.uiOrgStructure = result.structure;
+    editor.synchronizeLiveResolution(result.liveEmployeeIdsByUnitId);
+    const tagOrder = this.tagDefinitions.map((tag) => tag.id);
+    for (const unit of editor.units) {
+      const displayUnit =
+        unit.liveFilter === null
+          ? unit
+          : { ...unit, employeeIds: result.liveEmployeeIdsByUnitId.get(unit.id) ?? [] };
+      const summary = buildOrgEditorUnitTagSummary(
+        displayUnit,
+        result.structure.indexes.employeesById,
+        tagOrder,
+      );
+      setOrgEditorUnitTagFooterHeight(
+        unit.id,
+        unit.collapsed
+          ? 0
+          : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16),
+      );
+    }
+    this.viewModelCache.set(viewId, {
+      documentRevision,
+      employeeFieldDefinitions: this.employeeFieldDefinitions,
+      employees: this.organizationEmployees,
+      structure: result.structure,
+      tags: this.tagDefinitions,
+    });
+    return result.structure;
+  }
+
+  private handleViewDocumentChange(viewId: ViewId, kind: "custom" | "system"): void {
+    if (this.isApplyingState) return;
+    const structure = this.buildViewModel(viewId);
+    if (!structure) return;
+    if (kind === "system") {
+      this.uiOrgStructure = structure;
+      this.refreshEmployeeUnitContexts();
+      this.resetAnalyticsCache();
+      this.scheduleAnalyticsPrecompute();
+    }
+    if (this.activeOrgViewId === viewId) this.activeViewOrgStructure = structure;
+    if (this.downloadSourceViewId === viewId) this.downloadViewOrgStructure = structure;
+  }
+
+  private rebuildMainModel(): void {
+    const systemViewId = this.systemOrgViewId;
+    if (!systemViewId) return;
+    const systemStructure = this.buildViewModel(systemViewId);
+    if (!systemStructure) return;
+    this.uiOrgStructure = systemStructure;
+    this.activeViewOrgStructure =
+      this.activeOrgViewId === systemViewId
+        ? systemStructure
+        : this.buildViewModel(this.activeOrgViewId);
+    this.downloadViewOrgStructure =
+      this.downloadSourceViewId === systemViewId
+        ? systemStructure
+        : this.downloadSourceViewId === this.activeOrgViewId
+          ? this.activeViewOrgStructure
+          : this.buildViewModel(this.downloadSourceViewId);
     this.refreshEmployeeUnitContexts();
     this.resetAnalyticsCache();
     this.scheduleAnalyticsPrecompute();
@@ -656,6 +820,56 @@ export class OrgStore {
     this.exportSession.clearSelection();
   }
 
+  selectOrgView(viewId: ViewId): void {
+    if (!this.orgViews.editorByViewId.has(viewId)) return;
+    this.orgViews.selectView(viewId);
+    this.activeViewOrgStructure =
+      viewId === this.systemOrgViewId ? this.uiOrgStructure : this.buildViewModel(viewId);
+  }
+
+  createOrgView(name: string, source: NewOrgViewSource): ViewId {
+    const viewId = this.orgViews.createView(name, source);
+    this.activeViewOrgStructure = this.buildViewModel(viewId);
+    return viewId;
+  }
+
+  renameOrgView(viewId: ViewId, name: string): void {
+    this.orgViews.renameView(viewId, name);
+  }
+
+  deleteOrgView(viewId: ViewId): void {
+    if (!this.orgViews.deleteView(viewId)) return;
+    this.viewModelCache.delete(viewId);
+    if (this.downloadSourceViewId === viewId) {
+      this.selectDownloadOrgView(this.systemOrgViewId);
+    }
+    this.activeViewOrgStructure =
+      this.activeOrgViewId === this.systemOrgViewId
+        ? this.uiOrgStructure
+        : this.buildViewModel(this.activeOrgViewId);
+  }
+
+  selectDownloadOrgView(viewId: ViewId): void {
+    if (!this.orgViews.editorByViewId.has(viewId) || viewId === this.downloadSourceViewId) return;
+    this.downloadSourceViewId = viewId;
+    this.downloadViewOrgStructure =
+      viewId === this.systemOrgViewId
+        ? this.uiOrgStructure
+        : viewId === this.activeOrgViewId
+          ? this.activeViewOrgStructure
+          : this.buildViewModel(viewId);
+    this.exportSession.clearSelection();
+    this.exportSession.setExcludedJsonUnitIds([]);
+    this.downloadUi = {
+      ...this.downloadUi,
+      employeeFilters: createEmptyEmployeeFiltersState(),
+      employeeQuery: "",
+      selectedFilters: createEmptyEmployeeFiltersState(),
+      selectedQuery: "",
+      unitQuery: "",
+    };
+  }
+
   selectUnit(unitId: UnitId): void {
     this.selectedUnitId = unitId;
   }
@@ -727,7 +941,11 @@ export class OrgStore {
     if (this.selectedUnitId === unitId) this.selectedUnitId = this.rootUnit?.id ?? null;
   }
 
-  createEmployee(fields: EditableEmployeeFields, unitMemberships: UnitAssignment[]): EmployeeId {
+  createEmployee(
+    fields: EditableEmployeeFields,
+    unitMemberships: UnitAssignment[],
+    viewId: ViewId = this.systemOrgViewId,
+  ): EmployeeId {
     const now = new Date().toISOString();
     const normalizedFields = normalizeEditableEmployeeFields(fields);
     const identityKey = createEmployeeIdentityKey(normalizedFields);
@@ -753,7 +971,7 @@ export class OrgStore {
     };
 
     this.organizationEmployees = [...this.organizationEmployees, employee];
-    this.applyOrganizationEmployeeAssignments(id, unitMemberships);
+    this.applyOrganizationEmployeeAssignments(id, unitMemberships, viewId);
     this.rebuildMainModel();
 
     return id;
@@ -763,8 +981,9 @@ export class OrgStore {
     employeeId: EmployeeId,
     fields: EditableEmployeeFields,
     unitMemberships: UnitAssignment[],
+    viewId: ViewId = this.systemOrgViewId,
   ): void {
-    this.updateOrganizationEmployee(employeeId, fields, unitMemberships);
+    this.updateOrganizationEmployee(employeeId, fields, unitMemberships, viewId);
   }
 
   updateEmployeeTags(updates: readonly EmployeeTagUpdate[]): void {
@@ -784,13 +1003,16 @@ export class OrgStore {
     }));
 
     if (!this.applyOrganizationEmployeeTagUpdates(after)) return;
+    this.rebuildMainModel();
 
-    this.mainOrgEditor.commitExternalCommand("Update Employee tags", {
+    this.orgEditor.commitExternalCommand("Update Employee tags", {
       redo: () => {
         this.applyOrganizationEmployeeTagUpdates(after);
+        this.rebuildMainModel();
       },
       undo: () => {
         this.applyOrganizationEmployeeTagUpdates(before);
+        this.rebuildMainModel();
       },
     });
   }
@@ -846,6 +1068,7 @@ export class OrgStore {
     employeeId: EmployeeId,
     fields: EditableEmployeeFields,
     unitMemberships: UnitAssignment[],
+    viewId: ViewId,
   ): void {
     const now = new Date().toISOString();
     const normalizedFields = normalizeEditableEmployeeFields(fields);
@@ -867,7 +1090,7 @@ export class OrgStore {
         ? { ...employee, ...normalizedFields, customFieldValues, tags, updatedAt: now }
         : employee,
     );
-    this.applyOrganizationEmployeeAssignments(employeeId, unitMemberships);
+    this.applyOrganizationEmployeeAssignments(employeeId, unitMemberships, viewId);
     this.rebuildMainModel();
   }
 
@@ -942,6 +1165,7 @@ export class OrgStore {
   private applyOrganizationEmployeeAssignments(
     employeeId: EmployeeId,
     memberships: UnitAssignment[],
+    viewId: ViewId,
   ): void {
     const assignmentByUnitId = new Map<
       UnitId,
@@ -954,12 +1178,14 @@ export class OrgStore {
         unitId: membership.unitId,
       });
     }
-    this.mainOrgEditor.setEmployeeAssignments(employeeId, [...assignmentByUnitId.values()]);
+    this.orgViews.editorByViewId
+      .get(viewId)
+      ?.setEmployeeAssignments(employeeId, [...assignmentByUnitId.values()]);
   }
 
   deleteOrganizationEmployee(employeeId: EmployeeId): void {
     if (!this.organizationEmployees.some((candidate) => candidate.id === employeeId)) return;
-    this.mainOrgEditor.purgeEmployeeReferences(employeeId);
+    this.orgViews.forEachEditor((editor) => editor.purgeEmployeeReferences(employeeId));
     this.organizationEmployees = this.organizationEmployees.filter(
       (candidate) => candidate.id !== employeeId,
     );
@@ -1086,21 +1312,29 @@ export class OrgStore {
       employeeFilters: clear(this.downloadUi.employeeFilters),
       selectedFilters: clear(this.downloadUi.selectedFilters),
     };
-    this.orgEditor.units = this.orgEditor.units.map((unit) => {
-      if (!unit.liveFilter) return unit;
-      const liveFilter = {
-        ...unit.liveFilter,
-        customFields: unit.liveFilter.customFields.filter((filter) => filter.fieldId !== fieldId),
-      };
-      return hasEmployeeLiveFilterCriteria(liveFilter)
-        ? { ...unit, liveFilter }
-        : {
-            ...unit,
-            bossEmployeeId: null,
-            employeeIds: [],
-            employeePositions: [],
-            liveFilter: null,
-          };
+    this.orgViews.forEachEditor((editor, viewId) => {
+      const nextUnits = editor.units.map((unit) => {
+        if (!unit.liveFilter?.customFields.some((filter) => filter.fieldId === fieldId)) {
+          return unit;
+        }
+        const liveFilter = {
+          ...unit.liveFilter,
+          customFields: unit.liveFilter.customFields.filter((filter) => filter.fieldId !== fieldId),
+        };
+        return hasEmployeeLiveFilterCriteria(liveFilter)
+          ? { ...unit, liveFilter }
+          : {
+              ...unit,
+              bossEmployeeId: null,
+              employeeIds: [],
+              employeePositions: [],
+              liveFilter: null,
+            };
+      });
+      if (nextUnits.some((unit, index) => unit !== editor.units[index])) {
+        editor.units = nextUnits;
+        this.orgViews.markViewDocumentChanged(viewId);
+      }
     });
   }
 
@@ -1149,21 +1383,27 @@ export class OrgStore {
       employeeFilters: clear(this.downloadUi.employeeFilters),
       selectedFilters: clear(this.downloadUi.selectedFilters),
     };
-    this.orgEditor.units = this.orgEditor.units.map((unit) => {
-      if (!unit.liveFilter) return unit;
-      const liveFilter = {
-        ...unit.liveFilter,
-        selectedTags: unit.liveFilter.selectedTags.filter((id) => id !== tagId),
-      };
-      return hasEmployeeLiveFilterCriteria(liveFilter)
-        ? { ...unit, liveFilter }
-        : {
-            ...unit,
-            bossEmployeeId: null,
-            employeeIds: [],
-            employeePositions: [],
-            liveFilter: null,
-          };
+    this.orgViews.forEachEditor((editor, viewId) => {
+      const nextUnits = editor.units.map((unit) => {
+        if (!unit.liveFilter?.selectedTags.includes(tagId)) return unit;
+        const liveFilter = {
+          ...unit.liveFilter,
+          selectedTags: unit.liveFilter.selectedTags.filter((id) => id !== tagId),
+        };
+        return hasEmployeeLiveFilterCriteria(liveFilter)
+          ? { ...unit, liveFilter }
+          : {
+              ...unit,
+              bossEmployeeId: null,
+              employeeIds: [],
+              employeePositions: [],
+              liveFilter: null,
+            };
+      });
+      if (nextUnits.some((unit, index) => unit !== editor.units[index])) {
+        editor.units = nextUnits;
+        this.orgViews.markViewDocumentChanged(viewId);
+      }
     });
     this.exportSession.excludedJsonTagKeys = this.exportSession.excludedJsonTagKeys.filter(
       (key) => key !== normalizeSearchValue(target.label),
@@ -1185,16 +1425,8 @@ export class OrgStore {
         ...employee,
         tags: employee.tags.map((tag) => ({ ...tag })),
       })),
-      structure: {
-        layoutMode: this.orgEditor.layoutMode,
-        units: this.orgEditor.units.map((unit) => ({
-          ...unit,
-          employeeIds: [...unit.employeeIds],
-          employeePositions: unit.employeePositions.map((position) => ({ ...position })),
-          liveFilter: unit.liveFilter ? structuredClone(unit.liveFilter) : null,
-        })),
-      },
       tags: this.tagDefinitions.map((tag) => ({ ...tag })),
+      views: this.orgViews.createState(),
     };
   }
 
@@ -1210,12 +1442,13 @@ export class OrgStore {
         employeeQuery: this.downloadUi.employeeQuery,
         selectedFilters: structuredClone(this.downloadUi.selectedFilters),
         selectedQuery: this.downloadUi.selectedQuery,
+        sourceViewId: this.downloadSourceViewId,
         unitQuery: this.downloadUi.unitQuery,
       },
       editor: {
         ...this.editorUi,
-        selectedItems: this.orgEditor.selectedItems.map((item) => ({ ...item })),
-        viewport: { ...this.orgEditor.viewport },
+        activeViewId: this.activeOrgViewId,
+        views: this.orgViews.createUiState(),
       },
       employees: structuredClone(this.employeesUi),
       expandedUnitIds: [...this.expandedUnitIds],
@@ -1250,8 +1483,23 @@ export class OrgStore {
         unitQuery: ui.download.unitQuery,
       };
       this.exportSession.loadState(ui.download);
-      this.orgEditor.setViewport({ ...ui.editor.viewport });
-      this.orgEditor.setSelectedItems(ui.editor.selectedItems.map((item) => ({ ...item })));
+      for (const viewUi of ui.editor.views) {
+        const editor = this.orgViews.editorByViewId.get(viewUi.viewId);
+        editor?.setViewport({ ...viewUi.viewport });
+        editor?.setSelectedItems(viewUi.selectedItems.map((item) => ({ ...item })));
+      }
+      this.orgViews.selectView(ui.editor.activeViewId);
+      this.downloadSourceViewId = ui.download.sourceViewId;
+      this.activeViewOrgStructure =
+        this.activeOrgViewId === this.systemOrgViewId
+          ? this.uiOrgStructure
+          : this.buildViewModel(this.activeOrgViewId);
+      this.downloadViewOrgStructure =
+        this.downloadSourceViewId === this.systemOrgViewId
+          ? this.uiOrgStructure
+          : this.downloadSourceViewId === this.activeOrgViewId
+            ? this.activeViewOrgStructure
+            : this.buildViewModel(this.downloadSourceViewId);
     } finally {
       this.isApplyingState = previousIsApplyingState;
     }

@@ -515,6 +515,24 @@
     "Arabic": "Árabe",
     "Choose interface language": "Elige el idioma de la interfaz.",
     "Choose interface theme": "Elige la apariencia de la interfaz.",
-    "Arrange selected": "Organizar seleccionados"
+    "Arrange selected": "Organizar seleccionados",
+    "A View with this name already exists.": "Ya existe una vista con este nombre.",
+    "Enter a View name.": "Introduce un nombre para la vista.",
+    "The source View is unavailable.": "La vista de origen no está disponible.",
+    "The system View is unavailable.": "La vista del sistema no está disponible.",
+    "View names can contain at most 100 characters.": "Los nombres de vista pueden tener como máximo 100 caracteres.",
+    "Copy View": "Copia de una vista",
+    "Create View": "Crear vista",
+    "Delete View": "Eliminar vista",
+    "Delete View confirmation": "¿Eliminar «{name}»? Se eliminarán sus equipos, asignaciones, reglas y diseño.",
+    "Empty View": "Vista vacía",
+    "Rename": "Renombrar",
+    "Rename View": "Renombrar vista",
+    "Source View": "Vista de origen",
+    "Organization View": "Vista de la organización",
+    "View name": "Nombre de la vista",
+    "View source": "Origen de la vista",
+    "Assign Employees in this View before configuring an export.": "Asigna empleados en esta vista antes de configurar la descarga.",
+    "Go to Editor": "Ir al Editor"
   }
 }

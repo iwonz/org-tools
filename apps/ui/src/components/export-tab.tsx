@@ -32,6 +32,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ProductSurface } from "@/components/ui/product-surface";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitTree } from "@/components/unit-tree";
 import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
@@ -111,7 +118,7 @@ export const ExportTab = observer(() => {
   const t = useUiText();
   const countText = useCountText();
   const getUnitEmployeeSummary = useUnitEmployeeSummary();
-  const units: UiOrgStructure | null = store.units;
+  const units: UiOrgStructure | null = store.downloadUnits;
   const [status, setStatus] = useState<UiTextKey | null>(null);
   const [isExportSettingsDialogOpen, setIsExportSettingsDialogOpen] = useState(false);
   const [sourceSection, setSourceSection] = useState<ExportSourceSection>("units");
@@ -140,13 +147,14 @@ export const ExportTab = observer(() => {
   const employeePositionOptions = units?.indexes.positionOptions ?? [];
   const employeeTagOptions = units?.indexes.tagOptions ?? [];
   const employeeSearchDocumentByEmployeeId = units?.indexes.employeeSearchDocumentByEmployeeId;
+  const assignedEmployees = units?.deepEmployees ?? [];
   const employeeUnitContextsByEmployeeId = useMemo(
-    () => buildEmployeeUnitContextIndex(units?.allEmployees ?? []),
-    [units],
+    () => buildEmployeeUnitContextIndex(assignedEmployees),
+    [assignedEmployees],
   );
   const employeeUnitMembershipsByEmployeeId = useMemo(
-    () => buildEmployeeUnitMembershipIndex(units?.allEmployees ?? [], units?.indexes.unitsById),
-    [units],
+    () => buildEmployeeUnitMembershipIndex(assignedEmployees, units?.indexes.unitsById),
+    [assignedEmployees, units?.indexes.unitsById],
   );
   const unitQueryTokens = getSearchTokens(unitQuery);
   const employeeQueryTokens = getSearchTokens(employeeQuery);
@@ -253,7 +261,7 @@ export const ExportTab = observer(() => {
     return filterEmployeesBySearch({
       employeeSearchDocumentByEmployeeId,
       employeeUnitMembershipsByEmployeeId,
-      employees: units?.allEmployees ?? [],
+      employees: assignedEmployees,
       filters: employeeFilters,
       queryTokens: employeeQueryTokens,
     });
@@ -262,7 +270,7 @@ export const ExportTab = observer(() => {
     employeeQueryTokens,
     employeeSearchDocumentByEmployeeId,
     employeeUnitMembershipsByEmployeeId,
-    units,
+    assignedEmployees,
   ]);
   const foundEmployeesToAdd = useMemo(
     () => foundEmployees.filter((employee) => !selectedEmployeeIdSet.has(employee.id)),
@@ -412,21 +420,41 @@ export const ExportTab = observer(() => {
       store.employeeFieldDefinitions,
     ],
   );
-  const hasEmployeeSourceContent = (units?.allEmployees.length ?? 0) > 0;
+  const hasEmployeeSourceContent = assignedEmployees.length > 0;
 
   if (!units) return null;
+  const viewSourceSelect = (
+    <div className="flex shrink-0 items-center gap-3 px-3 py-2" data-demo-id="download-view-source">
+      <span className="text-xs font-medium text-muted-foreground">{t("Source View")}</span>
+      <Select onValueChange={store.selectDownloadOrgView} value={store.downloadSourceViewId}>
+        <SelectTrigger className="h-9 w-56" aria-label={t("Source View")}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {store.orgViewList.map((view) => (
+            <SelectItem key={view.id} value={view.id}>
+              {view.kind === "system" ? t("Units") : view.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
   if (!hasEmployeeSourceContent) {
     return (
-      <TopLevelEmptyState
-        action={
-          <Button onClick={() => store.setActiveTab("employees")} type="button">
-            {t("Go to Employees")}
-          </Button>
-        }
-        description={t("Add Employees before configuring an export.")}
-        icon={<HiOutlineUsers className="size-6" />}
-        title={t("No Employees to export")}
-      />
+      <section className="flex min-h-0 flex-1 flex-col">
+        {viewSourceSelect}
+        <TopLevelEmptyState
+          action={
+            <Button onClick={() => store.setActiveTab("orgEditor")} type="button">
+              {t("Go to Editor")}
+            </Button>
+          }
+          description={t("Assign Employees in this View before configuring an export.")}
+          icon={<HiOutlineUsers className="size-6" />}
+          title={t("No Employees to export")}
+        />
+      </section>
     );
   }
 
@@ -516,9 +544,13 @@ export const ExportTab = observer(() => {
       data-demo-id="export-tab"
     >
       <ExportHeaderAction disabled={!hasSelectedEmployees} onClick={continueToSettings} />
-      <ProductSurface className="relative min-h-0 flex-1" data-demo-id="export-surface">
+      <ProductSurface
+        className="relative flex min-h-0 flex-1 flex-col"
+        data-demo-id="export-surface"
+      >
+        {viewSourceSelect}
         <div
-          className="grid h-full min-h-0 grid-rows-2 overflow-hidden md:grid-cols-2 md:grid-rows-1"
+          className="grid min-h-0 flex-1 grid-rows-2 overflow-hidden md:grid-cols-2 md:grid-rows-1"
           data-demo-id="export-selection-grid"
         >
           <aside

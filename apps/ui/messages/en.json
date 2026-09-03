@@ -515,6 +515,24 @@
     "Arabic": "Arabic",
     "Choose interface language": "Choose the interface language.",
     "Choose interface theme": "Choose the interface appearance.",
-    "Arrange selected": "Arrange selected"
+    "Arrange selected": "Arrange selected",
+    "A View with this name already exists.": "A View with this name already exists.",
+    "Enter a View name.": "Enter a View name.",
+    "The source View is unavailable.": "The source View is unavailable.",
+    "The system View is unavailable.": "The system View is unavailable.",
+    "View names can contain at most 100 characters.": "View names can contain at most 100 characters.",
+    "Copy View": "Copy a View",
+    "Create View": "Create View",
+    "Delete View": "Delete View",
+    "Delete View confirmation": "Delete “{name}”? Its Units, assignments, rules, and layout will be removed.",
+    "Empty View": "Empty View",
+    "Rename": "Rename",
+    "Rename View": "Rename View",
+    "Source View": "Source View",
+    "Organization View": "Organization View",
+    "View name": "View name",
+    "View source": "View source",
+    "Assign Employees in this View before configuring an export.": "Assign Employees in this View before configuring an export.",
+    "Go to Editor": "Go to Editor"
   }
 }

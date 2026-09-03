@@ -86,7 +86,8 @@ test("runs the complete state editor at the repository base path without APIs or
   await importSyntheticState(page);
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
 
-  await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-editor-view-toolbar"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-view-select"]')).toContainText("Units");
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   const coloredTag = page.locator('[data-tag-color-surface][data-tag-color="blue"]').first();
@@ -167,6 +168,15 @@ test("hands state to another live tab and forgets it after the final tab closes"
   await page.addInitScript(useEnglish, localeStorageKey);
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await importSyntheticState(page);
+  await page.locator('[data-demo-id="org-editor-create-view"]').click();
+  const createView = page.getByRole("dialog", { name: "Create View", exact: true });
+  await createView.getByLabel("View name", { exact: true }).fill("Live scenario");
+  await createView.getByLabel("View source", { exact: true }).click();
+  await page.getByRole("option", { name: "Copy a View", exact: true }).click();
+  await createView.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(page.locator('[data-demo-id="org-editor-view-select"]')).toContainText(
+    "Live scenario",
+  );
 
   const secondPage = await context.newPage();
   await secondPage.goto("./", { waitUntil: "domcontentloaded" });
@@ -174,6 +184,9 @@ test("hands state to another live tab and forgets it after the final tab closes"
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
   await secondPage.bringToFront();
   await expect(secondPage.getByText("Product", { exact: true }).first()).toBeVisible();
+  await expect(secondPage.locator('[data-demo-id="org-editor-view-select"]')).toContainText(
+    "Live scenario",
+  );
   await secondPage.getByRole("tab", { name: "Employees", exact: true }).click();
   await expect(secondPage.getByRole("tab", { name: "Employees", exact: true })).toHaveAttribute(
     "aria-selected",

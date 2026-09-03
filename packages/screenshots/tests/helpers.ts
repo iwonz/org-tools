@@ -33,7 +33,7 @@ const emptyEmployeeFilters = () => ({
   selectedUnitIds: [],
 });
 
-const emptyDownloadState = (): OrgToolsState["ui"]["download"] => ({
+const emptyDownloadState = (sourceViewId: string): OrgToolsState["ui"]["download"] => ({
   employeeFilters: emptyEmployeeFilters(),
   employeeQuery: "",
   excludedEmployeeIds: [],
@@ -94,6 +94,7 @@ const emptyDownloadState = (): OrgToolsState["ui"]["download"] => ({
   tabMode: "json" as const,
   templateFormat: "{email}, ",
   unitQuery: "",
+  sourceViewId,
 });
 
 export async function resetServerState(page: Page, locale: AppLocale = "en"): Promise<string> {
@@ -105,7 +106,9 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
   if (!response.ok()) throw new Error(JSON.stringify(await response.json()));
   const document = (await response.json()) as { revision: number; state: OrgToolsState };
   const state = document.state;
-  state.organization.structure.units = [];
+  const systemView = state.organization.views.find((view) => view.kind === "system");
+  if (!systemView) throw new Error("System View is unavailable.");
+  systemView.structure.units = [];
   state.organization.employees = [];
   state.organization.employeeFieldDefinitions = [];
   state.organization.tags = [];
@@ -113,10 +116,16 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
   state.ui.analytics = { filters: emptyEmployeeFilters(), query: "" };
   state.ui.calendar = { monthIndex: 6, year: 2026 };
   state.ui.editor = {
+    activeViewId: systemView.id,
     searchOpen: false,
     searchQuery: "",
-    selectedItems: [],
-    viewport: { scale: 1, x: 0, y: 0 },
+    views: [
+      {
+        selectedItems: [],
+        viewId: systemView.id,
+        viewport: { scale: 1, x: 0, y: 0 },
+      },
+    ],
   };
   state.ui.employees = { filters: emptyEmployeeFilters(), query: "" };
   state.ui.expandedUnitIds = [];
@@ -129,7 +138,7 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
     employeeQuery: "",
     unitQuery: "",
   };
-  state.ui.download = emptyDownloadState();
+  state.ui.download = emptyDownloadState(systemView.id);
   const write = await page.request.put("/api/state", {
     data: { scope: "all", state },
     headers: { Origin: origin },

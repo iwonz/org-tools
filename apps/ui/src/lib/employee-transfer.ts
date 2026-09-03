@@ -606,7 +606,9 @@ export const applyEmployeeImport = ({
     employeeById.set(row.id, next);
   }
 
-  const units = state.organization.structure.units.map(cloneUnit);
+  const systemView = state.organization.views.find((view) => view.kind === "system");
+  if (!systemView) throw new LocalizedError(uiMessage("The system View is unavailable."));
+  const units = systemView.structure.units.map(cloneUnit);
   if (preview.importsTeams) {
     const unitById = new Map(units.map((unit) => [unit.id, unit]));
     const pathById = createUnitPaths(units);
@@ -682,6 +684,7 @@ export const applyEmployeeImport = ({
   }
 
   state.organization.employees = [...employeeById.values()];
-  state.organization.structure.units = units;
+  systemView.structure.units = units;
+  systemView.updatedAt = now;
   return parseOrgToolsState(state);
 };
