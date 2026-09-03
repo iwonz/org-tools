@@ -285,6 +285,24 @@
     ]
   },
   {
+    "id": "editor-unit-note-preview",
+    "module": "editor",
+    "featured": false,
+    "title": "Unit Markdown note preview",
+    "file": "feature-editor-unit-note-preview.png",
+    "description": "Review a View-local Unit note rendered from safe bundled GitHub Flavored Markdown before saving the draft.",
+    "capabilities": ["Markdown preview", "Tables and lists", "Draft preview", "View-local content"]
+  },
+  {
+    "id": "editor-unit-note-editor",
+    "module": "editor",
+    "featured": false,
+    "title": "Unit Markdown note editor",
+    "file": "feature-editor-unit-note-editor.png",
+    "description": "Write a bounded Unit note in an isolated draft and commit it as one undoable Editor action.",
+    "capabilities": ["Markdown draft", "64 KiB limit", "Explicit save", "Undo and redo"]
+  },
+  {
     "id": "editor-view-selector",
     "module": "editor",
     "featured": false,

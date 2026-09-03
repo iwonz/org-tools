@@ -42,7 +42,7 @@ import {
 import { createEmployeeIdentityKey, isEmployeeId } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
-import { createDefaultOrgEditorState } from "@/lib/org-editor";
+import { createDefaultOrgEditorState, normalizeOrgEditorUnitNoteMarkdown } from "@/lib/org-editor";
 
 export type LoadedOrgFile = { kind: "orgToolsState"; state: OrgToolsState };
 
@@ -498,6 +498,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
       "id",
       "liveFilter",
       "name",
+      "noteMarkdown",
       "order",
       "parentId",
       "updatedAt",
@@ -512,6 +513,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     !isEmployeeIdArray(value.employeeIds) ||
     !isString(value.name) ||
     !value.name.trim() ||
+    !isString(value.noteMarkdown) ||
     !Number.isInteger(value.order) ||
     (value.order as number) < 0 ||
     !isTimestamp(value.updatedAt) ||
@@ -522,6 +524,8 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
   }
   const employeePositions = normalizeEmployeePositions(value.employeePositions);
   if (!employeePositions) return null;
+  const noteMarkdown = normalizeOrgEditorUnitNoteMarkdown(value.noteMarkdown);
+  if (noteMarkdown === null || noteMarkdown !== value.noteMarkdown) return null;
   const liveFilter = value.liveFilter === null ? null : normalizeLiveFilterRule(value.liveFilter);
   if (value.liveFilter !== null && !liveFilter) return null;
   if (liveFilter && value.employeeIds.length > 0) return null;
@@ -534,6 +538,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     id: value.id,
     liveFilter,
     name: value.name.trim(),
+    noteMarkdown,
     order: value.order as number,
     parentId: value.parentId,
     updatedAt: value.updatedAt,

@@ -37,6 +37,12 @@ remote avatars are never fetched. Crop encoding prefers WebP and falls back only
 local PNG canvas encoder; neither path uploads the source or result. Profile and email navigation
 require direct user actions and referrer protection.
 
+Unit notes are bounded local Markdown embedded only in complete state transfer and the configured
+SQLite state. Preview never executes raw HTML and replaces Markdown images with inert local text,
+so opening a note cannot fetch an asset. Supported external links navigate only after a direct
+click and always use `noopener`, `noreferrer`, and a no-referrer policy. Editor Image and structured
+Employee outputs omit note content.
+
 ## Local files and publication
 
 The default `.org-tools/` runtime directory is ignored by Git. Stop the local server before copying

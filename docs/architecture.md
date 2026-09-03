@@ -35,6 +35,11 @@ global references shared by every View. Viewport and selection live per View in 
 writes therefore do not serialize Employees or structural documents. Open surfaces, notifications,
 search suggestions, and unfinished forms are transient.
 
+Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
+UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
+Copy/Paste preserve their source content while later edits remain independent. A note Save is one
+Unit history command and one organization write; the open dialog draft is transient.
+
 State Import parses one detached value, validates exact keys, identifiers, dates, URLs, embedded
 avatars, references, graph invariants, and UI references, then performs one atomic replacement.
 Employee Import maps a flat or nested array, preserves imported UUIDs for new Employees, matches
@@ -132,6 +137,9 @@ history, collaborative cursors, or remote synchronization.
   replacement clears the clipboard, which is never persisted, broadcast, or written to the system
   clipboard.
 - `AutomaticStateWriter` owns write serialization and retry state.
+- Unit note drafts stay outside every store until Save. The lazily imported Markdown renderer uses
+  GitHub Flavored Markdown without raw HTML or image elements; safe links require an explicit click
+  and use `noopener`, `noreferrer`, and a no-referrer policy.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
   and write observation; the SQLite transport is imported only by `apps/ui`.
 - Import owns one transient `File`, representative record, mapping, and validated candidate. Employee
@@ -228,7 +236,9 @@ back to the nearest surviving ancestor, then the first root, then no selection.
 The system View and Units are the same document. A custom View may start empty or clone any View;
 copying regenerates all Unit IDs and View-local references while retaining global Employee IDs.
 Editing an Employee or Tag updates every View immediately, while assigning or removing an Employee
-from a custom Unit affects that View only. Editor export always uses the active View.
+from a custom Unit affects that View only. Unit Markdown notes follow the Unit through View cloning
+and Copy/Paste but remain isolated after the copy. Editor export always uses the active View and
+does not paint or serialize notes into Image, JSON, or Template output.
 
 ## Builds and development
 

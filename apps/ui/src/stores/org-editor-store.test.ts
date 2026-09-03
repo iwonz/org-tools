@@ -1,9 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import {
   createDefaultOrgEditorState,
   createOrgEditorUnitFromScratch,
   ORG_EDITOR_GRID_SIZE,
+  ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES,
 } from "@/lib/org-editor";
 import { OrgEditorStore } from "@/stores/org-editor-store";
 
@@ -151,5 +152,44 @@ describe("OrgEditorStore deletion", () => {
     expect(new Set(store.units.map((unit) => unit.id))).toEqual(
       new Set([rootId, childId, otherId, liveId]),
     );
+  });
+});
+
+describe("OrgEditorStore Unit notes", () => {
+  test("saves a normalized note in one command and supports Undo and Redo", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-03T12:00:00.000Z"));
+    let documentChanges = 0;
+    const store = new OrgEditorStore(() => {
+      documentChanges += 1;
+    });
+    const unitId = store.addUnit({ name: "Platform", x: 0, y: 0 });
+    const originalUpdatedAt = store.units[0]?.updatedAt;
+    vi.setSystemTime(new Date("2026-09-03T12:00:01.000Z"));
+    documentChanges = 0;
+
+    store.setUnitNoteMarkdown(unitId, "# Scope\r\n\r\n- Own the API");
+
+    expect(documentChanges).toBe(1);
+    expect(store.units[0]?.noteMarkdown).toBe("# Scope\n\n- Own the API");
+    expect(store.units[0]?.updatedAt).not.toBe(originalUpdatedAt);
+    expect(store.canUndo).toBe(true);
+
+    store.undo();
+    expect(store.units[0]?.noteMarkdown).toBe("");
+    store.redo();
+    expect(store.units[0]?.noteMarkdown).toBe("# Scope\n\n- Own the API");
+    vi.useRealTimers();
+  });
+
+  test("does not mutate a Unit for an oversized note", () => {
+    const store = new OrgEditorStore();
+    const unitId = store.addUnit({ name: "Platform", x: 0, y: 0 });
+    const before = store.createState();
+
+    expect(() =>
+      store.setUnitNoteMarkdown(unitId, "x".repeat(ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES + 1)),
+    ).toThrow("64 KiB");
+    expect(store.createState()).toEqual(before);
   });
 });

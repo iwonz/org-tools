@@ -2197,6 +2197,94 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await assertLocalRequests();
 });
 
+test("edits, safely previews, persists, and discards Unit Markdown notes", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+
+  const productUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  const noteAction = productUnit.locator('[data-demo-id="unit-note-action"]');
+  await expect(noteAction).toHaveAttribute("data-note-active", "false");
+  await expect(noteAction).toHaveCSS("opacity", "0");
+  await productUnit.hover();
+  await expect(noteAction).toHaveCSS("opacity", "1");
+  await noteAction.click();
+
+  let dialog = page.getByRole("dialog", { name: "Note for Product", exact: true });
+  await expect(dialog.locator('[data-demo-id="unit-note-preview-tab"]')).toHaveAttribute(
+    "data-state",
+    "active",
+  );
+  await expect(dialog.locator('[data-demo-id="unit-note-empty"]')).toBeVisible();
+  await dialog.locator('[data-demo-id="unit-note-editor-tab"]').click();
+  const noteSource = [
+    "# Platform scope",
+    "",
+    "**Owns delivery.**",
+    "",
+    "| Area | Owner |",
+    "| --- | --- |",
+    "| API | Platform |",
+    "",
+    "![Remote diagram](https://external.example.test/diagram.png)",
+    "",
+    "<script>window.noteExecuted = true</script>",
+    "",
+    "[Reference](https://external.example.test/reference)",
+  ].join("\n");
+  await dialog.locator('[data-demo-id="unit-note-editor"]').fill(noteSource);
+  await dialog.locator('[data-demo-id="unit-note-preview-tab"]').click();
+  const preview = dialog.locator('[data-demo-id="unit-note-preview"]');
+  await expect(preview.getByRole("heading", { name: "Platform scope", exact: true })).toBeVisible();
+  await expect(preview.getByRole("table")).toBeVisible();
+  await expect(
+    preview.getByText("Image not displayed: Remote diagram", { exact: true }),
+  ).toBeVisible();
+  await expect(preview.locator("img,script")).toHaveCount(0);
+  await expect(preview.getByRole("link", { name: "Reference", exact: true })).toHaveAttribute(
+    "rel",
+    "noopener noreferrer",
+  );
+  await expect(preview.getByRole("link", { name: "Reference", exact: true })).toHaveAttribute(
+    "referrerpolicy",
+    "no-referrer",
+  );
+  expect(await page.evaluate(() => "noteExecuted" in window)).toBe(false);
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(noteAction).toHaveAttribute("data-note-active", "true");
+  await expect(noteAction).toHaveCSS("opacity", "1");
+
+  await page.waitForTimeout(400);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const restoredUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  const restoredAction = restoredUnit.locator('[data-demo-id="unit-note-action"]');
+  await expect(restoredAction).toHaveAttribute("data-note-active", "true");
+  await restoredAction.click();
+  dialog = page.getByRole("dialog", { name: "Note for Product", exact: true });
+  await expect(dialog.locator('[data-demo-id="unit-note-preview-tab"]')).toHaveAttribute(
+    "data-state",
+    "active",
+  );
+  await dialog.locator('[data-demo-id="unit-note-editor-tab"]').click();
+  await dialog.locator('[data-demo-id="unit-note-editor"]').fill("Unsaved replacement");
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  const discard = page.getByRole("alertdialog", { name: "Discard note changes?", exact: true });
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await discard.getByRole("button", { name: "Discard changes", exact: true }).click();
+  await expect(dialog).toBeHidden();
+
+  await restoredAction.click();
+  dialog = page.getByRole("dialog", { name: "Note for Product", exact: true });
+  await expect(dialog.getByText("Owns delivery.", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await assertLocalRequests();
+});
+
 test("deletes nested and overlapping Editor selections as one valid state", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
@@ -2449,6 +2537,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
       id: unitId(index),
       liveFilter: null,
       name: `Unit ${String(index + 1).padStart(4, "0")}`,
+      noteMarkdown: "",
       order: index,
       parentId: null,
       updatedAt: timestamp,

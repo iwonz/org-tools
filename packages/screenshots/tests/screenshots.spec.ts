@@ -465,6 +465,22 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
   await capture(page, "editor");
 
+  const productNoteUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await productNoteUnit.hover();
+  await productNoteUnit.locator('[data-demo-id="unit-note-action"]').click();
+  const noteDialog = page.getByRole("dialog", { name: "Note for Product", exact: true });
+  await noteDialog.getByRole("tab", { name: "Editor", exact: true }).click();
+  await noteDialog
+    .getByLabel("Markdown editor", { exact: true })
+    .fill(
+      "# Product responsibilities\n\n- Own the product roadmap\n- Coordinate discovery and delivery\n\n| Decision | Owner |\n| --- | --- |\n| Quarterly priorities | Product lead |",
+    );
+  await noteDialog.getByRole("tab", { name: "Preview", exact: true }).click();
+  await capture(page, "editor-unit-note-preview");
+  await noteDialog.getByRole("tab", { name: "Editor", exact: true }).click();
+  await capture(page, "editor-unit-note-editor");
+  await noteDialog.getByRole("button", { name: "Save", exact: true }).click();
+
   const viewSelect = page.locator('[data-demo-id="org-editor-view-select"]');
   await page.locator('[data-demo-id="org-editor-create-view"]').click();
   let viewDialog = page.getByRole("dialog", { name: "Create View", exact: true });

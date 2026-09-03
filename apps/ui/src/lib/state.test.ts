@@ -5,6 +5,7 @@ import { isUuid } from "@/lib/employee-data";
 import { isEmployeeId } from "@/lib/employee-id";
 import { createEmptyEmployeeSearchFilters } from "@/lib/employee-search";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
+import { ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES } from "@/lib/org-editor";
 import { createBlankOrgToolsState, parseOrgFileJson, parseOrgToolsState } from "@/lib/org-file";
 import type { OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
 import { OrgStore } from "@/stores/org-store";
@@ -83,6 +84,7 @@ describe("OrgToolsState", () => {
     if (!nextEmployeeId) throw new Error("Expected an Employee.");
     store.orgEditor.setViewport({ scale: 1.25, x: 40, y: 60 });
     store.orgEditor.setSelectedItems([{ type: "unit", unitId }]);
+    store.orgEditor.setUnitNoteMarkdown(unitId, "# Platform\n\nOwns delivery.");
     store.setTheme("dark");
 
     const state = store.createOrgToolsState();
@@ -96,6 +98,7 @@ describe("OrgToolsState", () => {
     expect(isEmployeeId(nextEmployeeId)).toBe(true);
     expect(restored.theme).toBe("dark");
     expect(restored.orgEditor.viewport).toEqual({ scale: 1.25, x: 40, y: 60 });
+    expect(restored.orgEditor.units[0]?.noteMarkdown).toBe("# Platform\n\nOwns delivery.");
     expect(
       restored.uiOrgStructure?.indexes.employeesById.get(nextEmployeeId)?.unitPositions[0],
     ).toMatchObject({
@@ -104,6 +107,29 @@ describe("OrgToolsState", () => {
       unitId,
     });
     expect(restored.createOrgToolsState()).toEqual(state);
+  });
+
+  test("requires a canonical bounded note on every Unit", () => {
+    const { store } = populatedStore();
+    const missing = structuredClone(store.createOrgToolsState());
+    const missingUnit = missing.organization.views[0]?.structure.units[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    delete missingUnit.noteMarkdown;
+    expect(() => parseOrgToolsState(missing)).toThrow();
+
+    const oversized = structuredClone(store.createOrgToolsState());
+    const oversizedUnit = oversized.organization.views[0]?.structure.units[0];
+    if (!oversizedUnit) throw new Error("Expected a Unit.");
+    oversizedUnit.noteMarkdown = "x".repeat(ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES + 1);
+    expect(() => parseOrgToolsState(oversized)).toThrow();
+
+    const nonCanonical = structuredClone(store.createOrgToolsState());
+    const nonCanonicalUnit = nonCanonical.organization.views[0]?.structure.units[0];
+    if (!nonCanonicalUnit) throw new Error("Expected a Unit.");
+    nonCanonicalUnit.noteMarkdown = "line one\r\nline two";
+    expect(() => parseOrgToolsState(nonCanonical)).toThrow();
   });
 
   test("clones isolated Views while keeping Employees global", () => {
@@ -487,6 +513,7 @@ describe("OrgToolsState", () => {
         id: firstId,
         liveFilter: rule([secondId]),
         name: "First",
+        noteMarkdown: "",
         order: 0,
         parentId: null,
         updatedAt: now,
@@ -502,6 +529,7 @@ describe("OrgToolsState", () => {
         id: secondId,
         liveFilter: rule([firstId]),
         name: "Second",
+        noteMarkdown: "",
         order: 1,
         parentId: null,
         updatedAt: now,

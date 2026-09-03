@@ -296,6 +296,25 @@ for (const [locale, messages] of [
     expect(
       await productUnit.evaluate((element) => window.getComputedStyle(element).fontFamily),
     ).toContain(expectedFont);
+    await productUnit.hover();
+    await productUnit
+      .getByRole("button", {
+        name: messages.Ui["Open Unit note for {name}"].replace("{name}", "Product"),
+        exact: true,
+      })
+      .click();
+    const noteDialog = page.getByRole("dialog", {
+      name: messages.Ui["Note for {name}"].replace("{name}", "Product"),
+      exact: true,
+    });
+    await expect(
+      noteDialog.getByRole("tab", { name: messages.Ui.Preview, exact: true }),
+    ).toBeVisible();
+    await expect(
+      noteDialog.getByRole("tab", { name: messages.Ui.Editor, exact: true }),
+    ).toBeVisible();
+    await expect(noteDialog.getByText(messages.Ui["No note yet."], { exact: true })).toBeVisible();
+    await noteDialog.getByRole("button", { name: messages.Ui.Close, exact: true }).click();
     if (locale === "ar") {
       const [canvasBox, viewBox, historyBox, actionBox] = await Promise.all([
         editorCanvas.boundingBox(),

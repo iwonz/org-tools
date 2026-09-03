@@ -533,6 +533,19 @@
     "View name": "View name",
     "View source": "View source",
     "Assign Employees in this View before configuring an export.": "Assign Employees in this View before configuring an export.",
-    "Go to Editor": "Go to Editor"
+    "Go to Editor": "Go to Editor",
+    "Unit note": "Unit note",
+    "Open Unit note for {name}": "Open note for {name}",
+    "Note for {name}": "Note for {name}",
+    "No note yet.": "No note yet.",
+    "Write Markdown in the Editor tab.": "Write Markdown in the Editor tab.",
+    "Describe responsibilities, decisions, or context with Markdown.": "Describe responsibilities, decisions, or context with Markdown.",
+    "Discard note changes?": "Discard note changes?",
+    "Discard note changes description": "The unsaved Markdown will be lost.",
+    "Discard changes": "Discard changes",
+    "Unit notes can contain at most 64 KiB.": "Unit notes can contain at most 64 KiB.",
+    "Markdown image {alt}": "Image not displayed: {alt}",
+    "Markdown preview": "Markdown preview",
+    "Markdown editor": "Markdown editor"
   }
 }

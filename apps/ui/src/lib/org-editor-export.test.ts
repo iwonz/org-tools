@@ -53,6 +53,7 @@ const unit: OrgEditorUnit = {
   id: "00000000-0000-4000-8000-000000000012",
   liveFilter: null,
   name: "Research & Development / Lab",
+  noteMarkdown: "",
   order: 0,
   parentId: null,
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -176,6 +177,9 @@ describe("Org Editor image export", () => {
         employeeRowHeights: [76, 48],
       }),
     ).toBe(212);
+    expect(getOrgEditorUnitBounds({ ...unit, noteMarkdown: "# Private note" })).toEqual(
+      getOrgEditorUnitBounds(unit),
+    );
   });
 
   test("anchors hierarchy connections to rendered card heights", () => {
@@ -203,7 +207,7 @@ describe("Org Editor image export", () => {
 
 describe("Org Editor structured export scope", () => {
   test("limits Employees and Unit assignments to the selected Unit or subtree", () => {
-    const root = { ...unit, employeeIds: [employee.id] };
+    const root = { ...unit, employeeIds: [employee.id], noteMarkdown: "# Private note" };
     const child: OrgEditorUnit = {
       ...unit,
       employeeIds: [employee.id],
@@ -235,5 +239,6 @@ describe("Org Editor structured export scope", () => {
       root.name,
       child.name,
     ]);
+    expect(JSON.stringify(subtreeRows)).not.toContain("Private note");
   });
 });

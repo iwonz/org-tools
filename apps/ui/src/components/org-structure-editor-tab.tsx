@@ -35,6 +35,7 @@ import {
   HiOutlineChevronRight,
   HiOutlineClipboard,
   HiOutlineDocumentDuplicate,
+  HiOutlineDocumentText,
   HiOutlineFolder,
   HiOutlineMagnifyingGlass,
   HiOutlineMinus,
@@ -87,6 +88,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitDialog } from "@/components/unit-dialog";
+import { UnitNoteDialog } from "@/components/unit-note-dialog";
 import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
@@ -971,6 +973,7 @@ function OrgEditorNode({
   layoutMode,
   onAddChild,
   onEditUnit,
+  onOpenNote,
   onConnectionPointerDown,
   onEmployeeContextMenu,
   onEmployeePointerDown,
@@ -990,6 +993,7 @@ function OrgEditorNode({
   layoutMode: OrgEditorLayoutMode;
   onAddChild: (unitId: OrgEditorUnitId) => void;
   onEditUnit: (unit: OrgEditorUnit) => void;
+  onOpenNote: (unit: OrgEditorUnit) => void;
   onConnectionPointerDown: (
     event: React.PointerEvent<HTMLButtonElement>,
     unit: OrgEditorUnit,
@@ -1131,12 +1135,33 @@ function OrgEditorNode({
       >
         <HiOutlinePlus className="size-4" />
       </Button>
+      <Button
+        aria-label={t("Open Unit note for {name}", { name: unit.name })}
+        className={cn(
+          "absolute end-2 top-2 z-20 size-7 rounded-md border-0 p-0 shadow-none transition-[color,background-color,opacity]",
+          unit.noteMarkdown.trim()
+            ? "bg-signal/10 text-signal opacity-100 hover:bg-signal/15 hover:text-signal"
+            : "pointer-events-none bg-transparent text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100",
+        )}
+        data-demo-id="unit-note-action"
+        data-note-active={unit.noteMarkdown.trim() ? "true" : "false"}
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenNote(unit);
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        size="icon"
+        type="button"
+        variant="ghost"
+      >
+        <HiOutlineDocumentText className="size-4" />
+      </Button>
       <div
         className="grid shrink-0 gap-1.5 p-2"
         data-org-editor-unit-header
         style={{ height: ORG_EDITOR_UNIT_HEADER_HEIGHT }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pe-8">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground">
             <HiOutlineBuildingOffice2 className="size-4" />
           </span>
@@ -1692,6 +1717,7 @@ export const OrgStructureEditorTab = observer(() => {
     initialUnitIds: OrgEditorUnitId[];
   } | null>(null);
   const [exportUnitId, setExportUnitId] = useState<OrgEditorUnitId | null>(null);
+  const [noteUnitId, setNoteUnitId] = useState<OrgEditorUnitId | null>(null);
   const { searchOpen, searchQuery } = store.editorUi;
   const [searchPinnedUnitId, setSearchPinnedUnitId] = useState<OrgEditorUnitId | null>(null);
   const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
@@ -1933,6 +1959,11 @@ export const OrgStructureEditorTab = observer(() => {
     [employeeById],
   );
   const exportUnit = exportUnitId ? (unitById.get(exportUnitId) ?? null) : null;
+  const noteUnit = noteUnitId ? (unitById.get(noteUnitId) ?? null) : null;
+
+  useEffect(() => {
+    if (noteUnitId && !noteUnit) setNoteUnitId(null);
+  }, [noteUnit, noteUnitId]);
   const orgEditorSearchResults = useMemo<OrgEditorSearchResult[]>(() => {
     if (!units || orgEditorSearchTokens.length === 0) return [];
 
@@ -3385,6 +3416,7 @@ export const OrgStructureEditorTab = observer(() => {
                 onAddChild={openCreateChildUnit}
                 onConnectionPointerDown={handleConnectionPointerDown}
                 onEditUnit={openEditUnit}
+                onOpenNote={(unit) => setNoteUnitId(unit.id)}
                 onEmployeeContextMenu={handleEmployeeContextMenu}
                 onEmployeePointerDown={handleEmployeePointerDown}
                 onUnitContextMenu={handleUnitContextMenu}
@@ -3881,6 +3913,14 @@ export const OrgStructureEditorTab = observer(() => {
         unit={exportUnit}
         units={displayUnits}
       />
+      {noteUnit && (
+        <UnitNoteDialog
+          onOpenChange={(open) => !open && setNoteUnitId(null)}
+          onSave={(unitId, source) => editor.setUnitNoteMarkdown(unitId, source)}
+          open
+          unit={noteUnit}
+        />
+      )}
     </>
   );
 });

@@ -533,6 +533,19 @@
     "View name": "اسم العرض",
     "View source": "مصدر العرض",
     "Assign Employees in this View before configuring an export.": "عيّن موظفين في هذا العرض قبل إعداد التنزيل.",
-    "Go to Editor": "الانتقال إلى المحرر"
+    "Go to Editor": "الانتقال إلى المحرر",
+    "Unit note": "ملاحظة الفريق",
+    "Open Unit note for {name}": "فتح ملاحظة {name}",
+    "Note for {name}": "ملاحظة {name}",
+    "No note yet.": "لا توجد ملاحظة بعد.",
+    "Write Markdown in the Editor tab.": "اكتب Markdown في علامة تبويب المحرر.",
+    "Describe responsibilities, decisions, or context with Markdown.": "صِف المسؤوليات أو القرارات أو السياق باستخدام Markdown.",
+    "Discard note changes?": "هل تريد تجاهل تغييرات الملاحظة؟",
+    "Discard note changes description": "سيتم فقدان Markdown غير المحفوظ.",
+    "Discard changes": "تجاهل التغييرات",
+    "Unit notes can contain at most 64 KiB.": "يمكن أن تحتوي ملاحظات الفريق على 64 KiB كحد أقصى.",
+    "Markdown image {alt}": "الصورة غير معروضة: {alt}",
+    "Markdown preview": "معاينة Markdown",
+    "Markdown editor": "محرر Markdown"
   }
 }

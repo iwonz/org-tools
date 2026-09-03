@@ -44,6 +44,7 @@ export type OrgEditorUnit = {
    */
   employeePositions: OrgEditorEmployeePosition[];
   liveFilter: EmployeeLiveFilterRule | null;
+  noteMarkdown: string;
   createdAt: string;
   updatedAt: string;
 };

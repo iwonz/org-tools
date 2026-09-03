@@ -25,7 +25,10 @@ scope, compatibility alias, or migration reader. Exactly one View is the protect
 document; custom Views contain independent Unit documents while Employees, fields, and Tags remain
 global. Older single-structure state files are rejected without mutation. Import validates one
 detached candidate up to 25 MiB and atomically replaces the current state after confirmation.
-Export downloads `org-tools-state.json` with every View.
+Each Unit in every View requires an LF-normalized `noteMarkdown` string of at most 64 KiB UTF-8;
+older Unit records without this field and noncanonical CRLF values are rejected. Notes remain
+View-local and are included only in this complete state format. Export downloads
+`org-tools-state.json` with every View.
 
 ## Employees
 

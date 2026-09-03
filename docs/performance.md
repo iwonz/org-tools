@@ -46,7 +46,11 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
   View; a deterministic glyph-aware width packs intrinsic short chips and grapheme-safe long lines,
   and the cached wrapped footer heights participate in the same geometry pass without DOM
-  measurement. DOM and PNG consume the same line rectangles and indivisible count suffix.
+measurement. DOM and PNG consume the same line rectangles and indivisible count suffix.
+- Keep the Unit Markdown renderer out of the main Editor bundle and mount it only while a note
+  Preview is open. Closed notes are opaque bounded strings: canvas layout, spatial indexing, search,
+  PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save
+  validates at most 64 KiB of UTF-8 and commits one Unit document change.
 
 Analytics builds every count group, known birth-year index, and gender age cohort in one Employee
 pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys

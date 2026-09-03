@@ -55,6 +55,7 @@ export const ORG_EDITOR_UNIT_TAG_FOOTER_PADDING = 8;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_VERTICAL_PADDING = 4;
 export const ORG_EDITOR_DEFAULT_LAYOUT_MODE: OrgEditorLayoutMode = "topDown";
 export const ORG_EDITOR_GRID_SIZE = 24;
+export const ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES = 64 * 1024;
 export const ORG_EDITOR_GRID_MIN_SCREEN_SIZE = 24;
 export const ORG_EDITOR_CANVAS_DEFAULT_VIEWPORT: OrgEditorCanvasViewport = {
   scale: 1,
@@ -267,6 +268,14 @@ export const getAdaptiveOrgEditorGridSize = (scale: number) => {
 };
 
 export const createOrgEditorUnitId = () => createUuid();
+
+export const normalizeOrgEditorUnitNoteMarkdown = (value: string): string | null => {
+  const normalized = value.replace(/\r\n?/gu, "\n");
+  if (new TextEncoder().encode(normalized).byteLength > ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES) {
+    return null;
+  }
+  return normalized.trim() ? normalized : "";
+};
 
 const employeeRowLayoutSourceByUnitId = new Map<
   OrgEditorUnitId,
@@ -983,6 +992,7 @@ export const createOrgEditorUnitFromScratch = ({
   id = createOrgEditorUnitId(),
   liveFilter = null,
   name,
+  noteMarkdown = "",
   order = 0,
   parentId = null,
   x,
@@ -995,6 +1005,7 @@ export const createOrgEditorUnitFromScratch = ({
   id?: OrgEditorUnitId;
   liveFilter?: OrgEditorUnit["liveFilter"];
   name: string;
+  noteMarkdown?: string;
   order?: number;
   parentId?: OrgEditorUnitId | null;
   x: number;
@@ -1026,6 +1037,7 @@ export const createOrgEditorUnitFromScratch = ({
     id,
     liveFilter,
     name,
+    noteMarkdown: normalizeOrgEditorUnitNoteMarkdown(noteMarkdown) ?? "",
     order,
     parentId,
     updatedAt: now,

@@ -533,6 +533,19 @@
     "View name": "Nom de la vue",
     "View source": "Source de la vue",
     "Assign Employees in this View before configuring an export.": "Affectez des employés dans cette vue avant de configurer le téléchargement.",
-    "Go to Editor": "Accéder à l’Éditeur"
+    "Go to Editor": "Accéder à l’Éditeur",
+    "Unit note": "Note d’équipe",
+    "Open Unit note for {name}": "Ouvrir la note de {name}",
+    "Note for {name}": "Note de {name}",
+    "No note yet.": "Aucune note pour le moment.",
+    "Write Markdown in the Editor tab.": "Écrivez du Markdown dans l’onglet Éditeur.",
+    "Describe responsibilities, decisions, or context with Markdown.": "Décrivez les responsabilités, les décisions ou le contexte en Markdown.",
+    "Discard note changes?": "Ignorer les modifications de la note ?",
+    "Discard note changes description": "Le Markdown non enregistré sera perdu.",
+    "Discard changes": "Ignorer les modifications",
+    "Unit notes can contain at most 64 KiB.": "Les notes d’équipe sont limitées à 64 Kio.",
+    "Markdown image {alt}": "Image non affichée : {alt}",
+    "Markdown preview": "Aperçu Markdown",
+    "Markdown editor": "Éditeur Markdown"
   }
 }

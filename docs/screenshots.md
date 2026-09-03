@@ -1,7 +1,7 @@
 # Screenshots
 
 The screenshot catalog is generated from the production applications and declared in
-`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 52
+`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 54
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
@@ -273,6 +273,23 @@ bounded edge-pan, hierarchy lines, zoom, history, and normal-weight layout contr
 Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse, Complete Tag
 footers.
 
+### Unit Markdown note preview
+
+[![Unit Markdown note preview](screenshots/feature-editor-unit-note-preview.png)](screenshots/feature-editor-unit-note-preview.png)
+
+Review a View-local Unit note rendered from safe bundled GitHub Flavored Markdown. Preview always
+opens first and reflects the current draft before it is saved.
+
+Capabilities: Markdown preview, Tables and lists, Draft preview, View-local content.
+
+### Unit Markdown note editor
+
+[![Unit Markdown note editor](screenshots/feature-editor-unit-note-editor.png)](screenshots/feature-editor-unit-note-editor.png)
+
+Write a bounded Unit note in an isolated draft, then commit it as one undoable Editor action.
+
+Capabilities: Markdown draft, 64 KiB limit, Explicit save, Undo and redo.
+
 ### Editor View selector
 
 [![Editor View selector](screenshots/feature-editor-view-selector.png)](screenshots/feature-editor-view-selector.png)
@@ -531,5 +548,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 52 PNGs must retain identical hashes. Material differences require
+- Regenerate immediately; all 54 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

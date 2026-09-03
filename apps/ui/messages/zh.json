@@ -533,6 +533,19 @@
     "View name": "视图名称",
     "View source": "视图来源",
     "Assign Employees in this View before configuring an export.": "请先在此视图中分配员工，再配置导出。",
-    "Go to Editor": "前往编辑器"
+    "Go to Editor": "前往编辑器",
+    "Unit note": "团队备注",
+    "Open Unit note for {name}": "打开{name}的备注",
+    "Note for {name}": "{name}的备注",
+    "No note yet.": "暂无备注。",
+    "Write Markdown in the Editor tab.": "在“编辑器”标签页中编写 Markdown。",
+    "Describe responsibilities, decisions, or context with Markdown.": "使用 Markdown 描述职责、决策或背景。",
+    "Discard note changes?": "放弃备注更改？",
+    "Discard note changes description": "未保存的 Markdown 将会丢失。",
+    "Discard changes": "放弃更改",
+    "Unit notes can contain at most 64 KiB.": "团队备注最多可包含 64 KiB。",
+    "Markdown image {alt}": "未显示图片：{alt}",
+    "Markdown preview": "Markdown 预览",
+    "Markdown editor": "Markdown 编辑器"
   }
 }

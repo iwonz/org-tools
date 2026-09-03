@@ -20,6 +20,7 @@ describe("OrgViewsStore shared clipboard", () => {
     if (!source) return;
     const employeeId = createUuid();
     const rootId = source.addUnit({ employeeIds: [employeeId], name: "Root", x: 0, y: 0 });
+    source.setUnitNoteMarkdown(rootId, "# Source note");
     const childId = source.addUnit({
       liveFilter: { ...createEmptyEmployeeLiveFilterRule(), selectedUnitIds: [rootId] },
       name: "Live child",
@@ -43,6 +44,7 @@ describe("OrgViewsStore shared clipboard", () => {
     const pastedRoot = target.units.find((unit) => unit.parentId === null);
     const pastedChild = target.units.find((unit) => unit.parentId !== null);
     expect(pastedRoot?.employeeIds).toEqual([employeeId]);
+    expect(pastedRoot?.noteMarkdown).toBe("# Source note");
     expect(pastedChild?.parentId).toBe(pastedRoot?.id);
     expect(pastedChild?.liveFilter?.selectedUnitIds).toEqual([pastedRoot?.id]);
     expect(target.canUndo).toBe(true);
@@ -102,5 +104,28 @@ describe("OrgViewsStore shared clipboard", () => {
     const state = createBlankOrgToolsState("light", "en");
     views.load(state.organization.views, state.ui.editor.views, state.ui.editor.activeViewId);
     expect(views.clipboard).toBeNull();
+  });
+
+  test("copies Unit notes into an isolated View without sharing later edits", () => {
+    const views = createViewsStore();
+    const source = views.systemEditor;
+    expect(source).not.toBeNull();
+    if (!source) return;
+    const unitId = source.addUnit({ name: "Platform", x: 0, y: 0 });
+    source.setUnitNoteMarkdown(unitId, "Initial context");
+
+    const targetViewId = views.createView("Plan", {
+      type: "copy",
+      viewId: views.systemView?.id ?? "",
+    });
+    const target = views.editorByViewId.get(targetViewId);
+    const copiedUnit = target?.units[0];
+    expect(copiedUnit?.id).not.toBe(unitId);
+    expect(copiedUnit?.noteMarkdown).toBe("Initial context");
+
+    if (!copiedUnit) return;
+    target?.setUnitNoteMarkdown(copiedUnit.id, "Plan-only context");
+    expect(source.units[0]?.noteMarkdown).toBe("Initial context");
+    expect(target?.units[0]?.noteMarkdown).toBe("Plan-only context");
   });
 });

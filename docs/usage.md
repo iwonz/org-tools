@@ -86,7 +86,12 @@ control.
   membership type is not printed. Dragging Units, Employees, connections, or a marquee near the
   canvas edge smoothly pans in that direction without ending the gesture. Deleting a nested or
   multi-Unit selection is one atomic operation that removes stale selections, filters, and output
-  references before automatic storage. Editor exports always use the active View.
+  references before automatic storage. A Unit note action appears on hover or keyboard focus and
+  stays visible in its signal color when content exists. It always opens on **Preview**; **Editor**
+  changes a private Markdown draft that becomes one undoable View-local update only after
+  **Save**. Clearing and saving removes the note, while closing a changed draft requires explicit
+  discard confirmation. View cloning and cross-View Copy/Paste carry notes; Image, JSON, and
+  Template Editor exports omit them. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
   reports known birth years and completed ages, including one-decimal averages plus deterministic
   youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`

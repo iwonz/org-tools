@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import type { OrgToolsState } from "@org-tools/types";
+
 import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import enMessages from "../../../apps/ui/messages/en.json" with { type: "json" };
 import esMessages from "../../../apps/ui/messages/es.json" with { type: "json" };
@@ -120,6 +122,16 @@ test("runs the complete state editor at the repository base path without APIs or
   await expect(createViewButton).not.toHaveAttribute("title");
 
   const productUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await productUnit.hover();
+  await productUnit.locator('[data-demo-id="unit-note-action"]').click();
+  const unitNote = page.getByRole("dialog", { name: "Note for Product", exact: true });
+  await unitNote.locator('[data-demo-id="unit-note-editor-tab"]').click();
+  await unitNote.locator('[data-demo-id="unit-note-editor"]').fill("# Portable note");
+  await unitNote.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(productUnit.locator('[data-demo-id="unit-note-action"]')).toHaveAttribute(
+    "data-note-active",
+    "true",
+  );
   await productUnit.click({ position: { x: 80, y: 54 } });
   await page.keyboard.press("Control+c");
   await createViewButton.click();
@@ -128,6 +140,10 @@ test("runs the complete state editor at the repository base path without APIs or
   await createViewDialog.getByRole("button", { name: "Create", exact: true }).click();
   await page.keyboard.press("Control+v");
   await expect(productUnit).toBeVisible();
+  await expect(productUnit.locator('[data-demo-id="unit-note-action"]')).toHaveAttribute(
+    "data-note-active",
+    "true",
+  );
   await page.keyboard.press("Control+z");
   await expect(productUnit).toHaveCount(0);
   await page.locator('[data-demo-id="org-editor-view-select"]').click();
@@ -172,8 +188,13 @@ test("runs the complete state editor at the repository base path without APIs or
   const stateExport = await stateExportPromise;
   expect(stateExport.suggestedFilename()).toBe("org-tools-state.json");
   const savedPath = await stateExport.path();
-  const saved = JSON.parse(await readFile(savedPath ?? "", "utf8")) as Record<string, unknown>;
+  const saved = JSON.parse(await readFile(savedPath ?? "", "utf8")) as OrgToolsState;
   expect(Object.keys(saved).sort()).toEqual(["organization", "ui"]);
+  expect(
+    saved.organization.views
+      .flatMap((view) => view.structure.units)
+      .find((unit) => unit.name === "Product")?.noteMarkdown,
+  ).toBe("# Portable note");
 
   for (const tab of ["Employees", "Analytics", "Calendar"] as const) {
     await page.getByRole("tab", { name: tab, exact: true }).click();

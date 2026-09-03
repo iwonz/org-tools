@@ -533,6 +533,19 @@
     "View name": "Название представления",
     "View source": "Основа представления",
     "Assign Employees in this View before configuring an export.": "Назначьте сотрудников в этом представлении перед настройкой выгрузки.",
-    "Go to Editor": "Перейти в Редактор"
+    "Go to Editor": "Перейти в Редактор",
+    "Unit note": "Заметка команды",
+    "Open Unit note for {name}": "Открыть заметку команды «{name}»",
+    "Note for {name}": "Заметка команды «{name}»",
+    "No note yet.": "Заметки пока нет.",
+    "Write Markdown in the Editor tab.": "Добавьте Markdown во вкладке «Редактор».",
+    "Describe responsibilities, decisions, or context with Markdown.": "Опишите обязанности, решения или контекст с помощью Markdown.",
+    "Discard note changes?": "Отменить изменения заметки?",
+    "Discard note changes description": "Несохранённый Markdown будет потерян.",
+    "Discard changes": "Отменить изменения",
+    "Unit notes can contain at most 64 KiB.": "Заметка команды может занимать не более 64 КиБ.",
+    "Markdown image {alt}": "Изображение не показано: {alt}",
+    "Markdown preview": "Предпросмотр Markdown",
+    "Markdown editor": "Редактор Markdown"
   }
 }

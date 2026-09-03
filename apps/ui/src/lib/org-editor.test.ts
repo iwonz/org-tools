@@ -75,6 +75,7 @@ const createUnit = (unit: Partial<OrgEditorUnit> & Pick<OrgEditorUnit, "id">): O
   employeePositions: [],
   liveFilter: null,
   name: unit.id,
+  noteMarkdown: "",
   order: 0,
   parentId: null,
   updatedAt: "2026-07-31T00:00:00.000Z",

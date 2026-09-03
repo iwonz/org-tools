@@ -26,6 +26,7 @@ import {
   getOrgEditorUnitHeight,
   getOrgEditorUnitWidth,
   layoutOrgEditorUnits,
+  normalizeOrgEditorUnitNoteMarkdown,
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
   snapOrgEditorPoint,
@@ -410,6 +411,7 @@ const areUnitsEqual = (firstUnits: OrgEditorUnit[], secondUnits: OrgEditorUnit[]
       firstUnit.id === secondUnit.id &&
       firstUnit.parentId === secondUnit.parentId &&
       firstUnit.name === secondUnit.name &&
+      firstUnit.noteMarkdown === secondUnit.noteMarkdown &&
       firstUnit.order === secondUnit.order &&
       firstUnit.x === secondUnit.x &&
       firstUnit.y === secondUnit.y &&
@@ -1003,6 +1005,23 @@ export class OrgEditorStore {
           : unit,
       );
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
+    });
+  }
+
+  setUnitNoteMarkdown(unitId: OrgEditorUnitId, source: string): void {
+    const noteMarkdown = normalizeOrgEditorUnitNoteMarkdown(source);
+    if (noteMarkdown === null) {
+      throw new LocalizedError(uiMessage("Unit notes can contain at most 64 KiB."));
+    }
+    const currentUnit = this.units.find((unit) => unit.id === unitId);
+    if (!currentUnit) throw new LocalizedError(uiMessage("Unit not found."));
+    if (currentUnit.noteMarkdown === noteMarkdown) return;
+
+    this.runCommand("Edit Unit note", () => {
+      const updatedAt = new Date().toISOString();
+      this.units = this.units.map((unit) =>
+        unit.id === unitId ? { ...unit, noteMarkdown, updatedAt } : unit,
+      );
     });
   }
 
