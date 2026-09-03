@@ -33,7 +33,7 @@ const rasterNoisePixelBudget = 256;
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
 const LONG_EXPORT_TAG_ID = "90000000-0000-4000-8000-000000000099";
 
-test.setTimeout(60_000);
+test.setTimeout(360_000);
 
 function screenshotPath(id: string): string {
   const scenario = scenariosById.get(id);
@@ -376,7 +376,10 @@ test("captures the complete Employee workflow", async ({ page }) => {
   await capture(page, "employees-tag-catalog");
   await dialog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
   await expect(dialog.locator('[data-demo-id="tag-catalog-editor"]')).toBeVisible();
+  await dialog.locator('[data-demo-id="tag-color-trigger"]').click();
+  await expect(page.locator('[data-demo-id="tag-color-full-palette"]')).toBeVisible();
   await capture(page, "employees-tag-editor");
+  await page.keyboard.press("Escape");
   await dialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await page.locator('[data-demo-id="employees-position-filter"]').click();

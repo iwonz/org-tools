@@ -155,6 +155,67 @@ textarea::placeholder {
   background: color-mix(in oklab, var(--signal) 24%, transparent);
 }
 
+.tag-color-custom {
+  background-color: var(--tag-custom-fill);
+  color: var(--tag-custom-foreground);
+}
+
+.tag-color-custom:hover {
+  background-color: var(--tag-custom-fill-hover);
+}
+
+.tag-color-custom:active {
+  background-color: var(--tag-custom-fill-active);
+}
+
+.dark .tag-color-custom {
+  background-color: var(--tag-custom-fill-dark);
+  color: var(--tag-custom-foreground-dark);
+}
+
+.dark .tag-color-custom:hover {
+  background-color: var(--tag-custom-fill-hover-dark);
+}
+
+.dark .tag-color-custom:active {
+  background-color: var(--tag-custom-fill-active-dark);
+}
+
+.tag-color-hue {
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    #ef4444,
+    #f59e0b,
+    #eab308,
+    #22c55e,
+    #06b6d4,
+    #3b82f6,
+    #8b5cf6,
+    #ec4899,
+    #ef4444
+  );
+}
+
+.tag-color-hue::-webkit-slider-thumb {
+  width: 1rem;
+  height: 1rem;
+  appearance: none;
+  border: 2px solid white;
+  border-radius: 9999px;
+  background: transparent;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
+}
+
+.tag-color-hue::-moz-range-thumb {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid white;
+  border-radius: 9999px;
+  background: transparent;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-slot="button"][data-slot="button"],
   [data-slot="tabs-trigger"][data-slot="tabs-trigger"] {

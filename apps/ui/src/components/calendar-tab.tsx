@@ -41,7 +41,7 @@ import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
 import { formatCalendarDayTitle, getCalendarWeekStart } from "@/lib/calendar-locale";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
-import { tagColorSurfaceClassName } from "@/lib/tag-color";
+import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -383,6 +383,7 @@ export const CalendarTab = observer(() => {
                 key={group.tagId}
                 onClick={() => setDialogTagKey(group.normalizedLabel)}
                 size="sm"
+                style={customTagColorSurfaceStyle(group.color)}
                 type="button"
                 variant="secondary"
               >

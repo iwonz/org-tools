@@ -50,7 +50,8 @@ first name, last name, and email normalized with Unicode NFKC, trimmed and colla
 and locale-independent lowercase. Employee Import requires UUID plus all three identity fields,
 keeps the current UUID for an identity match, and blocks UUID collisions with another identity.
 
-Tags are normalized shared catalog entities with stable UUIDs and an optional semantic color;
+Tags are normalized shared catalog entities with stable UUIDs and an optional supplied semantic
+color name or canonical lowercase six-digit HEX color;
 Employee records store only `{ tagId, date }` assignments. Custom fields also have UUID identity and
 a unique ASCII token key. Value fields store typed values, while Template fields form an acyclic
 dependency graph and may hash their UTF-8 result with MD5 or SHA-256.
@@ -117,6 +118,9 @@ history, collaborative cursors, or remote synchronization.
 
 - `OrgStore` owns Employees, custom field definitions, the Tag catalog, the current Unit structure, derived indexes, durable UI projection, and
   separate organization/UI change sequences.
+- Shared Tag color helpers keep named palette classes static and derive bounded light/dark fill,
+  hover, active, and readable foreground variables for custom HEX values. The catalog Popover owns
+  only transient HSV selection; persisted definitions receive the canonical resulting color.
 - `OrgEditorStore` owns the single structural document, history, selection, viewport, and commands.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,

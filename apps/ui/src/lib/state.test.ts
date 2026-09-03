@@ -158,6 +158,23 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(obsolete)).toThrow("invalid Employee");
   });
 
+  test("accepts canonical custom Tag colors and rejects other HEX forms atomically", () => {
+    const { store } = populatedStore();
+    const state = store.createOrgToolsState();
+    const tag = state.organization.tags[0];
+    if (!tag) throw new Error("Expected a Tag definition.");
+    tag.color = "#7c3aed";
+    expect(parseOrgToolsState(state).organization.tags[0]?.color).toBe("#7c3aed");
+
+    for (const color of ["#7C3AED", "#73e", "#7c3aed80", "7c3aed"] as const) {
+      const invalid = structuredClone(state);
+      const invalidTag = invalid.organization.tags[0];
+      if (!invalidTag) throw new Error("Expected a Tag definition.");
+      invalidTag.color = color as `#${string}`;
+      expect(() => parseOrgToolsState(invalid)).toThrow("invalid Tags");
+    }
+  });
+
   test("rejects obsolete CSV and flat Unit Download state", () => {
     const state = createBlankOrgToolsState();
     const obsolete = structuredClone(state) as unknown as {

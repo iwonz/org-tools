@@ -73,7 +73,17 @@ const DOWNLOAD_JSON_TOP_LEVEL_FIELD_KEYS = [
   "units",
   "tags",
 ] as const satisfies readonly OrgToolsDownloadJsonTopLevelFieldKey[];
-const TAG_COLORS = ["amber", "blue", "cyan", "green", "orange", "red", "rose", "teal"] as const;
+const TAG_COLOR_NAMES = [
+  "amber",
+  "blue",
+  "cyan",
+  "green",
+  "orange",
+  "red",
+  "rose",
+  "teal",
+] as const;
+const CUSTOM_TAG_COLOR_PATTERN = /^#[0-9a-f]{6}$/u;
 const DOWNLOAD_TAG_FIELD_KEYS = [
   "label",
   "date",
@@ -251,7 +261,15 @@ const normalizeTagDefinitions = (value: unknown): EmployeeTagDefinition[] | null
     const label = item.label.normalize("NFKC").trim().replace(/\s+/gu, " ");
     const normalizedLabel = label.toLocaleLowerCase("en-US");
     if (!label || ids.has(item.id) || labels.has(normalizedLabel)) return null;
-    if (!(item.color === null || TAG_COLORS.includes(item.color as EmployeeTagColor))) return null;
+    if (
+      !(
+        item.color === null ||
+        (isString(item.color) &&
+          (TAG_COLOR_NAMES.includes(item.color as (typeof TAG_COLOR_NAMES)[number]) ||
+            CUSTOM_TAG_COLOR_PATTERN.test(item.color)))
+      )
+    )
+      return null;
     ids.add(item.id);
     labels.add(normalizedLabel);
     definitions.push({ color: item.color as EmployeeTagColor | null, id: item.id, label });

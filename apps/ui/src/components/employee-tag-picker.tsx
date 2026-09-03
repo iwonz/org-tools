@@ -24,7 +24,7 @@ import {
   toggleEmployeeTagForTargets,
 } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { tagColorSurfaceClassName } from "@/lib/tag-color";
+import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -188,6 +188,7 @@ export function EmployeeTagPickerPanel({
                       )}
                       data-tag-color={definition?.color ?? "none"}
                       data-tag-color-surface
+                      style={customTagColorSurfaceStyle(definition?.color)}
                     >
                       <EmployeeTagDateText
                         date={checked === false ? null : dateState}

@@ -29,7 +29,8 @@ Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly mean
 recurring day and month are known.
 
 Employees have stable UUIDs, a configurable model of typed or derived custom fields, and a shared
-Tag catalog with semantic filled colors and no decorative marker dots. Custom fields participate in forms, filters, Employee Import,
+Tag catalog with named presets and arbitrary HEX colors rendered as filled surfaces without
+decorative marker dots. Custom fields participate in forms, filters, Employee Import,
 structured JSON, and Template output. The Calendar uses locale-aware weeks, weekend tones, a
 compact dated-Tag rail, and direct Today navigation when browsing another month.
 

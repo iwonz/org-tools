@@ -1,6 +1,6 @@
 "use client";
 
-import type { EmployeeTagColor, EmployeeTagDefinition, TagId } from "@org-tools/types";
+import type { EmployeeTagDefinition, TagId } from "@org-tools/types";
 import { useMemo, useState } from "react";
 import {
   HiOutlineMagnifyingGlass,
@@ -9,6 +9,7 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi2";
 
+import { TagColorPicker } from "@/components/tag-color-picker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,42 +31,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { describeError, type UiMessageDescriptor, type UiTextKey } from "@/i18n/messages";
+import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { tagColorSurfaceClassName } from "@/lib/tag-color";
+import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
-
-export const TAG_COLORS: Array<EmployeeTagColor | null> = [
-  null,
-  "red",
-  "orange",
-  "amber",
-  "green",
-  "teal",
-  "cyan",
-  "blue",
-  "rose",
-];
-
-const TAG_COLOR_MESSAGE_KEYS = {
-  amber: "Amber",
-  blue: "Blue",
-  cyan: "Cyan",
-  green: "Green",
-  orange: "Orange",
-  red: "Red",
-  rose: "Rose",
-  teal: "Teal",
-} as const satisfies Record<EmployeeTagColor, UiTextKey>;
 
 export function TagCatalogDialog({
   onOpenChange,
@@ -149,6 +120,7 @@ export function TagCatalogDialog({
                             )}
                             data-tag-color={tag.color ?? "none"}
                             data-tag-color-surface
+                            style={customTagColorSurfaceStyle(tag.color)}
                           >
                             <span className="truncate">{tag.label}</span>
                           </div>
@@ -203,46 +175,10 @@ export function TagCatalogDialog({
                 </div>
                 <div className="grid gap-2">
                   <Label>{t("Color")}</Label>
-                  <Select
-                    onValueChange={(color) =>
-                      setEditing({
-                        ...editing,
-                        color: color === "none" ? null : (color as EmployeeTagColor),
-                      })
-                    }
-                    value={editing.color ?? "none"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue>
-                        <span
-                          className={cn(
-                            "inline-flex rounded-md px-2 py-0.5",
-                            tagColorSurfaceClassName(editing.color),
-                          )}
-                          data-tag-color={editing.color ?? "none"}
-                          data-tag-color-surface
-                        >
-                          {t(editing.color ? TAG_COLOR_MESSAGE_KEYS[editing.color] : "No color")}
-                        </span>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TAG_COLORS.map((color) => (
-                        <SelectItem key={color ?? "none"} value={color ?? "none"}>
-                          <span
-                            className={cn(
-                              "inline-flex rounded-md px-2 py-0.5",
-                              tagColorSurfaceClassName(color),
-                            )}
-                            data-tag-color={color ?? "none"}
-                            data-tag-color-surface
-                          >
-                            {t(color ? TAG_COLOR_MESSAGE_KEYS[color] : "No color")}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <TagColorPicker
+                    onChange={(color) => setEditing({ ...editing, color })}
+                    value={editing.color}
+                  />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button onClick={() => setEditing(null)} type="button" variant="ghost">

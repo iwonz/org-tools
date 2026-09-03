@@ -5,7 +5,7 @@ import { HighlightedText } from "@/components/highlighted-text";
 import { useAppFormatter } from "@/i18n/use-ui-text";
 import { orderEmployeeTagsForDisplay } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { tagColorSurfaceClassName } from "@/lib/tag-color";
+import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 
 export function EmployeeTags({
@@ -58,6 +58,7 @@ export function EmployeeTags({
           data-tag-color={tag.color ?? "none"}
           data-tag-color-surface
           key={normalizeSearchValue(tag.label)}
+          style={customTagColorSurfaceStyle(tag.color)}
           title={
             tag.date
               ? format.dateTime(new Date(`${tag.date}T00:00:00Z`), {

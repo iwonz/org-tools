@@ -102,6 +102,23 @@ test("runs the complete state editor at the repository base path without APIs or
   expect(coloredBackground).not.toBe(neutralBackground);
   await expect(page.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(0);
 
+  await page.locator('[data-demo-id="employee-tags-button"]').click();
+  const tagCatalog = page.getByRole("dialog", { name: "Tags", exact: true });
+  await tagCatalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
+  await tagCatalog.locator('[data-demo-id="tag-color-trigger"]').click();
+  const colorDropdown = page.locator('[data-demo-id="tag-color-dropdown"]');
+  await expect(colorDropdown.locator('[data-demo-id="tag-color-full-palette"]')).toBeVisible();
+  await colorDropdown.getByLabel("Hue").fill("210");
+  await colorDropdown.getByRole("slider", { name: "Choose custom color" }).press("ArrowLeft");
+  await page.keyboard.press("Escape");
+  const customColor = await tagCatalog
+    .locator('[data-demo-id="tag-color-trigger"] [data-tag-color^="#"]')
+    .getAttribute("data-tag-color");
+  expect(customColor).toMatch(/^#[0-9a-f]{6}$/u);
+  await tagCatalog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(tagCatalog.locator(`[data-tag-color="${customColor}"]`).first()).toBeVisible();
+  await tagCatalog.getByRole("button", { name: "Close", exact: true }).first().click();
+
   const stateExportPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const stateExport = await stateExportPromise;

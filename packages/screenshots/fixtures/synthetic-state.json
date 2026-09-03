@@ -170,7 +170,11 @@
       { "color": "cyan", "id": "90000000-0000-4000-8000-000000000003", "label": "Engineering" },
       { "color": "green", "id": "90000000-0000-4000-8000-000000000004", "label": "Mentor" },
       { "color": "amber", "id": "90000000-0000-4000-8000-000000000005", "label": "Operations" },
-      { "color": "rose", "id": "90000000-0000-4000-8000-000000000006", "label": "Accessibility" },
+      {
+        "color": "#7c3aed",
+        "id": "90000000-0000-4000-8000-000000000006",
+        "label": "Accessibility"
+      },
       { "color": null, "id": "90000000-0000-4000-8000-000000000007", "label": "Content" },
       { "color": "orange", "id": "90000000-0000-4000-8000-000000000008", "label": "Discovery" },
       { "color": null, "id": "90000000-0000-4000-8000-000000000009", "label": "Planning" },

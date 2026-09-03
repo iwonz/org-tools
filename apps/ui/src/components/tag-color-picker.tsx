@@ -1,0 +1,193 @@
+"use client";
+
+import type { EmployeeTagColor, EmployeeTagColorName } from "@org-tools/types";
+import { useState } from "react";
+import { HiCheck, HiOutlineChevronDown } from "react-icons/hi2";
+
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { UiTextKey } from "@/i18n/messages";
+import { useUiText } from "@/i18n/use-ui-text";
+import {
+  customTagColorSurfaceStyle,
+  EMPLOYEE_TAG_COLOR_NAMES,
+  employeeTagColorToHex,
+  hexToHsv,
+  hsvToHex,
+  isCustomEmployeeTagColor,
+  tagColorSurfaceClassName,
+} from "@/lib/tag-color";
+import { cn } from "@/lib/utils";
+
+const TAG_COLOR_MESSAGE_KEYS = {
+  amber: "Amber",
+  blue: "Blue",
+  cyan: "Cyan",
+  green: "Green",
+  orange: "Orange",
+  red: "Red",
+  rose: "Rose",
+  teal: "Teal",
+} as const satisfies Record<EmployeeTagColorName, UiTextKey>;
+
+const clamp = (value: number, minimum: number, maximum: number) =>
+  Math.min(maximum, Math.max(minimum, value));
+
+function TagColorLabel({ color }: { color: EmployeeTagColor | null }) {
+  const t = useUiText();
+  const label = color
+    ? isCustomEmployeeTagColor(color)
+      ? `${t("Custom color")} · ${color}`
+      : t(TAG_COLOR_MESSAGE_KEYS[color])
+    : t("No color");
+
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-0 max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
+        tagColorSurfaceClassName(color),
+      )}
+      data-tag-color={color ?? "none"}
+      data-tag-color-surface
+      style={customTagColorSurfaceStyle(color)}
+    >
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+export function TagColorPicker({
+  onChange,
+  value,
+}: {
+  onChange: (color: EmployeeTagColor | null) => void;
+  value: EmployeeTagColor | null;
+}) {
+  const t = useUiText();
+  const [open, setOpen] = useState(false);
+  const currentHex = employeeTagColorToHex(value);
+  const hsv = hexToHsv(currentHex);
+
+  const updateSaturationAndValue = (clientX: number, clientY: number, element: HTMLElement) => {
+    const bounds = element.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    onChange(
+      hsvToHex({
+        hue: hsv.hue,
+        saturation: clamp((clientX - bounds.left) / bounds.width, 0, 1),
+        value: clamp(1 - (clientY - bounds.top) / bounds.height, 0, 1),
+      }),
+    );
+  };
+
+  return (
+    <Popover onOpenChange={setOpen} open={open}>
+      <PopoverTrigger asChild>
+        <button
+          aria-expanded={open}
+          aria-label={t("Choose Tag color")}
+          className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-start outline-none transition-colors hover:bg-accent/45 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
+          data-demo-id="tag-color-trigger"
+          type="button"
+        >
+          <TagColorLabel color={value} />
+          <HiOutlineChevronDown className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="max-h-[min(36rem,var(--radix-popover-content-available-height))] w-[min(19rem,var(--radix-popover-content-available-width))] overflow-y-auto p-2"
+        data-demo-id="tag-color-dropdown"
+      >
+        <div className="grid gap-2 p-1" data-demo-id="tag-color-full-palette">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("Full color palette")}
+            </span>
+            <code className="text-xs text-muted-foreground">{currentHex}</code>
+          </div>
+          <div
+            aria-label={t("Choose custom color")}
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={Math.round(hsv.value * 100)}
+            aria-valuetext={currentHex}
+            className="relative h-32 cursor-crosshair touch-none overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+            onKeyDown={(event) => {
+              const step = event.shiftKey ? 0.1 : 0.02;
+              const next = { ...hsv };
+              if (event.key === "ArrowLeft") next.saturation -= step;
+              else if (event.key === "ArrowRight") next.saturation += step;
+              else if (event.key === "ArrowUp") next.value += step;
+              else if (event.key === "ArrowDown") next.value -= step;
+              else return;
+              event.preventDefault();
+              onChange(
+                hsvToHex({
+                  ...next,
+                  saturation: clamp(next.saturation, 0, 1),
+                  value: clamp(next.value, 0, 1),
+                }),
+              );
+            }}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              updateSaturationAndValue(event.clientX, event.clientY, event.currentTarget);
+            }}
+            onPointerMove={(event) => {
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+              updateSaturationAndValue(event.clientX, event.clientY, event.currentTarget);
+            }}
+            role="slider"
+            style={{
+              background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsv.hue} 100% 50%))`,
+            }}
+            tabIndex={0}
+          >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_1px_4px_rgb(0_0_0/0.55)]"
+              style={{
+                backgroundColor: currentHex,
+                left: `${hsv.saturation * 100}%`,
+                top: `${(1 - hsv.value) * 100}%`,
+              }}
+            />
+          </div>
+          <input
+            aria-label={t("Hue")}
+            className="tag-color-hue h-4 w-full cursor-pointer appearance-none bg-transparent"
+            max={359}
+            min={0}
+            onChange={(event) =>
+              onChange(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
+            }
+            type="range"
+            value={Math.round(hsv.hue)}
+          />
+        </div>
+        <div className="my-2 h-px bg-border/80" />
+        <div className="grid gap-0.5" role="listbox">
+          {[null, ...EMPLOYEE_TAG_COLOR_NAMES].map((color) => {
+            const selected = value === color;
+            return (
+              <button
+                aria-selected={selected}
+                className="flex min-h-9 cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5 text-start outline-none transition-colors hover:bg-accent/65 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40"
+                key={color ?? "none"}
+                onClick={() => {
+                  onChange(color);
+                  setOpen(false);
+                }}
+                role="option"
+                type="button"
+              >
+                <TagColorLabel color={color} />
+                {selected && <HiCheck className="size-4 shrink-0 text-signal" />}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

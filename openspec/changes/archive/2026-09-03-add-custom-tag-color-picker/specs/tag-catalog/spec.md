@@ -1,9 +1,4 @@
-# tag-catalog Specification
-
-## Purpose
-Define stable global Tag definitions, catalog management, colored assignments, and reference cleanup.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Tags use stable catalog definitions
 The system SHALL persist Tags as UUID-keyed global definitions with a unique normalized label and an

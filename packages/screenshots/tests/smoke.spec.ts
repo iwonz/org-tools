@@ -2734,17 +2734,50 @@ test("uses the configured Tag color as fill without leading marker dots", async 
 
   await page.locator('[data-demo-id="employee-tags-button"]').click();
   const catalog = page.getByRole("dialog", { name: "Tags", exact: true });
-  const catalogTag = catalog.locator('[data-tag-color-surface][data-tag-color="rose"]').first();
+  const catalogTag = catalog.locator('[data-tag-color-surface][data-tag-color="#7c3aed"]').first();
   await expectFilledTagSurface(catalogTag);
   await catalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
-  await catalog.getByRole("combobox").click();
-  const palette = page.locator('[data-slot="select-content"]');
-  await expect(palette.locator("[data-tag-color-surface]")).toHaveCount(9);
+  const colorTrigger = catalog.locator('[data-demo-id="tag-color-trigger"]');
+  await colorTrigger.click();
+  const palette = page.locator('[data-demo-id="tag-color-dropdown"]');
+  const fullPalette = palette.locator('[data-demo-id="tag-color-full-palette"]');
+  await expect(fullPalette).toBeVisible();
+  await expect(palette.getByRole("option")).toHaveCount(9);
+  const [fullPaletteBox, firstPresetBox] = await Promise.all([
+    fullPalette.boundingBox(),
+    palette.getByRole("option").first().boundingBox(),
+  ]);
+  expect(fullPaletteBox).not.toBeNull();
+  expect(firstPresetBox).not.toBeNull();
+  expect((fullPaletteBox?.y ?? 0) + (fullPaletteBox?.height ?? 0)).toBeLessThanOrEqual(
+    firstPresetBox?.y ?? 0,
+  );
   await expectFilledTagSurface(
-    palette.locator('[data-tag-color-surface][data-tag-color="orange"]'),
+    palette
+      .getByRole("option", { name: "Orange", exact: true })
+      .locator("[data-tag-color-surface]"),
   );
   await expect(palette.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(0);
+
+  await palette.getByRole("option", { name: "Orange", exact: true }).click();
+  await expect(colorTrigger.locator('[data-tag-color="orange"]')).toBeVisible();
+  await colorTrigger.click();
+  await palette.getByRole("option", { name: "No color", exact: true }).click();
+  await expect(colorTrigger.locator('[data-tag-color="none"]')).toBeVisible();
+  await colorTrigger.click();
+  await palette.getByLabel("Hue").fill("268");
+  await palette.getByRole("slider", { name: "Choose custom color" }).click({
+    position: { x: 210, y: 34 },
+  });
+  const customSurface = colorTrigger.locator('[data-tag-color^="#"]');
+  await expect(customSurface).toBeVisible();
+  const customColor = await customSurface.getAttribute("data-tag-color");
+  expect(customColor).toMatch(/^#[0-9a-f]{6}$/u);
+  await expectFilledTagSurface(customSurface);
   await page.keyboard.press("Escape");
+  await catalog.getByRole("button", { name: "Save", exact: true }).click();
+  const savedCustomSurface = catalog.locator(`[data-tag-color="${customColor}"]`).first();
+  await expectFilledTagSurface(savedCustomSurface);
   await catalog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");

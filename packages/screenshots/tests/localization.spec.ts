@@ -257,6 +257,26 @@ for (const [locale, messages] of [
     await dialog.getByRole("button", { name: messages.Ui["Replace state"], exact: true }).click();
     await expect(dialog).toBeHidden();
 
+    await page.getByRole("tab", { name: messages.Ui.Employees, exact: true }).click();
+    await page.getByRole("button", { name: messages.Ui.Tags, exact: true }).click();
+    const tagCatalog = page.getByRole("dialog", { name: messages.Ui.Tags, exact: true });
+    await tagCatalog
+      .getByRole("button", { name: messages.Ui["Edit tag"], exact: true })
+      .first()
+      .click();
+    const tagColorTrigger = tagCatalog.locator('[data-demo-id="tag-color-trigger"]');
+    await expect(tagColorTrigger).toContainText(messages.Ui["Custom color"]);
+    await expect(tagColorTrigger).toHaveAccessibleName(messages.Ui["Choose Tag color"]);
+    await tagColorTrigger.click();
+    const tagColorDropdown = page.locator('[data-demo-id="tag-color-dropdown"]');
+    await expect(tagColorDropdown).toContainText(messages.Ui["Full color palette"]);
+    await expect(tagColorDropdown.getByLabel(messages.Ui.Hue)).toBeVisible();
+    await expect(
+      tagColorDropdown.getByRole("option", { name: messages.Ui["No color"], exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await tagCatalog.getByRole("button", { name: messages.Ui.Close, exact: true }).first().click();
+
     await page.getByRole("tab", { name: messages.Ui.Editor, exact: true }).click();
     const editorCanvas = page.locator('[data-demo-id="org-editor-canvas"]');
     const editorWorld = editorCanvas.locator(':scope > div[dir="ltr"]');

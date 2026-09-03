@@ -3,7 +3,7 @@ export type EmployeeGender = "male" | "female" | "unspecified";
 
 import type { EmployeeFieldId, EmployeeFieldOptionId, TagId } from "./ids.js";
 
-export type EmployeeTagColor =
+export type EmployeeTagColorName =
   | "amber"
   | "blue"
   | "cyan"
@@ -12,6 +12,9 @@ export type EmployeeTagColor =
   | "red"
   | "rose"
   | "teal";
+
+/** A supplied semantic color name or a parser-validated canonical `#rrggbb` value. */
+export type EmployeeTagColor = EmployeeTagColorName | `#${string}`;
 
 /** A global Tag definition shared by Employee assignments. */
 export type EmployeeTagDefinition = {

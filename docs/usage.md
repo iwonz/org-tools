@@ -50,7 +50,10 @@ control.
 - **Employees** manages profiles, gender, complete birthdays, embedded avatar, typed custom fields,
   shared tags whose configured color is their tonal fill, contact fields, and Unit assignments with compound filters. **Employee
   model** defines stored Value fields or derived Template fields with optional MD5/SHA-256 output;
-  **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading deletion. Gender is
+  **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
+  deletion. Its color dropdown keeps a full custom palette above localized named presets and No
+  color; arbitrary choices are stored as canonical `#rrggbb` values and use readable tonal fills in
+  both themes. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
