@@ -3,7 +3,7 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
 import type * as React from "react";
 import { HiMiniCheck, HiMiniChevronUpDown } from "react-icons/hi2";
-
+import { SURFACE_LAYER_CLASS } from "@/lib/surface-layers";
 import { cn } from "@/lib/utils";
 
 function Select(props: React.ComponentProps<typeof SelectPrimitive.Root>) {
@@ -50,7 +50,8 @@ function SelectContent({
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={cn(
-          "relative z-50 max-h-96 min-w-32 overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]",
+          "relative max-h-96 min-w-32 overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]",
+          SURFACE_LAYER_CLASS.select,
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
           className,

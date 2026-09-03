@@ -107,7 +107,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Complete visual capability catalog
 - **WHEN** a visitor opens the detailed screenshot guide
-- **THEN** the 46-frame gallery contains ten featured workflows and only currently visible supporting
+- **THEN** the 48-frame gallery contains ten featured workflows and only currently visible supporting
   behavior, without project, file, Save, autosave, or obsolete conflict frames
 
 #### Scenario: Continuous validation
@@ -127,7 +127,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Screenshot generation
 - **WHEN** screenshot generation runs against both production runtimes
-- **THEN** it deterministically replaces exactly 46 declared PNGs, including ten featured frames
+- **THEN** it deterministically replaces exactly 48 declared PNGs, including ten featured frames
 
 #### Scenario: Screenshot manifest consistency
 - **WHEN** generation or publication checks inspect the gallery
@@ -231,27 +231,31 @@ runners without deprecation annotations.
 
 ### Requirement: Documentation and gallery cover current product surfaces
 The repository SHALL document both local-only runtimes, six bundled locales, Arabic RTL, Analytics
-age/year insights, modal Language and Theme settings, selected-only Editor arrangement, direct State
-Export, Import, structured output, privacy, performance, and screenshots without obsolete guidance.
-The deterministic gallery SHALL contain exactly 46 PNGs and the README SHALL retain exactly ten
-featured Import, Export, Theme, Language, Units, Employees, Editor, Analytics, Calendar, and Download
-frames.
+age/year insights, modal Language and Theme settings with local flags, selected-only Editor
+arrangement, direct State Export, source-driven Employee Import, colored Editor PNG Tags, privacy,
+performance, and screenshots without obsolete guidance. The deterministic gallery SHALL contain
+exactly 48 PNGs and the README SHALL retain exactly ten featured Import, Export, Theme, Language,
+Units, Employees, Editor, Analytics, Calendar, and Download frames.
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
-- **THEN** it deterministically replaces exactly 46 declared PNGs covering only current product workflows
+- **THEN** it deterministically replaces exactly 48 declared PNGs covering only current product workflows
 
 #### Scenario: Locale gallery
 - **WHEN** Language frames are generated
-- **THEN** the primary frame shows the six-language modal and the supporting frame demonstrates Arabic RTL
+- **THEN** the primary frame shows six flagged language rows and the supporting frame demonstrates Arabic RTL
 
 #### Scenario: Updated workflow gallery
-- **WHEN** Analytics, Editor, Units, Calendar, Theme, and Language frames are generated
-- **THEN** they show the new metrics, controls, equal panes, localized date, and modal selectors
+- **WHEN** Editor, Units, Calendar, Language, Import, and Tag frames are generated
+- **THEN** they show colored PNG Tags, revised count order, rose weekends, flags, target Selects, and flat Tag management
 
 #### Scenario: Transfer gallery
 - **WHEN** screenshot generation completes
-- **THEN** featured Import shows State and Employee modes while supporting frames show representative mapping and explicit database recreation
+- **THEN** featured Import shows State and Employee modes while supporting frames show source-driven mapping and explicit database recreation
+
+#### Scenario: Tag management gallery
+- **WHEN** Tag supporting frames are generated
+- **THEN** catalog, rename, quick color, and full Employee membership actions are visible across the maintained scenarios
 
 #### Scenario: Structured-output gallery
 - **WHEN** screenshot generation completes
@@ -266,7 +270,7 @@ frames.
 - **THEN** the same ten current product previews remain featured and every linked PNG exists
 
 #### Scenario: Deterministic generation
-- **WHEN** the 46-frame gallery is generated twice from unchanged source and fixed fixtures
+- **WHEN** the 48-frame gallery is generated twice from unchanged source and fixed fixtures
 - **THEN** every PNG hash is identical and every owned page has no unexpected console or network diagnostic
 
 ### Requirement: Localization validation covers every supported catalog
@@ -283,14 +287,14 @@ for `en`, `zh`, `ru`, `es`, `fr`, and `ar` in both production runtimes.
 - **THEN** locale-only UI changes do not serialize organization state or trigger per-frame full scans
 
 ### Requirement: Gallery documents Employee schema, Tags, and Calendar
-The deterministic gallery SHALL contain 46 PNG files: the maintained existing workflows refreshed
+The deterministic gallery SHALL contain 48 PNG files: the maintained existing workflows refreshed
 for UUIDs, Tag colors, sidebar order, and Calendar, plus supporting Employee filter, Template field,
 Value field, Tag management, custom Employee value, and Import custom mapping scenarios. Every PNG
 SHALL use synthetic data and appear identically across two generations.
 
 #### Scenario: Regenerate the gallery
 - **WHEN** screenshots are generated twice from the same clean production build
-- **THEN** all 46 referenced PNG files exist and their SHA-256 manifests match
+- **THEN** all 48 referenced PNG files exist and their SHA-256 manifests match
 
 ### Requirement: Large-model validation remains bounded
 Automated checks SHALL exercise 20,000 Employees and 4,000 Units with identity, Tag, custom field,
@@ -303,18 +307,18 @@ rendering caused only by UI interaction.
 
 ### Requirement: Gallery verifies Tag fill semantics
 The deterministic screenshot gallery SHALL show named and arbitrary Tag colors as readable filled
-surfaces without separate leading color dots in representative Employee, Tag catalog, Calendar, and
-assignment workflows. The Tag catalog editor frame SHALL show the dedicated edit dialog with the
-full palette, exact typed color editor, and localized named preset list. The maintained Template
-token frame SHALL show the Format help affordance and its localized guidance.
+surfaces without separate leading color dots in representative Employee, Tag catalog, Calendar,
+assignment, and Editor PNG workflows. Tag supporting frames SHALL show the separate rename modal,
+row-level quick color Popover with exact type Select above it, and full Employee membership dialog.
+The maintained Template token frame SHALL show the Format help affordance and localized guidance.
 
 #### Scenario: Regenerate Tag-bearing frames
 - **WHEN** the maintained gallery is generated twice from unchanged source
-- **THEN** affected Tag-bearing PNGs show the named and arbitrary filled treatments, modal editor, exact color entry, full palette dropdown, and identical hash manifests
+- **THEN** affected PNGs show named and arbitrary fills, flat rows, quick color, rename, membership, and identical hash manifests
 
 #### Scenario: Validate exact custom color behavior
 - **WHEN** browser validation enters HTML Keyword, HEX, RGB, and RGBA colors in both runtimes
-- **THEN** each valid input resolves to its canonical color, invalid input preserves the previous draft, and no console, network, or geometry diagnostic occurs
+- **THEN** each valid input resolves to its canonical color, invalid input preserves the previous value, and the type Select remains above its Popover
 
 #### Scenario: Validate Format guidance
 - **WHEN** browser validation visits each token-aware Format surface

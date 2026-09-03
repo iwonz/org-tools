@@ -4,6 +4,7 @@ import {
   customTagColorSurfaceStyle,
   employeeTagColorToHex,
   formatTagColorInput,
+  getTagColorCanvasStyle,
   hexToHsv,
   hsvToHex,
   isCustomEmployeeTagColor,
@@ -98,5 +99,15 @@ describe("tagColorSurfaceClassName", () => {
     }
     expect(employeeTagColorToHex("blue")).toBe("#3b82f6");
     expect(employeeTagColorToHex("#7c3aed")).toBe("#7c3aed");
+  });
+
+  it("resolves neutral, named, custom, and alpha colors for PNG canvas chips", () => {
+    expect(getTagColorCanvasStyle(null)).toEqual({
+      fillStyle: "rgba(29, 29, 29, 0.1)",
+      textStyle: "#1d1d1d",
+    });
+    expect(getTagColorCanvasStyle("blue").fillStyle).toMatch(/^#[0-9a-f]{6}$/u);
+    expect(getTagColorCanvasStyle("#7c3aed")).not.toEqual(getTagColorCanvasStyle(null));
+    expect(getTagColorCanvasStyle("#7c3aed80")).not.toEqual(getTagColorCanvasStyle("#7c3aed"));
   });
 });

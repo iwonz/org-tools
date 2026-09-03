@@ -52,7 +52,13 @@ import {
   type EmployeeImportPolicy,
   type EmployeeImportPreview,
   type EmployeeImportSource,
+  type EmployeeImportTarget,
+  employeeImportBuiltinTarget,
+  employeeImportCustomTarget,
+  employeeImportPendingTarget,
+  isEmployeeImportTargetMapped,
   parseEmployeeImportFile,
+  setEmployeeImportSourceTarget,
 } from "@/lib/employee-transfer";
 import { parseStateImportFile, type StateImportCandidate } from "@/lib/state-transfer";
 
@@ -61,6 +67,8 @@ type ImportMode = "employees" | "state";
 const ROW_HEIGHT = 58;
 const REVIEW_HEIGHT = 290;
 const OVERSCAN = 5;
+const MAPPING_ROW_HEIGHT = 52;
+const MAPPING_HEIGHT = 360;
 
 const formatFileSize = (
   size: number,
@@ -151,116 +159,138 @@ function MappingGrid({
   paths: string[];
 }) {
   const t = useUiText();
-  const [newFieldOpen, setNewFieldOpen] = useState(false);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [newFieldPath, setNewFieldPath] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldKey, setNewFieldKey] = useState("");
-  const [newFieldPath, setNewFieldPath] = useState("__none__");
   const [newFieldType, setNewFieldType] = useState<CustomEmployeeValueType>("text");
   const [newFieldOptions, setNewFieldOptions] = useState("");
+  const valueDefinitions = fieldDefinitions.filter((definition) => definition.kind === "value");
+  const first = Math.max(0, Math.floor(scrollTop / MAPPING_ROW_HEIGHT) - OVERSCAN);
+  const last = Math.min(
+    paths.length,
+    Math.ceil((scrollTop + MAPPING_HEIGHT) / MAPPING_ROW_HEIGHT) + OVERSCAN,
+  );
+  const resetNewField = () => {
+    setNewFieldPath(null);
+    setNewFieldName("");
+    setNewFieldKey("");
+    setNewFieldType("text");
+    setNewFieldOptions("");
+  };
+  const selectTarget = (sourcePath: string, value: string) => {
+    if (value === "__create__") {
+      setNewFieldPath(sourcePath);
+      return;
+    }
+    const currentTarget = mapping.sourceTargets[sourcePath];
+    let nextMapping = mapping;
+    if (value === "__none__") {
+      nextMapping = setEmployeeImportSourceTarget(mapping, sourcePath, null);
+      if (currentTarget?.startsWith("pending:")) {
+        const fieldId = currentTarget.slice("pending:".length);
+        nextMapping = {
+          ...nextMapping,
+          newValueFields: nextMapping.newValueFields.filter(
+            (pending) => pending.definition.id !== fieldId,
+          ),
+        };
+      }
+    } else {
+      nextMapping = setEmployeeImportSourceTarget(
+        mapping,
+        sourcePath,
+        value as EmployeeImportTarget,
+      );
+    }
+    onChange(nextMapping);
+  };
   return (
     <div className="grid gap-2" data-demo-id="employee-import-mapping">
-      {EMPLOYEE_IMPORT_FIELDS.map((field) => {
-        const required =
-          field === "id" || field === "firstName" || field === "lastName" || field === "email";
-        return (
-          <div
-            className="grid min-w-0 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.7fr)]"
-            key={field}
-          >
-            <Select
-              onValueChange={(value) =>
-                onChange({ ...mapping, [field]: value === "__none__" ? null : value })
-              }
-              value={mapping[field] ?? "__none__"}
-            >
-              <SelectTrigger
-                aria-label={t("Source JSON path for {field}", { field: t(FIELD_LABELS[field]) })}
-                id={`employee-import-${field}`}
+      <div
+        className="relative overflow-y-auto overflow-x-hidden rounded-md bg-muted/15"
+        data-demo-id="employee-import-mapping-paths"
+        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+        style={{
+          height: Math.min(
+            MAPPING_HEIGHT,
+            Math.max(MAPPING_ROW_HEIGHT, paths.length * MAPPING_ROW_HEIGHT),
+          ),
+        }}
+      >
+        <div className="relative" style={{ height: paths.length * MAPPING_ROW_HEIGHT }}>
+          {paths.slice(first, last).map((path, visibleIndex) => {
+            const rowIndex = first + visibleIndex;
+            const target = mapping.sourceTargets[path] ?? null;
+            return (
+              <div
+                className="absolute start-0 top-0 grid w-full min-w-0 items-center gap-2 px-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.8fr)]"
+                data-source-path={path}
+                key={path}
+                style={{
+                  height: MAPPING_ROW_HEIGHT,
+                  transform: `translateY(${rowIndex * MAPPING_ROW_HEIGHT}px)`,
+                }}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">{t("Do not import")}</SelectItem>
-                {paths.map((path) => (
-                  <SelectItem key={path} value={path}>
-                    {path}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <HiOutlineArrowRight
-              aria-hidden="true"
-              className="mx-auto hidden size-4 text-muted-foreground sm:block"
-            />
-            <div className="min-w-0 rounded-md bg-muted/45 px-3 py-2 text-sm">
-              {t(FIELD_LABELS[field])}
-              {required ? " *" : ""}
-            </div>
-          </div>
-        );
-      })}
-      {fieldDefinitions.flatMap((definition) => {
-        if (definition.kind !== "value") return [];
-        return [
-          <div
-            className="grid min-w-0 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.7fr)]"
-            key={definition.id}
-          >
-            <Select
-              onValueChange={(value) =>
-                onChange({
-                  ...mapping,
-                  customFields: {
-                    ...mapping.customFields,
-                    [definition.id]: value === "__none__" ? null : value,
-                  },
-                })
-              }
-              value={mapping.customFields[definition.id] ?? "__none__"}
-            >
-              <SelectTrigger
-                aria-label={t("Source JSON path for {field}", { field: definition.name })}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">{t("Do not import")}</SelectItem>
-                {paths.map((path) => (
-                  <SelectItem key={path} value={path}>
-                    {path}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <HiOutlineArrowRight
-              aria-hidden="true"
-              className="mx-auto hidden size-4 text-muted-foreground sm:block"
-            />
-            <div className="min-w-0 rounded-md bg-muted/45 px-3 py-2 text-sm">
-              {definition.name}
-              {definition.required ? " *" : ""}
-            </div>
-          </div>,
-        ];
-      })}
-      {mapping.newValueFields.map((pending) => (
-        <div
-          className="grid min-w-0 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(9rem,0.7fr)]"
-          key={pending.definition.id}
-        >
-          <div className="truncate rounded-md bg-background px-3 py-2 text-sm">{pending.path}</div>
-          <HiOutlineArrowRight
-            aria-hidden="true"
-            className="mx-auto hidden size-4 text-muted-foreground sm:block"
-          />
-          <div className="rounded-md bg-muted/45 px-3 py-2 text-sm">{pending.definition.name}</div>
+                <div
+                  className="min-w-0 truncate rounded-md bg-background px-3 py-2 text-sm"
+                  title={path}
+                >
+                  {path}
+                </div>
+                <HiOutlineArrowRight
+                  aria-hidden="true"
+                  className="mx-auto hidden size-4 text-muted-foreground sm:block rtl:rotate-180"
+                />
+                <Select
+                  onValueChange={(value) => selectTarget(path, value)}
+                  value={target ?? "__none__"}
+                >
+                  <SelectTrigger aria-label={t("Org Tools field for {path}", { path })}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t("Do not import")}</SelectItem>
+                    {EMPLOYEE_IMPORT_FIELDS.map((field) => {
+                      const required = ["id", "firstName", "lastName", "email"].includes(field);
+                      return (
+                        <SelectItem key={field} value={employeeImportBuiltinTarget(field)}>
+                          {t(FIELD_LABELS[field])}
+                          {required ? " *" : ""}
+                        </SelectItem>
+                      );
+                    })}
+                    {valueDefinitions.map((definition) => (
+                      <SelectItem
+                        key={definition.id}
+                        value={employeeImportCustomTarget(definition.id)}
+                      >
+                        {definition.name}
+                        {definition.required ? " *" : ""}
+                      </SelectItem>
+                    ))}
+                    {mapping.newValueFields.map((pending) => (
+                      <SelectItem
+                        key={pending.definition.id}
+                        value={employeeImportPendingTarget(pending.definition.id)}
+                      >
+                        {pending.definition.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__create__">{t("Create custom field")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
         </div>
-      ))}
-      {newFieldOpen ? (
+      </div>
+      {newFieldPath ? (
         <div
           className="grid gap-2 rounded-md bg-muted/30 p-3"
           data-demo-id="employee-import-new-field"
         >
+          <div className="truncate text-xs text-muted-foreground">{newFieldPath}</div>
           <div className="grid gap-2 sm:grid-cols-2">
             <Input
               aria-label={t("Name")}
@@ -275,46 +305,31 @@ function MappingGrid({
               value={newFieldKey}
             />
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Select onValueChange={setNewFieldPath} value={newFieldPath}>
-              <SelectTrigger aria-label={t("Source JSON path")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">{t("Source JSON path")}</SelectItem>
-                {paths.map((path) => (
-                  <SelectItem key={path} value={path}>
-                    {path}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              onValueChange={(value) => setNewFieldType(value as CustomEmployeeValueType)}
-              value={newFieldType}
-            >
-              <SelectTrigger aria-label={t("Field type")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(["text", "number", "boolean", "date", "option"] as const).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {t(
-                      type === "text"
-                        ? "Text"
-                        : type === "number"
-                          ? "Number"
-                          : type === "boolean"
-                            ? "Flag"
-                            : type === "date"
-                              ? "Date"
-                              : "Option",
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            onValueChange={(value) => setNewFieldType(value as CustomEmployeeValueType)}
+            value={newFieldType}
+          >
+            <SelectTrigger aria-label={t("Field type")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(["text", "number", "boolean", "date", "option"] as const).map((type) => (
+                <SelectItem key={type} value={type}>
+                  {t(
+                    type === "text"
+                      ? "Text"
+                      : type === "number"
+                        ? "Number"
+                        : type === "boolean"
+                          ? "Flag"
+                          : type === "date"
+                            ? "Date"
+                            : "Option",
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {newFieldType === "option" && (
             <Input
               aria-label={t("Comma-separated options")}
@@ -324,49 +339,42 @@ function MappingGrid({
             />
           )}
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setNewFieldOpen(false)} size="sm" type="button" variant="ghost">
+            <Button onClick={resetNewField} size="sm" type="button" variant="ghost">
               {t("Cancel")}
             </Button>
             <Button
               disabled={
                 !newFieldName.trim() ||
                 !newFieldKey.trim() ||
-                newFieldPath === "__none__" ||
                 (newFieldType === "option" && !newFieldOptions.trim())
               }
               onClick={() => {
-                onChange({
+                const definition = {
+                  id: createUuid(),
+                  key: newFieldKey.trim(),
+                  kind: "value" as const,
+                  name: newFieldName.trim(),
+                  options:
+                    newFieldType === "option"
+                      ? [...new Set(newFieldOptions.split(",").map((option) => option.trim()))]
+                          .filter(Boolean)
+                          .map((label) => ({ id: createUuid(), label }))
+                      : [],
+                  required: false,
+                  valueType: newFieldType,
+                };
+                const nextMapping = {
                   ...mapping,
-                  newValueFields: [
-                    ...mapping.newValueFields,
-                    {
-                      definition: {
-                        id: createUuid(),
-                        key: newFieldKey.trim(),
-                        kind: "value",
-                        name: newFieldName.trim(),
-                        options:
-                          newFieldType === "option"
-                            ? [
-                                ...new Set(
-                                  newFieldOptions.split(",").map((option) => option.trim()),
-                                ),
-                              ]
-                                .filter(Boolean)
-                                .map((label) => ({ id: createUuid(), label }))
-                            : [],
-                        required: false,
-                        valueType: newFieldType,
-                      },
-                      path: newFieldPath,
-                    },
-                  ],
-                });
-                setNewFieldOpen(false);
-                setNewFieldName("");
-                setNewFieldKey("");
-                setNewFieldPath("__none__");
-                setNewFieldOptions("");
+                  newValueFields: [...mapping.newValueFields, { definition, path: newFieldPath }],
+                };
+                onChange(
+                  setEmployeeImportSourceTarget(
+                    nextMapping,
+                    newFieldPath,
+                    employeeImportPendingTarget(definition.id),
+                  ),
+                );
+                resetNewField();
               }}
               size="sm"
               type="button"
@@ -376,18 +384,7 @@ function MappingGrid({
             </Button>
           </div>
         </div>
-      ) : (
-        <Button
-          className="justify-self-start"
-          onClick={() => setNewFieldOpen(true)}
-          size="sm"
-          type="button"
-          variant="secondary"
-        >
-          <HiOutlinePlus />
-          {t("Create mapped field")}
-        </Button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -748,7 +745,13 @@ export function ImportDialog({
                       onChange={(nextMapping) => {
                         setMapping(nextMapping);
                         setOverrides(new Map());
-                        if (!nextMapping.teams && bulkPolicy === "teamsOnly") {
+                        if (
+                          !isEmployeeImportTargetMapped(
+                            nextMapping,
+                            employeeImportBuiltinTarget("teams"),
+                          ) &&
+                          bulkPolicy === "teamsOnly"
+                        ) {
                           setBulkPolicy("update");
                         }
                       }}
@@ -784,9 +787,11 @@ export function ImportDialog({
                         <SelectContent>
                           <SelectItem value="update">{t("Update data")}</SelectItem>
                           <SelectItem value="skip">{t("Skip")}</SelectItem>
-                          {mapping?.teams && (
-                            <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>
-                          )}
+                          {mapping &&
+                            isEmployeeImportTargetMapped(
+                              mapping,
+                              employeeImportBuiltinTarget("teams"),
+                            ) && <SelectItem value="teamsOnly">{t("Teams only")}</SelectItem>}
                         </SelectContent>
                       </Select>
                     </div>
@@ -801,7 +806,14 @@ export function ImportDialog({
                     }}
                     overrides={overrides}
                     preview={previewResult.preview}
-                    teamsMapped={Boolean(mapping?.teams)}
+                    teamsMapped={
+                      mapping
+                        ? isEmployeeImportTargetMapped(
+                            mapping,
+                            employeeImportBuiltinTarget("teams"),
+                          )
+                        : false
+                    }
                   />
                 </>
               )}

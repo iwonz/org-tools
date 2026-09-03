@@ -104,20 +104,20 @@ test("runs the complete state editor at the repository base path without APIs or
 
   await page.locator('[data-demo-id="employee-tags-button"]').click();
   const tagCatalog = page.getByRole("dialog", { name: "Tags", exact: true });
-  await tagCatalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
-  const tagEditor = page.getByRole("dialog", { name: "Edit tag", exact: true });
-  await tagEditor.locator('[data-demo-id="tag-color-trigger"]').click();
+  const tagRow = tagCatalog.locator('[data-demo-id="tag-catalog-row"]').first();
+  await tagRow.locator('[data-demo-id="tag-color-trigger"]').click();
   const colorDropdown = page.locator('[data-demo-id="tag-color-dropdown"]');
   await expect(colorDropdown.locator('[data-demo-id="tag-color-full-palette"]')).toBeVisible();
   await colorDropdown.getByLabel("Color format").click();
   await page.getByRole("option", { name: "RGBA", exact: true }).click();
-  await colorDropdown.getByLabel("Color value").fill("rgba(124, 58, 237, .5)");
+  const colorValue = colorDropdown.getByLabel("Color value");
+  await colorValue.fill("rgba(124, 58, 237, .5)");
+  await colorValue.press("Enter");
   await page.keyboard.press("Escape");
-  const customColor = await tagEditor
-    .locator('[data-demo-id="tag-color-trigger"] [data-tag-color^="#"]')
+  const customColor = await tagRow
+    .locator('[data-tag-color-surface][data-tag-color^="#"]')
     .getAttribute("data-tag-color");
   expect(customColor).toBe("#7c3aed80");
-  await tagEditor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(tagCatalog.locator(`[data-tag-color="${customColor}"]`).first()).toBeVisible();
   await tagCatalog.getByRole("button", { name: "Close", exact: true }).first().click();
 

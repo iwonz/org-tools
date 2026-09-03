@@ -1,6 +1,7 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTagColor,
   OrgEditorLayoutMode,
   OrgEditorUnit,
   OrgEditorUnitId,
@@ -38,6 +39,7 @@ import {
   type OrgEditorUnitEmployeeSummary,
   sortOrgEditorEmployeeIds,
 } from "@/lib/org-editor";
+import { getTagColorCanvasStyle } from "@/lib/tag-color";
 import {
   renderTemplateFormat,
   type TemplateFieldValue,
@@ -656,10 +658,27 @@ export const getOrgEditorExportEmployeeTagLabels = (employee: Employee, locale: 
   );
 };
 
+export type OrgEditorExportEmployeeTag = {
+  color: EmployeeTagColor | null;
+  label: string;
+};
+
+export const getOrgEditorExportEmployeeTags = (
+  employee: Employee,
+  locale: string,
+): OrgEditorExportEmployeeTag[] => {
+  const labels = getOrgEditorExportEmployeeTagLabels(employee, locale);
+  return sortEmployeeTags(employee.tags).map((tag, index) => ({
+    color: tag.color ?? null,
+    label: labels[index] ?? tag.label,
+  }));
+};
+
 export const getOrgEditorExportEmployeeTagChipWidth = (label: string, maxWidth: number) =>
   getOrgEditorTagChipWidth(label, maxWidth);
 
 export type OrgEditorExportEmployeeTagChipLayout = {
+  color: EmployeeTagColor | null;
   height: number;
   lines: string[];
   width: number;
@@ -715,22 +734,24 @@ const wrapOrgEditorExportTagLabel = (
 };
 
 export const createOrgEditorExportEmployeeTagLayout = (
-  labels: readonly string[],
+  tags: readonly (OrgEditorExportEmployeeTag | string)[],
   maxWidth: number,
   measureText: MeasureOrgEditorExportText = estimateOrgEditorExportText,
 ): OrgEditorExportEmployeeTagLayout => {
-  if (labels.length === 0 || maxWidth <= 0) return { chips: [], height: 0, rowCount: 0 };
+  if (tags.length === 0 || maxWidth <= 0) return { chips: [], height: 0, rowCount: 0 };
 
   const safeWidth = Math.max(1, maxWidth);
   const horizontalPadding = ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.horizontalPadding;
   const maxTextWidth = Math.max(1, safeWidth - horizontalPadding * 2);
-  const chipDrafts = labels.map((label) => {
+  const chipDrafts = tags.map((tag) => {
+    const { color, label } = typeof tag === "string" ? { color: null, label: tag } : tag;
     const naturalWidth = Math.max(24, horizontalPadding * 2 + measureText(label));
     const lines =
       naturalWidth <= safeWidth
         ? [label]
         : wrapOrgEditorExportTagLabel(label, maxTextWidth, measureText);
     return {
+      color,
       height:
         ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height +
         Math.max(0, lines.length - 1) * ORG_EDITOR_EXPORT_EMPLOYEE_TAG_LINE_HEIGHT,
@@ -763,7 +784,7 @@ export const createOrgEditorExportEmployeeTagLayout = (
 };
 
 export const getOrgEditorExportEmployeeTagRowCount = (
-  labels: readonly string[],
+  labels: readonly (OrgEditorExportEmployeeTag | string)[],
   maxWidth: number,
 ) => createOrgEditorExportEmployeeTagLayout(labels, maxWidth).rowCount;
 
@@ -780,7 +801,7 @@ export const getOrgEditorExportEmployeeRowHeight = (
 ) =>
   getOrgEditorExportEmployeeRowHeightForTagLayout(
     createOrgEditorExportEmployeeTagLayout(
-      getOrgEditorExportEmployeeTagLabels(employee, locale),
+      getOrgEditorExportEmployeeTags(employee, locale),
       maxWidth,
     ),
   );
@@ -816,9 +837,10 @@ const drawOrgEditorEmployeeTags = ({
       },
       ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.radius,
     );
-    context.fillStyle = ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fillStyle;
+    const colorStyle = getTagColorCanvasStyle(chip.color);
+    context.fillStyle = colorStyle.fillStyle;
     context.fill();
-    context.fillStyle = ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.textStyle;
+    context.fillStyle = colorStyle.textStyle;
     const textBlockHeight = chip.lines.length * ORG_EDITOR_EXPORT_EMPLOYEE_TAG_LINE_HEIGHT;
     const firstLineY =
       chipY +
@@ -1047,7 +1069,7 @@ export const createOrgEditorUnitImageBlob = async ({
       const employee = employeeById.get(employeeId);
       return employee
         ? createOrgEditorExportEmployeeTagLayout(
-            getOrgEditorExportEmployeeTagLabels(employee, locale),
+            getOrgEditorExportEmployeeTags(employee, locale),
             availableTagWidth,
             (text) => measureContext.measureText(text).width,
           )

@@ -1,14 +1,19 @@
 "use client";
 
-import type { EmployeeTagDefinition, TagId } from "@org-tools/types";
+import type { Employee, EmployeeTagDefinition, TagId } from "@org-tools/types";
+import { observer } from "mobx-react-lite";
 import { useMemo, useState } from "react";
 import {
+  HiOutlineEye,
   HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
   HiOutlineTag,
   HiOutlineTrash,
 } from "react-icons/hi2";
 
+import { EmployeeCardActions } from "@/components/employee-card-actions";
+import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
+import { EmployeeDialog } from "@/components/employee-dialog";
 import { TagColorPicker } from "@/components/tag-color-picker";
 import {
   AlertDialog,
@@ -38,7 +43,7 @@ import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
-export function TagCatalogDialog({
+export const TagCatalogDialog = observer(function TagCatalogDialog({
   onOpenChange,
   open,
 }: {
@@ -52,6 +57,10 @@ export function TagCatalogDialog({
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<EmployeeTagDefinition | null>(null);
   const [deleteId, setDeleteId] = useState<TagId | null>(null);
+  const [viewingTagId, setViewingTagId] = useState<TagId | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const units = store.units;
   const [editError, setEditError] = useState<UiMessageDescriptor | null>(null);
   const visible = useMemo(() => {
     const normalized = normalizeSearchValue(query);
@@ -71,6 +80,16 @@ export function TagCatalogDialog({
     }
     return result;
   }, [store.organizationEmployees]);
+  const viewingTag = store.tagDefinitions.find((tag) => tag.id === viewingTagId) ?? null;
+  const taggedEmployees = useMemo(
+    () =>
+      viewingTagId
+        ? (units?.indexes.employeesByName ?? []).filter((employee) =>
+            employee.tags.some((assignment) => assignment.tagId === viewingTagId),
+          )
+        : [],
+    [units, viewingTagId],
+  );
   return (
     <>
       <Dialog onOpenChange={onOpenChange} open={open}>
@@ -104,7 +123,8 @@ export function TagCatalogDialog({
                     const count = counts.get(tag.id) ?? { dated: 0, employees: 0 };
                     return (
                       <div
-                        className="flex items-center gap-3 rounded-md bg-muted/30 px-3 py-2"
+                        className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-accent/40"
+                        data-demo-id="tag-catalog-row"
                         key={tag.id}
                       >
                         <div className="min-w-0 flex-1">
@@ -124,6 +144,22 @@ export function TagCatalogDialog({
                             {t("{count} dated", { count: count.dated })}
                           </div>
                         </div>
+                        <Button
+                          aria-label={t("View Employees with this Tag")}
+                          data-demo-id="tag-catalog-view-employees"
+                          onClick={() => setViewingTagId(tag.id)}
+                          size="icon"
+                          title={t("View Employees with this Tag")}
+                          type="button"
+                          variant="ghost"
+                        >
+                          <HiOutlineEye />
+                        </Button>
+                        <TagColorPicker
+                          onChange={(color) => store.saveTagDefinition({ ...tag, color })}
+                          value={tag.color}
+                          variant="icon"
+                        />
                         <Button
                           aria-label={t("Edit tag")}
                           onClick={() => {
@@ -186,13 +222,6 @@ export function TagCatalogDialog({
                     value={editing.label}
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label>{t("Color")}</Label>
-                  <TagColorPicker
-                    onChange={(color) => setEditing({ ...editing, color })}
-                    value={editing.color}
-                  />
-                </div>
                 {editError && (
                   <div className="text-sm text-destructive" role="alert">
                     {messageText(editError)}
@@ -230,6 +259,96 @@ export function TagCatalogDialog({
           )}
         </DialogContent>
       </Dialog>
+      <Dialog
+        onOpenChange={(nextOpen) => !nextOpen && setViewingTagId(null)}
+        open={viewingTag !== null}
+      >
+        <DialogContent
+          className="flex max-h-[86dvh] max-w-3xl flex-col"
+          data-demo-id="tag-employees-dialog"
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {viewingTag
+                ? t("Employees with Tag {tag}", { tag: viewingTag.label })
+                : t("Employees")}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody className="min-h-0 flex-1 overflow-hidden p-0">
+            {units && (
+              <EmployeeCardList
+                actions={(employee) => (
+                  <EmployeeCardActions
+                    employee={employee}
+                    onApplyTags={store.updateEmployeeTags}
+                    onDelete={setDeletingEmployee}
+                    onEdit={setEditingEmployee}
+                    tagOptions={units.indexes.tagOptions}
+                    tagPickerDataDemoId="tag-employees-tag-picker"
+                  />
+                )}
+                className="h-full p-0"
+                dataDemoId="tag-employees-list"
+                employees={taggedEmployees}
+                emptyState={t("No Employees have this Tag")}
+                onUnitContextClick={(unitContext) =>
+                  store.selectUnitFromEmployeeCard(unitContext.unitId)
+                }
+                resetKey={`tag-employees:${viewingTagId ?? "none"}`}
+                subtitle={(employee) => <EmployeeIdentity employee={employee} />}
+                unitContextsByEmployeeId={store.employeeUnitContextsByEmployeeId}
+              />
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={() => setViewingTagId(null)} type="button" variant="outline">
+              {t("Close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {editingEmployee && units && (
+        <EmployeeDialog
+          employee={editingEmployee}
+          mode="global"
+          onOpenChange={(nextOpen) => !nextOpen && setEditingEmployee(null)}
+          onSave={(fields, memberships) =>
+            store.updateEmployee(editingEmployee.id, fields, memberships)
+          }
+          open={Boolean(editingEmployee)}
+          tagOptions={units.indexes.tagOptions}
+          units={units}
+        />
+      )}
+      <AlertDialog
+        onOpenChange={(nextOpen) => !nextOpen && setDeletingEmployee(null)}
+        open={Boolean(deletingEmployee)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Delete Employee?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingEmployee
+                ? t("Employee {name} will be removed from the catalog and every Team.", {
+                    name: deletingEmployee.fullName,
+                  })
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                if (deletingEmployee) store.deleteOrganizationEmployee(deletingEmployee.id);
+                setDeletingEmployee(null);
+              }}
+            >
+              {t("Delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog onOpenChange={(next) => !next && setDeleteId(null)} open={deleteId !== null}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -254,4 +373,4 @@ export function TagCatalogDialog({
       </AlertDialog>
     </>
   );
-}
+});

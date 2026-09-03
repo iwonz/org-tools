@@ -1226,6 +1226,19 @@ test("imports complete states and mapped Employee arrays", async ({ page }) => {
   await expect(employeeImport.getByText("Source JSON path", { exact: true })).toBeVisible();
   await expect(employeeImport.getByText("Org Tools field", { exact: true })).toBeVisible();
   await expect(employeeImport.getByText("Import Teams", { exact: true })).toHaveCount(0);
+  const mappingPaths = employeeImport.locator(
+    '[data-demo-id="employee-import-mapping-paths"] [data-source-path]',
+  );
+  await expect(mappingPaths).toHaveCount(6);
+  await employeeImport.getByLabel("Org Tools field for firstName", { exact: true }).click();
+  await page.getByRole("option", { name: "Last name *", exact: true }).click();
+  await expect(
+    employeeImport.getByLabel("Org Tools field for lastName", { exact: true }),
+  ).toContainText("Do not import");
+  await employeeImport.getByLabel("Org Tools field for firstName", { exact: true }).click();
+  await page.getByRole("option", { name: "First name *", exact: true }).click();
+  await employeeImport.getByLabel("Org Tools field for lastName", { exact: true }).click();
+  await page.getByRole("option", { name: "Last name *", exact: true }).click();
   await page.setViewportSize({ height: 844, width: 390 });
   const employeeImportBody = employeeImport.locator('[data-slot="dialog-body"]');
   const mobileImportLayout = await employeeImportBody.evaluate((element) => {
@@ -1597,6 +1610,7 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   expect(unitSummaryBox?.y ?? 0).toBeGreaterThanOrEqual(
     (unitSearchControlBox?.y ?? 0) + (unitSearchControlBox?.height ?? 0),
   );
+  expect(unitSummaryBox?.x).toBeCloseTo(unitSearchControlBox?.x ?? 0, 0);
   await unitEmployeeSearch.getByRole("searchbox").fill("Avery");
   await expect(page.locator('[data-demo-id="units-employee-match-count"]')).toContainText(
     "1 match",
@@ -2564,11 +2578,15 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   await expectNoHorizontalRule(page.locator('[data-demo-id="dated-tag-rail"]'));
   const emptyDate = page.locator('[data-calendar-date="2026-07-01"]');
   const eventDate = page.locator('[data-calendar-date="2026-07-10"]');
+  const weekendDate = page.locator('[data-calendar-date="2026-07-04"]');
   await expect(emptyDate).toHaveRole("button");
   await expect(eventDate).toHaveRole("button");
   await expect(emptyDate).toHaveCSS("border-top-width", "0px");
   await expect(emptyDate).toHaveCSS("cursor", "pointer");
   await expect(eventDate).toHaveCSS("cursor", "pointer");
+  expect(await getBackgroundColor(weekendDate)).not.toBe(await getBackgroundColor(emptyDate));
+  const weekendHeadings = page.locator('[data-demo-id="calendar-weekdays"] > .bg-calendar-weekend');
+  await expect(weekendHeadings).toHaveCount(2);
   const emptyRestingBackground = await getBackgroundColor(emptyDate);
   await expectStableHoverGeometry(emptyDate);
   await expect.poll(() => getBackgroundColor(emptyDate)).not.toBe(emptyRestingBackground);
@@ -2766,16 +2784,33 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   const catalog = page.getByRole("dialog", { name: "Tags", exact: true });
   const catalogTag = catalog.locator('[data-tag-color-surface][data-tag-color="#7c3aed"]').first();
   await expectFilledTagSurface(catalogTag);
-  await catalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
+  let tagRow = catalog
+    .locator('[data-demo-id="tag-catalog-row"]:has([data-tag-color="#7c3aed"])')
+    .first();
+  await expect(tagRow).toHaveCSS("border-width", "0px");
+  await expectTransparentBackground(tagRow);
+  await expectStableHoverGeometry(tagRow);
+  expect(
+    await tagRow
+      .getByRole("button")
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label"))),
+  ).toEqual(["View Employees with this Tag", "Choose Tag color", "Edit tag", "Delete tag"]);
+  await tagRow.getByRole("button", { name: "Edit tag", exact: true }).click();
   const tagEditor = page.getByRole("dialog", { name: "Edit tag", exact: true });
   await expect(catalog.locator('[data-demo-id="tag-catalog-editor"]')).toHaveCount(0);
   const originalName = await tagEditor.getByLabel("Name", { exact: true }).inputValue();
+  tagRow = catalog
+    .locator('[data-demo-id="tag-catalog-row"]')
+    .filter({ hasText: originalName })
+    .first();
+  await expect(tagEditor.locator('[data-demo-id="tag-color-trigger"]')).toHaveCount(0);
   await tagEditor.getByLabel("Name", { exact: true }).fill("Cancelled Tag edit");
   await tagEditor.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(catalog.getByText("Cancelled Tag edit", { exact: true })).toHaveCount(0);
-  await catalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
+  await tagRow.getByRole("button", { name: "Edit tag", exact: true }).click();
   await expect(tagEditor.getByLabel("Name", { exact: true })).toHaveValue(originalName);
-  const colorTrigger = tagEditor.locator('[data-demo-id="tag-color-trigger"]');
+  await tagEditor.getByRole("button", { name: "Cancel", exact: true }).click();
+  const colorTrigger = tagRow.locator('[data-demo-id="tag-color-trigger"]');
   await colorTrigger.click();
   const palette = page.locator('[data-demo-id="tag-color-dropdown"]');
   const fullPalette = palette.locator('[data-demo-id="tag-color-full-palette"]');
@@ -2803,42 +2838,56 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await colorFormat.click();
   await page.getByRole("option", { name: "HTML Keyword", exact: true }).click();
   await colorValue.fill("aliceblue");
-  await expect(colorTrigger.locator('[data-tag-color="#f0f8ff"]')).toBeVisible();
+  await colorValue.press("Enter");
+  await expect(tagRow.locator('[data-tag-color="#f0f8ff"]')).toBeVisible();
   await colorFormat.click();
   await page.getByRole("option", { name: "HEX", exact: true }).click();
   await colorValue.fill("#0F8");
-  await expect(colorTrigger.locator('[data-tag-color="#00ff88"]')).toBeVisible();
+  await colorValue.press("Enter");
+  await expect(tagRow.locator('[data-tag-color="#00ff88"]')).toBeVisible();
   await colorFormat.click();
   await page.getByRole("option", { name: "RGB", exact: true }).click();
   await colorValue.fill("rgb(12, 34, 56)");
-  await expect(colorTrigger.locator('[data-tag-color="#0c2238"]')).toBeVisible();
+  await colorValue.press("Enter");
+  await expect(tagRow.locator('[data-tag-color="#0c2238"]')).toBeVisible();
   await colorValue.fill("rgb(999, 34, 56)");
   await expect(palette.getByText("Enter a valid RGB color.", { exact: true })).toBeVisible();
-  await expect(colorTrigger.locator('[data-tag-color="#0c2238"]')).toBeVisible();
+  await expect(tagRow.locator('[data-tag-color="#0c2238"]')).toBeVisible();
   await colorFormat.click();
   await page.getByRole("option", { name: "RGBA", exact: true }).click();
   await colorValue.fill("rgba(124, 58, 237, .5)");
-  await expect(colorTrigger.locator('[data-tag-color="#7c3aed80"]')).toBeVisible();
+  await colorValue.press("Enter");
+  await expect(tagRow.locator('[data-tag-color="#7c3aed80"]')).toBeVisible();
 
   await palette.getByRole("option", { name: "Orange", exact: true }).click();
-  await expect(colorTrigger.locator('[data-tag-color="orange"]')).toBeVisible();
+  await expect(tagRow.locator('[data-tag-color="orange"]')).toBeVisible();
   await colorTrigger.click();
   await palette.getByRole("option", { name: "No color", exact: true }).click();
-  await expect(colorTrigger.locator('[data-tag-color="none"]')).toBeVisible();
+  await expect(tagRow.locator('[data-tag-color="none"]')).toBeVisible();
   await colorTrigger.click();
-  await palette.getByLabel("Hue").fill("268");
   await palette.getByRole("slider", { name: "Choose custom color" }).click({
     position: { x: 210, y: 34 },
   });
-  const customSurface = colorTrigger.locator('[data-tag-color^="#"]');
+  const customSurface = tagRow.locator('[data-tag-color^="#"]');
   await expect(customSurface).toBeVisible();
   const customColor = await customSurface.getAttribute("data-tag-color");
   expect(customColor).toMatch(/^#[0-9a-f]{6}$/u);
   await expectFilledTagSurface(customSurface);
   await page.keyboard.press("Escape");
-  await tagEditor.getByRole("button", { name: "Save", exact: true }).click();
-  const savedCustomSurface = catalog.locator(`[data-tag-color="${customColor}"]`).first();
-  await expectFilledTagSurface(savedCustomSurface);
+  await colorTrigger.click();
+  await palette.getByLabel("Hue").fill("12");
+  await page.keyboard.press("Escape");
+  await expect(tagRow.locator(`[data-tag-color="${customColor}"]`)).toBeVisible();
+  await tagRow.getByRole("button", { name: "View Employees with this Tag", exact: true }).click();
+  const tagEmployees = page.getByRole("dialog", { name: /Employees with Tag/u });
+  await expect(tagEmployees.locator('[data-demo-id="tag-employees-list"]')).toBeVisible();
+  const taggedEmployeeActions = tagEmployees.locator("[data-employee-card-actions]");
+  await expect(taggedEmployeeActions.first()).toBeVisible();
+  const taggedEmployeeCount = await taggedEmployeeActions.count();
+  await tagEmployees.locator('[data-demo-id="tag-employees-tag-picker-trigger"]').first().click();
+  await page.getByRole("checkbox", { name: originalName, exact: true }).click();
+  await expect(taggedEmployeeActions).toHaveCount(taggedEmployeeCount - 1);
+  await tagEmployees.getByRole("button", { name: "Close", exact: true }).first().click();
   await catalog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");

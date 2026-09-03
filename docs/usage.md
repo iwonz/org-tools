@@ -29,7 +29,8 @@ their distinct role.
 English, Simplified Chinese, Russian, Spanish, French, and Modern Standard Arabic catalogs are
 bundled locally. A new static state uses the first supported entry in the browser language list and
 falls back to English. An existing SQLite state, imported state, live-tab state, or previous manual
-choice takes priority. The Language modal switches navigation, menus, dialogs, errors, empty states,
+choice takes priority. The Language modal shows a bundled local flag at the logical start of each
+row and switches navigation, menus, dialogs, errors, empty states,
 date formatting, plurals, and accessibility labels in place. Arabic sets the document to RTL and
 mirrors the shell while keeping Editor canvas coordinates LTR. The Theme modal offers Light, Dark,
 and System. Locale and theme are allowed local metadata; both are also part of exported state so an
@@ -51,10 +52,12 @@ control.
   shared tags whose configured color is their tonal fill, contact fields, and Unit assignments with compound filters. **Employee
   model** defines stored Value fields or derived Template fields with optional MD5/SHA-256 output;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
-  deletion. Editing opens a dedicated modal. Its color dropdown keeps a full custom palette first,
+  deletion. Its flat rows expose Eye, Color, Edit, and Delete: Eye opens current full Employee cards,
+  Edit opens a rename-only modal, and Color opens the picker directly. The picker keeps a full custom palette first,
   exact HTML Keyword, HEX, RGB, or RGBA entry next, and localized named presets plus No color below;
   arbitrary choices are stored as canonical `#rrggbb` or `#rrggbbaa` values and use readable tonal
-  fills in both themes. Invalid exact input remains a draft and does not change the Tag. Gender is
+  fills in both themes and PNG output. Palette and hue changes commit once after a completed gesture;
+  invalid or canceled exact input does not change the Tag. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
@@ -79,7 +82,7 @@ control.
   unknown-year sentinel are excluded. Every Eye drill-down uses current full Employee cards with
   Tag, Edit, and Delete actions.
 - **Calendar** combines recurring birthdays and dated tags with localized weekday order, leading
-  month offsets, weekend tones, a horizontal Tag rail, conditional Today navigation, interactive dates, and Employee
+  month offsets, soft rose weekend tones, a horizontal Tag rail, conditional Today navigation, interactive dates, and Employee
   actions. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each
   interactive Tag heading and its full Employee-card list. Day and tag dialogs omit redundant
   descriptions, generic dated-event/current-future headings, special event subtitles, and empty
@@ -102,9 +105,10 @@ control.
 
 **Import** opens a modal with **All state** and **Employees**. All state accepts the exact current
 state shape up to 25 MiB and replaces it atomically after confirmation. Employees accepts a JSON
-array, shows a bounded preview of the first record with the most mappable properties, maps source
-paths left-to-right into fixed fields, requires UUID, first name, last name, and email, and imports
-nested Team assignments only when Teams is mapped. Existing Value fields may be mapped and new
+array, shows a bounded preview of the first record with the most mappable properties, and lists every
+discovered source path beside a real Org Tools target Select. Each target belongs to only one path;
+selecting an occupied target transfers it from the previous row. UUID, first name, last name, and
+email are required, and nested Team assignments import only when Teams is mapped. Existing Value fields may be mapped and new
 Value definitions may be prepared atomically. The review separates additions, identity duplicates,
 and skipped rows. A mapped birthday must be a real `DD.MM.YYYY` value; `1900` means the birth year
 is unknown, including for `29.02.1900`. Existing identities can be updated, skipped, or limited to

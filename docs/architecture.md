@@ -118,18 +118,21 @@ history, collaborative cursors, or remote synchronization.
 
 - `OrgStore` owns Employees, custom field definitions, the Tag catalog, the current Unit structure, derived indexes, durable UI projection, and
   separate organization/UI change sequences.
-- Shared Tag color helpers keep named palette classes static and derive bounded light/dark fill,
-  hover, active, and readable foreground variables for custom HEX values. The catalog color Popover
-  owns transient HSV selection plus exact HTML Keyword, HEX, RGB, or RGBA input. Input is parsed
-  locally and only canonical six- or eight-digit lowercase HEX reaches the Tag draft. Catalog Edit
-  uses a dedicated modal draft, so canceling never mutates the definition.
+- Shared Tag color helpers keep named palette classes static and derive bounded light/dark and canvas
+  fill/foreground pairs for named, custom, alpha, and neutral values. Flat catalog rows expose Eye,
+  Color, Edit, and Delete in that order. The row-level color Popover owns transient HSV selection plus
+  exact HTML Keyword, HEX, RGB, or RGBA input; pointer gestures commit once on completion, exact input
+  commits on Enter or blur, and cancel or invalid input does not mutate the Tag. Edit is a separate
+  rename-only modal. Eye resolves the current `tagId` into a virtualized full Employee-card list.
 - `OrgEditorStore` owns the single structural document, history, selection, viewport, and commands.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
   and write observation; the SQLite transport is imported only by `apps/ui`.
 - Import owns one transient `File`, representative record, mapping, and validated candidate. Employee
   source paths and the first richest record are derived in one pass; a bounded JSON rendering and
-  left-to-right mapping stay transient. Global Export validates and
+  virtualized source-driven `JSON path → Org Tools target` mapping stay transient. Each target is
+  unique, selecting it transfers it from the previous path, and a pending Value definition remains
+  transactional with the final Apply. Global Export validates and
   downloads the complete current state only after an explicit action.
 - Data Download is a separate reporting pipeline for structured JSON and separator templates.
   JSON creates one record per Employee from one sortable top-level list of scalar Employee fields
@@ -145,7 +148,7 @@ headers, roster padding, centered avatars, Employee text columns, compact tag pa
 heights, and hierarchy anchors. The selected export font measures one immutable tag layout per
 Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
 drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
-Employee summary, and boss treatment while excluding Static/Live membership type, transient
+Employee summary, Tag tonal colors, and boss treatment while excluding Static/Live membership type, transient
 selection, hover, handles, and menus. Its bounded inline preview has no secondary full-image
 viewer. Image titles, backgrounds, fonts, icon-only alignment, scope, radius, Employee templates,
 and Editor JSON settings remain output-only session settings and do not mutate the current
@@ -155,7 +158,7 @@ limiting Employees and assignments to Unit-only or subtree scope.
 
 Both runtimes expose the same Import, Export, language, and theme actions and retain identical
 compact/expanded sidebar geometry. Language and Theme are independent modal radio selectors rather
-than floating menus.
+than floating menus; the six Language rows use bundled decorative SVG flags.
 The header combines the active section icon and title with effect-registered contextual actions.
 Units registers **Add Unit**; Employees registers **Employee model**, **Tags**, and **Add Employee**;
 Data Download registers **Continue**. Inactive sections unregister without updating the shell during render. Thematic icons
@@ -174,7 +177,7 @@ events form one virtualized vertical stream: Birthdays first, then each localize
 its stable Employee list. A selected
 dated tag is stored by normalized key so edits and deletions re-derive current events instead of
 retaining a stale group snapshot. The month grid uses locale-aware weekday order, leading empty
-cells, real weekend tones, a horizontal dated-Tag rail, and one Tag icon/count per occupied date.
+cells, dedicated light/dark rose weekend tones, a horizontal dated-Tag rail, and one Tag icon/count per occupied date.
 Calendar day titles are assembled from locale parts; Russian omits its abbreviated year suffix.
 
 Analytics derives birth-year counts and `all`, `male`, and `female` completed-age cohorts in the same

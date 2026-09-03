@@ -158,8 +158,8 @@ function CalendarDayCell({
     <button
       className={cn(
         "flex min-h-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg bg-muted/30 p-2.5 text-start outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-        isWeekend && "bg-muted/65 hover:bg-muted/80",
-        isToday && "bg-signal/15 hover:bg-signal/20",
+        isWeekend && "bg-calendar-weekend hover:bg-calendar-weekend-hover",
+        isToday && !isWeekend && "bg-signal/15 hover:bg-signal/20",
       )}
       data-calendar-date={calendarDay.date}
       data-has-content={hasContent ? "true" : "false"}
@@ -448,7 +448,7 @@ export const CalendarTab = observer(() => {
                   <div
                     className={cn(
                       "rounded-md px-2 py-1 text-center text-xs font-medium capitalize text-muted-foreground",
-                      isWeekend && "bg-muted/65",
+                      isWeekend && "bg-calendar-weekend",
                     )}
                     key={label}
                   >

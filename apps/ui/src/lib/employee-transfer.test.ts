@@ -4,7 +4,11 @@ import {
   applyEmployeeImport,
   createSuggestedEmployeeImportMapping,
   deriveEmployeeImportPreview,
+  employeeImportBuiltinTarget,
+  employeeImportPendingTarget,
+  getEmployeeImportSourcePath,
   parseEmployeeImportText,
+  setEmployeeImportSourceTarget,
 } from "@/lib/employee-transfer";
 import type { OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
 import { OrgStore } from "@/stores/org-store";
@@ -31,6 +35,18 @@ const manualUnit = (name: string): OrgEditorUnitConfiguration => ({
 });
 
 describe("Employee transfer", () => {
+  test("keeps one target per source path and transfers an occupied target", () => {
+    const paths = ["person.given", "person.preferred"];
+    let mapping = createSuggestedEmployeeImportMapping(paths);
+    const target = employeeImportBuiltinTarget("firstName");
+    mapping = setEmployeeImportSourceTarget(mapping, paths[0] as string, target);
+    mapping = setEmployeeImportSourceTarget(mapping, paths[1] as string, target);
+
+    expect(mapping.sourceTargets[paths[0] as string]).toBeNull();
+    expect(mapping.sourceTargets[paths[1] as string]).toBe(target);
+    expect(getEmployeeImportSourcePath(mapping, target)).toBe(paths[1]);
+  });
+
   test("chooses the first richest representative row while collecting all paths", () => {
     const source = parseEmployeeImportText(
       "employees.json",
@@ -87,11 +103,23 @@ describe("Employee transfer", () => {
         },
       ]),
     );
-    const mapping = createSuggestedEmployeeImportMapping(source.paths);
-    mapping.firstName = "person.first";
-    mapping.lastName = "person.last";
-    mapping.email = "contact.email";
-    mapping.teams = "teams";
+    let mapping = createSuggestedEmployeeImportMapping(source.paths);
+    mapping = setEmployeeImportSourceTarget(
+      mapping,
+      "person.first",
+      employeeImportBuiltinTarget("firstName"),
+    );
+    mapping = setEmployeeImportSourceTarget(
+      mapping,
+      "person.last",
+      employeeImportBuiltinTarget("lastName"),
+    );
+    mapping = setEmployeeImportSourceTarget(
+      mapping,
+      "contact.email",
+      employeeImportBuiltinTarget("email"),
+    );
+    mapping = setEmployeeImportSourceTarget(mapping, "teams", employeeImportBuiltinTarget("teams"));
     const preview = deriveEmployeeImportPreview(source, mapping, []);
     const next = applyEmployeeImport({
       bulkPolicy: "update",
@@ -236,6 +264,7 @@ describe("Employee transfer", () => {
         path: "department",
       },
     ];
+    mapping.sourceTargets.department = employeeImportPendingTarget(fieldId);
     const preview = deriveEmployeeImportPreview(source, mapping, store.organizationEmployees);
     const next = applyEmployeeImport({
       bulkPolicy: "update",

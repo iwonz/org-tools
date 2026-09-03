@@ -230,6 +230,31 @@ export const employeeTagColorToHex = (color: EmployeeTagColor | null | undefined
   return DEFAULT_CUSTOM_TAG_COLOR;
 };
 
+export const getTagColorCanvasStyle = (
+  color: EmployeeTagColor | null | undefined,
+): { fillStyle: string; textStyle: string } => {
+  if (!color) {
+    return { fillStyle: "rgba(29, 29, 29, 0.1)", textStyle: "#1d1d1d" };
+  }
+  const parsed = parseHex(employeeTagColorToHex(color));
+  if (!parsed) {
+    return { fillStyle: "rgba(29, 29, 29, 0.1)", textStyle: "#1d1d1d" };
+  }
+  const white = { blue: 255, green: 255, red: 255 };
+  const nearBlack = { blue: 23, green: 23, red: 23 };
+  const opaqueRgb = mix(
+    { blue: parsed.blue, green: parsed.green, red: parsed.red },
+    white,
+    parsed.alpha,
+  );
+  const fill = mix(opaqueRgb, white, 0.18);
+  const tintedText = mix(opaqueRgb, nearBlack, 0.3);
+  return {
+    fillStyle: rgbToHex(fill),
+    textStyle: rgbToHex(contrast(tintedText, fill) >= 4.5 ? tintedText : nearBlack),
+  };
+};
+
 export const hexToHsv = (hex: string): Hsv => {
   const { blue, green, red } = parseHex(hex) ?? {
     alpha: 1,

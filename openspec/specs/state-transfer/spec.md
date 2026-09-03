@@ -11,9 +11,10 @@ strict current `OrgToolsState` no larger than 25 MiB and atomically replace memo
 confirmation. Employees SHALL accept at most 20,000 JSON records, require source mappings for UUID,
 first name, last name, and email, support standard fields, Tags, Teams, and current Value fields, and
 atomically apply only after valid review. A mapping MAY stage a new Value field definition, which
-SHALL be created only by the same successful Apply. Mapping rows SHALL read from source JSON path on
-the left toward one fixed Org Tools field on the right. Tags and Teams SHALL use the same mapping-row
-composition as scalar fields.
+SHALL be created only by the same successful Apply. Mapping SHALL show every discovered source JSON
+path once on the left and a selectable Org Tools target or Do not import on the right. Targets MUST
+remain unique; selecting an occupied target SHALL transfer it from its previous source. Tags and
+Teams SHALL use the same mapping-row composition as scalar fields.
 
 #### Scenario: Import complete State
 - **WHEN** a user selects State, chooses a valid current state, and confirms replacement
@@ -21,8 +22,12 @@ composition as scalar fields.
 
 #### Scenario: Map Employee input
 - **WHEN** a user selects Employees and chooses a JSON array
-- **THEN** bounded discovered source paths can be mapped left-to-right to fixed current Employee fields, Tags, and Teams
+- **THEN** every bounded discovered source path appears with a Select for an Org Tools field or Do not import
 - **AND** identity, validity, new count, and existing-match count are recomputed once per mapping change
+
+#### Scenario: Transfer an occupied target
+- **WHEN** a user assigns an Org Tools target already selected for another source path
+- **THEN** the target moves to the new source and the previous source becomes Do not import
 
 #### Scenario: Map an existing custom field
 - **WHEN** a source path is mapped to a current Value definition

@@ -237,9 +237,10 @@ measurement, wrapped tag visibility, and bounded scrolling SHALL remain unchange
 Dialog and alert-dialog surfaces SHALL remain distinct through overlay, radius, focus management,
 and at most one restrained shadow. Language and Theme SHALL use compact modal radio lists. Non-modal
 Popover, Select, Tag/search, and Editor menus SHALL retain one neutral hairline and borderless items.
-Overlay levels SHALL place canvas tools below sidebar tooltips, sidebar content below dialogs, and
-runtime errors above all ordinary interaction layers. Headers, scrollable bodies, and footers SHALL
-use consistent spacing and restrained tonal separation when it keeps actions or context visible.
+Overlay levels SHALL place canvas tools below sidebar tooltips, sidebar content below dialogs,
+Popovers above their owning dialog, nested Select portals above Popovers, and runtime errors above
+all ordinary interaction layers. Headers, scrollable bodies, and footers SHALL use consistent
+spacing and restrained tonal separation when it keeps actions or context visible.
 
 #### Scenario: Modal setting selector
 - **WHEN** Language or Theme opens over any workflow
@@ -258,6 +259,10 @@ use consistent spacing and restrained tonal separation when it keeps actions or 
 - **WHEN** any non-modal floating menu opens over a same-tone page in either theme
 - **THEN** one stable neutral outline distinguishes the container without an item border, geometry
   shift, or additional elevation
+
+#### Scenario: Select inside a Popover
+- **WHEN** the exact Tag color type Select opens inside the color Popover
+- **THEN** every option renders above the Popover and remains pointer and keyboard accessible
 
 ### Requirement: Global transfer actions use focused modal workflows
 Import SHALL open one responsive modal with State and Employees tabs, thematic icons before labels,
@@ -295,10 +300,12 @@ horizontal overflow.
 ### Requirement: Units detail panes use one compact alignment
 At 768 px and wider, the Units hierarchy and Employee roster SHALL each occupy exactly half of the
 workflow width. Their Unit-name and Employee searches SHALL share the same first-row vertical
-position, height, and padding. Selected Unit identity, breadcrumb, and roster count SHALL follow the
-right search before one contiguous Employee list. Below 768 px, the panes SHALL stack as equal-height
-regions without horizontal overflow. The hierarchy SHALL begin directly at the workflow content
-boundary, and search, breadcrumbs, and Employee rows SHALL share one logical content edge.
+position, height, and padding. The complete roster count and conditional filtered match count SHALL
+appear immediately below the right search on its logical content edge; selected Unit identity and
+breadcrumb SHALL follow before one contiguous Employee list. Below 768 px, the panes SHALL stack as
+equal-height regions without horizontal overflow. The hierarchy SHALL begin directly at the
+workflow content boundary, and search, count, breadcrumbs, and Employee rows SHALL share one logical
+content edge.
 
 #### Scenario: Populated desktop Units workflow
 - **WHEN** a Unit with Employees renders at desktop width
@@ -310,7 +317,7 @@ boundary, and search, breadcrumbs, and Employee rows SHALL share one logical con
 
 #### Scenario: Populated Units workflow alignment
 - **WHEN** a Unit with Employees is selected at a maintained desktop width
-- **THEN** the hierarchy has no redundant header gap and search, breadcrumbs, and Employee avatars share the documented content edge
+- **THEN** its roster count is directly below Employee search and above Unit identity and breadcrumbs
 
 #### Scenario: Contiguous selected-Unit roster
 - **WHEN** a selected Unit contains both direct and descendant Employees

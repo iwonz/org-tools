@@ -204,8 +204,26 @@
     "featured": false,
     "title": "Tag catalog editor",
     "file": "feature-employees-tag-editor.png",
-    "description": "Edit a Tag in a dedicated modal with a full palette, exact typed color formats, named presets, and reset.",
-    "capabilities": ["Modal editing", "Exact color formats", "Color palette", "Reset color"]
+    "description": "Rename a Tag in a focused modal without mixing identity changes with color controls.",
+    "capabilities": ["Dedicated modal", "Rename", "Validation", "Explicit save"]
+  },
+  {
+    "id": "employees-tag-color",
+    "module": "employees",
+    "featured": false,
+    "title": "Quick Tag color",
+    "file": "feature-employees-tag-color.png",
+    "description": "Open the row-level color action to choose a preset, use the full palette, enter an exact typed value, or reset the Tag color.",
+    "capabilities": ["Quick color", "Exact formats", "Full palette", "Preset colors", "Reset color"]
+  },
+  {
+    "id": "employees-tag-members",
+    "module": "employees",
+    "featured": false,
+    "title": "Employees with a Tag",
+    "file": "feature-employees-tag-members.png",
+    "description": "Inspect every Employee carrying a Tag in a virtualized full-card list with the ordinary Tag, Edit, and Delete actions.",
+    "capabilities": ["Tag membership", "Virtualized list", "Employee cards", "Employee actions"]
   },
   {
     "id": "employees-form",
@@ -323,10 +341,11 @@
     "featured": false,
     "title": "Editor image export",
     "file": "feature-editor-image-export.png",
-    "description": "Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping tags, localized boss marker, and connections follow the live canvas without membership-type labels or a secondary viewer.",
+    "description": "Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping colored tags, localized boss marker, and connections follow the live canvas without membership-type labels or a secondary viewer.",
     "capabilities": [
       "Inline PNG preview",
       "Complete tags",
+      "Tag colors",
       "Membership-neutral cards",
       "Hierarchy",
       "Localized boss marker",

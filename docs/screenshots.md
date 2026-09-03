@@ -1,7 +1,7 @@
 # Screenshots
 
 The screenshot catalog is generated from the production applications and declared in
-`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 46
+`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 48
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
@@ -70,7 +70,7 @@ Capabilities: Light theme, Expanded sidebar, Module labels, Local actions.
 
 [![Six-language selector](screenshots/demo-language.png)](screenshots/demo-language.png)
 
-Choose among all six bundled UN-language catalogs in a compact modal selector.
+Choose among all six bundled UN-language catalogs with local decorative flags in a compact modal selector.
 
 Capabilities: Six locales, In-place switching, Localized navigation, Persistent locale.
 
@@ -175,8 +175,8 @@ Capabilities: Custom fields, Virtualized values, Not filled, Compound filtering.
 
 [![Tag catalog](screenshots/feature-employees-tag-catalog.png)](screenshots/feature-employees-tag-catalog.png)
 
-Search centralized Tags and inspect named or arbitrary global filled colors, Employee usage, and
-dated-assignment counts without decorative marker dots.
+Search centralized Tags in flat rows and inspect named or arbitrary global filled colors, Employee
+usage, dated-assignment counts, and the ordered Eye, Color, Edit, and Delete actions.
 
 Capabilities: Tag catalog, Search, Global colors, Usage counts.
 
@@ -184,11 +184,28 @@ Capabilities: Tag catalog, Search, Global colors, Usage counts.
 
 [![Tag catalog editor](screenshots/feature-employees-tag-editor.png)](screenshots/feature-employees-tag-editor.png)
 
-Edit a Tag in its dedicated modal, choose any color from the full palette, enter an exact HTML
-Keyword, HEX, RGB, or RGBA value, or use and reset the localized named presets shown below it. The
-screenshot keeps the dropdown open so every path is visible.
+Rename a Tag in its dedicated focused modal without mixing identity and color changes.
 
-Capabilities: Modal editing, Exact color formats, Full palette, Named colors, Reset color.
+Capabilities: Dedicated modal, Rename, Validation, Explicit save.
+
+### Quick Tag color
+
+[![Quick Tag color](screenshots/feature-employees-tag-color.png)](screenshots/feature-employees-tag-color.png)
+
+Open Color directly from a flat catalog row, use the full palette or an exact HTML Keyword, HEX,
+RGB, or RGBA value, choose a named preset, or reset the color. Nested Select content remains above
+the Popover and palette gestures commit once.
+
+Capabilities: Quick color, Exact formats, Full palette, Presets, Reset color.
+
+### Employees with a Tag
+
+[![Employees with a Tag](screenshots/feature-employees-tag-members.png)](screenshots/feature-employees-tag-members.png)
+
+Open Eye to inspect every current Employee carrying the stable Tag ID in a virtualized full-card
+list with the ordinary Tag, Edit, and Delete actions.
+
+Capabilities: Tag membership, Virtualized list, Employee cards, Employee actions.
 
 ### Employee profile and assignments
 
@@ -230,8 +247,8 @@ Capabilities: Local file, Clipboard image, Crop and zoom, WebP with PNG fallback
 
 [![Employee field mapping](screenshots/feature-employee-import-mapping.png)](screenshots/feature-employee-import-mapping.png)
 
-Inspect the first richest bounded JSON record and map arbitrary flat or nested source paths
-left-to-right into current Employee fields, Tags, and optional Team assignments.
+Inspect the first richest bounded JSON record and map every discovered flat or nested source path
+left-to-right through a real Org Tools target Select. Occupied targets transfer between rows.
 
 Capabilities: Field mapping, Nested paths, Team assignments, Import preview.
 
@@ -283,12 +300,12 @@ Capabilities: Multi-selection, Boss assignment, Bulk tags, Edit, Copy, Delete.
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping tags,
+Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping colored tags,
 localized boss marker, and connections follow the live canvas without printing Static/Live
 membership type, then choose transparent, solid, or gradient backgrounds in the same dialog.
 
-Capabilities: Inline PNG preview, Complete tags, Membership-neutral cards, Hierarchy, Localized boss
-marker, Iconic scope, Background presets.
+Capabilities: Inline PNG preview, Complete colored tags, Membership-neutral cards, Hierarchy,
+Localized boss marker, Iconic scope, Background presets.
 
 ### Editor text template export
 
@@ -349,7 +366,7 @@ Capabilities: Value drill-down, Matching Employees, Employee actions.
 
 [![Employee Calendar](screenshots/demo-calendar.png)](screenshots/demo-calendar.png)
 
-Navigate locale-correct weeks with weekend tones, birthdays, compact dated-tag counts, conditional
+Navigate locale-correct weeks with soft rose weekend tones, birthdays, compact dated-tag counts, conditional
 Today navigation, and a strong current-day state.
 
 Capabilities: Localized weekdays, Weekends, Birthdays, Tag indicators, Today state.
@@ -433,8 +450,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
-- Confirm Tag editing uses a dedicated modal and its color dropdown shows the palette, exact typed
-  format editor, named presets, and no marker dots without clipping.
+- Confirm Tag rows are flat and expose Eye, Color, Edit, and Delete in order. Rename uses a dedicated
+  modal; quick Color shows its palette, exact typed format Select above the Popover, named presets,
+  and no marker dots or clipping; Eye uses full live Employee cards.
 - Confirm thematic icons precede text in buttons and tabs while disclosure, sorting, removal,
   status, and count affordances retain their semantic trailing positions.
 - Confirm Units always exposes hierarchy-name search for a nonempty structure, its path/search aligns to roster avatars, direct and
@@ -455,8 +473,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
   whose help icon and placeholder disclose the `@` menu that inserts the existing `{token}` syntax.
-- Confirm Employee Import shows a bounded richest-record preview beside left-to-right mapping rows,
-  imports Teams only through mapping, and keeps duplicate review virtualized.
+- Confirm Employee Import shows a bounded richest-record preview beside virtualized fixed-source →
+  target-Select rows, transfers occupied targets, imports Teams only through mapping, and keeps
+  duplicate review virtualized.
 - Confirm an unavailable or corrupt database offers Retry and confirmed Create new without silently
   replacing the existing database family.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
@@ -464,5 +483,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 46 PNGs must retain identical hashes. Material differences require
+- Regenerate immediately; all 48 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

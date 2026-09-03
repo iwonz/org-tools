@@ -478,6 +478,27 @@ export const UnitsTab = observer(() => {
               tagOptions={units.indexes.tagOptions}
               value={employeeSearchQuery}
             />
+            <div
+              className="px-1 text-xs text-muted-foreground"
+              data-demo-id="units-employee-summary"
+            >
+              <span data-demo-id="units-employee-total-count">
+                {countText("employees", {
+                  count: sortedDirectEmployees.length + nestedEmployees.length,
+                })}
+              </span>
+              {hasEmployeeSearch && (
+                <>
+                  {" "}
+                  <span data-demo-id="units-employee-match-count">
+                    ·{" "}
+                    {countText("matches", {
+                      count: filteredDirectEmployees.length + filteredNestedEmployees.length,
+                    })}
+                  </span>
+                </>
+              )}
+            </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">{selectedUnit.name}</div>
               <nav
@@ -497,27 +518,6 @@ export const UnitsTab = observer(() => {
                   ))}
                 </ol>
               </nav>
-              <div
-                className="mt-1 text-xs text-muted-foreground"
-                data-demo-id="units-employee-summary"
-              >
-                <span data-demo-id="units-employee-total-count">
-                  {countText("employees", {
-                    count: sortedDirectEmployees.length + nestedEmployees.length,
-                  })}
-                </span>
-                {hasEmployeeSearch && (
-                  <>
-                    {" "}
-                    <span data-demo-id="units-employee-match-count">
-                      ·{" "}
-                      {countText("matches", {
-                        count: filteredDirectEmployees.length + filteredNestedEmployees.length,
-                      })}
-                    </span>
-                  </>
-                )}
-              </div>
             </div>
           </div>
           <EmployeeCardList

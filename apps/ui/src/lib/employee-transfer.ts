@@ -54,9 +54,13 @@ export type EmployeeImportPendingValueField = {
   definition: CustomEmployeeValueField;
   path: string;
 };
-export type EmployeeImportMapping = Record<EmployeeImportField, string | null> & {
-  customFields: Record<EmployeeFieldId, string | null>;
+export type EmployeeImportTarget =
+  | `builtin:${EmployeeImportField}`
+  | `custom:${EmployeeFieldId}`
+  | `pending:${EmployeeFieldId}`;
+export type EmployeeImportMapping = {
   newValueFields: EmployeeImportPendingValueField[];
+  sourceTargets: Record<string, EmployeeImportTarget | null>;
 };
 export type EmployeeImportPolicy = "add" | "skip" | "teamsOnly" | "update";
 
@@ -135,17 +139,47 @@ const collectPaths = (
   }
 };
 
-export const createEmptyEmployeeImportMapping = (): EmployeeImportMapping =>
-  Object.assign(
-    Object.fromEntries(EMPLOYEE_IMPORT_FIELDS.map((field) => [field, null])) as Record<
-      EmployeeImportField,
-      string | null
-    >,
-    {
-      customFields: {},
-      newValueFields: [],
-    },
-  );
+export const employeeImportBuiltinTarget = (field: EmployeeImportField): EmployeeImportTarget =>
+  `builtin:${field}`;
+
+export const employeeImportCustomTarget = (fieldId: EmployeeFieldId): EmployeeImportTarget =>
+  `custom:${fieldId}`;
+
+export const employeeImportPendingTarget = (fieldId: EmployeeFieldId): EmployeeImportTarget =>
+  `pending:${fieldId}`;
+
+export const createEmptyEmployeeImportMapping = (
+  paths: readonly string[] = [],
+): EmployeeImportMapping => ({
+  newValueFields: [],
+  sourceTargets: Object.fromEntries(paths.map((path) => [path, null])),
+});
+
+export const getEmployeeImportSourcePath = (
+  mapping: EmployeeImportMapping,
+  target: EmployeeImportTarget,
+): string | null =>
+  Object.entries(mapping.sourceTargets).find(([, candidate]) => candidate === target)?.[0] ?? null;
+
+export const setEmployeeImportSourceTarget = (
+  mapping: EmployeeImportMapping,
+  sourcePath: string,
+  target: EmployeeImportTarget | null,
+): EmployeeImportMapping => {
+  const sourceTargets = { ...mapping.sourceTargets };
+  if (target) {
+    for (const [path, candidate] of Object.entries(sourceTargets)) {
+      if (candidate === target) sourceTargets[path] = null;
+    }
+  }
+  sourceTargets[sourcePath] = target;
+  return { ...mapping, sourceTargets };
+};
+
+export const isEmployeeImportTargetMapped = (
+  mapping: EmployeeImportMapping,
+  target: EmployeeImportTarget,
+): boolean => getEmployeeImportSourcePath(mapping, target) !== null;
 
 const normalizePathName = (value: string): string =>
   value.replace(/[^a-z0-9]/giu, "").toLowerCase();
@@ -153,7 +187,7 @@ const normalizePathName = (value: string): string =>
 export const createSuggestedEmployeeImportMapping = (
   paths: readonly string[],
 ): EmployeeImportMapping => {
-  const mapping = createEmptyEmployeeImportMapping();
+  let mapping = createEmptyEmployeeImportMapping(paths);
   const available = new Map(
     paths.map((path) => [normalizePathName(path.split(".").at(-1) ?? path), path]),
   );
@@ -172,7 +206,10 @@ export const createSuggestedEmployeeImportMapping = (
     username: ["username", "login"],
   };
   for (const field of EMPLOYEE_IMPORT_FIELDS) {
-    mapping[field] = aliases[field].map((alias) => available.get(alias)).find(Boolean) ?? null;
+    const path = aliases[field].map((alias) => available.get(alias)).find(Boolean);
+    if (path) {
+      mapping = setEmployeeImportSourceTarget(mapping, path, employeeImportBuiltinTarget(field));
+    }
   }
   return mapping;
 };
@@ -328,7 +365,18 @@ export const deriveEmployeeImportPreview = (
   currentEmployees: readonly OrganizationEmployee[],
   currentFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
 ): EmployeeImportPreview => {
-  if (!mapping.id || !mapping.firstName || !mapping.lastName || !mapping.email) {
+  const pathByTarget = new Map<EmployeeImportTarget, string>();
+  for (const [path, target] of Object.entries(mapping.sourceTargets)) {
+    if (target) pathByTarget.set(target, path);
+  }
+  const mappedPath = (field: EmployeeImportField) =>
+    pathByTarget.get(employeeImportBuiltinTarget(field)) ?? null;
+  if (
+    !mappedPath("id") ||
+    !mappedPath("firstName") ||
+    !mappedPath("lastName") ||
+    !mappedPath("email")
+  ) {
     throw new LocalizedError(
       uiMessage("Map UUID, first name, last name, and email before continuing."),
     );
@@ -342,7 +390,7 @@ export const deriveEmployeeImportPreview = (
   const mappedFields = new Set<Exclude<EmployeeImportField, "id" | "teams">>(
     EMPLOYEE_IMPORT_FIELDS.filter(
       (field): field is Exclude<EmployeeImportField, "id" | "teams"> =>
-        field !== "id" && field !== "teams" && mapping[field] !== null,
+        field !== "id" && field !== "teams" && mappedPath(field) !== null,
     ),
   );
   const rows: EmployeeImportRow[] = [];
@@ -353,8 +401,10 @@ export const deriveEmployeeImportPreview = (
     ...mapping.newValueFields.map((field) => field.definition),
   ];
   const customPathByFieldId = new Map<EmployeeFieldId, string>();
-  for (const [fieldId, path] of Object.entries(mapping.customFields)) {
-    if (path) customPathByFieldId.set(fieldId, path);
+  for (const definition of currentFieldDefinitions) {
+    if (definition.kind !== "value") continue;
+    const path = pathByTarget.get(employeeImportCustomTarget(definition.id));
+    if (path) customPathByFieldId.set(definition.id, path);
   }
   for (const pending of mapping.newValueFields) {
     customPathByFieldId.set(pending.definition.id, pending.path);
@@ -364,7 +414,7 @@ export const deriveEmployeeImportPreview = (
       const sourceRow = source.rows[index];
       if (!sourceRow) continue;
       const value = (field: EmployeeImportField) => {
-        const path = mapping[field];
+        const path = mappedPath(field);
         return path ? getPathValue(sourceRow, path) : undefined;
       };
       const genderValue = value("gender");
@@ -432,7 +482,7 @@ export const deriveEmployeeImportPreview = (
   }
   const matchedCount = rows.reduce((count, row) => count + Number(row.matched), 0);
   return {
-    importsTeams: mapping.teams !== null,
+    importsTeams: mappedPath("teams") !== null,
     mappedCustomFieldIds: new Set(customPathByFieldId.keys()),
     mappedFields,
     matchedCount,

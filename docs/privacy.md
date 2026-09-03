@@ -20,7 +20,7 @@ restores the original file family.
 
 Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
 complete state or map an Employee array with optional nested Team assignments; the source, bounded
-richest-record preview, mapping, and duplicate choices are discarded when the modal closes. Birthday
+richest-record preview, virtualized source-to-target mapping, pending custom fields, and duplicate choices are discarded when the modal closes. Birthday
 validation is local and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without
 inferring one. Employee UUID creation, duplicate-key normalization, custom Template evaluation, and
 optional MD5 or SHA-256 output all run locally. Export
@@ -28,7 +28,7 @@ validates and downloads the complete state only after an explicit user action. S
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
 the full Tag color palette and exact HTML Keyword, HEX, RGB, or RGBA parser run locally and persist
 only canonical lowercase six- or eight-digit HEX without contacting a palette, color, or asset
-service. Invalid draft input is discarded without changing state. Dragging a field never transmits or
+service. Palette gestures commit only their final valid color; invalid or canceled drafts are discarded without changing state. Bundled language flags never create network requests. Dragging a field never transmits or
 persists organization data. Organization records are never
 copied to browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs;
 remote avatars are never fetched. Crop encoding prefers WebP and falls back only to the browser's

@@ -2,7 +2,7 @@
 
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import type * as React from "react";
-
+import { SURFACE_LAYER_CLASS } from "@/lib/surface-layers";
 import { cn } from "@/lib/utils";
 
 function Popover(props: React.ComponentProps<typeof PopoverPrimitive.Root>) {
@@ -25,7 +25,8 @@ function PopoverContent({
       <PopoverPrimitive.Content
         align={align}
         className={cn(
-          "pointer-events-auto z-[60] rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)] outline-none",
+          "pointer-events-auto rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)] outline-none",
+          SURFACE_LAYER_CLASS.popover,
           className,
         )}
         collisionPadding={collisionPadding}

@@ -374,15 +374,24 @@ test("captures the complete Employee workflow", async ({ page }) => {
   dialog = page.getByRole("dialog", { name: "Tags", exact: true });
   await expect(dialog).toContainText("Design");
   await capture(page, "employees-tag-catalog");
+  const firstTagRow = dialog.locator('[data-demo-id="tag-catalog-row"]').first();
+  await firstTagRow.locator('[data-demo-id="tag-color-trigger"]').click();
+  await expect(page.locator('[data-demo-id="tag-color-full-palette"]')).toBeVisible();
+  await capture(page, "employees-tag-color");
+  await page.keyboard.press("Escape");
   await dialog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
   const tagEditor = page.getByRole("dialog", { name: "Edit tag", exact: true });
   await expect(tagEditor).toHaveAttribute("data-demo-id", "tag-catalog-editor");
-  await tagEditor.locator('[data-demo-id="tag-color-trigger"]').click();
-  await expect(page.locator('[data-demo-id="tag-color-full-palette"]')).toBeVisible();
-  await expect(page.locator('[data-demo-id="tag-color-exact-input"]')).toBeVisible();
   await capture(page, "employees-tag-editor");
-  await page.keyboard.press("Escape");
   await tagEditor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await firstTagRow.locator('[data-demo-id="tag-catalog-view-employees"]').click();
+  await expect(page.locator('[data-demo-id="tag-employees-list"]')).toBeVisible();
+  await capture(page, "employees-tag-members");
+  await page
+    .getByRole("dialog", { name: /Employees with Tag/u })
+    .getByRole("button", { name: "Close", exact: true })
+    .first()
+    .click();
   await dialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await page.locator('[data-demo-id="employees-position-filter"]').click();

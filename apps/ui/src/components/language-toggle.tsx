@@ -27,6 +27,74 @@ const LANGUAGE_OPTIONS: Array<{ labelKey: UiTextKey; value: AppLocale }> = [
   { labelKey: "Arabic", value: "ar" },
 ];
 
+function LocaleFlag({ locale }: { locale: AppLocale }) {
+  const common = {
+    "aria-hidden": true,
+    className: "size-5 shrink-0 overflow-hidden rounded-[3px] ring-1 ring-black/10",
+    role: "presentation",
+    viewBox: "0 0 24 16",
+  } as const;
+
+  if (locale === "en") {
+    return (
+      <svg {...common}>
+        <title>GB</title>
+        <rect fill="#21468b" height="16" width="24" />
+        <path d="M0 0l24 16M24 0L0 16" stroke="#fff" strokeWidth="4" />
+        <path d="M0 0l24 16M24 0L0 16" stroke="#cf142b" strokeWidth="1.7" />
+        <path d="M12 0v16M0 8h24" stroke="#fff" strokeWidth="6" />
+        <path d="M12 0v16M0 8h24" stroke="#cf142b" strokeWidth="3.2" />
+      </svg>
+    );
+  }
+  if (locale === "zh") {
+    return (
+      <svg {...common}>
+        <title>CN</title>
+        <rect fill="#de2910" height="16" width="24" />
+        <path d="m5 2 .8 2.3h2.4L6.3 5.7 7 8 5 6.6 3 8l.7-2.3-1.9-1.4h2.4z" fill="#ffde00" />
+      </svg>
+    );
+  }
+  if (locale === "ru") {
+    return (
+      <svg {...common}>
+        <title>RU</title>
+        <rect fill="#fff" height="5.34" width="24" />
+        <rect fill="#0039a6" height="5.34" width="24" y="5.33" />
+        <rect fill="#d52b1e" height="5.34" width="24" y="10.66" />
+      </svg>
+    );
+  }
+  if (locale === "es") {
+    return (
+      <svg {...common}>
+        <title>ES</title>
+        <rect fill="#aa151b" height="16" width="24" />
+        <rect fill="#f1bf00" height="8" width="24" y="4" />
+      </svg>
+    );
+  }
+  if (locale === "fr") {
+    return (
+      <svg {...common}>
+        <title>FR</title>
+        <rect fill="#0055a4" height="16" width="8" />
+        <rect fill="#fff" height="16" width="8" x="8" />
+        <rect fill="#ef4135" height="16" width="8" x="16" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <title>SA</title>
+      <rect fill="#006c35" height="16" width="24" />
+      <path d="M6 10.5h12M8 12h8" stroke="#fff" strokeLinecap="round" strokeWidth="1.2" />
+      <circle cx="12" cy="6" fill="none" r="2.4" stroke="#fff" strokeWidth="1" />
+    </svg>
+  );
+}
+
 export function LanguageToggle({
   labelClassName,
   triggerClassName,
@@ -89,6 +157,7 @@ export function LanguageToggle({
                   type="radio"
                   value={option.value}
                 />
+                <LocaleFlag locale={option.value} />
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">{localizedName}</span>
                   {localizedName !== selfName && (

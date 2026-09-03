@@ -21,6 +21,7 @@ import {
   getOrgEditorExportEmployeeTagChipWidth,
   getOrgEditorExportEmployeeTagLabels,
   getOrgEditorExportEmployeeTagRowCount,
+  getOrgEditorExportEmployeeTags,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_EXPORT_GRADIENTS,
 } from "@/lib/org-editor-export";
@@ -89,12 +90,12 @@ describe("Org Editor image export", () => {
   });
 
   test("localizes every dated tag and expands PNG rows with compact export geometry", () => {
-    const taggedEmployee = {
+    const taggedEmployee: Employee = {
       ...employee,
       tags: [
-        { date: null, label: "Alpha" },
-        { date: "2026-09-01", label: "Last day" },
-        { date: null, label: "Remote" },
+        { color: "blue", date: null, label: "Alpha" },
+        { color: "#7c3aed80", date: "2026-09-01", label: "Last day" },
+        { color: null, date: null, label: "Remote" },
         { date: null, label: "Mentor" },
       ],
     };
@@ -103,6 +104,12 @@ describe("Org Editor image export", () => {
     expect(english).toHaveLength(4);
     expect(english).toContain("Last day · Sep 1, 2026");
     expect(russian).not.toEqual(english);
+    expect(getOrgEditorExportEmployeeTags(taggedEmployee, "en")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: "blue", label: "Alpha" }),
+        expect.objectContaining({ color: "#7c3aed80", label: "Last day · Sep 1, 2026" }),
+      ]),
+    );
     expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBe(38);
     expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90)).toBeCloseTo(43.2);
     expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(3);
@@ -128,6 +135,19 @@ describe("Org Editor image export", () => {
     expect(getOrgEditorExportEmployeeRowHeightForTagLayout(layout)).toBe(
       48 + layout.height - ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height,
     );
+  });
+
+  test("keeps every Tag color in the measured PNG chip layout", () => {
+    const layout = createOrgEditorExportEmployeeTagLayout(
+      [
+        { color: "teal", label: "Platform" },
+        { color: "#7c3aed80", label: "Mentor" },
+        { color: null, label: "Remote" },
+      ],
+      180,
+    );
+
+    expect(layout.chips.map((chip) => chip.color)).toEqual(["teal", "#7c3aed80", null]);
   });
 
   test("shares compact tag and Employee-row geometry with the live canvas", () => {

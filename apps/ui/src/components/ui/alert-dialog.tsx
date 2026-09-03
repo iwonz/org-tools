@@ -4,6 +4,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import type * as React from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { SURFACE_LAYER_CLASS } from "@/lib/surface-layers";
 import { cn } from "@/lib/utils";
 
 function AlertDialog(props: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
@@ -24,7 +25,11 @@ function AlertDialogOverlay({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
   return (
     <AlertDialogPrimitive.Overlay
-      className={cn("fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]", className)}
+      className={cn(
+        "fixed inset-0 bg-black/45 backdrop-blur-[2px]",
+        SURFACE_LAYER_CLASS.dialog,
+        className,
+      )}
       data-slot="alert-dialog-overlay"
       {...props}
     />
@@ -40,7 +45,8 @@ function AlertDialogContent({
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-2xl bg-card p-0 shadow-[0_18px_48px_-36px_rgb(0_0_0/0.55)]",
+          "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-2xl bg-card p-0 shadow-[0_18px_48px_-36px_rgb(0_0_0/0.55)]",
+          SURFACE_LAYER_CLASS.dialog,
           className,
         )}
         data-slot="alert-dialog-content"

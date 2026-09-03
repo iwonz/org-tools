@@ -4,6 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type * as React from "react";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useUiText } from "@/i18n/use-ui-text";
+import { SURFACE_LAYER_CLASS } from "@/lib/surface-layers";
 import { cn } from "@/lib/utils";
 
 function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -28,7 +29,11 @@ function DialogOverlay({
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
-      className={cn("fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]", className)}
+      className={cn(
+        "fixed inset-0 bg-black/45 backdrop-blur-[2px]",
+        SURFACE_LAYER_CLASS.dialog,
+        className,
+      )}
       data-slot="dialog-overlay"
       {...props}
     />
@@ -49,7 +54,8 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-2xl bg-card p-0 shadow-[0_18px_48px_-36px_rgb(0_0_0/0.55)]",
+          "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden rounded-2xl bg-card p-0 shadow-[0_18px_48px_-36px_rgb(0_0_0/0.55)]",
+          SURFACE_LAYER_CLASS.dialog,
           className,
         )}
         data-slot="dialog-content"

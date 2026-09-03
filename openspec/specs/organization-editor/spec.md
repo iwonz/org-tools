@@ -151,7 +151,7 @@ Year selectors, including an explicit unknown-year choice, and SHALL reject inco
 selections. Calendar SHALL navigate a selected month and year across year boundaries, SHALL project
 February 29 birthdays to February 28 in non-leap years independent of whether their birth year is
 known, SHALL include exact-date Tags, SHALL align dates under locale-ordered weekdays, and SHALL style
-actual Saturday and Sunday headings and cells with one restrained weekend tone. Russian weeks SHALL
+actual Saturday and Sunday headings and cells with one restrained rose weekend tone. Russian weeks SHALL
 begin Monday and English weeks SHALL begin Sunday. Calendar SHALL fit its week-aligned grid and
 bounded Tag rail without page scroll at the maintained 1280 by 720 desktop viewport. Analytics SHALL
 render six content-sized groups in one full-bleed workflow with compact gaps and one uniform soft
@@ -253,7 +253,7 @@ not current. Activating it SHALL restore the current local month and year.
 ### Requirement: Org Editor Employee geometry follows wrapped tags
 The Org Editor SHALL compute Employee row heights from all rendered localized tag chips and SHALL
 use shared prefix offsets for virtualization, hitboxes, selection, connectors, layout, and bounds.
-The PNG renderer SHALL draw every localized tag as a compact neutral chip matching the on-screen
+The PNG renderer SHALL draw every localized tag as a compact catalog-colored chip matching the on-screen
 Employee-card treatment, including rounded geometry, typography, wrapping, and `label · date`
 content. It SHALL preserve every tag character without ellipsis by wrapping oversized content inside
 its chip, and SHALL derive drawing plus row-height growth from the same measured tag layout without
@@ -269,7 +269,7 @@ hidden tags, text overflow, or unused tag-row space.
 
 #### Scenario: Export Employee tags to PNG
 - **WHEN** an Employee with dated, undated, or wider-than-column tags is included in an Org Editor PNG export
-- **THEN** every complete tag appears as one wrapped neutral chip with card-consistent text, padding, radius, and compact row gaps
+- **THEN** every complete tag appears as one wrapped catalog-colored chip with card-consistent text, padding, radius, and compact row gaps
 - **AND** dated tags use a localized date after a middle dot without bright blue styling, ellipsis, clipping, or reserved empty rows
 
 ### Requirement: Editor commands retain readable interaction feedback
@@ -380,13 +380,23 @@ Unit filters.
 ### Requirement: Calendar dates use consistent interaction geometry
 The Calendar SHALL format its month heading through the active locale with a bare numeric year,
 render every in-month date as an actionable button with a fixed date-number row, and distinguish
-weekends and the current date through stable tonal treatment. A day-dialog title SHALL preserve
-locale order while omitting the abbreviated Russian year suffix. Previous and Next navigation SHALL
-use the reviewed labels from the active catalog.
+real Saturday and Sunday headings and cells through a stable theme-aware light rose treatment. A
+current weekend SHALL retain that rose surface while the signal date badge remains the dominant
+current-day cue. A day-dialog title SHALL preserve locale order while omitting the abbreviated
+Russian year suffix. Previous and Next navigation SHALL use the reviewed labels from the active
+catalog.
 
 #### Scenario: Empty and populated dates
 - **WHEN** one empty date and one event date render in the same month
 - **THEN** both are buttons with aligned numbers and stable hover feedback
+
+#### Scenario: Weekend dates
+- **WHEN** a displayed date falls on Saturday or Sunday
+- **THEN** its weekday heading and cell use the same restrained rose family in both themes
+
+#### Scenario: Current weekend date
+- **WHEN** today falls on a weekend in the displayed month
+- **THEN** the cell retains weekend context and the date badge remains clearly current
 
 #### Scenario: Current date
 - **WHEN** the displayed month contains today

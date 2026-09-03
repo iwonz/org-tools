@@ -56,15 +56,17 @@ dates, and locale-dependent text are rejected without conversion.
 
 Employee Import accepts a top-level array of objects up to 25 MiB. Source properties may be flat or
 nested. One linear read discovers their paths and selects the first record with the greatest number
-of mappable paths; at most 128 KiB of that record is shown beside left-to-right source-path → fixed-field
-mapping rows. UUID, first name, last name, and email mappings are mandatory. When mapped, tags must be
+of mappable paths; at most 128 KiB of that record is shown beside a virtualized list of every discovered
+source JSON path. Each row keeps the path fixed on the left and provides an Org Tools target Select on
+the right. A target may be used by only one path; selecting an occupied target transfers it from its
+previous row. UUID, first name, last name, and email targets are mandatory. When mapped, tags must be
 `{ label, date }` objects and Teams must use the exact shape above. An empty Teams mapping means no
 Team import and removes the Teams-only duplicate policy. Existing Teams match by
 ID and then normalized full path; missing paths become manual Teams. Imported assignments are
 additive and preserve unrelated membership.
 
-Existing custom Value fields appear as ordinary mapping rows. A new Value field may be prepared
-with its display name, unique token key, type, and options; its definition and all values are added
+Existing custom Value fields appear as target options. **Create custom field** stages a Value field
+for the selected source path with its display name, unique token key, type, and options; its definition and all values are added
 only if the complete candidate passes strict validation. Template fields never accept imported
 values. Imported Tags contribute label and optional date only: missing normalized labels create
 neutral catalog entries, while colors always remain controlled by the current Tag catalog.

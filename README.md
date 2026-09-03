@@ -23,20 +23,20 @@ requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 46 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 48 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
 
 Employees have stable UUIDs, a configurable model of typed or derived custom fields, and a shared
-Tag catalog with dedicated editing dialogs, named presets, a full palette, and exact HTML Keyword,
-HEX, RGB, or RGBA entry rendered as filled surfaces without decorative marker dots. Custom colors
+Tag catalog with flat rows, dedicated rename and Employee-list dialogs, quick row-level color actions,
+named presets, a full palette, and exact HTML Keyword, HEX, RGB, or RGBA entry rendered as filled surfaces without decorative marker dots. Custom colors
 are normalized to canonical HEX, including retained alpha. Custom fields participate in forms, filters, Employee Import,
-structured JSON, and Template output. The Calendar uses locale-aware weeks, weekend tones, a
+structured JSON, Template output, and colored PNG chips. The Calendar uses locale-aware weeks, soft rose weekend tones, a
 compact dated-Tag rail, and direct Today navigation when browsing another month.
 
 The complete interface is bundled in English, Simplified Chinese, Russian, Spanish, French, and
-Modern Standard Arabic. New in-memory states follow the first supported browser language, Arabic
+Modern Standard Arabic. The language dialog uses bundled local flags. New in-memory states follow the first supported browser language, Arabic
 mirrors the application shell through RTL, and language plus theme are selected in compact modal
 dialogs. No font or translation asset is loaded from the network.
 

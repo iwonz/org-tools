@@ -260,16 +260,7 @@ for (const [locale, messages] of [
     await page.getByRole("tab", { name: messages.Ui.Employees, exact: true }).click();
     await page.getByRole("button", { name: messages.Ui.Tags, exact: true }).click();
     const tagCatalog = page.getByRole("dialog", { name: messages.Ui.Tags, exact: true });
-    await tagCatalog
-      .getByRole("button", { name: messages.Ui["Edit tag"], exact: true })
-      .first()
-      .click();
-    const tagEditor = page.getByRole("dialog", {
-      name: messages.Ui["Edit tag"],
-      exact: true,
-    });
-    const tagColorTrigger = tagEditor.locator('[data-demo-id="tag-color-trigger"]');
-    await expect(tagColorTrigger).toContainText(messages.Ui["Custom color"]);
+    const tagColorTrigger = tagCatalog.locator('[data-demo-id="tag-color-trigger"]').first();
     await expect(tagColorTrigger).toHaveAccessibleName(messages.Ui["Choose Tag color"]);
     await tagColorTrigger.click();
     const tagColorDropdown = page.locator('[data-demo-id="tag-color-dropdown"]');
@@ -282,6 +273,15 @@ for (const [locale, messages] of [
       tagColorDropdown.getByRole("option", { name: messages.Ui["No color"], exact: true }),
     ).toBeVisible();
     await page.keyboard.press("Escape");
+    await tagCatalog
+      .getByRole("button", { name: messages.Ui["Edit tag"], exact: true })
+      .first()
+      .click();
+    const tagEditor = page.getByRole("dialog", {
+      name: messages.Ui["Edit tag"],
+      exact: true,
+    });
+    await expect(tagEditor.locator('[data-demo-id="tag-color-trigger"]')).toHaveCount(0);
     await tagEditor.getByRole("button", { name: messages.Ui.Cancel, exact: true }).click();
     await tagCatalog.getByRole("button", { name: messages.Ui.Close, exact: true }).first().click();
 

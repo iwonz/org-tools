@@ -1,8 +1,8 @@
 "use client";
 
 import type { EmployeeTagColor, EmployeeTagColorName } from "@org-tools/types";
-import { useEffect, useState } from "react";
-import { HiCheck, HiOutlineChevronDown } from "react-icons/hi2";
+import { useEffect, useRef, useState } from "react";
+import { HiCheck, HiOutlineChevronDown, HiOutlineSwatch } from "react-icons/hi2";
 
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -70,54 +70,94 @@ function TagColorLabel({ color }: { color: EmployeeTagColor | null }) {
 export function TagColorPicker({
   onChange,
   value,
+  variant = "field",
 }: {
   onChange: (color: EmployeeTagColor | null) => void;
   value: EmployeeTagColor | null;
+  variant?: "field" | "icon";
 }) {
   const t = useUiText();
   const [open, setOpen] = useState(false);
   const [inputMode, setInputMode] = useState<TagColorInputMode>("hex");
   const [inputValue, setInputValue] = useState(() => formatTagColorInput("hex", value));
   const [inputInvalid, setInputInvalid] = useState(false);
-  const currentHex = employeeTagColorToHex(value);
+  const [draftColor, setDraftColor] = useState<EmployeeTagColor | null>(value);
+  const draftColorRef = useRef<EmployeeTagColor | null>(value);
+  const lastCommittedRef = useRef<EmployeeTagColor | null>(value);
+  const currentHex = employeeTagColorToHex(draftColor);
   const hsv = hexToHsv(currentHex);
 
   useEffect(() => {
+    draftColorRef.current = value;
+    lastCommittedRef.current = value;
+    setDraftColor(value);
     setInputValue(formatTagColorInput(inputMode, value));
     setInputInvalid(false);
   }, [inputMode, value]);
 
-  const changeColor = (color: EmployeeTagColor | null) => {
-    onChange(color);
+  const previewColor = (color: EmployeeTagColor | null) => {
+    draftColorRef.current = color;
+    setDraftColor(color);
     setInputValue(formatTagColorInput(inputMode, color));
     setInputInvalid(false);
   };
 
+  const commitColor = (color: EmployeeTagColor | null) => {
+    previewColor(color);
+    if (lastCommittedRef.current === color) return;
+    lastCommittedRef.current = color;
+    onChange(color);
+  };
+
   const updateSaturationAndValue = (clientX: number, clientY: number, element: HTMLElement) => {
     const bounds = element.getBoundingClientRect();
-    if (bounds.width <= 0 || bounds.height <= 0) return;
-    changeColor(
-      hsvToHex({
-        hue: hsv.hue,
-        saturation: clamp((clientX - bounds.left) / bounds.width, 0, 1),
-        value: clamp(1 - (clientY - bounds.top) / bounds.height, 0, 1),
-      }),
-    );
+    if (bounds.width <= 0 || bounds.height <= 0) return null;
+    const color = hsvToHex({
+      hue: hsv.hue,
+      saturation: clamp((clientX - bounds.left) / bounds.width, 0, 1),
+      value: clamp(1 - (clientY - bounds.top) / bounds.height, 0, 1),
+    });
+    previewColor(color);
+    return color;
   };
 
   return (
-    <Popover onOpenChange={setOpen} open={open}>
+    <Popover
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (nextOpen) {
+          previewColor(value);
+          lastCommittedRef.current = value;
+          return;
+        }
+        previewColor(value);
+      }}
+      open={open}
+    >
       <PopoverTrigger asChild>
-        <button
-          aria-expanded={open}
-          aria-label={t("Choose Tag color")}
-          className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-start outline-none transition-colors hover:bg-accent/45 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
-          data-demo-id="tag-color-trigger"
-          type="button"
-        >
-          <TagColorLabel color={value} />
-          <HiOutlineChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        </button>
+        {variant === "icon" ? (
+          <button
+            aria-expanded={open}
+            aria-label={t("Choose Tag color")}
+            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent/65 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+            data-demo-id="tag-color-trigger"
+            title={t("Choose Tag color")}
+            type="button"
+          >
+            <HiOutlineSwatch className="size-5" />
+          </button>
+        ) : (
+          <button
+            aria-expanded={open}
+            aria-label={t("Choose Tag color")}
+            className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-start outline-none transition-colors hover:bg-accent/45 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
+            data-demo-id="tag-color-trigger"
+            type="button"
+          >
+            <TagColorLabel color={value} />
+            <HiOutlineChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="start"
@@ -147,7 +187,7 @@ export function TagColorPicker({
               else if (event.key === "ArrowDown") next.value -= step;
               else return;
               event.preventDefault();
-              changeColor(
+              previewColor(
                 hsvToHex({
                   ...next,
                   saturation: clamp(next.saturation, 0, 1),
@@ -162,6 +202,16 @@ export function TagColorPicker({
             onPointerMove={(event) => {
               if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
               updateSaturationAndValue(event.clientX, event.clientY, event.currentTarget);
+            }}
+            onPointerUp={(event) => {
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+              const color = updateSaturationAndValue(
+                event.clientX,
+                event.clientY,
+                event.currentTarget,
+              );
+              event.currentTarget.releasePointerCapture(event.pointerId);
+              if (color) commitColor(color);
             }}
             role="slider"
             style={{
@@ -184,9 +234,12 @@ export function TagColorPicker({
             className="tag-color-hue h-4 w-full cursor-pointer appearance-none bg-transparent"
             max={359}
             min={0}
+            onBlur={() => commitColor(draftColorRef.current)}
             onChange={(event) =>
-              changeColor(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
+              previewColor(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
             }
+            onKeyUp={() => commitColor(draftColorRef.current)}
+            onPointerUp={() => commitColor(draftColorRef.current)}
             type="range"
             value={Math.round(hsv.hue)}
           />
@@ -217,7 +270,20 @@ export function TagColorPicker({
                 const parsed = parseTagColorInput(inputMode, nextValue);
                 setInputValue(nextValue);
                 setInputInvalid(parsed === null);
-                if (parsed) onChange(parsed);
+                if (parsed) {
+                  draftColorRef.current = parsed;
+                  setDraftColor(parsed);
+                }
+              }}
+              onBlur={() => {
+                const parsed = parseTagColorInput(inputMode, inputValue);
+                if (parsed) commitColor(parsed);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                const parsed = parseTagColorInput(inputMode, inputValue);
+                if (parsed) commitColor(parsed);
               }}
               placeholder={tagColorInputPlaceholder(inputMode)}
               spellCheck={false}
@@ -235,14 +301,14 @@ export function TagColorPicker({
         <div className="my-2 h-px bg-border/80" />
         <div className="grid gap-0.5" role="listbox">
           {[null, ...EMPLOYEE_TAG_COLOR_NAMES].map((color) => {
-            const selected = value === color;
+            const selected = draftColor === color;
             return (
               <button
                 aria-selected={selected}
                 className="flex min-h-9 cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5 text-start outline-none transition-colors hover:bg-accent/65 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40"
                 key={color ?? "none"}
                 onClick={() => {
-                  changeColor(color);
+                  commitColor(color);
                   setOpen(false);
                 }}
                 role="option"

@@ -21,7 +21,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Build shared maps, search documents, Unit order, membership, birthday, gender, dated-tag,
   position, Tag-catalog, and custom-field indexes outside React render paths.
 - Derive custom Tag tonal variables from one six- or eight-digit HEX value when its surface renders;
-  palette and exact color input update only the open Tag draft in constant time and never traverse
+  palette and hue movement update only the open Tag draft in constant time; one final valid commit
+  updates the catalog after the gesture. Exact input commits only on Enter or blur. These previews never traverse
   Employees or Units.
 - Parse each canonical `DD.MM.YYYY` birthday once while building the shared search index; Calendar,
   Analytics, and filters reuse its derived recurring month-day key without duplicating Employee data.
@@ -65,8 +66,11 @@ Dragging a scalar, Unit, Tag, or nested collection field changes only its bounde
 rebuilds the bounded preview once per completed drop. Unit and Tag exclusions use normalized `Set`
 lookups; searchable selectors virtualize their options and show only an exclusion count in the
 trigger.
+Employee Import discovers source paths and its richest representative once. The source-driven mapping
+list virtualizes visible rows, keeps unique targets in a bounded map, and never repeats the 20,000-row
+analysis while scrolling or changing a target.
 Canvas PNG generation uses current layout, shared live-card geometry, bounded embedded avatar bytes,
-complete locally measured tag text, and local vector primitives without network work. Oversized tags
+complete locally measured tag text, resolved Tag colors, and local vector primitives without network work. Oversized tags
 increase only their Employee row and containing Unit height; the existing maximum canvas-pixel bound
 remains authoritative.
 
