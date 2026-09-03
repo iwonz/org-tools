@@ -166,7 +166,10 @@ describe("OrgToolsState", () => {
     tag.color = "#7c3aed";
     expect(parseOrgToolsState(state).organization.tags[0]?.color).toBe("#7c3aed");
 
-    for (const color of ["#7C3AED", "#73e", "#7c3aed80", "7c3aed"] as const) {
+    tag.color = "#7c3aed80";
+    expect(parseOrgToolsState(state).organization.tags[0]?.color).toBe("#7c3aed80");
+
+    for (const color of ["#7C3AED", "#73e", "#7C3AED80", "#7c3aed8", "7c3aed"] as const) {
       const invalid = structuredClone(state);
       const invalidTag = invalid.organization.tags[0];
       if (!invalidTag) throw new Error("Expected a Tag definition.");

@@ -29,8 +29,9 @@ Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly mean
 recurring day and month are known.
 
 Employees have stable UUIDs, a configurable model of typed or derived custom fields, and a shared
-Tag catalog with named presets and arbitrary HEX colors rendered as filled surfaces without
-decorative marker dots. Custom fields participate in forms, filters, Employee Import,
+Tag catalog with dedicated editing dialogs, named presets, a full palette, and exact HTML Keyword,
+HEX, RGB, or RGBA entry rendered as filled surfaces without decorative marker dots. Custom colors
+are normalized to canonical HEX, including retained alpha. Custom fields participate in forms, filters, Employee Import,
 structured JSON, and Template output. The Calendar uses locale-aware weeks, weekend tones, a
 compact dated-Tag rail, and direct Today navigation when browsing another month.
 
@@ -44,8 +45,8 @@ Units, and Tags appear in their exact output order. Editor Image export keeps a 
 preview with localized boss text and no secondary image viewer.
 Analytics includes known birth-year distributions plus average, youngest, and oldest age summaries
 for the whole catalog, men, and women; unknown `1900` years are excluded.
-Template formats in Data Download and Editor export accept `@` to insert documented `{token}` values
-at the caret. If a local SQLite database cannot open, explicit recovery preserves its file family as
+Template formats in Data Download, Editor export, and the Employee model place a help affordance
+beside Format and accept `@` to insert documented `{token}` values at the caret. If a local SQLite database cannot open, explicit recovery preserves its file family as
 a timestamped backup before creating a blank current-schema database.
 
 ## Run locally

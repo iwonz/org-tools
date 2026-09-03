@@ -375,11 +375,14 @@ test("captures the complete Employee workflow", async ({ page }) => {
   await expect(dialog).toContainText("Design");
   await capture(page, "employees-tag-catalog");
   await dialog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
-  await expect(dialog.locator('[data-demo-id="tag-catalog-editor"]')).toBeVisible();
-  await dialog.locator('[data-demo-id="tag-color-trigger"]').click();
+  const tagEditor = page.getByRole("dialog", { name: "Edit tag", exact: true });
+  await expect(tagEditor).toHaveAttribute("data-demo-id", "tag-catalog-editor");
+  await tagEditor.locator('[data-demo-id="tag-color-trigger"]').click();
   await expect(page.locator('[data-demo-id="tag-color-full-palette"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="tag-color-exact-input"]')).toBeVisible();
   await capture(page, "employees-tag-editor");
   await page.keyboard.press("Escape");
+  await tagEditor.getByRole("button", { name: "Cancel", exact: true }).click();
   await dialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await page.locator('[data-demo-id="employees-position-filter"]').click();
@@ -564,10 +567,14 @@ test("captures source selection and every data Download format", async ({ page }
     element.scrollTop = 0;
   });
   const formatInput = settings.getByLabel("Format", { exact: true });
+  await expect(formatInput).toHaveAttribute("placeholder", "Type @ to add tokens");
   await formatInput.fill("@full");
   await expect(settings.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
     "{fullName}",
   );
+  await settings.getByRole("button", { name: "Token suggestions help", exact: true }).hover();
+  await expect(settings.getByRole("tooltip")).toBeVisible();
+  await expect(settings.getByRole("tooltip")).toContainText("Type @ to open token suggestions.");
   await capture(page, "download-template-tokens");
   await formatInput.press("Enter");
   await settingsBody.evaluate((element) => {

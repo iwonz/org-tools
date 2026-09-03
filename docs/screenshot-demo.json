@@ -204,8 +204,8 @@
     "featured": false,
     "title": "Tag catalog editor",
     "file": "feature-employees-tag-editor.png",
-    "description": "Rename a Tag or choose and reset its global semantic color from one controlled catalog.",
-    "capabilities": ["Rename", "Color palette", "Reset color", "Cascading delete"]
+    "description": "Edit a Tag in a dedicated modal with a full palette, exact typed color formats, named presets, and reset.",
+    "capabilities": ["Modal editing", "Exact color formats", "Color palette", "Reset color"]
   },
   {
     "id": "employees-form",
@@ -459,8 +459,14 @@
     "featured": false,
     "title": "Template token suggestions",
     "file": "feature-download-template-tokens.png",
-    "description": "Type @ in the shared Format field to filter localized token suggestions and insert the stable brace syntax at the caret.",
-    "capabilities": ["Caret menu", "Localized descriptions", "Keyboard selection", "Brace syntax"]
+    "description": "Discover the @ shortcut from Format help, filter localized token suggestions, and insert stable brace syntax at the caret.",
+    "capabilities": [
+      "Discoverable shortcut",
+      "Caret menu",
+      "Localized descriptions",
+      "Keyboard selection",
+      "Brace syntax"
+    ]
   },
   {
     "id": "download-source-selection",

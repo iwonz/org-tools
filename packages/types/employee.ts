@@ -13,7 +13,7 @@ export type EmployeeTagColorName =
   | "rose"
   | "teal";
 
-/** A supplied semantic color name or a parser-validated canonical `#rrggbb` value. */
+/** A supplied semantic color name or a parser-validated canonical `#rrggbb[aa]` value. */
 export type EmployeeTagColor = EmployeeTagColorName | `#${string}`;
 
 /** A global Tag definition shared by Employee assignments. */

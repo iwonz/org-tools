@@ -1,19 +1,31 @@
 "use client";
 
 import type { EmployeeTagColor, EmployeeTagColorName } from "@org-tools/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HiCheck, HiOutlineChevronDown } from "react-icons/hi2";
 
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { UiTextKey } from "@/i18n/messages";
 import { useUiText } from "@/i18n/use-ui-text";
 import {
   customTagColorSurfaceStyle,
   EMPLOYEE_TAG_COLOR_NAMES,
   employeeTagColorToHex,
+  formatTagColorInput,
   hexToHsv,
   hsvToHex,
   isCustomEmployeeTagColor,
+  parseTagColorInput,
+  type TagColorInputMode,
+  tagColorInputPlaceholder,
   tagColorSurfaceClassName,
 } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
@@ -64,13 +76,27 @@ export function TagColorPicker({
 }) {
   const t = useUiText();
   const [open, setOpen] = useState(false);
+  const [inputMode, setInputMode] = useState<TagColorInputMode>("hex");
+  const [inputValue, setInputValue] = useState(() => formatTagColorInput("hex", value));
+  const [inputInvalid, setInputInvalid] = useState(false);
   const currentHex = employeeTagColorToHex(value);
   const hsv = hexToHsv(currentHex);
+
+  useEffect(() => {
+    setInputValue(formatTagColorInput(inputMode, value));
+    setInputInvalid(false);
+  }, [inputMode, value]);
+
+  const changeColor = (color: EmployeeTagColor | null) => {
+    onChange(color);
+    setInputValue(formatTagColorInput(inputMode, color));
+    setInputInvalid(false);
+  };
 
   const updateSaturationAndValue = (clientX: number, clientY: number, element: HTMLElement) => {
     const bounds = element.getBoundingClientRect();
     if (bounds.width <= 0 || bounds.height <= 0) return;
-    onChange(
+    changeColor(
       hsvToHex({
         hue: hsv.hue,
         saturation: clamp((clientX - bounds.left) / bounds.width, 0, 1),
@@ -121,7 +147,7 @@ export function TagColorPicker({
               else if (event.key === "ArrowDown") next.value -= step;
               else return;
               event.preventDefault();
-              onChange(
+              changeColor(
                 hsvToHex({
                   ...next,
                   saturation: clamp(next.saturation, 0, 1),
@@ -159,11 +185,52 @@ export function TagColorPicker({
             max={359}
             min={0}
             onChange={(event) =>
-              onChange(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
+              changeColor(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
             }
             type="range"
             value={Math.round(hsv.hue)}
           />
+        </div>
+        <div className="my-2 h-px bg-border/80" />
+        <div className="grid gap-2 px-1 pb-1" data-demo-id="tag-color-exact-input">
+          <div className="text-xs font-medium text-muted-foreground">{t("Exact color")}</div>
+          <div className="grid grid-cols-[minmax(7.5rem,0.8fr)_minmax(0,1.2fr)] gap-2">
+            <Select
+              onValueChange={(mode: TagColorInputMode) => setInputMode(mode)}
+              value={inputMode}
+            >
+              <SelectTrigger aria-label={t("Color format")} className="min-w-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="keyword">{t("HTML Keyword")}</SelectItem>
+                <SelectItem value="hex">HEX</SelectItem>
+                <SelectItem value="rgb">RGB</SelectItem>
+                <SelectItem value="rgba">RGBA</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              aria-invalid={inputInvalid}
+              aria-label={t("Color value")}
+              onChange={(event) => {
+                const nextValue = event.currentTarget.value;
+                const parsed = parseTagColorInput(inputMode, nextValue);
+                setInputValue(nextValue);
+                setInputInvalid(parsed === null);
+                if (parsed) onChange(parsed);
+              }}
+              placeholder={tagColorInputPlaceholder(inputMode)}
+              spellCheck={false}
+              value={inputValue}
+            />
+          </div>
+          {inputInvalid && (
+            <p className="text-xs text-destructive" role="alert">
+              {t("Enter a valid {format} color.", {
+                format: inputMode === "keyword" ? t("HTML Keyword") : inputMode.toUpperCase(),
+              })}
+            </p>
+          )}
         </div>
         <div className="my-2 h-px bg-border/80" />
         <div className="grid gap-0.5" role="listbox">
@@ -175,7 +242,7 @@ export function TagColorPicker({
                 className="flex min-h-9 cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5 text-start outline-none transition-colors hover:bg-accent/65 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40"
                 key={color ?? "none"}
                 onClick={() => {
-                  onChange(color);
+                  changeColor(color);
                   setOpen(false);
                 }}
                 role="option"

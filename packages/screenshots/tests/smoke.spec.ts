@@ -407,7 +407,7 @@ test("registers responsive workflow actions in the shared header", async ({ page
   await expect(unitDialog).toBeVisible();
   await unitDialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
-  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await page.locator('[data-demo-id="tab-employees"]').click();
   const addEmployee = page.locator('[data-demo-id="employee-create-button"]');
   await expect(addEmployee).toHaveCount(1);
   await expectContainedBy(header, addEmployee);
@@ -1398,6 +1398,14 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   await expect(settings.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
   await expect(settings.getByText("All Employee Units", { exact: true })).toBeVisible();
   const formatInput = settings.getByLabel("Format", { exact: true });
+  await expect(formatInput).toHaveAttribute("placeholder", "Type @ to add tokens");
+  const formatHelp = settings.getByRole("button", {
+    name: "Token suggestions help",
+    exact: true,
+  });
+  await formatHelp.hover();
+  await expect(settings.getByRole("tooltip")).toBeVisible();
+  await expect(settings.getByRole("tooltip")).toContainText("Type @ to open token suggestions.");
   await formatInput.fill("@full");
   const suggestions = settings.locator('[data-demo-id="template-token-suggestions"]');
   await expect(suggestions).toContainText("{fullName}");
@@ -1407,6 +1415,22 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   await settings.getByRole("button", { name: "Download", exact: true }).click();
   expect((await templatePromise).suggestedFilename()).toBe("org-tools-export.txt");
   await expect(settings.locator('[data-demo-id="export-actions"] > div')).toHaveCount(0);
+
+  await settings.getByRole("button", { name: "Close", exact: true }).click();
+  await page.locator('[data-demo-id="tab-employees"]').click();
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  const modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await modelDialog.getByRole("button", { name: /Directory key/u }).click();
+  const modelEditor = modelDialog.locator('[data-demo-id="employee-field-editor"]');
+  await expect(modelEditor.getByLabel("Format", { exact: true })).toHaveAttribute(
+    "placeholder",
+    "Type @ to add tokens",
+  );
+  await modelEditor.getByRole("button", { name: "Token suggestions help", exact: true }).focus();
+  await expect(modelEditor.getByRole("tooltip")).toBeVisible();
+  await expect(modelEditor.getByRole("tooltip")).toContainText("Type @ to open token suggestions.");
+  await modelEditor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await assertLocalRequests();
 });
@@ -2197,6 +2221,12 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await expect(exportDialog.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
   await expect(exportDialog.getByText("Preview", { exact: true })).toHaveCount(0);
   const editorFormatInput = exportDialog.getByLabel("Format", { exact: true });
+  await expect(editorFormatInput).toHaveAttribute("placeholder", "Type @ to add tokens");
+  await exportDialog.getByRole("button", { name: "Token suggestions help", exact: true }).focus();
+  await expect(exportDialog.getByRole("tooltip")).toBeVisible();
+  await expect(exportDialog.getByRole("tooltip")).toContainText(
+    "Type @ to open token suggestions.",
+  );
   await editorFormatInput.fill("@unitn");
   await expect(exportDialog.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
     "{unitName}",
@@ -2737,11 +2767,20 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   const catalogTag = catalog.locator('[data-tag-color-surface][data-tag-color="#7c3aed"]').first();
   await expectFilledTagSurface(catalogTag);
   await catalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
-  const colorTrigger = catalog.locator('[data-demo-id="tag-color-trigger"]');
+  const tagEditor = page.getByRole("dialog", { name: "Edit tag", exact: true });
+  await expect(catalog.locator('[data-demo-id="tag-catalog-editor"]')).toHaveCount(0);
+  const originalName = await tagEditor.getByLabel("Name", { exact: true }).inputValue();
+  await tagEditor.getByLabel("Name", { exact: true }).fill("Cancelled Tag edit");
+  await tagEditor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(catalog.getByText("Cancelled Tag edit", { exact: true })).toHaveCount(0);
+  await catalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
+  await expect(tagEditor.getByLabel("Name", { exact: true })).toHaveValue(originalName);
+  const colorTrigger = tagEditor.locator('[data-demo-id="tag-color-trigger"]');
   await colorTrigger.click();
   const palette = page.locator('[data-demo-id="tag-color-dropdown"]');
   const fullPalette = palette.locator('[data-demo-id="tag-color-full-palette"]');
   await expect(fullPalette).toBeVisible();
+  await expect(palette.locator('[data-demo-id="tag-color-exact-input"]')).toBeVisible();
   await expect(palette.getByRole("option")).toHaveCount(9);
   const [fullPaletteBox, firstPresetBox] = await Promise.all([
     fullPalette.boundingBox(),
@@ -2759,6 +2798,28 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   );
   await expect(palette.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(0);
 
+  const colorFormat = palette.getByLabel("Color format");
+  const colorValue = palette.getByLabel("Color value");
+  await colorFormat.click();
+  await page.getByRole("option", { name: "HTML Keyword", exact: true }).click();
+  await colorValue.fill("aliceblue");
+  await expect(colorTrigger.locator('[data-tag-color="#f0f8ff"]')).toBeVisible();
+  await colorFormat.click();
+  await page.getByRole("option", { name: "HEX", exact: true }).click();
+  await colorValue.fill("#0F8");
+  await expect(colorTrigger.locator('[data-tag-color="#00ff88"]')).toBeVisible();
+  await colorFormat.click();
+  await page.getByRole("option", { name: "RGB", exact: true }).click();
+  await colorValue.fill("rgb(12, 34, 56)");
+  await expect(colorTrigger.locator('[data-tag-color="#0c2238"]')).toBeVisible();
+  await colorValue.fill("rgb(999, 34, 56)");
+  await expect(palette.getByText("Enter a valid RGB color.", { exact: true })).toBeVisible();
+  await expect(colorTrigger.locator('[data-tag-color="#0c2238"]')).toBeVisible();
+  await colorFormat.click();
+  await page.getByRole("option", { name: "RGBA", exact: true }).click();
+  await colorValue.fill("rgba(124, 58, 237, .5)");
+  await expect(colorTrigger.locator('[data-tag-color="#7c3aed80"]')).toBeVisible();
+
   await palette.getByRole("option", { name: "Orange", exact: true }).click();
   await expect(colorTrigger.locator('[data-tag-color="orange"]')).toBeVisible();
   await colorTrigger.click();
@@ -2775,7 +2836,7 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   expect(customColor).toMatch(/^#[0-9a-f]{6}$/u);
   await expectFilledTagSurface(customSurface);
   await page.keyboard.press("Escape");
-  await catalog.getByRole("button", { name: "Save", exact: true }).click();
+  await tagEditor.getByRole("button", { name: "Save", exact: true }).click();
   const savedCustomSurface = catalog.locator(`[data-tag-color="${customColor}"]`).first();
   await expectFilledTagSurface(savedCustomSurface);
   await catalog.getByRole("button", { name: "Close", exact: true }).first().click();

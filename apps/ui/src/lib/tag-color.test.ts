@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   customTagColorSurfaceStyle,
   employeeTagColorToHex,
+  formatTagColorInput,
   hexToHsv,
   hsvToHex,
   isCustomEmployeeTagColor,
   normalizeCustomEmployeeTagColor,
+  parseTagColorInput,
+  tagColorInputPlaceholder,
   tagColorSurfaceClassName,
 } from "@/lib/tag-color";
 
@@ -42,9 +45,37 @@ describe("tagColorSurfaceClassName", () => {
   it("normalizes and recognizes only canonical custom colors", () => {
     expect(normalizeCustomEmployeeTagColor(" #7C3AED ")).toBe("#7c3aed");
     expect(normalizeCustomEmployeeTagColor("#abc")).toBeNull();
-    expect(normalizeCustomEmployeeTagColor("#7c3aed80")).toBeNull();
+    expect(normalizeCustomEmployeeTagColor("#7C3AED80")).toBe("#7c3aed80");
     expect(isCustomEmployeeTagColor("#7c3aed")).toBe(true);
+    expect(isCustomEmployeeTagColor("#7c3aed80")).toBe(true);
     expect(isCustomEmployeeTagColor("#7C3AED")).toBe(false);
+  });
+
+  it("normalizes each exact input mode to canonical HEX", () => {
+    expect(parseTagColorInput("keyword", "rebeccapurple")).toBe("#663399");
+    expect(parseTagColorInput("keyword", "RED")).toBe("#ff0000");
+    expect(parseTagColorInput("hex", " #C0F ")).toBe("#cc00ff");
+    expect(parseTagColorInput("hex", "#7C3AED")).toBe("#7c3aed");
+    expect(parseTagColorInput("rgb", "rgb(124, 58, 237)")).toBe("#7c3aed");
+    expect(parseTagColorInput("rgba", "rgba(124, 58, 237, .5)")).toBe("#7c3aed80");
+    expect(parseTagColorInput("rgba", "rgba(124, 58, 237, 1)")).toBe("#7c3aed");
+  });
+
+  it("rejects invalid exact color input without coercing channel bounds", () => {
+    expect(parseTagColorInput("keyword", "transparent")).toBeNull();
+    expect(parseTagColorInput("hex", "#12")).toBeNull();
+    expect(parseTagColorInput("hex", "#7c3aed80")).toBeNull();
+    expect(parseTagColorInput("rgb", "rgb(256, 0, 0)")).toBeNull();
+    expect(parseTagColorInput("rgb", "rgba(1, 2, 3, .5)")).toBeNull();
+    expect(parseTagColorInput("rgba", "rgba(1, 2, 3, 1.2)")).toBeNull();
+  });
+
+  it("formats the selected color for each exact editor and supplies matching placeholders", () => {
+    expect(formatTagColorInput("hex", "#7c3aed80")).toBe("#7c3aed");
+    expect(formatTagColorInput("rgb", "#7c3aed80")).toBe("rgb(124, 58, 237)");
+    expect(formatTagColorInput("rgba", "#7c3aed80")).toBe("rgba(124, 58, 237, .502)");
+    expect(formatTagColorInput("keyword", "#663399")).toBe("rebeccapurple");
+    expect(tagColorInputPlaceholder("rgba")).toContain("rgba(");
   });
 
   it("creates theme-aware tonal variables for an arbitrary color", () => {
@@ -56,6 +87,9 @@ describe("tagColorSurfaceClassName", () => {
       "--tag-custom-foreground": expect.stringMatching(/^#[0-9a-f]{6}$/u),
       "--tag-custom-foreground-dark": expect.stringMatching(/^#[0-9a-f]{6}$/u),
     });
+    expect(customTagColorSurfaceStyle("#7c3aed80")).not.toEqual(
+      customTagColorSurfaceStyle("#7c3aed"),
+    );
   });
 
   it("round-trips palette values through HSV without changing canonical output", () => {

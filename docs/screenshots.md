@@ -184,10 +184,11 @@ Capabilities: Tag catalog, Search, Global colors, Usage counts.
 
 [![Tag catalog editor](screenshots/feature-employees-tag-editor.png)](screenshots/feature-employees-tag-editor.png)
 
-Rename a Tag, choose any color from the full palette, or use and reset the localized named presets
-shown below it. The screenshot keeps the dropdown open so both paths are visible.
+Edit a Tag in its dedicated modal, choose any color from the full palette, enter an exact HTML
+Keyword, HEX, RGB, or RGBA value, or use and reset the localized named presets shown below it. The
+screenshot keeps the dropdown open so every path is visible.
 
-Capabilities: Rename, Full palette, Named colors, Reset color, Cascading delete.
+Capabilities: Modal editing, Exact color formats, Full palette, Named colors, Reset color.
 
 ### Employee profile and assignments
 
@@ -385,10 +386,10 @@ Capabilities: Template format, Row mode, Field tokens, Preview, Copy and downloa
 
 [![Template token suggestions](screenshots/feature-download-template-tokens.png)](screenshots/feature-download-template-tokens.png)
 
-Type `@` in the shared Format field to filter localized token suggestions and insert the stable
-brace syntax at the caret.
+Use the help affordance and placeholder to discover that typing `@` in the shared Format field
+filters localized token suggestions and inserts the stable brace syntax at the caret.
 
-Capabilities: Caret menu, Localized descriptions, Keyboard selection, Brace syntax.
+Capabilities: Discoverable shortcut, Caret menu, Localized descriptions, Keyboard selection, Brace syntax.
 
 ### Download source selection
 
@@ -432,6 +433,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
+- Confirm Tag editing uses a dedicated modal and its color dropdown shows the palette, exact typed
+  format editor, named presets, and no marker dots without clipping.
 - Confirm thematic icons precede text in buttons and tabs while disclosure, sorting, removal,
   status, and count affordances retain their semantic trailing positions.
 - Confirm Units always exposes hierarchy-name search for a nonempty structure, its path/search aligns to roster avatars, direct and
@@ -451,7 +454,7 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
-  whose `@` menu inserts the existing `{token}` syntax.
+  whose help icon and placeholder disclose the `@` menu that inserts the existing `{token}` syntax.
 - Confirm Employee Import shows a bounded richest-record preview beside left-to-right mapping rows,
   imports Teams only through mapping, and keeps duplicate review virtualized.
 - Confirm an unavailable or corrupt database offers Retry and confirmed Create new without silently

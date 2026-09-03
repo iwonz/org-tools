@@ -1,9 +1,4 @@
-# tag-catalog Specification
-
-## Purpose
-Define stable global Tag definitions, catalog management, colored assignments, and reference cleanup.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Tags use stable catalog definitions
 The system SHALL persist Tags as UUID-keyed global definitions with a unique normalized label and an
@@ -61,26 +56,6 @@ definition SHALL atomically remove its assignments, filters, and output exclusio
 #### Scenario: Delete an assigned Tag
 - **WHEN** the user confirms deletion after seeing affected counts
 - **THEN** the definition and all references disappear in one organization mutation
-
-### Requirement: Assignment controls reflect catalog colors
-Every Tag assignment surface SHALL display the current global named or custom color as its own
-restrained tonal fill with a readable matching foreground in light and dark themes. Tag chips,
-assignment pickers, catalog identity labels, and Calendar Tag controls MUST NOT add a separate
-leading color dot. Color SHALL be editable only in the central Tag dialog. A new Tag staged in an
-Employee form SHALL use the neutral no-color fill and SHALL enter the catalog only when the Employee
-save succeeds.
-
-#### Scenario: Render a colored Tag
-- **WHEN** a Tag with a named or custom catalog color appears in an Employee chip, assignment picker, catalog, or Calendar
-- **THEN** the Tag surface uses a readable tonal form of that color as its fill and no leading color dot is rendered
-
-#### Scenario: Render a neutral Tag
-- **WHEN** a Tag has no configured color
-- **THEN** its surface uses the neutral Tag treatment without an empty marker or reserved marker space
-
-#### Scenario: Cancel a new staged Tag
-- **WHEN** a user creates a draft Tag and cancels the Employee form
-- **THEN** neither the catalog nor the Employee is changed
 
 ### Requirement: Palette choices preview the Tag surface
 The central Tag color dropdown SHALL show a full-spectrum picker first, an exact color editor, and

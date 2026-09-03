@@ -17,7 +17,7 @@ type OrgToolsState = {
       layoutMode: "leftRight" | "topDown";
       units: OrgEditorUnit[];
     };
-    tags: EmployeeTagDefinition[]; // null, a named preset, or canonical lowercase #rrggbb
+    tags: EmployeeTagDefinition[]; // null, a named preset, or canonical lowercase #rrggbb[aa]
   };
   ui: OrgToolsUiState;
 };

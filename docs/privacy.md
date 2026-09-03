@@ -26,8 +26,9 @@ inferring one. Employee UUID creation, duplicate-key normalization, custom Templ
 optional MD5 or SHA-256 output all run locally. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
-the full Tag color palette is rendered and calculated locally and persists only its canonical HEX
-value without contacting a palette, color, or asset service. Dragging a field never transmits or
+the full Tag color palette and exact HTML Keyword, HEX, RGB, or RGBA parser run locally and persist
+only canonical lowercase six- or eight-digit HEX without contacting a palette, color, or asset
+service. Invalid draft input is discarded without changing state. Dragging a field never transmits or
 persists organization data. Organization records are never
 copied to browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs;
 remote avatars are never fetched. Crop encoding prefers WebP and falls back only to the browser's

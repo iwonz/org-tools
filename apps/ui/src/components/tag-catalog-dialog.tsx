@@ -52,7 +52,7 @@ export function TagCatalogDialog({
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<EmployeeTagDefinition | null>(null);
   const [deleteId, setDeleteId] = useState<TagId | null>(null);
-  const [error, setError] = useState<UiMessageDescriptor | null>(null);
+  const [editError, setEditError] = useState<UiMessageDescriptor | null>(null);
   const visible = useMemo(() => {
     const normalized = normalizeSearchValue(query);
     return [...store.tagDefinitions]
@@ -93,11 +93,6 @@ export function TagCatalogDialog({
                 value={query}
               />
             </div>
-            {error && (
-              <div className="text-sm text-destructive" role="alert">
-                {messageText(error)}
-              </div>
-            )}
             <div className="min-h-0 overflow-y-auto">
               {visible.length === 0 ? (
                 <div className="rounded-md bg-muted/35 p-4 text-sm text-muted-foreground">
@@ -133,7 +128,7 @@ export function TagCatalogDialog({
                           aria-label={t("Edit tag")}
                           onClick={() => {
                             setEditing({ ...tag });
-                            setError(null);
+                            setEditError(null);
                           }}
                           size="icon"
                           title={t("Edit tag")}
@@ -158,11 +153,29 @@ export function TagCatalogDialog({
                 </div>
               )}
             </div>
-            {editing && (
-              <section
-                className="grid gap-3 rounded-lg bg-muted/30 p-4"
-                data-demo-id="tag-catalog-editor"
-              >
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
+              {t("Close")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        onOpenChange={(next) => {
+          if (next) return;
+          setEditing(null);
+          setEditError(null);
+        }}
+        open={editing !== null}
+      >
+        <DialogContent className="max-w-md" data-demo-id="tag-catalog-editor">
+          <DialogHeader>
+            <DialogTitle>{t("Edit tag")}</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <>
+              <DialogBody className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="tag-catalog-name">{t("Name")}</Label>
                   <Input
@@ -180,34 +193,41 @@ export function TagCatalogDialog({
                     value={editing.color}
                   />
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button onClick={() => setEditing(null)} type="button" variant="ghost">
-                    {t("Cancel")}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      try {
-                        store.saveTagDefinition(editing);
-                        setEditing(null);
-                        setError(null);
-                      } catch (saveError) {
-                        setError(describeError(saveError));
-                      }
-                    }}
-                    type="button"
-                  >
-                    <HiOutlineTag />
-                    {t("Save")}
-                  </Button>
-                </div>
-              </section>
-            )}
-          </DialogBody>
-          <DialogFooter>
-            <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
-              {t("Close")}
-            </Button>
-          </DialogFooter>
+                {editError && (
+                  <div className="text-sm text-destructive" role="alert">
+                    {messageText(editError)}
+                  </div>
+                )}
+              </DialogBody>
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setEditError(null);
+                  }}
+                  type="button"
+                  variant="ghost"
+                >
+                  {t("Cancel")}
+                </Button>
+                <Button
+                  onClick={() => {
+                    try {
+                      store.saveTagDefinition(editing);
+                      setEditing(null);
+                      setEditError(null);
+                    } catch (saveError) {
+                      setEditError(describeError(saveError));
+                    }
+                  }}
+                  type="button"
+                >
+                  <HiOutlineTag />
+                  {t("Save")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
       <AlertDialog onOpenChange={(next) => !next && setDeleteId(null)} open={deleteId !== null}>

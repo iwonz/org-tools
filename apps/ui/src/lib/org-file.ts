@@ -83,7 +83,7 @@ const TAG_COLOR_NAMES = [
   "rose",
   "teal",
 ] as const;
-const CUSTOM_TAG_COLOR_PATTERN = /^#[0-9a-f]{6}$/u;
+const CUSTOM_TAG_COLOR_PATTERN = /^(?:#[0-9a-f]{6}|#[0-9a-f]{8})$/u;
 const DOWNLOAD_TAG_FIELD_KEYS = [
   "label",
   "date",

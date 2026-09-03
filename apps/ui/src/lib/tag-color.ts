@@ -25,7 +25,31 @@ export const EMPLOYEE_TAG_COLOR_HEX = {
 
 export const DEFAULT_CUSTOM_TAG_COLOR = "#6366f1" as const;
 
-const CUSTOM_TAG_COLOR_PATTERN = /^#[0-9a-f]{6}$/u;
+const CUSTOM_TAG_COLOR_PATTERN = /^(?:#[0-9a-f]{6}|#[0-9a-f]{8})$/u;
+
+export const TAG_COLOR_INPUT_MODES = ["keyword", "hex", "rgb", "rgba"] as const;
+export type TagColorInputMode = (typeof TAG_COLOR_INPUT_MODES)[number];
+
+const BASIC_HTML_COLOR_KEYWORDS = {
+  aqua: "#00ffff",
+  black: "#000000",
+  blue: "#0000ff",
+  fuchsia: "#ff00ff",
+  gray: "#808080",
+  green: "#008000",
+  lime: "#00ff00",
+  maroon: "#800000",
+  navy: "#000080",
+  olive: "#808000",
+  orange: "#ffa500",
+  purple: "#800080",
+  rebeccapurple: "#663399",
+  red: "#ff0000",
+  silver: "#c0c0c0",
+  teal: "#008080",
+  white: "#ffffff",
+  yellow: "#ffff00",
+} as const satisfies Record<string, `#${string}`>;
 
 export const isEmployeeTagColorName = (color: string): color is EmployeeTagColorName =>
   (EMPLOYEE_TAG_COLOR_NAMES as readonly string[]).includes(color);
@@ -38,12 +62,14 @@ export const normalizeCustomEmployeeTagColor = (color: string): `#${string}` | n
   return CUSTOM_TAG_COLOR_PATTERN.test(normalized) ? (normalized as `#${string}`) : null;
 };
 
-type Rgb = { blue: number; green: number; red: number };
+type Rgba = { alpha: number; blue: number; green: number; red: number };
+type Rgb = Omit<Rgba, "alpha">;
 export type Hsv = { hue: number; saturation: number; value: number };
 
-const parseHex = (hex: string): Rgb | null => {
+const parseHex = (hex: string): Rgba | null => {
   if (!CUSTOM_TAG_COLOR_PATTERN.test(hex)) return null;
   return {
+    alpha: hex.length === 9 ? Number.parseInt(hex.slice(7, 9), 16) / 255 : 1,
     red: Number.parseInt(hex.slice(1, 3), 16),
     green: Number.parseInt(hex.slice(3, 5), 16),
     blue: Number.parseInt(hex.slice(5, 7), 16),
@@ -57,6 +83,97 @@ const channelToHex = (channel: number) =>
 
 const rgbToHex = ({ blue, green, red }: Rgb): `#${string}` =>
   `#${channelToHex(red)}${channelToHex(green)}${channelToHex(blue)}`;
+
+const rgbaToHex = ({ alpha, ...rgb }: Rgba): `#${string}` => {
+  const opaque = rgbToHex(rgb);
+  return alpha >= 1 ? opaque : `${opaque}${channelToHex(alpha * 255)}`;
+};
+
+const parseFunctionalColor = (value: string, includeAlpha: boolean): Rgba | null => {
+  const expression = includeAlpha
+    ? /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*((?:0(?:\.\d+)?|1(?:\.0+)?|\.\d+))\s*\)$/iu
+    : /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/iu;
+  const match = expression.exec(value.trim());
+  if (!match) return null;
+  const channels = match.slice(1, 4).map(Number);
+  if (channels.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)) {
+    return null;
+  }
+  const alpha = includeAlpha ? Number(match[4]) : 1;
+  if (!Number.isFinite(alpha) || alpha < 0 || alpha > 1) return null;
+  return { alpha, blue: channels[2] ?? 0, green: channels[1] ?? 0, red: channels[0] ?? 0 };
+};
+
+const resolveBrowserColorKeyword = (keyword: string): Rgba | null => {
+  if (typeof document === "undefined" || !document.body) return null;
+  const probe = document.createElement("span");
+  probe.style.color = "";
+  probe.style.color = keyword;
+  if (!probe.style.color) return null;
+  probe.style.position = "fixed";
+  probe.style.visibility = "hidden";
+  document.body.append(probe);
+  const resolved = window.getComputedStyle(probe).color;
+  probe.remove();
+  const commaSyntax = resolved
+    .replace(/^rgb\((\d+)\s+(\d+)\s+(\d+)\)$/u, "rgb($1, $2, $3)")
+    .replace(/^rgba?\((\d+)\s+(\d+)\s+(\d+)\s*\/\s*([\d.]+)\)$/u, "rgba($1, $2, $3, $4)");
+  return parseFunctionalColor(commaSyntax, commaSyntax.startsWith("rgba"));
+};
+
+const parseHtmlColorKeyword = (value: string): Rgba | null => {
+  const keyword = value.trim().toLowerCase();
+  if (!/^[a-z]+$/u.test(keyword) || keyword === "transparent" || keyword === "currentcolor") {
+    return null;
+  }
+  const known = BASIC_HTML_COLOR_KEYWORDS[keyword as keyof typeof BASIC_HTML_COLOR_KEYWORDS];
+  return known ? parseHex(known) : resolveBrowserColorKeyword(keyword);
+};
+
+export const parseTagColorInput = (mode: TagColorInputMode, value: string): `#${string}` | null => {
+  if (mode === "keyword") {
+    const parsed = parseHtmlColorKeyword(value);
+    return parsed ? rgbaToHex(parsed) : null;
+  }
+  if (mode === "hex") {
+    const normalized = value.trim().toLowerCase();
+    const expanded = /^#[0-9a-f]{3}$/u.test(normalized)
+      ? `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`
+      : normalized;
+    return /^#[0-9a-f]{6}$/u.test(expanded) ? (expanded as `#${string}`) : null;
+  }
+  const parsed = parseFunctionalColor(value, mode === "rgba");
+  return parsed ? rgbaToHex(parsed) : null;
+};
+
+const formatAlpha = (alpha: number) => Number(alpha.toFixed(3)).toString().replace(/^0\./u, ".");
+
+export const formatTagColorInput = (
+  mode: TagColorInputMode,
+  color: EmployeeTagColor | null | undefined,
+): string => {
+  const hex = employeeTagColorToHex(color);
+  const parsed = parseHex(hex);
+  if (!parsed) return "";
+  if (mode === "hex") return rgbToHex(parsed);
+  if (mode === "rgb") return `rgb(${parsed.red}, ${parsed.green}, ${parsed.blue})`;
+  if (mode === "rgba") {
+    return `rgba(${parsed.red}, ${parsed.green}, ${parsed.blue}, ${formatAlpha(parsed.alpha)})`;
+  }
+  return (
+    Object.entries(BASIC_HTML_COLOR_KEYWORDS).find(
+      ([, value]) => value === rgbToHex(parsed),
+    )?.[0] ?? ""
+  );
+};
+
+export const tagColorInputPlaceholder = (mode: TagColorInputMode) =>
+  ({
+    hex: "#6366f1",
+    keyword: "rebeccapurple",
+    rgb: "rgb(99, 102, 241)",
+    rgba: "rgba(99, 102, 241, .5)",
+  })[mode];
 
 const mix = (foreground: Rgb, background: Rgb, amount: number): Rgb => ({
   red: foreground.red * amount + background.red * (1 - amount),
@@ -82,14 +199,17 @@ export const customTagColorSurfaceStyle = (
   color: EmployeeTagColor | null | undefined,
 ): CSSProperties | undefined => {
   if (!color || !isCustomEmployeeTagColor(color)) return undefined;
-  const rgb = parseHex(color);
-  if (!rgb) return undefined;
+  const parsed = parseHex(color);
+  if (!parsed) return undefined;
   const white = { blue: 255, green: 255, red: 255 };
   const nearBlack = { blue: 23, green: 23, red: 23 };
-  const lightFill = mix(rgb, white, 0.18);
-  const darkFill = mix(rgb, nearBlack, 0.24);
-  const tintedDark = mix(rgb, nearBlack, 0.52);
-  const tintedLight = mix(rgb, white, 0.68);
+  const rgb = { blue: parsed.blue, green: parsed.green, red: parsed.red };
+  const lightRgb = mix(rgb, white, parsed.alpha);
+  const darkRgb = mix(rgb, nearBlack, parsed.alpha);
+  const lightFill = mix(lightRgb, white, 0.18);
+  const darkFill = mix(darkRgb, nearBlack, 0.24);
+  const tintedDark = mix(lightRgb, nearBlack, 0.52);
+  const tintedLight = mix(darkRgb, white, 0.68);
   const lightText = contrast(tintedDark, lightFill) >= 4.5 ? tintedDark : nearBlack;
   const darkText = contrast(tintedLight, darkFill) >= 4.5 ? tintedLight : white;
   return {
@@ -111,7 +231,12 @@ export const employeeTagColorToHex = (color: EmployeeTagColor | null | undefined
 };
 
 export const hexToHsv = (hex: string): Hsv => {
-  const { blue, green, red } = parseHex(hex) ?? { blue: 241, green: 102, red: 99 };
+  const { blue, green, red } = parseHex(hex) ?? {
+    alpha: 1,
+    blue: 241,
+    green: 102,
+    red: 99,
+  };
   const redUnit = red / 255;
   const greenUnit = green / 255;
   const blueUnit = blue / 255;

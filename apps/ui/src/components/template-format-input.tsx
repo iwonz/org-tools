@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { HiOutlineInformationCircle } from "react-icons/hi2";
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useUiText } from "@/i18n/use-ui-text";
 import {
   type ActiveTemplateFormatQuery,
   getActiveTemplateFormatQuery,
@@ -80,6 +82,7 @@ export function TemplateFormatInput({
   tokens: TemplateFormatToken[];
   value: string;
 }) {
+  const t = useUiText();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [query, setQuery] = useState<ActiveTemplateFormatQuery | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -129,7 +132,27 @@ export function TemplateFormatInput({
 
   return (
     <div className="grid min-w-0 gap-2" data-demo-id={dataDemoId}>
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <span className="group relative inline-flex">
+          <button
+            aria-describedby={`${id}-token-help`}
+            aria-label={t("Token suggestions help")}
+            className="inline-flex size-5 cursor-help items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+            data-demo-id="template-format-help"
+            type="button"
+          >
+            <HiOutlineInformationCircle className="size-4" />
+          </button>
+          <span
+            className="pointer-events-none absolute start-0 top-full z-[90] mt-1 hidden w-64 rounded-md border border-border/80 bg-popover px-3 py-2 text-start text-xs font-normal leading-relaxed text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)] group-hover:block group-focus-within:block"
+            id={`${id}-token-help`}
+            role="tooltip"
+          >
+            {t("Type @ to open token suggestions.")}
+          </span>
+        </span>
+      </div>
       <div className="relative min-w-0">
         <Textarea
           aria-activedescendant={open ? `${id}-token-${activeIndex}` : undefined}
@@ -173,6 +196,7 @@ export function TemplateFormatInput({
             }
             refreshQuery(event.currentTarget.value, event.currentTarget.selectionStart);
           }}
+          placeholder={t("Type @ to add tokens")}
           ref={textareaRef}
           role="combobox"
           value={value}

@@ -20,8 +20,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Persist identifiers and relationships rather than nested Employee copies.
 - Build shared maps, search documents, Unit order, membership, birthday, gender, dated-tag,
   position, Tag-catalog, and custom-field indexes outside React render paths.
-- Derive custom Tag tonal variables from one six-digit HEX value when its surface renders; palette
-  pointer interaction updates only the open Tag draft and never traverses Employees or Units.
+- Derive custom Tag tonal variables from one six- or eight-digit HEX value when its surface renders;
+  palette and exact color input update only the open Tag draft in constant time and never traverse
+  Employees or Units.
 - Parse each canonical `DD.MM.YYYY` birthday once while building the shared search index; Calendar,
   Analytics, and filters reuse its derived recurring month-day key without duplicating Employee data.
 - Resolve custom Template dependencies once per definition graph and memoize derived Employee

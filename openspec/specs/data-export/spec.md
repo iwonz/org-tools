@@ -86,13 +86,23 @@ same packing model as the live Editor.
 - **THEN** no downloaded-file success label appears and any prior copy confirmation is cleared
 
 ### Requirement: Template formats use one token-aware input
-Data Download and Editor Template export SHALL use one shared multiline Format input and SHALL NOT
-render separate token-button catalogs. Typing `@` immediately before the caret SHALL open a
-caret-positioned bordered suggestion menu containing the matching `{token}` and a localized short
-description. Matching MUST be case-insensitive by substring across token keys and descriptions.
-Choosing a token SHALL replace only the active `@query` with the existing `{token}` syntax and place
-the caret after it. Manual `{token}` values and conditional expressions SHALL retain their existing
-formatter behavior.
+Data Download, Editor Template export, and custom Employee Template definitions SHALL use one shared
+multiline Format input and SHALL NOT render separate token-button catalogs. Every such input SHALL
+place a compact focusable help icon immediately after its Format label. Hovering or focusing the
+icon SHALL explain that typing `@` opens token suggestions, and the input placeholder SHALL provide
+the same concise discovery cue. Typing `@` immediately before the caret SHALL open a caret-positioned
+bordered suggestion menu containing the matching `{token}` and a localized short description.
+Matching MUST be case-insensitive by substring across token keys and descriptions. Choosing a token
+SHALL replace only the active `@query` with the existing `{token}` syntax and place the caret after
+it. Manual `{token}` values and conditional expressions SHALL retain their existing formatter behavior.
+
+#### Scenario: Discover token suggestions
+- **WHEN** a user hovers or focuses the help icon beside any token-aware Format label
+- **THEN** localized guidance explains that typing `@` opens token suggestions without changing the field value
+
+#### Scenario: See the token placeholder
+- **WHEN** a token-aware Format field is empty
+- **THEN** its localized placeholder indicates that `@` can add tokens
 
 #### Scenario: Insert a token with the keyboard
 - **WHEN** a user types `@name`, changes the active suggestion with Arrow Up or Arrow Down, and presses Enter

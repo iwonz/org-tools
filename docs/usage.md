@@ -51,9 +51,10 @@ control.
   shared tags whose configured color is their tonal fill, contact fields, and Unit assignments with compound filters. **Employee
   model** defines stored Value fields or derived Template fields with optional MD5/SHA-256 output;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
-  deletion. Its color dropdown keeps a full custom palette above localized named presets and No
-  color; arbitrary choices are stored as canonical `#rrggbb` values and use readable tonal fills in
-  both themes. Gender is
+  deletion. Editing opens a dedicated modal. Its color dropdown keeps a full custom palette first,
+  exact HTML Keyword, HEX, RGB, or RGBA entry next, and localized named presets plus No color below;
+  arbitrary choices are stored as canonical `#rrggbb` or `#rrggbbaa` values and use readable tonal
+  fills in both themes. Invalid exact input remains a draft and does not change the Tag. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
@@ -92,8 +93,9 @@ control.
   JSON always produces one record per Employee. Drag handles order scalar fields and the ordinary
   Unit and Tag rows in one list; enabled Unit and Tag arrays expose their own reorderable fields,
   names, and searchable exclusion menus. Template retains All Units and First Unit row modes through
-  the same control used by Editor export. In either Template surface, typing `@` in Format opens a
-  localized caret menu and inserts the stable `{token}` syntax. Unit paths use the fixed ` / ` separator. **Continue**
+  the same control used by Editor export. Every token-aware Format label includes a help icon, and
+  its placeholder explains that typing `@` opens a localized caret menu and inserts the stable
+  `{token}` syntax. Unit paths use the fixed ` / ` separator. **Continue**
   stays disabled in the shared header until at least one Employee is selected.
 
 ## Import and Export

@@ -51,7 +51,7 @@ and locale-independent lowercase. Employee Import requires UUID plus all three i
 keeps the current UUID for an identity match, and blocks UUID collisions with another identity.
 
 Tags are normalized shared catalog entities with stable UUIDs and an optional supplied semantic
-color name or canonical lowercase six-digit HEX color;
+color name or canonical lowercase six- or eight-digit HEX color;
 Employee records store only `{ tagId, date }` assignments. Custom fields also have UUID identity and
 a unique ASCII token key. Value fields store typed values, while Template fields form an acyclic
 dependency graph and may hash their UTF-8 result with MD5 or SHA-256.
@@ -119,8 +119,10 @@ history, collaborative cursors, or remote synchronization.
 - `OrgStore` owns Employees, custom field definitions, the Tag catalog, the current Unit structure, derived indexes, durable UI projection, and
   separate organization/UI change sequences.
 - Shared Tag color helpers keep named palette classes static and derive bounded light/dark fill,
-  hover, active, and readable foreground variables for custom HEX values. The catalog Popover owns
-  only transient HSV selection; persisted definitions receive the canonical resulting color.
+  hover, active, and readable foreground variables for custom HEX values. The catalog color Popover
+  owns transient HSV selection plus exact HTML Keyword, HEX, RGB, or RGBA input. Input is parsed
+  locally and only canonical six- or eight-digit lowercase HEX reaches the Tag draft. Catalog Edit
+  uses a dedicated modal draft, so canceling never mutates the definition.
 - `OrgEditorStore` owns the single structural document, history, selection, viewport, and commands.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - `StateRuntimeController` owns hydration, tab synchronization, environment theme/locale updates,
@@ -135,7 +137,8 @@ history, collaborative cursors, or remote synchronization.
   independently sortable nested fields, and support naming plus exact exclusions. Template retains
   All Units and First Unit row modes through one control shared with Editor export. Both Template
   surfaces use one multiline Format input whose caret menu converts `@query` into existing `{token}`
-  syntax; suggestion state is transient.
+  syntax. A small help affordance and the placeholder disclose the shortcut; tooltip, query, and
+  suggestion state are transient.
 
 Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
 headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row

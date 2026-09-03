@@ -7,7 +7,7 @@ Define the strict singleton state contract, automatic SQLite persistence, privat
 The application SHALL use one strict unversioned `OrgToolsState` with exactly `organization` and
 `ui` at the top level. Organization SHALL contain UUID Employees with custom values, one current
 `{ layoutMode, units }` structure, UUID-keyed custom field definitions, and a UUID-keyed Tag catalog
-whose optional color is a supplied semantic name or canonical lowercase six-digit HEX value.
+whose optional color is a supplied semantic name or canonical lowercase six- or eight-digit HEX value.
 Durable UI SHALL contain locale, theme, shell state, active section, Unit navigation, complete
 birthday and custom filters, searches, Calendar and Download settings, plus the one Editor viewport
 and selection. Download settings SHALL store one complete `jsonTopLevelFieldOrder` covering
@@ -31,7 +31,7 @@ document, unknown key, or old custom/output shape.
 #### Scenario: Complete state round trip
 - **WHEN** a current state is exported and imported, synchronized to another tab, or reopened from
   SQLite
-- **THEN** organization data and valid durable UI context restore atomically, including exact named or custom Tag colors and unified JSON field order
+- **THEN** organization data and valid durable UI context restore atomically, including exact named, opaque, or alpha custom Tag colors and unified JSON field order
 
 #### Scenario: Capture current state
 - **WHEN** current state is captured after organization and UI actions
