@@ -175,7 +175,8 @@ Capabilities: Custom fields, Virtualized values, Not filled, Compound filtering.
 
 [![Tag catalog](screenshots/feature-employees-tag-catalog.png)](screenshots/feature-employees-tag-catalog.png)
 
-Search centralized Tags and inspect their global color, Employee usage, and dated-assignment counts.
+Search centralized Tags and inspect their global filled color, Employee usage, and dated-assignment
+counts without decorative marker dots.
 
 Capabilities: Tag catalog, Search, Global colors, Usage counts.
 
@@ -183,7 +184,7 @@ Capabilities: Tag catalog, Search, Global colors, Usage counts.
 
 [![Tag catalog editor](screenshots/feature-employees-tag-editor.png)](screenshots/feature-employees-tag-editor.png)
 
-Rename a Tag or choose and reset its global semantic color from one controlled catalog.
+Rename a Tag or choose and reset its global semantic color through filled palette previews.
 
 Capabilities: Rename, Color palette, Reset color, Cascading delete.
 

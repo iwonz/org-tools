@@ -5,7 +5,7 @@ import { HighlightedText } from "@/components/highlighted-text";
 import { useAppFormatter } from "@/i18n/use-ui-text";
 import { orderEmployeeTagsForDisplay } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { tagColorClassName } from "@/lib/tag-color";
+import { tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 
 export function EmployeeTags({
@@ -51,9 +51,12 @@ export function EmployeeTags({
       {visibleTags.map((tag) => (
         <span
           className={cn(
-            "inline-flex max-w-full items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] leading-4 text-primary",
+            "inline-flex max-w-full items-center rounded-md px-2 py-0.5 text-[11px] leading-4",
+            tagColorSurfaceClassName(tag.color),
             isCanvas ? "px-1.5 py-0 text-[9px] leading-3" : "shrink-0",
           )}
+          data-tag-color={tag.color ?? "none"}
+          data-tag-color-surface
           key={normalizeSearchValue(tag.label)}
           title={
             tag.date
@@ -64,9 +67,6 @@ export function EmployeeTags({
               : undefined
           }
         >
-          <span
-            className={cn("mr-1.5 size-1.5 shrink-0 rounded-full", tagColorClassName(tag.color))}
-          />
           <span>
             <HighlightedText queryTokens={queryTokens} text={tag.label} />
             {tag.date && (

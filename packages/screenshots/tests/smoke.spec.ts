@@ -47,6 +47,25 @@ async function getBackgroundColor(locator: Locator) {
   return locator.evaluate((element) => window.getComputedStyle(element).backgroundColor);
 }
 
+async function expectFilledTagSurface(locator: Locator) {
+  await expect(locator).toBeVisible();
+  const presentation = await locator.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      background: style.backgroundColor,
+      color: style.color,
+      emptyRoundMarkers: [...element.children].filter((child) => {
+        if (!(child instanceof HTMLElement) || child.textContent?.trim()) return false;
+        const childStyle = window.getComputedStyle(child);
+        return childStyle.borderRadius === "9999px" && child.getBoundingClientRect().width <= 12;
+      }).length,
+    };
+  });
+  expect(presentation.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(presentation.color).not.toBe(presentation.background);
+  expect(presentation.emptyRoundMarkers).toBe(0);
+}
+
 async function getBackgroundPresentation(locator: Locator) {
   return locator.evaluate((element) => {
     const style = window.getComputedStyle(element);
@@ -2687,6 +2706,57 @@ test("edits and clears a dated tag from quick and full Employee editors", async 
   ).toBeDisabled();
   await page.keyboard.press("Escape");
   await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await assertLocalRequests();
+});
+
+test("uses the configured Tag color as fill without leading marker dots", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+
+  const coloredChip = page.locator('[data-tag-color-surface][data-tag-color="blue"]').first();
+  const neutralChip = page.locator('[data-tag-color-surface][data-tag-color="none"]').first();
+  await expectFilledTagSurface(coloredChip);
+  await expectFilledTagSurface(neutralChip);
+  expect(await getBackgroundColor(coloredChip)).not.toBe(await getBackgroundColor(neutralChip));
+
+  await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
+  const tagPopover = page.locator('[data-demo-id="employees-tag-picker-popover"]');
+  const tealOption = tagPopover.locator('[data-tag-color-surface][data-tag-color="teal"]');
+  await expectFilledTagSurface(tealOption);
+  await tealOption.hover();
+  await expectFilledTagSurface(tealOption);
+  await expect(tagPopover.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("Escape");
+
+  await page.locator('[data-demo-id="employee-tags-button"]').click();
+  const catalog = page.getByRole("dialog", { name: "Tags", exact: true });
+  const catalogTag = catalog.locator('[data-tag-color-surface][data-tag-color="rose"]').first();
+  await expectFilledTagSurface(catalogTag);
+  await catalog.getByRole("button", { name: "Edit tag", exact: true }).first().click();
+  await catalog.getByRole("combobox").click();
+  const palette = page.locator('[data-slot="select-content"]');
+  await expect(palette.locator("[data-tag-color-surface]")).toHaveCount(9);
+  await expectFilledTagSurface(
+    palette.locator('[data-tag-color-surface][data-tag-color="orange"]'),
+  );
+  await expect(palette.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await catalog.getByRole("button", { name: "Close", exact: true }).first().click();
+
+  await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");
+  await expectFilledTagSurface(coloredChip);
+  expect(await getBackgroundColor(coloredChip)).not.toBe(await getBackgroundColor(neutralChip));
+
+  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
+  const calendarTag = page.locator('[data-demo-id="calendar-dated-tag-group"][data-color="amber"]');
+  await expectFilledTagSurface(calendarTag);
+  await calendarTag.hover();
+  await expectFilledTagSurface(calendarTag);
+
   await assertLocalRequests();
 });
 

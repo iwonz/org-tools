@@ -37,10 +37,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
+import { describeError, type UiMessageDescriptor, type UiTextKey } from "@/i18n/messages";
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { tagColorClassName } from "@/lib/tag-color";
+import { tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -55,6 +55,18 @@ export const TAG_COLORS: Array<EmployeeTagColor | null> = [
   "blue",
   "rose",
 ];
+
+const TAG_COLOR_MESSAGE_KEYS = {
+  amber: "Amber",
+  blue: "Blue",
+  cyan: "Cyan",
+  green: "Green",
+  orange: "Orange",
+  red: "Red",
+  rose: "Rose",
+  teal: "Teal",
+} as const satisfies Record<EmployeeTagColor, UiTextKey>;
+
 export function TagCatalogDialog({
   onOpenChange,
   open,
@@ -129,14 +141,17 @@ export function TagCatalogDialog({
                         className="flex items-center gap-3 rounded-md bg-muted/30 px-3 py-2"
                         key={tag.id}
                       >
-                        <span
-                          className={cn(
-                            "size-2.5 shrink-0 rounded-full",
-                            tagColorClassName(tag.color),
-                          )}
-                        />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium">{tag.label}</div>
+                          <div
+                            className={cn(
+                              "inline-flex max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
+                              tagColorSurfaceClassName(tag.color),
+                            )}
+                            data-tag-color={tag.color ?? "none"}
+                            data-tag-color-surface
+                          >
+                            <span className="truncate">{tag.label}</span>
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {countText("employees", { count: count.employees })} ·{" "}
                             {t("{count} dated", { count: count.dated })}
@@ -198,32 +213,31 @@ export function TagCatalogDialog({
                     value={editing.color ?? "none"}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue>
+                        <span
+                          className={cn(
+                            "inline-flex rounded-md px-2 py-0.5",
+                            tagColorSurfaceClassName(editing.color),
+                          )}
+                          data-tag-color={editing.color ?? "none"}
+                          data-tag-color-surface
+                        >
+                          {t(editing.color ? TAG_COLOR_MESSAGE_KEYS[editing.color] : "No color")}
+                        </span>
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {TAG_COLORS.map((color) => (
                         <SelectItem key={color ?? "none"} value={color ?? "none"}>
-                          <span className="flex items-center gap-2">
-                            <span className={cn("size-2 rounded-full", tagColorClassName(color))} />
-                            {color
-                              ? t(
-                                  color === "red"
-                                    ? "Red"
-                                    : color === "orange"
-                                      ? "Orange"
-                                      : color === "amber"
-                                        ? "Amber"
-                                        : color === "green"
-                                          ? "Green"
-                                          : color === "teal"
-                                            ? "Teal"
-                                            : color === "cyan"
-                                              ? "Cyan"
-                                              : color === "blue"
-                                                ? "Blue"
-                                                : "Rose",
-                                )
-                              : t("No color")}
+                          <span
+                            className={cn(
+                              "inline-flex rounded-md px-2 py-0.5",
+                              tagColorSurfaceClassName(color),
+                            )}
+                            data-tag-color={color ?? "none"}
+                            data-tag-color-surface
+                          >
+                            {t(color ? TAG_COLOR_MESSAGE_KEYS[color] : "No color")}
                           </span>
                         </SelectItem>
                       ))}

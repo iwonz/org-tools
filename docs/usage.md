@@ -48,9 +48,9 @@ control.
   The current roster count appears below search without redundant roster-section headings or counts.
   **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, complete birthdays, embedded avatar, typed custom fields,
-  shared colored tags, contact fields, and Unit assignments with compound filters. **Employee
+  shared tags whose configured color is their tonal fill, contact fields, and Unit assignments with compound filters. **Employee
   model** defines stored Value fields or derived Template fields with optional MD5/SHA-256 output;
-  **Tags** manages normalized labels, colors, usage counts, rename, and cascading deletion. Gender is
+  **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading deletion. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring

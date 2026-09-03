@@ -41,7 +41,7 @@ import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
 import { formatCalendarDayTitle, getCalendarWeekStart } from "@/lib/calendar-locale";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
-import { tagColorClassName } from "@/lib/tag-color";
+import { tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -373,18 +373,19 @@ export const CalendarTab = observer(() => {
           >
             {datedTagGroups.map((group) => (
               <Button
-                className="h-8 shrink-0 gap-0 rounded-full px-2.5 text-xs"
+                className={cn(
+                  "h-8 shrink-0 gap-0 rounded-full px-2.5 text-xs",
+                  tagColorSurfaceClassName(group.color),
+                )}
                 data-color={group.color ?? "none"}
                 data-demo-id="calendar-dated-tag-group"
+                data-tag-color-surface
                 key={group.tagId}
                 onClick={() => setDialogTagKey(group.normalizedLabel)}
                 size="sm"
                 type="button"
                 variant="secondary"
               >
-                <span
-                  className={cn("me-1.5 size-2 rounded-full", tagColorClassName(group.color))}
-                />
                 <HiOutlineTag className="me-1.5 size-3.5" />
                 <span>{group.label}</span>
                 <MiddleDot />

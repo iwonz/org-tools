@@ -88,6 +88,20 @@ test("runs the complete state editor at the repository base path without APIs or
 
   await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
 
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  const coloredTag = page.locator('[data-tag-color-surface][data-tag-color="blue"]').first();
+  const neutralTag = page.locator('[data-tag-color-surface][data-tag-color="none"]').first();
+  await expect(coloredTag).toBeVisible();
+  await expect(neutralTag).toBeVisible();
+  const [coloredBackground, neutralBackground] = await Promise.all(
+    [coloredTag, neutralTag].map((tag) =>
+      tag.evaluate((element) => window.getComputedStyle(element).backgroundColor),
+    ),
+  );
+  expect(coloredBackground).not.toBe("rgba(0, 0, 0, 0)");
+  expect(coloredBackground).not.toBe(neutralBackground);
+  await expect(page.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(0);
+
   const stateExportPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const stateExport = await stateExportPromise;

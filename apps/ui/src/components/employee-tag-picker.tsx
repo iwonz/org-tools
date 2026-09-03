@@ -24,7 +24,7 @@ import {
   toggleEmployeeTagForTargets,
 } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { tagColorClassName } from "@/lib/tag-color";
+import { tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -181,13 +181,14 @@ export function EmployeeTagPickerPanel({
                     onClick={() => onApply(toggleEmployeeTagForTargets(employees, tag))}
                     type="button"
                   >
-                    <span className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "size-2 shrink-0 rounded-full",
-                          tagColorClassName(definition?.color),
-                        )}
-                      />
+                    <span
+                      className={cn(
+                        "inline-flex max-w-full items-center rounded-md px-2 py-0.5",
+                        tagColorSurfaceClassName(definition?.color),
+                      )}
+                      data-tag-color={definition?.color ?? "none"}
+                      data-tag-color-surface
+                    >
                       <EmployeeTagDateText
                         date={checked === false ? null : dateState}
                         label={tag}
