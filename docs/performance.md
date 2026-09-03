@@ -36,6 +36,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   only that Employee's assignments and derives virtualized-row or collapsed-card anchors without a
   full Unit scan.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
+- Tag-filter bulk selection derives the complete ordered Tag ID set in one linear pass and emits one
+  filter update; it never depends on or mounts off-screen virtual rows.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
   the ordinary Employee virtualizer; do not create virtual header rows or repeat count formatting.
 - Coalesce pan, zoom, and Unit, Employee, connection, or marquee drag samples through one

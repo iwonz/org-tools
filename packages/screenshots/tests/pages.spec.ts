@@ -203,6 +203,20 @@ test("runs the complete state editor at the repository base path without APIs or
   expect(coloredBackground).not.toBe(neutralBackground);
   await expect(page.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(0);
 
+  await page.locator('[data-demo-id="employees-position-filter"]').click();
+  const employeeFilters = page.locator('[data-demo-id="employees-position-popover"]');
+  await employeeFilters.getByRole("button", { name: "Tags", exact: true }).click();
+  const selectAllTags = employeeFilters.locator('[data-demo-id="employee-tag-filter-select-all"]');
+  const deselectAllTags = employeeFilters.locator(
+    '[data-demo-id="employee-tag-filter-deselect-all"]',
+  );
+  await selectAllTags.click();
+  await expect(selectAllTags).toBeDisabled();
+  await expect(deselectAllTags).toBeEnabled();
+  await deselectAllTags.click();
+  await expect(deselectAllTags).toBeDisabled();
+  await page.keyboard.press("Escape");
+
   await page.locator('[data-demo-id="employee-tags-button"]').click();
   const tagCatalog = page.getByRole("dialog", { name: "Tags", exact: true });
   const tagRow = tagCatalog.locator('[data-demo-id="tag-catalog-row"]').first();

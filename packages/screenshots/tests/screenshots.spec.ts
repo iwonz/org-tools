@@ -398,15 +398,15 @@ test("captures the complete Employee workflow", async ({ page }) => {
 
   await page.locator('[data-demo-id="employees-position-filter"]').click();
   const filters = page.locator('[data-demo-id="employees-position-popover"]');
-  await filters.getByRole("button", { name: "Gender", exact: true }).click();
-  await filters.getByRole("checkbox", { name: "Gender: Female", exact: true }).click();
+  await filters.getByRole("button", { name: "Tags", exact: true }).click();
+  await filters.locator('[data-demo-id="employee-tag-filter-select-all"]').click();
   await capture(page, "employees-filters");
 
+  await filters.getByRole("button", { name: "Clear all", exact: true }).click();
   await filters.getByRole("button", { name: "Department", exact: true }).click();
   await expect(filters.locator('[data-filter-options-list="Department"]')).toBeVisible();
   await capture(page, "employees-custom-filter");
 
-  await filters.getByRole("button", { name: "Clear all", exact: true }).click();
   await page.keyboard.press("Escape");
   await page.locator('[data-demo-id="employee-edit-button"]').first().click();
   dialog = page.getByRole("dialog", { name: "Edit Employee" });

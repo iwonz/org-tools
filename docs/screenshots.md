@@ -132,9 +132,12 @@ Capabilities: Virtualized catalog, Search and counts, Tags, Contact links, Row a
 
 [![Compound Employee filters](screenshots/feature-employees-filters.png)](screenshots/feature-employees-filters.png)
 
-Compose birthday, gender, position, tag, Team, and text criteria with visible match counts.
+Compose birthday, gender, position, tag, Team, and text criteria with visible match counts. The Tag
+section demonstrates complete-catalog Select all and Deselect all controls beside the independent
+Without tags option.
 
-Capabilities: Ordered filters, Complete birthday, Custom values, Not filled, Compound matching.
+Capabilities: Ordered filters, Complete birthday, Tag bulk selection, Custom values, Not filled,
+Compound matching.
 
 ### Employee model
 

@@ -8,6 +8,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   HiOutlineBriefcase,
   HiOutlineCalendarDays,
+  HiOutlineCheck,
   HiOutlineChevronDown,
   HiOutlineFolder,
   HiOutlineFunnel,
@@ -32,8 +33,10 @@ import {
 import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
 import {
   createEmptyEmployeeSearchFilters,
+  deselectAllEmployeeFilterTags,
   type EmployeeSearchFilters,
   pruneEmployeeSearchFilters,
+  selectAllEmployeeFilterTags,
 } from "@/lib/employee-search";
 import { getSearchTokens, normalizeSearchValue } from "@/lib/search-index";
 import { cn } from "@/lib/utils";
@@ -520,6 +523,13 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
         : tagOptions.map((label) => ({ id: label, label })),
     [store.tagDefinitions, tagOptions],
   );
+  const availableTagIds = useMemo(
+    () => [...new Set(tagFilterOptions.map((option) => option.id))],
+    [tagFilterOptions],
+  );
+  const selectedTagIdSet = useMemo(() => new Set(selectedTags), [selectedTags]);
+  const areAllTagsSelected =
+    availableTagIds.length > 0 && availableTagIds.every((tagId) => selectedTagIdSet.has(tagId));
   const unitOptions = useMemo<EmployeeUnitFilterOption<UnitId>[]>(() => {
     if (!isOpen) return [];
 
@@ -804,6 +814,37 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                   }
                   title={t("Tags")}
                 />
+                <div
+                  className="grid grid-cols-2 gap-1"
+                  data-demo-id="employee-tag-filter-bulk-actions"
+                >
+                  <Button
+                    className="h-8 justify-center border-0 px-2 text-xs font-normal"
+                    data-demo-id="employee-tag-filter-select-all"
+                    disabled={availableTagIds.length === 0 || areAllTagsSelected}
+                    onClick={() =>
+                      onFiltersChange(selectAllEmployeeFilterTags(filters, availableTagIds))
+                    }
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <HiOutlineCheck className="size-4" />
+                    {t("Select all")}
+                  </Button>
+                  <Button
+                    className="h-8 justify-center border-0 px-2 text-xs font-normal"
+                    data-demo-id="employee-tag-filter-deselect-all"
+                    disabled={selectedTags.length === 0}
+                    onClick={() => onFiltersChange(deselectAllEmployeeFilterTags(filters))}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <HiOutlineXMark className="size-4" />
+                    {t("Deselect all")}
+                  </Button>
+                </div>
                 <EmployeeFilterOptionList
                   emptyState={t("No tags found")}
                   onToggle={(tagId) =>

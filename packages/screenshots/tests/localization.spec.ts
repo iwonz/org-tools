@@ -412,6 +412,24 @@ for (const [locale, messages] of [
     await expect(unitRosterRows.locator('[data-demo-id="unit-employee-card"]')).toHaveCount(4);
     await page.locator('[data-demo-id="tab-employees"]').click();
     await expect(page.getByText("Avery Stone", { exact: true }).first()).toBeVisible();
+    await page.locator('[data-demo-id="employees-position-filter"]').click();
+    const employeeFilters = page.locator('[data-demo-id="employees-position-popover"]');
+    await employeeFilters.getByRole("button", { name: messages.Ui.Tags, exact: true }).click();
+    const selectAllTags = employeeFilters.locator(
+      '[data-demo-id="employee-tag-filter-select-all"]',
+    );
+    const deselectAllTags = employeeFilters.locator(
+      '[data-demo-id="employee-tag-filter-deselect-all"]',
+    );
+    await expect(selectAllTags).toHaveAccessibleName(messages.Ui["Select all"]);
+    await expect(deselectAllTags).toHaveAccessibleName(messages.Ui["Deselect all"]);
+    await expect(selectAllTags.locator("svg")).toHaveCount(1);
+    await expect(deselectAllTags.locator("svg")).toHaveCount(1);
+    await selectAllTags.click();
+    await expect(selectAllTags).toBeDisabled();
+    await deselectAllTags.click();
+    await expect(deselectAllTags).toBeDisabled();
+    await page.keyboard.press("Escape");
     const createEmployeeButton = page.locator('[data-demo-id="employee-create-button"]');
     await expectLeadingThematicIcon(createEmployeeButton, messages.Ui["Add Employee"]);
     await createEmployeeButton.click();

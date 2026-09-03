@@ -4,9 +4,11 @@ import { describe, expect, test } from "vitest";
 import { buildOrganizationStructure } from "@/lib/build-organization-structure";
 import {
   createEmptyEmployeeSearchFilters,
+  deselectAllEmployeeFilterTags,
   filterEmployeesBySearch,
   getEmployeesForSearch,
   pruneEmployeeSearchFilters,
+  selectAllEmployeeFilterTags,
 } from "@/lib/employee-search";
 import { buildEmployeeUnitMembershipIndex } from "@/lib/employee-unit-contexts";
 import { createDefaultOrgEditorState, createOrgEditorUnitFromScratch } from "@/lib/org-editor";
@@ -134,6 +136,29 @@ const filter = (
   }).map((currentEmployee) => currentEmployee.id);
 
 describe("Employee Unit filters", () => {
+  test("selects and deselects the complete ordered Tag catalog independently of untagged Employees", () => {
+    const initialFilters = {
+      ...createEmptyEmployeeSearchFilters(),
+      includeWithoutTags: true,
+      selectedTags: [uuid(999)],
+    };
+    const selectedFilters = selectAllEmployeeFilterTags(initialFilters, [
+      CRITICAL_TAG_ID,
+      uuid(202),
+      CRITICAL_TAG_ID,
+    ]);
+
+    expect(selectedFilters).toMatchObject({
+      includeWithoutTags: true,
+      selectedTags: [CRITICAL_TAG_ID, uuid(202)],
+    });
+    expect(initialFilters.selectedTags).toEqual([uuid(999)]);
+    expect(deselectAllEmployeeFilterTags(selectedFilters)).toMatchObject({
+      includeWithoutTags: true,
+      selectedTags: [],
+    });
+  });
+
   test("returns the central sorted array without a full pass for an empty search", () => {
     const sortedEmployees = structure.indexes.employeesByName;
     const visibleEmployees = getEmployeesForSearch({

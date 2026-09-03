@@ -38,6 +38,21 @@ export const createEmptyEmployeeSearchFilters = (): EmployeeSearchFilters => ({
   selectedUnitIds: [],
 });
 
+export const selectAllEmployeeFilterTags = (
+  filters: EmployeeSearchFilters,
+  availableTagIds: readonly TagId[],
+): EmployeeSearchFilters => ({
+  ...filters,
+  selectedTags: [...new Set(availableTagIds)],
+});
+
+export const deselectAllEmployeeFilterTags = (
+  filters: EmployeeSearchFilters,
+): EmployeeSearchFilters => ({
+  ...filters,
+  selectedTags: [],
+});
+
 export const getEmployeeSearchFiltersKey = (filters: EmployeeSearchFilters) =>
   [
     filters.selectedGenders.join("|"),

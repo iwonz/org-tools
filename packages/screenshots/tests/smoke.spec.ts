@@ -1697,6 +1697,29 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Riley Chen");
   await filterPopover.getByRole("button", { name: "Clear all", exact: true }).click();
   await expect(page.locator('[data-demo-id="employees-match-count"]')).toHaveCount(0);
+
+  await filterPopover.getByRole("button", { name: "Tags", exact: true }).click();
+  const withoutTags = filterPopover.getByRole("checkbox", {
+    name: "Tags: Without tags",
+    exact: true,
+  });
+  const selectAllTags = filterPopover.locator('[data-demo-id="employee-tag-filter-select-all"]');
+  const deselectAllTags = filterPopover.locator(
+    '[data-demo-id="employee-tag-filter-deselect-all"]',
+  );
+  await expect(selectAllTags).toBeEnabled();
+  await expect(deselectAllTags).toBeDisabled();
+  await withoutTags.click();
+  await selectAllTags.click();
+  await expect(selectAllTags).toBeDisabled();
+  await expect(deselectAllTags).toBeEnabled();
+  await expect(withoutTags).toBeChecked();
+  await expect(filterPopover.locator('[data-filter-section="Tags"]')).toContainText("13");
+  await deselectAllTags.click();
+  await expect(selectAllTags).toBeEnabled();
+  await expect(deselectAllTags).toBeDisabled();
+  await expect(withoutTags).toBeChecked();
+  await withoutTags.click();
   await page.keyboard.press("Escape");
 
   await page.locator('[data-demo-id="employee-create-button"]').click();

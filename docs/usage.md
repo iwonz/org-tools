@@ -60,6 +60,8 @@ control.
   invalid or canceled exact input does not change the Tag. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
+  Tag filters provide **Select all** and **Deselect all** for the complete catalog while keeping
+  **Without tags** as an independent choice.
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
