@@ -5,7 +5,8 @@ The maintained target is 20,000 Employees and 4,000 Units on a modern desktop br
 ## State and persistence
 
 Organization and durable UI observations are separate. UI-only actions serialize only bounded
-scalars, filters, active View, and per-View selection/viewport. They never traverse the Employee
+scalars, filters, active View, and per-View selection, viewport, and distribution Unit IDs. They
+never traverse the Employee
 catalog, View Unit graphs, Live rules, or editor documents. Text input is coalesced by the 300 ms UI delay. Organization
 snapshots are created for logical organization actions and are kept behind a single-flight write
 queue; a newer pending snapshot replaces an older pending snapshot.
@@ -30,6 +31,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   values by organization revision. Filter option discovery and output reuse the same cache.
 - Cache derived structures by View document revision and global Employee/Tag/field references.
   Materialize only the system View, active Editor View, and selected Download View at once.
+- Build the active View's direct `EmployeeId → UnitId[]` distribution index only when materialized
+  manual or Live membership changes. Row status is an indexed lookup; selecting one Employee walks
+  only that Employee's assignments and derives virtualized-row or collapsed-card anchors without a
+  full Unit scan.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
   the ordinary Employee virtualizer; do not create virtual header rows or repeat count formatting.

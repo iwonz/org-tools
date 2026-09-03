@@ -181,7 +181,7 @@ test("switches the interface in place and persists the choice", async ({ page },
   await page.getByRole("tab", { name: ruMessages.Ui.Editor, exact: true }).click();
 
   await page.getByRole("button", { name: ruMessages.Ui["Add to empty canvas"] }).click();
-  await page.getByRole("button", { name: ruMessages.Ui["Add Unit"], exact: true }).click();
+  await page.getByRole("menuitem", { name: ruMessages.Ui["Add Unit"], exact: true }).click();
   const unitDialog = page.getByRole("dialog", { name: ruMessages.Ui["Add Unit"] });
   await unitDialog.getByLabel(ruMessages.Ui.Name, { exact: true }).fill("Platform");
   await unitDialog.getByRole("button", { name: ruMessages.Ui.Save, exact: true }).click();

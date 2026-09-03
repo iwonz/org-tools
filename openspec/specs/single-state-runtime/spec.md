@@ -11,7 +11,8 @@ catalog whose optional color is a supplied semantic name or canonical lowercase 
 HEX value. Every View SHALL contain its own `{ layoutMode, units }` structure and timestamps without
 Employee copies or overrides. Durable UI SHALL contain locale, theme, shell state, active section,
 system Unit navigation, complete birthday and custom filters, searches, Calendar and Download
-settings, active Editor View, and bounded viewport/selection entries for every View. Download
+settings, active Editor View, and bounded viewport, selection, and distribution-mode entries for
+every View. Download
 settings SHALL store its source View, one complete `jsonTopLevelFieldOrder` covering scalar Employee
 fields plus Unit and Tag collection keys, ordered nested Unit and Tag fields, independently named
 fields, exact exclusion keys, Template row mode, and Template format. They SHALL NOT store a separate
@@ -257,3 +258,16 @@ written to SQLite, browser storage, `BroadcastChannel`, or the public State befo
 - **WHEN** a note is saved while another Pages tab is live
 - **THEN** the peer tab receives the complete validated state containing the note, while unsaved
   drafts are never broadcast
+
+### Requirement: Distribution mode uses bounded automatic UI persistence
+Changing distribution mode SHALL increment only the UI change sequence and SHALL use the existing
+automatic server write or live Pages-tab broadcast. It MUST NOT serialize or mutate organization
+data solely because the mode or Employee selection changed.
+
+#### Scenario: Reload server mode
+- **WHEN** distribution mode is toggled and the local application reloads after automatic UI write
+- **THEN** the same Units remain enabled in the same View
+
+#### Scenario: Synchronize Pages tabs
+- **WHEN** one live Pages tab changes distribution mode
+- **THEN** another live tab receives the bounded UI setting without browser snapshot persistence

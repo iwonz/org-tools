@@ -27,4 +27,15 @@ describe("state change tracking", () => {
     expect(store.organizationChangeSequence).toBe(0);
     expect(store.uiChangeSequence).toBeGreaterThan(0);
   });
+
+  it("tracks distribution mode as bounded UI without an organization change", () => {
+    const store = new OrgStore();
+    const unitId = store.orgEditor.addUnit({ name: "Source", x: 0, y: 0 });
+    store.resetChangeTracking();
+
+    store.orgEditor.toggleUnitDistributionMode(unitId);
+
+    expect(store.organizationChangeSequence).toBe(0);
+    expect(store.uiChangeSequence).toBeGreaterThan(0);
+  });
 });

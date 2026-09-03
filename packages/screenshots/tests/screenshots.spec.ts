@@ -8,6 +8,7 @@ import sharp from "sharp";
 import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import {
+  createDistributionStateFile,
   openBlankState,
   openImportDialog,
   replaceWithSyntheticState,
@@ -543,6 +544,22 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(page.locator("[data-org-editor-context-menu]")).toBeVisible();
   await capture(page, "editor-bulk-employees");
   await page.keyboard.press("Escape");
+
+  const distributionDialog = await openImportDialog(page, await createDistributionStateFile());
+  await distributionDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  const distributionProduct = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await distributionProduct.click({ button: "right", position: { x: 20, y: 20 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await expect(distributionProduct.locator('[data-distribution-status="assigned"]')).toBeVisible();
+  await expect(
+    distributionProduct.locator('[data-distribution-status="sourceOnly"]'),
+  ).toBeVisible();
+  await capture(page, "editor-distribution-status");
+  await distributionProduct
+    .locator('[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]')
+    .click();
+  await expect(page.locator("[data-distribution-connection] circle")).toBeVisible();
+  await capture(page, "editor-distribution-connections");
 
   await replaceWithImageExportState(page);
   const dialog = await openEditorExport(page);

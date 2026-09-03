@@ -42,6 +42,10 @@ SQLite state. Preview never executes raw HTML and replaces Markdown images with 
 so opening a note cannot fetch an asset. Supported external links navigate only after a direct
 click and always use `noopener`, `noreferrer`, and a no-referrer policy. Editor Image and structured
 Employee outputs omit note content.
+Distribution mode derives direct membership, tonal status, and selected-placement paths solely from
+the active in-memory View. Its bounded View UI setting may use the existing local persistence or
+live-tab channel, but the visualization is absent from PNG and Employee outputs and creates no
+request or additional browser storage.
 
 ## Local files and publication
 

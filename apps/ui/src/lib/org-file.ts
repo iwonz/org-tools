@@ -1044,6 +1044,10 @@ const validateStateGraph = (state: OrgToolsState): void => {
   }
   for (const viewUi of state.ui.editor.views) {
     const viewUnitIds = unitIdsByViewId.get(viewUi.viewId) ?? new Set<UnitId>();
+    assertUniqueIds(viewUi.distributionModeUnitIds, "Distribution mode Unit IDs must be unique.");
+    if (viewUi.distributionModeUnitIds.some((unitId) => !viewUnitIds.has(unitId))) {
+      throw new Error("Distribution mode references a Unit outside its View.");
+    }
     for (const item of viewUi.selectedItems) {
       if (!viewUnitIds.has(item.unitId)) throw new Error("Editor selects a missing Unit.");
       if (item.type === "employee" && !employeeIds.has(item.employeeId)) {
@@ -1080,8 +1084,9 @@ const validateStateGraph = (state: OrgToolsState): void => {
 const normalizeViewUiState = (value: unknown): OrgToolsViewUiState | null => {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ["selectedItems", "viewId", "viewport"]) ||
+    !hasExactKeys(value, ["distributionModeUnitIds", "selectedItems", "viewId", "viewport"]) ||
     !isUuid(value.viewId) ||
+    !isUuidArray(value.distributionModeUnitIds) ||
     !Array.isArray(value.selectedItems)
   ) {
     return null;
@@ -1090,6 +1095,7 @@ const normalizeViewUiState = (value: unknown): OrgToolsViewUiState | null => {
   const viewport = normalizeViewport(value.viewport);
   if (!viewport || selectedItems.some((item) => !item)) return null;
   return {
+    distributionModeUnitIds: value.distributionModeUnitIds,
     selectedItems: selectedItems as OrgEditorSelectedItem[],
     viewId: value.viewId,
     viewport,
@@ -1349,6 +1355,7 @@ export const createBlankOrgToolsState = (
         searchQuery: "",
         views: [
           {
+            distributionModeUnitIds: editor.distributionModeUnitIds,
             selectedItems: editor.selectedItems,
             viewId: systemViewId,
             viewport: editor.viewport,

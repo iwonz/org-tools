@@ -31,6 +31,7 @@ import {
   HiOutlineArrowPath,
   HiOutlineArrowsPointingIn,
   HiOutlineArrowsPointingOut,
+  HiOutlineArrowsRightLeft,
   HiOutlineBuildingOffice2,
   HiOutlineChevronRight,
   HiOutlineClipboard,
@@ -92,6 +93,15 @@ import { UnitNoteDialog } from "@/components/unit-note-dialog";
 import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
+import {
+  buildEditorEmployeeUnitIndex,
+  createEditorDistributionConnection,
+  editorDistributionConnectionIntersectsRect,
+  getEditorDistributionPlacement,
+  getEditorDistributionSelection,
+  getEditorEmployeeOtherUnitCount,
+  getEditorEmployeeOtherUnitIds,
+} from "@/lib/editor-distribution";
 import {
   countEmployeeIdsInSelection,
   countEmployeeIdsNotInSelection,
@@ -436,6 +446,7 @@ function OrgEditorFloatingMenu({ children, point }: { children: ReactNode; point
 }
 
 function OrgEditorMenuButton({
+  ariaChecked,
   ariaExpanded,
   ariaHasPopup,
   buttonRef,
@@ -447,6 +458,7 @@ function OrgEditorMenuButton({
   onKeyDown,
   variant = "default",
 }: {
+  ariaChecked?: boolean;
   ariaExpanded?: boolean;
   ariaHasPopup?: "menu";
   buttonRef?: Ref<HTMLButtonElement>;
@@ -462,6 +474,7 @@ function OrgEditorMenuButton({
 
   return (
     <Button
+      aria-checked={ariaChecked}
       aria-expanded={ariaExpanded}
       aria-haspopup={ariaHasPopup}
       className={cn(
@@ -475,6 +488,7 @@ function OrgEditorMenuButton({
       onFocus={onFocus}
       onKeyDown={onKeyDown}
       ref={buttonRef}
+      role={ariaChecked === undefined ? "menuitem" : "menuitemcheckbox"}
       size="sm"
       type="button"
       variant="ghost"
@@ -967,6 +981,8 @@ function OrgEditorEmployeeDragPreview({
 }
 
 function OrgEditorNode({
+  distributionEnabled,
+  distributionUnitIdsByEmployeeId,
   employeeById,
   isConnectionDropTarget,
   isEmployeeDropTarget,
@@ -987,6 +1003,8 @@ function OrgEditorNode({
   unit,
   visibleWorldRect,
 }: {
+  distributionEnabled: boolean;
+  distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   isConnectionDropTarget: boolean;
   isEmployeeDropTarget: boolean;
@@ -1224,16 +1242,45 @@ function OrgEditorNode({
                 }),
               );
               const isBoss = unit.bossEmployeeId === employeeId;
+              const distributionOtherUnitCount = distributionEnabled
+                ? getEditorEmployeeOtherUnitCount(distributionUnitIdsByEmployeeId, employeeId)
+                : null;
+              const distributionStatus =
+                distributionOtherUnitCount === null
+                  ? null
+                  : distributionOtherUnitCount > 0
+                    ? "assigned"
+                    : "sourceOnly";
+              const employeeName = employee?.fullName ?? t("Employee unavailable");
+              const distributionLabel =
+                distributionStatus === "assigned"
+                  ? t("Distributed to {count} other Units", {
+                      count: distributionOtherUnitCount ?? 0,
+                    })
+                  : distributionStatus === "sourceOnly"
+                    ? t("Only in this Unit")
+                    : null;
 
               return (
                 <button
+                  aria-label={
+                    distributionLabel ? `${employeeName}. ${distributionLabel}` : employeeName
+                  }
                   className={cn(
                     "flex min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-start text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
                     unit.liveFilter === null
                       ? "cursor-grab active:cursor-grabbing"
                       : "cursor-default",
-                    employeeSelected && "bg-primary text-primary-foreground hover:bg-primary",
+                    distributionStatus === "assigned" &&
+                      "bg-distribution-assigned text-distribution-assigned-foreground hover:bg-distribution-assigned",
+                    distributionStatus === "sourceOnly" &&
+                      "bg-distribution-source-only text-distribution-source-only-foreground hover:bg-distribution-source-only",
+                    employeeSelected &&
+                      (distributionStatus
+                        ? "ring-2 ring-inset ring-signal"
+                        : "bg-primary text-primary-foreground hover:bg-primary"),
                   )}
+                  data-distribution-status={distributionStatus ?? "none"}
                   data-org-editor-employee-id={employeeId}
                   data-org-editor-employee-row
                   key={`${unit.id}:${employeeId}`}
@@ -1284,14 +1331,14 @@ function OrgEditorNode({
                     className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pe-1"
                     data-org-editor-employee-content
                   >
-                    <span className="truncate">
-                      {employee?.fullName ?? t("Employee unavailable")}
-                    </span>
+                    <span className="truncate">{employeeName}</span>
                     {employee && (
                       <EmployeeTags
                         className={cn(
                           "mt-0.5",
-                          employeeSelected && "[&_span]:text-primary-foreground",
+                          employeeSelected &&
+                            !distributionStatus &&
+                            "[&_span]:text-primary-foreground",
                         )}
                         compact
                         density="canvas"
@@ -1899,6 +1946,14 @@ export const OrgStructureEditorTab = observer(() => {
       ),
     [editor.units, resolvedLiveEmployeeIdsByUnitId],
   );
+  const distributionModeUnitIdSet = useMemo(
+    () => new Set(editor.distributionModeUnitIds),
+    [editor.distributionModeUnitIds],
+  );
+  const distributionUnitIdsByEmployeeId = useMemo(
+    () => buildEditorEmployeeUnitIndex(displayUnits),
+    [displayUnits],
+  );
   useMemo(() => {
     for (const unit of displayUnits) {
       const availableWidth = Math.max(
@@ -2355,6 +2410,55 @@ export const OrgStructureEditorTab = observer(() => {
       unit: withUnitPreviewPosition(entry.unit),
     }));
   }, [dragConnectionEntries, visibleConnectionQuery.items, withUnitPreviewPosition]);
+
+  const distributionConnections = useMemo(() => {
+    const selectedItems = selectionPreview ?? editor.selectedItems;
+    const selectedItem = getEditorDistributionSelection(selectedItems, distributionModeUnitIdSet);
+    if (!selectedItem) return [];
+    if (
+      !distributionUnitIdsByEmployeeId.get(selectedItem.employeeId)?.includes(selectedItem.unitId)
+    ) {
+      return [];
+    }
+
+    const sourceUnit = unitById.get(selectedItem.unitId);
+    if (!sourceUnit) return [];
+    const sourcePlacement = getEditorDistributionPlacement({
+      employeeById,
+      employeeId: selectedItem.employeeId,
+      unit: withUnitPreviewPosition(sourceUnit),
+    });
+
+    return getEditorEmployeeOtherUnitIds(
+      distributionUnitIdsByEmployeeId,
+      selectedItem.employeeId,
+      selectedItem.unitId,
+    ).flatMap((targetUnitId) => {
+      const targetUnit = unitById.get(targetUnitId);
+      if (!targetUnit) return [];
+      const targetPlacement = getEditorDistributionPlacement({
+        employeeById,
+        employeeId: selectedItem.employeeId,
+        unit: withUnitPreviewPosition(targetUnit),
+      });
+      const connection = createEditorDistributionConnection({
+        source: sourcePlacement.bounds,
+        target: targetPlacement.bounds,
+        targetHiddenByCollapse: targetPlacement.hiddenByCollapse,
+      });
+      if (!editorDistributionConnectionIntersectsRect(connection, visibleWorldRect)) return [];
+      return [{ ...connection, targetUnitId }];
+    });
+  }, [
+    distributionModeUnitIdSet,
+    distributionUnitIdsByEmployeeId,
+    editor.selectedItems,
+    employeeById,
+    selectionPreview,
+    unitById,
+    visibleWorldRect,
+    withUnitPreviewPosition,
+  ]);
 
   const getConnectionDropTarget = useCallback(
     (unitId: OrgEditorUnitId, point: CanvasPoint) => {
@@ -3395,6 +3499,29 @@ export const OrgStructureEditorTab = observer(() => {
                   strokeWidth={2}
                 />
               ))}
+              {distributionConnections.map((connection) => (
+                <g
+                  data-distribution-connection={connection.targetUnitId}
+                  key={connection.targetUnitId}
+                >
+                  <path
+                    className="stroke-distribution-assigned-foreground"
+                    d={connection.path}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeWidth={2.5}
+                  />
+                  {connection.showEndpointMarker && (
+                    <circle
+                      className="fill-distribution-assigned-foreground stroke-card"
+                      cx={connection.end.x}
+                      cy={connection.end.y}
+                      r={4}
+                      strokeWidth={2}
+                    />
+                  )}
+                </g>
+              ))}
               {connectionDragPath && (
                 <path
                   className="stroke-primary"
@@ -3408,6 +3535,8 @@ export const OrgStructureEditorTab = observer(() => {
             </svg>
             {visibleUnits.map((unit) => (
               <OrgEditorNode
+                distributionEnabled={distributionModeUnitIdSet.has(unit.id)}
+                distributionUnitIdsByEmployeeId={distributionUnitIdsByEmployeeId}
                 employeeById={employeeById}
                 isConnectionDropTarget={connectionDropTargetUnit?.id === unit.id}
                 isEmployeeDropTarget={employeeDropTargetUnit?.id === unit.id}
@@ -3640,6 +3769,37 @@ export const OrgStructureEditorTab = observer(() => {
                     >
                       <HiOutlineUserPlus />
                       {t("Create Employee")}
+                    </OrgEditorMenuButton>
+                  )}
+                  {contextMenuSingleUnit && (
+                    <OrgEditorMenuButton
+                      ariaChecked={distributionModeUnitIdSet.has(contextMenuSingleUnit.id)}
+                      dataDemoId="org-editor-distribution-mode-action"
+                      onClick={() => {
+                        editor.toggleUnitDistributionMode(contextMenuSingleUnit.id);
+                        setContextMenu(null);
+                      }}
+                    >
+                      <HiOutlineArrowsRightLeft />
+                      <span className="min-w-0 flex-1 truncate">{t("Distribution mode")}</span>
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "relative ms-auto h-4 w-7 shrink-0 rounded-full transition-colors",
+                          distributionModeUnitIdSet.has(contextMenuSingleUnit.id)
+                            ? "bg-signal"
+                            : "bg-muted-foreground/35",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-0.5 size-3 rounded-full bg-background transition-[inset-inline-start]",
+                            distributionModeUnitIdSet.has(contextMenuSingleUnit.id)
+                              ? "start-3.5"
+                              : "start-0.5",
+                          )}
+                        />
+                      </span>
                     </OrgEditorMenuButton>
                   )}
                   <span className="my-1 h-px bg-border" />

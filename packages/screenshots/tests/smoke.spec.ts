@@ -5,9 +5,11 @@ import type { OrgToolsState } from "@org-tools/types";
 import type { Locator, Page, Request } from "@playwright/test";
 import sharp from "sharp";
 
+import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import {
+  createDistributionStateFile,
   expectLocalRequestsOnly,
   openBlankState,
   openImportDialog,
@@ -2131,6 +2133,105 @@ test("renders split Org Editor controls and reveals search to the left", async (
   await assertLocalRequests();
 });
 
+test("persists Editor distribution highlighting and selected placement connections", async ({
+  page,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  const importDialog = await openImportDialog(page, await createDistributionStateFile());
+  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await expect(importDialog).toBeHidden();
+
+  const productUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  const platformUnit = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
+  await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  let distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
+  await expect(distributionAction).toHaveAttribute("role", "menuitemcheckbox");
+  await expect(distributionAction).toHaveAttribute("aria-checked", "false");
+  await distributionAction.focus();
+  await distributionAction.press("Enter");
+  await expect(distributionAction).toHaveCount(0);
+
+  const sharedRow = productUnit.locator(
+    '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]',
+  );
+  const sourceOnlyRow = productUnit.locator(
+    '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000004"]',
+  );
+  await expect(sharedRow).toHaveAttribute("data-distribution-status", "assigned");
+  await expect(sharedRow).toHaveAccessibleName(/Distributed to 1 other Units/u);
+  await expect(sourceOnlyRow).toHaveAttribute("data-distribution-status", "sourceOnly");
+  await expect(sourceOnlyRow).toHaveAccessibleName(/Only in this Unit/u);
+  await expect
+    .poll(async () => {
+      const assigned = await getBackgroundColor(sharedRow);
+      const sourceOnly = await getBackgroundColor(sourceOnlyRow);
+      return assigned !== "oklab(0 0 0 / 0)" && assigned !== sourceOnly;
+    })
+    .toBe(true);
+
+  await sharedRow.click();
+  await expect(page.locator("[data-distribution-connection]")).toHaveCount(1);
+  await expect(page.locator("[data-distribution-connection] circle")).toHaveCount(1);
+  await sourceOnlyRow.click({ modifiers: ["Control"] });
+  await expect(page.locator("[data-distribution-connection]")).toHaveCount(0);
+  await expect(sharedRow).toHaveAttribute("data-distribution-status", "assigned");
+
+  await platformUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
+  await distributionAction.press("Space");
+  await page.waitForTimeout(500);
+  await page.reload({ waitUntil: "domcontentloaded" });
+
+  const restoredProduct = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await restoredProduct.click({ button: "right", position: { x: 80, y: 40 } });
+  await expect(
+    page.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+  const restoredPlatform = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
+  await restoredPlatform.click({ button: "right", position: { x: 80, y: 40 } });
+  await expect(
+    page.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+
+  const stateDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const downloadedState = JSON.parse(
+    await readFile(await (await stateDownload).path(), "utf8"),
+  ) as OrgToolsState;
+  expect(downloadedState.ui.editor.views[0]?.distributionModeUnitIds).toEqual([
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  ]);
+
+  await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");
+  const darkSharedRow = page
+    .locator('[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]')
+    .locator('[data-distribution-status="assigned"]');
+  await expect(darkSharedRow).toBeVisible();
+  expect(await getBackgroundColor(darkSharedRow)).not.toBe("rgba(0, 0, 0, 0)");
+
+  await selectDialogRadio(page, "language-toggle", "language-dialog", "ru");
+  await page
+    .locator('[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]')
+    .click({ button: "right", position: { x: 80, y: 40 } });
+  await expect(page.locator('[data-demo-id="org-editor-distribution-mode-action"]')).toContainText(
+    ruMessages.Ui["Distribution mode"],
+  );
+  await page.keyboard.press("Escape");
+  await selectDialogRadio(page, "language-toggle", "language-dialog", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await page
+    .locator('[data-org-editor-unit-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]')
+    .click({ button: "right", position: { x: 80, y: 40 } });
+  await expect(page.locator('[data-demo-id="org-editor-distribution-mode-action"]')).toContainText(
+    arMessages.Ui["Distribution mode"],
+  );
+  await assertLocalRequests();
+});
+
 test("creates, isolates, renames, restores, and deletes Editor Views", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
@@ -2551,6 +2652,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   state.ui.editor.activeViewId = systemView.id;
   state.ui.editor.views = [
     {
+      distributionModeUnitIds: [],
       selectedItems: [],
       viewId: systemView.id,
       viewport: { scale: 1, x: 0, y: 0 },

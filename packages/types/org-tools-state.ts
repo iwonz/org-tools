@@ -105,6 +105,7 @@ export type OrgToolsViewDocument = OrgToolsViewDocumentBase &
   ({ kind: "custom"; name: string } | { kind: "system"; name: null });
 
 export type OrgToolsViewUiState = {
+  distributionModeUnitIds: UnitId[];
   selectedItems: OrgEditorSelectedItem[];
   viewId: ViewId;
   viewport: OrgEditorCanvasViewport;

@@ -29,6 +29,9 @@ Each Unit in every View requires an LF-normalized `noteMarkdown` string of at mo
 older Unit records without this field and noncanonical CRLF values are rejected. Notes remain
 View-local and are included only in this complete state format. Export downloads
 `org-tools-state.json` with every View.
+Every `ui.editor.views` entry also requires a unique `distributionModeUnitIds` array containing
+only Unit IDs from that View. The setting is transferred only as bounded complete-state UI; older
+entries without it, duplicates, and cross-View references are rejected atomically.
 
 ## Employees
 

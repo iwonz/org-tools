@@ -285,7 +285,9 @@ export class OrgStore {
       this.downloadSourceViewId,
       ...this.orgViews.views.flatMap((view) => {
         const editor = this.orgViews.editorByViewId.get(view.id);
-        return editor ? [editor.selectedItems, editor.viewport] : [];
+        return editor
+          ? [editor.distributionModeUnitIds, editor.selectedItems, editor.viewport]
+          : [];
       }),
     ];
   }
@@ -1561,6 +1563,7 @@ export class OrgStore {
       this.exportSession.loadState(ui.download);
       for (const viewUi of ui.editor.views) {
         const editor = this.orgViews.editorByViewId.get(viewUi.viewId);
+        editor?.setDistributionModeUnitIds(viewUi.distributionModeUnitIds);
         editor?.setViewport({ ...viewUi.viewport });
         editor?.setSelectedItems(viewUi.selectedItems.map((item) => ({ ...item })));
       }

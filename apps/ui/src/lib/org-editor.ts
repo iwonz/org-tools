@@ -550,6 +550,7 @@ export const findOrgEditorEmployeeRowIndex = (
 
 export const createDefaultOrgEditorState = (): OrgEditorState => {
   return {
+    distributionModeUnitIds: [],
     layoutMode: ORG_EDITOR_DEFAULT_LAYOUT_MODE,
     selectedItems: [],
     units: [],

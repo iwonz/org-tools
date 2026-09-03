@@ -29,6 +29,7 @@ describe("OrgViewsStore shared clipboard", () => {
       y: 240,
     });
     source.synchronizeLiveResolution(new Map([[childId, [employeeId]]]));
+    source.toggleUnitDistributionMode(rootId);
     source.setSelectedItems([{ type: "unit", unitId: rootId }]);
     source.copySelected();
 
@@ -47,6 +48,7 @@ describe("OrgViewsStore shared clipboard", () => {
     expect(pastedRoot?.noteMarkdown).toBe("# Source note");
     expect(pastedChild?.parentId).toBe(pastedRoot?.id);
     expect(pastedChild?.liveFilter?.selectedUnitIds).toEqual([pastedRoot?.id]);
+    expect(target.distributionModeUnitIds).toEqual([]);
     expect(target.canUndo).toBe(true);
 
     target.undo();
@@ -113,6 +115,7 @@ describe("OrgViewsStore shared clipboard", () => {
     if (!source) return;
     const unitId = source.addUnit({ name: "Platform", x: 0, y: 0 });
     source.setUnitNoteMarkdown(unitId, "Initial context");
+    source.toggleUnitDistributionMode(unitId);
 
     const targetViewId = views.createView("Plan", {
       type: "copy",
@@ -122,6 +125,7 @@ describe("OrgViewsStore shared clipboard", () => {
     const copiedUnit = target?.units[0];
     expect(copiedUnit?.id).not.toBe(unitId);
     expect(copiedUnit?.noteMarkdown).toBe("Initial context");
+    expect(target?.distributionModeUnitIds).toEqual(copiedUnit ? [copiedUnit.id] : []);
 
     if (!copiedUnit) return;
     target?.setUnitNoteMarkdown(copiedUnit.id, "Plan-only context");

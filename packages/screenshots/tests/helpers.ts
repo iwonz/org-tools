@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import type { AppLocale, OrgToolsState } from "@org-tools/types";
@@ -22,6 +23,27 @@ export const productTabs = [
 ] as const;
 
 export const localeStorageKey = "org-tools-locale";
+
+export async function createDistributionStateFile(
+  targetCollapsed = true,
+): Promise<ImportFilePayload> {
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const systemView = state.organization.views.find((view) => view.kind === "system");
+  const sourceUnit = systemView?.structure.units.find((unit) => unit.name === "Product");
+  const targetUnit = systemView?.structure.units.find((unit) => unit.name === "Platform");
+  const sharedEmployeeId = sourceUnit?.employeeIds[0];
+  if (!sourceUnit || !targetUnit || !sharedEmployeeId) {
+    throw new Error("The distribution fixture Units are unavailable.");
+  }
+  targetUnit.employeeIds = [sharedEmployeeId, ...targetUnit.employeeIds];
+  targetUnit.collapsed = targetCollapsed;
+  targetUnit.bossEmployeeId = null;
+  return {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "distribution-state.json",
+  };
+}
 const emptyEmployeeFilters = () => ({
   birthday: null,
   customFields: [],
@@ -121,6 +143,7 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
     searchQuery: "",
     views: [
       {
+        distributionModeUnitIds: [],
         selectedItems: [],
         viewId: systemView.id,
         viewport: { scale: 1, x: 0, y: 0 },

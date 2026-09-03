@@ -23,7 +23,7 @@ requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 54 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 56 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
@@ -48,7 +48,8 @@ Employees and Tags remain global while each View keeps its own Units, assignment
 history, selection, and viewport. Data Download can use any View as its source.
 Each Unit can carry a View-local Markdown note. Notes open in a safe Preview, edit as an isolated
 draft, participate in View clone and cross-View Copy/Paste, and stay out of PNG and Employee data
-outputs.
+outputs. A View-local distribution mode highlights direct members already placed elsewhere and
+traces one selected Employee to every other placement without changing or exporting the structure.
 Analytics includes known birth-year distributions plus average, youngest, and oldest age summaries
 for the whole catalog, men, and women; unknown `1900` years are excluded.
 Template formats in Data Download, Editor export, and the Employee model place a help affordance

@@ -179,6 +179,9 @@ const ensureStateHasCanvasShape = (state: OrgEditorState): OrgEditorState => {
   const fallbackState = createDefaultOrgEditorState();
 
   return {
+    distributionModeUnitIds: Array.isArray(state.distributionModeUnitIds)
+      ? [...new Set(state.distributionModeUnitIds)]
+      : fallbackState.distributionModeUnitIds,
     selectedItems: Array.isArray(state.selectedItems)
       ? state.selectedItems.map(cloneSelectedItem)
       : fallbackState.selectedItems,
@@ -435,6 +438,7 @@ const areHistorySnapshotsEqual = (
 
 export class OrgEditorStore {
   units: OrgEditorUnit[] = [];
+  distributionModeUnitIds: OrgEditorUnitId[] = [];
   selectedItems: OrgEditorSelectedItem[] = [];
   viewport: OrgEditorCanvasViewport = createDefaultOrgEditorState().viewport;
   layoutMode: OrgEditorLayoutMode = createDefaultOrgEditorState().layoutMode;
@@ -461,6 +465,7 @@ export class OrgEditorStore {
       {
         clipboardController: false,
         commandDepth: false,
+        distributionModeUnitIds: observable.shallow,
         localClipboard: observable.ref,
         onDocumentChange: false,
         redoStack: observable.shallow,
@@ -550,6 +555,7 @@ export class OrgEditorStore {
 
   createState(): OrgEditorState {
     return {
+      distributionModeUnitIds: [...this.distributionModeUnitIds],
       selectedItems: this.selectedItems.map(cloneSelectedItem),
       units: this.units.map(cloneUnit),
       viewport: cloneViewport(this.viewport),
@@ -561,6 +567,9 @@ export class OrgEditorStore {
     const nextState = ensureStateHasCanvasShape(state);
 
     this.units = nextState.units;
+    this.distributionModeUnitIds = nextState.distributionModeUnitIds.filter((unitId) =>
+      nextState.units.some((unit) => unit.id === unitId),
+    );
     this.viewport = nextState.viewport;
     this.layoutMode = nextState.layoutMode;
     this.selectedItems = filterSelectedItemsForUnits(nextState.selectedItems, nextState.units);
@@ -672,6 +681,14 @@ export class OrgEditorStore {
     this.units = snapshot.units.map(cloneUnit);
     this.layoutMode = snapshot.layoutMode;
     this.selectedItems = filterSelectedItemsForUnits(this.selectedItems, this.units);
+    this.pruneDistributionModeUnitIds();
+  }
+
+  private pruneDistributionModeUnitIds(): void {
+    const unitIds = new Set(this.units.map((unit) => unit.id));
+    this.distributionModeUnitIds = this.distributionModeUnitIds.filter((unitId) =>
+      unitIds.has(unitId),
+    );
   }
 
   private realignRootSubtrees(rootIds: Iterable<OrgEditorUnitId | null>): void {
@@ -804,6 +821,20 @@ export class OrgEditorStore {
     }
 
     this.selectedItems = [...nextItemsByKey.values()];
+  }
+
+  setDistributionModeUnitIds(unitIds: readonly OrgEditorUnitId[]): void {
+    const existingUnitIds = new Set(this.units.map((unit) => unit.id));
+    this.distributionModeUnitIds = [
+      ...new Set(unitIds.filter((unitId) => existingUnitIds.has(unitId))),
+    ];
+  }
+
+  toggleUnitDistributionMode(unitId: OrgEditorUnitId): void {
+    if (!this.units.some((unit) => unit.id === unitId)) return;
+    this.distributionModeUnitIds = this.distributionModeUnitIds.includes(unitId)
+      ? this.distributionModeUnitIds.filter((currentUnitId) => currentUnitId !== unitId)
+      : [...this.distributionModeUnitIds, unitId];
   }
 
   selectAllUnits(): void {
@@ -1578,6 +1609,7 @@ export class OrgEditorStore {
         });
       this.realignRootSubtrees(affectedRootUnitIds);
       this.selectedItems = [];
+      this.pruneDistributionModeUnitIds();
     });
   }
 

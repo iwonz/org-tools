@@ -32,6 +32,10 @@ const cloneStateWithRemappedUnits = (state: OrgEditorState): OrgEditorState => {
   );
 
   return {
+    distributionModeUnitIds: state.distributionModeUnitIds.flatMap((unitId) => {
+      const nextUnitId = unitIdMap.get(unitId);
+      return nextUnitId ? [nextUnitId] : [];
+    }),
     layoutMode: state.layoutMode,
     selectedItems: [],
     units: state.units.map((unit) => ({
@@ -129,6 +133,7 @@ export class OrgViewsStore {
         );
         const viewUi = uiByViewId.get(view.id);
         editor.loadState({
+          distributionModeUnitIds: viewUi?.distributionModeUnitIds ?? [],
           layoutMode: view.structure.layoutMode,
           selectedItems: viewUi?.selectedItems ?? [],
           units: view.structure.units,
@@ -220,6 +225,7 @@ export class OrgViewsStore {
     return this.viewRecords.map((view) => {
       const editor = this.editorByViewId.get(view.id);
       return {
+        distributionModeUnitIds: [...(editor?.distributionModeUnitIds ?? [])],
         selectedItems: editor?.selectedItems.map((item) => ({ ...item })) ?? [],
         viewId: view.id,
         viewport: { ...(editor?.viewport ?? createDefaultOrgEditorState().viewport) },

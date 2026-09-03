@@ -369,6 +369,7 @@
       "searchQuery": "",
       "views": [
         {
+          "distributionModeUnitIds": [],
           "selectedItems": [],
           "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
           "viewport": {

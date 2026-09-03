@@ -84,6 +84,7 @@ describe("OrgToolsState", () => {
     if (!nextEmployeeId) throw new Error("Expected an Employee.");
     store.orgEditor.setViewport({ scale: 1.25, x: 40, y: 60 });
     store.orgEditor.setSelectedItems([{ type: "unit", unitId }]);
+    store.orgEditor.toggleUnitDistributionMode(unitId);
     store.orgEditor.setUnitNoteMarkdown(unitId, "# Platform\n\nOwns delivery.");
     store.setTheme("dark");
 
@@ -98,6 +99,7 @@ describe("OrgToolsState", () => {
     expect(isEmployeeId(nextEmployeeId)).toBe(true);
     expect(restored.theme).toBe("dark");
     expect(restored.orgEditor.viewport).toEqual({ scale: 1.25, x: 40, y: 60 });
+    expect(restored.orgEditor.distributionModeUnitIds).toEqual([unitId]);
     expect(restored.orgEditor.units[0]?.noteMarkdown).toBe("# Platform\n\nOwns delivery.");
     expect(
       restored.uiOrgStructure?.indexes.employeesById.get(nextEmployeeId)?.unitPositions[0],
@@ -137,6 +139,7 @@ describe("OrgToolsState", () => {
     const systemViewId = store.systemOrgViewId;
     store.mainOrgEditor.setViewport({ scale: 1.2, x: 48, y: -24 });
     store.mainOrgEditor.setSelectedItems([{ type: "unit", unitId }]);
+    store.mainOrgEditor.toggleUnitDistributionMode(unitId);
 
     const customViewId = store.createOrgView("Scenario A", {
       type: "copy",
@@ -146,6 +149,7 @@ describe("OrgToolsState", () => {
     expect(copiedUnit?.id).not.toBe(unitId);
     expect(store.orgEditor.viewport).toEqual({ scale: 1.2, x: 48, y: -24 });
     expect(store.orgEditor.selectedItems).toEqual([]);
+    expect(store.orgEditor.distributionModeUnitIds).toEqual(copiedUnit ? [copiedUnit.id] : []);
 
     store.orgEditor.addUnit({ name: "Scenario only", x: 480, y: 0 });
     expect(store.mainOrgEditor.units).toHaveLength(1);
@@ -175,6 +179,7 @@ describe("OrgToolsState", () => {
     const customUnitId = store.orgEditor.addUnit({ name: "Future", x: 240, y: 120 });
     store.orgEditor.setViewport({ scale: 0.8, x: -96, y: 72 });
     store.orgEditor.setSelectedItems([{ type: "unit", unitId: customUnitId }]);
+    store.orgEditor.toggleUnitDistributionMode(customUnitId);
 
     const restored = new OrgStore();
     restored.loadOrgToolsState(store.createOrgToolsState(), null, null);
@@ -182,8 +187,35 @@ describe("OrgToolsState", () => {
     expect(restored.activeOrgViewId).toBe(customViewId);
     expect(restored.orgEditor.viewport).toEqual({ scale: 0.8, x: -96, y: 72 });
     expect(restored.orgEditor.selectedItems).toEqual([{ type: "unit", unitId: customUnitId }]);
+    expect(restored.orgEditor.distributionModeUnitIds).toEqual([customUnitId]);
     expect(restored.mainOrgEditor.viewport).toEqual({ scale: 1.1, x: 24, y: 48 });
     expect(restored.mainOrgEditor.selectedItems).toEqual([{ type: "unit", unitId }]);
+    expect(restored.mainOrgEditor.distributionModeUnitIds).toEqual([]);
+  });
+
+  test("requires valid unique distribution Unit IDs in every View UI entry", () => {
+    const { store, unitId } = populatedStore();
+    const state = store.createOrgToolsState();
+    const viewUi = state.ui.editor.views[0];
+    if (!viewUi) throw new Error("Expected View UI.");
+
+    const missing = structuredClone(state) as unknown as {
+      ui: { editor: { views: Array<Record<string, unknown>> } };
+    };
+    delete missing.ui.editor.views[0]?.distributionModeUnitIds;
+    expect(() => parseOrgToolsState(missing)).toThrow();
+
+    const duplicate = structuredClone(state);
+    const duplicateViewUi = duplicate.ui.editor.views[0];
+    if (!duplicateViewUi) throw new Error("Expected duplicate View UI.");
+    duplicateViewUi.distributionModeUnitIds = [unitId, unitId];
+    expect(() => parseOrgToolsState(duplicate)).toThrow("must be unique");
+
+    const foreign = structuredClone(state);
+    const foreignViewUi = foreign.ui.editor.views[0];
+    if (!foreignViewUi) throw new Error("Expected foreign View UI.");
+    foreignViewUi.distributionModeUnitIds = [uuid(999)];
+    expect(() => parseOrgToolsState(foreign)).toThrow("outside its View");
   });
 
   test("normalizes unique custom View names and protects the system View", () => {

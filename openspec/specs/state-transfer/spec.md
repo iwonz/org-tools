@@ -159,7 +159,8 @@ array Import with Teams SHALL create or update assignments only in the system Vi
 
 #### Scenario: Round-trip Views
 - **WHEN** a valid current State containing custom Views is exported and imported
-- **THEN** View isolation, global catalogs, active View, per-View viewport/selection, and Download source restore exactly
+- **THEN** View isolation, global catalogs, active View, per-View viewport, selection, distribution
+  mode, and Download source restore exactly
 
 #### Scenario: Reject single-structure State
 - **WHEN** State Import receives `organization.structure` without the current View array
@@ -182,3 +183,17 @@ SHALL NOT expose or modify Unit notes.
 #### Scenario: Import the former Unit shape
 - **WHEN** a complete State contains a Unit without `noteMarkdown`
 - **THEN** strict validation rejects the file atomically without changing current state
+
+### Requirement: Complete State requires distribution View UI
+Every View UI entry in the strict current State SHALL contain a unique
+`distributionModeUnitIds` array whose IDs belong to that View. Complete State Import SHALL reject a
+missing, duplicate, or foreign Unit ID atomically; complete State Export SHALL preserve valid mode
+settings.
+
+#### Scenario: Transfer enabled Units
+- **WHEN** a valid complete State with enabled distribution Units is exported and imported
+- **THEN** every View restores its own enabled Unit IDs
+
+#### Scenario: Import the former View UI shape
+- **WHEN** complete State omits `distributionModeUnitIds`
+- **THEN** validation rejects it without changing the current state

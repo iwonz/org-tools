@@ -392,6 +392,34 @@
     ]
   },
   {
+    "id": "editor-distribution-status",
+    "module": "editor",
+    "featured": false,
+    "title": "Employee distribution status",
+    "file": "feature-editor-distribution-status.png",
+    "description": "Inspect direct members of one Unit with green distributed and amber source-only tonal states.",
+    "capabilities": [
+      "View-local mode",
+      "Direct membership",
+      "Manual and Live Units",
+      "Accessible status"
+    ]
+  },
+  {
+    "id": "editor-distribution-connections",
+    "module": "editor",
+    "featured": false,
+    "title": "Employee placement connections",
+    "file": "feature-editor-distribution-connections.png",
+    "description": "Select one Employee occurrence to trace every other direct placement, including a collapsed-Unit endpoint.",
+    "capabilities": [
+      "Single selection",
+      "Exact row anchors",
+      "Collapsed fallback",
+      "Pointer-inert overlay"
+    ]
+  },
+  {
     "id": "editor-bulk-employees",
     "module": "editor",
     "featured": false,

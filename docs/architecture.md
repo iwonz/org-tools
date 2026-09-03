@@ -30,7 +30,8 @@ There is no kind, content discriminator, version, compatibility alias, or partia
 Exactly one View is the unnamed system document displayed as **Units**; Units, Employee Import, and
 Analytics use it directly. Custom Views have normalized unique names and isolated Unit documents,
 assignments, Live rules, hierarchy, layout, and geometry. Employees, custom fields, and Tags remain
-global references shared by every View. Viewport and selection live per View in the bounded
+global references shared by every View. Viewport, selection, and enabled distribution-mode Unit IDs
+live per View in the bounded
 `ui.editor` projection, while Data Download persists its selected source View. Ordinary interface
 writes therefore do not serialize Employees or structural documents. Open surfaces, notifications,
 search suggestions, and unfinished forms are transient.
@@ -216,6 +217,13 @@ scheduler presents the latest viewport or Unit delta, while pointer release or w
 performs the single snapped command and persistence observation. A geometry-keyed spatial index
 limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
 document geometry changes.
+Each Editor store also owns a bounded list of Units with distribution mode enabled. A memoized
+active-View index maps each Employee ID to direct manual or resolved Live Unit IDs without treating
+hierarchy containment as membership. Enabled source rows derive green distributed or amber
+source-only tonal states in constant time. An exact single Employee occurrence derives a bounded
+set of pointer-inert SVG paths from deterministic row rectangles; hidden rows in collapsed targets
+fall back to the nearest card edge. The overlay sits above hierarchy paths and below cards, stays
+outside history and spatial geometry, and is omitted from every Editor or Employee report output.
 Unit, Employee, connection, and marquee drags share one edge-pan loop. After the movement threshold,
 the last 64 screen pixels accelerate quadratically to a bounded six-pixel-per-frame viewport delta;
 diagonal motion uses the same total cap. Drag and document-anchored marquee previews remain

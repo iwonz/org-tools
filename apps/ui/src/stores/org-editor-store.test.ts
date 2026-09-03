@@ -132,6 +132,8 @@ describe("OrgEditorStore deletion", () => {
       y: 0,
     });
     store.synchronizeLiveResolution(new Map([[liveId, [employeeId]]]));
+    store.toggleUnitDistributionMode(rootId);
+    store.toggleUnitDistributionMode(childId);
     store.setSelectedItems([
       { type: "unit", unitId: rootId },
       { type: "unit", unitId: childId },
@@ -147,11 +149,28 @@ describe("OrgEditorStore deletion", () => {
       liveFilter: null,
     });
     expect(store.selectedItems).toEqual([]);
+    expect(store.distributionModeUnitIds).toEqual([]);
 
     store.undo();
     expect(new Set(store.units.map((unit) => unit.id))).toEqual(
       new Set([rootId, childId, otherId, liveId]),
     );
+  });
+
+  test("toggles distribution mode without structural history or document writes", () => {
+    let documentChanges = 0;
+    const store = new OrgEditorStore(() => {
+      documentChanges += 1;
+    });
+    const unitId = store.addUnit({ name: "Source", x: 0, y: 0 });
+    store.clearHistory();
+    documentChanges = 0;
+
+    store.toggleUnitDistributionMode(unitId);
+
+    expect(store.distributionModeUnitIds).toEqual([unitId]);
+    expect(store.canUndo).toBe(false);
+    expect(documentChanges).toBe(0);
   });
 });
 

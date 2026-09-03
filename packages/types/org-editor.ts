@@ -50,6 +50,7 @@ export type OrgEditorUnit = {
 };
 
 export type StructureDocument = {
+  distributionModeUnitIds: OrgEditorUnitId[];
   units: OrgEditorUnit[];
   selectedItems: OrgEditorSelectedItem[];
   viewport: OrgEditorCanvasViewport;

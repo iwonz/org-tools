@@ -108,7 +108,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Complete visual capability catalog
 - **WHEN** a visitor opens the detailed screenshot guide
-- **THEN** the 54-frame gallery contains ten featured workflows and only currently visible supporting
+- **THEN** the 56-frame gallery contains ten featured workflows and only currently visible supporting
   behavior, without project, file, Save, autosave, or obsolete conflict frames
 
 #### Scenario: Continuous validation
@@ -128,7 +128,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Screenshot generation
 - **WHEN** screenshot generation runs against both production runtimes
-- **THEN** it deterministically replaces exactly 54 declared PNGs, including ten featured frames
+- **THEN** it deterministically replaces exactly 56 declared PNGs, including ten featured frames
 
 #### Scenario: Screenshot manifest consistency
 - **WHEN** generation or publication checks inspect the gallery
@@ -236,12 +236,12 @@ Editor Views over global Employees, Analytics bound to the system View, View-sel
 Download, wrapped direct Tag footers, modal Language and Theme settings, selected-only Editor
 arrangement, direct State Export, source-driven Employee Import, colored Editor PNG Tags, privacy,
 performance, and screenshots without obsolete guidance. The deterministic gallery SHALL contain
-exactly 54 PNGs and the README SHALL retain exactly ten featured Import, Export, Theme, Language,
+exactly 56 PNGs and the README SHALL retain exactly ten featured Import, Export, Theme, Language,
 Units, Employees, Editor, Analytics, Calendar, and Download frames.
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
-- **THEN** it deterministically replaces exactly 54 declared PNGs covering only current product workflows
+- **THEN** it deterministically replaces exactly 56 declared PNGs covering only current product workflows
 
 #### Scenario: Locale gallery
 - **WHEN** Language frames are generated
@@ -276,7 +276,7 @@ Units, Employees, Editor, Analytics, Calendar, and Download frames.
 - **THEN** the same ten current product previews remain featured and every linked PNG exists
 
 #### Scenario: Deterministic generation
-- **WHEN** the 54-frame gallery is generated twice from unchanged source and fixed fixtures
+- **WHEN** the 56-frame gallery is generated twice from unchanged source and fixed fixtures
 - **THEN** every PNG hash is identical and every owned page has no unexpected console or network diagnostic
 
 ### Requirement: Localization validation covers every supported catalog
@@ -293,13 +293,13 @@ for `en`, `zh`, `ru`, `es`, `fr`, and `ar` in both production runtimes.
 - **THEN** locale-only UI changes do not serialize organization state or trigger per-frame full scans
 
 ### Requirement: Gallery documents Employee schema, Tags, and Calendar
-The deterministic gallery SHALL contain 54 PNG files: the maintained workflows plus View selection,
+The deterministic gallery SHALL contain 56 PNG files: the maintained workflows plus View selection,
 copy creation, isolated editing, rename/delete, and Unit note Preview/Editor scenarios. Every PNG SHALL use synthetic data and
 appear identically across two generations.
 
 #### Scenario: Regenerate the gallery
 - **WHEN** screenshots are generated twice from the same clean production build
-- **THEN** all 54 referenced PNG files exist and their SHA-256 manifests match
+- **THEN** all 56 referenced PNG files exist and their SHA-256 manifests match
 
 ### Requirement: Large-model validation remains bounded
 Automated checks SHALL exercise 20,000 Employees and 4,000 Units with identity, Tag, custom field,
@@ -331,12 +331,12 @@ The maintained Template token frame SHALL show the Format help affordance and lo
 
 ### Requirement: Gallery verifies compact Unit Tag footers
 The maintained Editor screenshots SHALL show content-sized direct-Tag footer chips with equal compact
-insets and without a large empty trailing area. Screenshot generation SHALL retain the maintained 54
+insets and without a large empty trailing area. Screenshot generation SHALL retain the maintained 56
 declared scenarios.
 
 #### Scenario: Regenerate Editor frames
 - **WHEN** the deterministic gallery is generated twice from unchanged source
-- **THEN** affected Editor frames show compact evenly inset footer chips and all 54 PNG hashes match between runs
+- **THEN** affected Editor frames show compact evenly inset footer chips and all 56 PNG hashes match between runs
 
 ### Requirement: Large multi-View validation remains bounded
 Automated checks SHALL exercise global Employee mutation, active View switching, Data Download source
@@ -348,13 +348,13 @@ rebuilds, UI-triggered organization serialization, or complete-list rendering.
 - **THEN** only required derived structures build and no organization write occurs until a structural command
 
 ### Requirement: Gallery and browser checks cover refined cross-View interactions
-The maintained 54-frame deterministic gallery SHALL cover the current scenario set while updating the
+The maintained 56-frame deterministic gallery SHALL cover the current scenario set while updating the
 Editor View, clipboard, and Unit footer frames. Browser validation SHALL exercise cross-View paste,
 all four edge-pan drag modes, nested and multi-selection deletion, and tooltip absence in both server
 and Pages runtimes without console, page, resource, or external-network diagnostics.
 
 #### Scenario: Regenerate affected Editor frames
-- **WHEN** the 54-frame gallery is generated twice from unchanged source and fixtures
+- **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
 - **THEN** complete wrapping footer Tags and the current View interactions appear with identical SHA-256 manifests
 
 #### Scenario: Validate large interaction performance
@@ -364,13 +364,28 @@ and Pages runtimes without console, page, resource, or external-network diagnost
 ### Requirement: Validation and gallery cover Unit Markdown notes
 Repository validation SHALL cover strict Unit note state, View-local history and copying, safe
 Markdown, both runtime persistence paths, localization, accessibility, and browser diagnostics. The
-deterministic gallery SHALL contain exactly 54 PNGs by adding Unit note Preview and Editor scenarios
+deterministic gallery SHALL contain exactly 56 PNGs including Unit note Preview and Editor scenarios
 while the README retains its ten featured frames.
 
 #### Scenario: Generate Unit note frames
 - **WHEN** screenshot generation runs twice from unchanged source and fixtures
-- **THEN** all 54 PNGs have identical hashes and the two note frames show Preview and Editor with
+- **THEN** all 56 PNGs have identical hashes and the two note frames show Preview and Editor with
   synthetic Markdown content
+
+### Requirement: Validation and gallery cover Editor distribution mode
+Repository validation SHALL cover strict View UI state, manual and Live membership, bounded
+derivation, context-switch accessibility, persisted highlighting, single-selection connections,
+multi-selection suppression, collapsed fallbacks, output exclusion, localization, and browser
+diagnostics. The deterministic gallery SHALL contain exactly 56 PNGs while README retains ten
+featured frames.
+
+#### Scenario: Generate distribution frames
+- **WHEN** screenshot generation runs twice from unchanged source and fixtures
+- **THEN** all 56 hashes match and supporting frames show status highlighting plus selected placement connections
+
+#### Scenario: Validate the large Editor
+- **WHEN** 20,000 Employees and 4,000 Units exercise distribution mode
+- **THEN** selection and viewport changes do not rebuild membership indexes, scan all Units, or write organization state
 
 #### Scenario: Validate a large noted Editor
 - **WHEN** performance coverage renders 20,000 Employees and 4,000 Units with closed notes

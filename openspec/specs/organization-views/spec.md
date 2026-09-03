@@ -1,7 +1,7 @@
 # organization-views Specification
 
 ## Purpose
-TBD - created by archiving change add-isolated-editor-views. Update Purpose after archive.
+Define isolated Unit documents, global Employee data, bounded per-View UI, and cross-View lifecycle.
 ## Requirements
 ### Requirement: Organization Views isolate Unit documents over global catalogs
 The organization SHALL contain exactly one protected system View and zero or more custom Views.
@@ -61,12 +61,13 @@ normalization, trim, whitespace collapse, and case folding.
 - **THEN** only that View is removed and Editor falls back to the system View
 
 ### Requirement: View UI and history remain isolated and bounded
-Each View SHALL retain its own viewport, selection, and undo/redo history while it exists. One
+Each View SHALL retain its own viewport, selection, enabled distribution Units, and undo/redo
+history while it exists. One
 clipboard SHALL be shared by all Views in the current tab so a copied Unit fragment can be pasted
-after switching Views. Only viewport and selection SHALL be durable; history and clipboard SHALL
-remain session-only. The clipboard MUST NOT enter `OrgToolsState`, SQLite, `BroadcastChannel`, the
-system clipboard, or network traffic and SHALL clear when the complete state is replaced or
-imported. Switching Views SHALL NOT serialize organization data.
+after switching Views. Only viewport, selection, and enabled distribution Unit IDs SHALL be durable;
+history and clipboard SHALL remain session-only. The clipboard MUST NOT enter `OrgToolsState`,
+SQLite, `BroadcastChannel`, the system clipboard, or network traffic and SHALL clear when the
+complete state is replaced or imported. Switching Views SHALL NOT serialize organization data.
 
 #### Scenario: Switch between Views
 - **WHEN** the user changes the active View and later returns
@@ -89,7 +90,7 @@ imported. Switching Views SHALL NOT serialize organization data.
 - **THEN** the shared transient clipboard is empty
 
 #### Scenario: Persist View UI
-- **WHEN** a View viewport or selection changes
+- **WHEN** a View viewport, selection, or distribution mode changes
 - **THEN** the bounded UI projection writes without serializing any Unit or Employee collection
 
 ### Requirement: View lifecycle controls avoid redundant hover help
@@ -130,3 +131,20 @@ Paste SHALL use the target View history and persistence lifecycle.
 #### Scenario: Paste a noted Unit into another View
 - **WHEN** a copied Unit with a note is pasted into another View
 - **THEN** the new Unit keeps the note and Undo affects only the target View
+
+### Requirement: Distribution mode follows View UI lifecycle
+Each View SHALL own a unique set of enabled distribution Unit IDs. Copying a complete View SHALL
+remap its enabled IDs to cloned Units, while blank View creation and cross-View Unit Paste SHALL
+leave newly created or pasted Units disabled.
+
+#### Scenario: Clone an enabled View
+- **WHEN** a View containing enabled distribution Units is copied
+- **THEN** corresponding cloned Units are enabled through their regenerated IDs
+
+#### Scenario: Paste an enabled source Unit
+- **WHEN** a Unit copied from another View is pasted
+- **THEN** the pasted Unit does not inherit the source View's distribution mode
+
+#### Scenario: Delete an enabled Unit
+- **WHEN** an enabled Unit is removed through any deletion entry point
+- **THEN** its ID is removed from View UI before the complete state is validated or persisted

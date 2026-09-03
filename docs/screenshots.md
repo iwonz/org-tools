@@ -1,7 +1,7 @@
 # Screenshots
 
 The screenshot catalog is generated from the production applications and declared in
-`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 54
+`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 56
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
@@ -350,6 +350,23 @@ Select multiple Employee rows and apply shared boss, tag, edit, copy, or delete 
 
 Capabilities: Multi-selection, Boss assignment, Bulk tags, Edit, Copy, Delete.
 
+### Employee distribution status
+
+[![Employee distribution status](screenshots/feature-editor-distribution-status.png)](screenshots/feature-editor-distribution-status.png)
+
+Inspect direct members of one Unit with green distributed and amber source-only tonal states.
+
+Capabilities: View-local mode, Direct membership, Manual and Live Units, Accessible status.
+
+### Employee placement connections
+
+[![Employee placement connections](screenshots/feature-editor-distribution-connections.png)](screenshots/feature-editor-distribution-connections.png)
+
+Select one Employee occurrence to trace every other direct placement, including a collapsed-Unit
+endpoint.
+
+Capabilities: Single selection, Exact row anchors, Collapsed fallback, Pointer-inert overlay.
+
 ### Editor image export
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
@@ -534,6 +551,10 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   retain document-anchored previews, and commit no more than one viewport and one structural update.
 - Confirm deleting nested and overlapping Unit selections produces no diagnostics after reload and
   leaves no stale Editor, Units, filter, expansion, or active Download references.
+- Confirm distribution mode can be enabled on multiple Units, uses green and amber tonal rows for
+  direct manual or resolved Live membership, preserves status fill through selection, and draws
+  paths only for one selected Employee occurrence. Collapsed targets use an endpoint marker,
+  multi-selection hides paths, and Editor output contains no overlay.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
@@ -548,5 +569,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 54 PNGs must retain identical hashes. Material differences require
+- Regenerate immediately; all 56 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

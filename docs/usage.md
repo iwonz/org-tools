@@ -91,7 +91,12 @@ control.
   changes a private Markdown draft that becomes one undoable View-local update only after
   **Save**. Clearing and saving removes the note, while closing a changed draft requires explicit
   discard confirmation. View cloning and cross-View Copy/Paste carry notes; Image, JSON, and
-  Template Editor exports omit them. Editor exports always use the active View.
+  Template Editor exports omit them. **Distribution mode** in a Unit context menu independently
+  marks direct members green when they also belong to another Unit in the active View and amber when
+  they exist only in the source Unit. Selecting exactly one Employee draws local placement links,
+  including a card-edge marker for a collapsed target; multi-selection hides the links without
+  disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
+  or Editor output. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
   reports known birth years and completed ages, including one-decimal averages plus deterministic
   youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`

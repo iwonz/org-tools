@@ -9,7 +9,12 @@ import frMessages from "../../../apps/ui/messages/fr.json" with { type: "json" }
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import zhMessages from "../../../apps/ui/messages/zh.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
-import { localeStorageKey, syntheticStatePath } from "./helpers.js";
+import {
+  createDistributionStateFile,
+  localeStorageKey,
+  openImportDialog,
+  syntheticStatePath,
+} from "./helpers.js";
 
 const useEnglish = (key: string) => window.localStorage.setItem(key, "en");
 
@@ -61,6 +66,40 @@ test("detects the browser locale and switches all six bundled languages", async 
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
   }
+});
+
+test("synchronizes Editor distribution mode between live Pages tabs", async ({ context, page }) => {
+  await page.addInitScript(useEnglish, localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  const dialog = await openImportDialog(page, await createDistributionStateFile());
+  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await expect(dialog).toBeHidden();
+
+  const productUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  const sharedRow = productUnit.locator(
+    '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]',
+  );
+  const sourceOnlyRow = productUnit.locator(
+    '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000004"]',
+  );
+  await expect(sharedRow).toHaveAttribute("data-distribution-status", "assigned");
+  await expect(sourceOnlyRow).toHaveAttribute("data-distribution-status", "sourceOnly");
+  await sharedRow.click();
+  await expect(page.locator("[data-distribution-connection]")).toHaveCount(1);
+
+  const peer = await context.newPage();
+  await peer.goto("./", { waitUntil: "domcontentloaded" });
+  const peerProductUnit = peer.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await expect(peerProductUnit).toBeVisible();
+  await expect(
+    peerProductUnit.locator('[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]'),
+  ).toHaveAttribute("data-distribution-status", "assigned");
+  await peerProductUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  await expect(
+    peer.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+  ).toHaveAttribute("aria-checked", "true");
 });
 
 test("runs the complete state editor at the repository base path without APIs or file persistence", async ({
