@@ -4,7 +4,7 @@ import type { EmployeeGender, UiOrgStructure, UnitId } from "@org-tools/types";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import type { ReactNode } from "react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   HiOutlineBriefcase,
   HiOutlineCalendarDays,
@@ -19,6 +19,7 @@ import {
 } from "react-icons/hi2";
 
 import { HighlightedText } from "@/components/highlighted-text";
+import { useAppLocale } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ import {
   selectAllEmployeeFilterTags,
 } from "@/lib/employee-search";
 import { getSearchTokens, normalizeSearchValue } from "@/lib/search-index";
+import { normalizeTagSearchValue, sortTagsByLocalizedLabel } from "@/lib/tag-order";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -499,12 +501,15 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
 }: EmployeeSearchInputProps) {
   const store = useOrgStore();
   const t = useUiText();
+  const { locale } = useAppLocale();
   const format = useAppFormatter();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedSectionId, setExpandedSectionId] = useState<EmployeeFilterSectionId | null>(null);
   const [birthdayDayValue, setBirthdayDayValue] = useState("none");
   const [birthdayMonthValue, setBirthdayMonthValue] = useState("none");
   const [birthdayYearValue, setBirthdayYearValue] = useState("none");
+  const [tagQuery, setTagQuery] = useState("");
+  const deferredTagQuery = useDeferredValue(tagQuery);
   const selectedPositions = filters.selectedPositions;
   const selectedGenders = filters.selectedGenders;
   const selectedTags = filters.selectedTags;
@@ -518,18 +523,36 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   );
   const tagFilterOptions = useMemo(
     () =>
-      store.tagDefinitions.length > 0
-        ? store.tagDefinitions.map((tag) => ({ id: tag.id, label: tag.label }))
-        : tagOptions.map((label) => ({ id: label, label })),
-    [store.tagDefinitions, tagOptions],
+      sortTagsByLocalizedLabel(
+        store.tagDefinitions.length > 0
+          ? store.tagDefinitions.map((tag) => ({ id: tag.id, label: tag.label }))
+          : tagOptions.map((label) => ({ id: label, label })),
+        locale,
+      ),
+    [locale, store.tagDefinitions, tagOptions],
   );
-  const availableTagIds = useMemo(
-    () => [...new Set(tagFilterOptions.map((option) => option.id))],
-    [tagFilterOptions],
+  const tagQueryTokens = useMemo(
+    () => normalizeTagSearchValue(deferredTagQuery).split(/\s+/u).filter(Boolean),
+    [deferredTagQuery],
+  );
+  const visibleTagFilterOptions = useMemo(
+    () =>
+      tagQueryTokens.length === 0
+        ? tagFilterOptions
+        : tagFilterOptions.filter((option) => {
+            const normalizedLabel = normalizeTagSearchValue(option.label);
+            return tagQueryTokens.every((token) => normalizedLabel.includes(token));
+          }),
+    [tagFilterOptions, tagQueryTokens],
+  );
+  const visibleTagIds = useMemo(
+    () => [...new Set(visibleTagFilterOptions.map((option) => option.id))],
+    [visibleTagFilterOptions],
   );
   const selectedTagIdSet = useMemo(() => new Set(selectedTags), [selectedTags]);
-  const areAllTagsSelected =
-    availableTagIds.length > 0 && availableTagIds.every((tagId) => selectedTagIdSet.has(tagId));
+  const areAllVisibleTagsSelected =
+    visibleTagIds.length > 0 && visibleTagIds.every((tagId) => selectedTagIdSet.has(tagId));
+  const hasSelectedVisibleTags = visibleTagIds.some((tagId) => selectedTagIdSet.has(tagId));
   const unitOptions = useMemo<EmployeeUnitFilterOption<UnitId>[]>(() => {
     if (!isOpen) return [];
 
@@ -560,6 +583,7 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
 
   useEffect(() => {
     if (!isOpen) {
+      setTagQuery("");
       setBirthdayDayValue(filters.birthday === null ? "none" : String(filters.birthday.day));
       setBirthdayMonthValue(filters.birthday === null ? "none" : String(filters.birthday.month));
       setBirthdayYearValue(filters.birthday === null ? "none" : String(filters.birthday.year));
@@ -806,6 +830,18 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
               title={t("Tags")}
             >
               <div className="grid gap-2">
+                <div className="relative">
+                  <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    aria-label={t("Search tags")}
+                    className="h-8 pl-8"
+                    data-demo-id="employee-tag-filter-search"
+                    onChange={(event) => setTagQuery(event.currentTarget.value)}
+                    placeholder={t("Search tags")}
+                    type="search"
+                    value={tagQuery}
+                  />
+                </div>
                 <EmployeeAbsenceFilterOption
                   checked={filters.includeWithoutTags}
                   label={t("Without tags")}
@@ -821,9 +857,9 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                   <Button
                     className="h-8 justify-center border-0 px-2 text-xs font-normal"
                     data-demo-id="employee-tag-filter-select-all"
-                    disabled={availableTagIds.length === 0 || areAllTagsSelected}
+                    disabled={visibleTagIds.length === 0 || areAllVisibleTagsSelected}
                     onClick={() =>
-                      onFiltersChange(selectAllEmployeeFilterTags(filters, availableTagIds))
+                      onFiltersChange(selectAllEmployeeFilterTags(filters, visibleTagIds))
                     }
                     size="sm"
                     type="button"
@@ -835,8 +871,10 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                   <Button
                     className="h-8 justify-center border-0 px-2 text-xs font-normal"
                     data-demo-id="employee-tag-filter-deselect-all"
-                    disabled={selectedTags.length === 0}
-                    onClick={() => onFiltersChange(deselectAllEmployeeFilterTags(filters))}
+                    disabled={!hasSelectedVisibleTags}
+                    onClick={() =>
+                      onFiltersChange(deselectAllEmployeeFilterTags(filters, visibleTagIds))
+                    }
                     size="sm"
                     type="button"
                     variant="ghost"
@@ -855,8 +893,8 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
                         : [...selectedTags, tagId],
                     })
                   }
-                  options={tagFilterOptions}
-                  queryTokens={[]}
+                  options={visibleTagFilterOptions}
+                  queryTokens={tagQueryTokens}
                   selectedValues={selectedTags}
                   title={t("Tags")}
                 />

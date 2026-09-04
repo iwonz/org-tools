@@ -136,7 +136,7 @@ const filter = (
   }).map((currentEmployee) => currentEmployee.id);
 
 describe("Employee Unit filters", () => {
-  test("selects and deselects the complete ordered Tag catalog independently of untagged Employees", () => {
+  test("selects and deselects visible Tags while preserving hidden Tags and untagged Employees", () => {
     const initialFilters = {
       ...createEmptyEmployeeSearchFilters(),
       includeWithoutTags: true,
@@ -150,12 +150,14 @@ describe("Employee Unit filters", () => {
 
     expect(selectedFilters).toMatchObject({
       includeWithoutTags: true,
-      selectedTags: [CRITICAL_TAG_ID, uuid(202)],
+      selectedTags: [uuid(999), CRITICAL_TAG_ID, uuid(202)],
     });
     expect(initialFilters.selectedTags).toEqual([uuid(999)]);
-    expect(deselectAllEmployeeFilterTags(selectedFilters)).toMatchObject({
+    expect(
+      deselectAllEmployeeFilterTags(selectedFilters, [CRITICAL_TAG_ID, uuid(202)]),
+    ).toMatchObject({
       includeWithoutTags: true,
-      selectedTags: [],
+      selectedTags: [uuid(999)],
     });
   });
 

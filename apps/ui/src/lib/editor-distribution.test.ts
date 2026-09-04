@@ -1,15 +1,29 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  applyEditorDistributionBulkToggle,
   buildEditorEmployeeUnitIndex,
   createEditorDistributionConnection,
+  createEditorPlacementMapLayout,
+  getEditorDistributionBulkState,
   getEditorDistributionPlacement,
   getEditorDistributionSelection,
   getEditorEmployeeOtherUnitIds,
+  getEditorPlacementMapFitViewport,
 } from "@/lib/editor-distribution";
 import { createOrgEditorUnitFromScratch } from "@/lib/org-editor";
 
 describe("Editor distribution membership", () => {
+  test("applies checked, unchecked, and mixed Unit selections as one set operation", () => {
+    expect(getEditorDistributionBulkState(new Set(), ["one", "two"])).toBe("unchecked");
+    expect(getEditorDistributionBulkState(new Set(["one"]), ["one", "two"])).toBe("mixed");
+    expect(getEditorDistributionBulkState(new Set(["one", "two"]), ["one", "two"])).toBe("checked");
+    expect(applyEditorDistributionBulkToggle(["one"], ["one", "two"])).toEqual(["one", "two"]);
+    expect(applyEditorDistributionBulkToggle(["one", "two", "three"], ["one", "two"])).toEqual([
+      "three",
+    ]);
+  });
+
   test("indexes direct materialized memberships without hierarchy inheritance", () => {
     const root = createOrgEditorUnitFromScratch({
       employeeIds: ["employee-shared", "employee-root"],
@@ -75,5 +89,37 @@ describe("Editor distribution membership", () => {
       getEditorDistributionPlacement({ employeeById: new Map(), employeeId, unit: collapsed })
         .hiddenByCollapse,
     ).toBe(true);
+  });
+
+  test("lays placement Units on deterministic non-overlapping rings and fits the map", () => {
+    const unitIds = Array.from({ length: 18 }, (_, index) => `unit-${index}`);
+    const first = createEditorPlacementMapLayout(unitIds);
+    const second = createEditorPlacementMapLayout(unitIds);
+    expect(second).toEqual(first);
+    expect(first.units.map((unit) => unit.unitId)).toEqual(unitIds);
+
+    for (let index = 0; index < first.units.length; index += 1) {
+      const unit = first.units[index];
+      if (!unit) continue;
+      for (const candidate of first.units.slice(index + 1)) {
+        const overlaps = !(
+          unit.x + unit.width <= candidate.x ||
+          candidate.x + candidate.width <= unit.x ||
+          unit.y + unit.height <= candidate.y ||
+          candidate.y + candidate.height <= unit.y
+        );
+        expect(overlaps).toBe(false);
+      }
+    }
+
+    const viewport = getEditorPlacementMapFitViewport({
+      bounds: first.bounds,
+      height: 480,
+      width: 720,
+    });
+    expect(viewport.scale).toBeGreaterThanOrEqual(0.2);
+    expect(viewport.scale).toBeLessThanOrEqual(1.4);
+    expect(Number.isFinite(viewport.x)).toBe(true);
+    expect(Number.isFinite(viewport.y)).toBe(true);
   });
 });

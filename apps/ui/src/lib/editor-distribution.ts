@@ -32,6 +32,132 @@ export type EditorDistributionConnection = {
   start: { x: number; y: number };
 };
 
+export type EditorDistributionBulkState = "checked" | "mixed" | "unchecked";
+
+export type EditorPlacementMapNode = EditorDistributionRect & {
+  unitId: OrgEditorUnitId;
+};
+
+export type EditorPlacementMapLayout = {
+  bounds: EditorDistributionRect;
+  employee: EditorDistributionRect;
+  units: EditorPlacementMapNode[];
+};
+
+const PLACEMENT_EMPLOYEE_WIDTH = 224;
+const PLACEMENT_EMPLOYEE_HEIGHT = 136;
+const PLACEMENT_UNIT_WIDTH = 184;
+const PLACEMENT_UNIT_HEIGHT = 68;
+const PLACEMENT_RING_START_RADIUS = 208;
+const PLACEMENT_RING_GAP = 232;
+const PLACEMENT_NODE_GAP = 24;
+
+export const getEditorDistributionBulkState = (
+  enabledUnitIds: ReadonlySet<OrgEditorUnitId>,
+  selectedUnitIds: readonly OrgEditorUnitId[],
+): EditorDistributionBulkState => {
+  if (selectedUnitIds.length === 0) return "unchecked";
+  const enabledCount = selectedUnitIds.reduce(
+    (count, unitId) => count + Number(enabledUnitIds.has(unitId)),
+    0,
+  );
+  if (enabledCount === 0) return "unchecked";
+  if (enabledCount === selectedUnitIds.length) return "checked";
+  return "mixed";
+};
+
+export const applyEditorDistributionBulkToggle = (
+  enabledUnitIds: readonly OrgEditorUnitId[],
+  selectedUnitIds: readonly OrgEditorUnitId[],
+) => {
+  const selectedIdSet = new Set(selectedUnitIds);
+  const currentIdSet = new Set(enabledUnitIds);
+  const state = getEditorDistributionBulkState(currentIdSet, selectedUnitIds);
+
+  if (state === "checked") {
+    return enabledUnitIds.filter((unitId) => !selectedIdSet.has(unitId));
+  }
+
+  for (const unitId of selectedUnitIds) currentIdSet.add(unitId);
+  return [...currentIdSet];
+};
+
+export const createEditorPlacementMapLayout = (
+  unitIds: readonly OrgEditorUnitId[],
+): EditorPlacementMapLayout => {
+  const employee = {
+    height: PLACEMENT_EMPLOYEE_HEIGHT,
+    width: PLACEMENT_EMPLOYEE_WIDTH,
+    x: -PLACEMENT_EMPLOYEE_WIDTH / 2,
+    y: -PLACEMENT_EMPLOYEE_HEIGHT / 2,
+  };
+  const units: EditorPlacementMapNode[] = [];
+  let unitIndex = 0;
+  let ringIndex = 0;
+
+  while (unitIndex < unitIds.length) {
+    const radius = PLACEMENT_RING_START_RADIUS + ringIndex * PLACEMENT_RING_GAP;
+    const circumference = Math.PI * 2 * radius;
+    const capacity = Math.max(
+      4,
+      Math.floor(circumference / (PLACEMENT_UNIT_WIDTH + PLACEMENT_NODE_GAP)),
+    );
+    const ringCount = Math.min(capacity, unitIds.length - unitIndex);
+
+    for (let indexOnRing = 0; indexOnRing < ringCount; indexOnRing += 1) {
+      const unitId = unitIds[unitIndex + indexOnRing];
+      if (!unitId) continue;
+      const angle = -Math.PI / 2 + (indexOnRing * Math.PI * 2) / ringCount;
+      units.push({
+        height: PLACEMENT_UNIT_HEIGHT,
+        unitId,
+        width: PLACEMENT_UNIT_WIDTH,
+        x: Math.cos(angle) * radius - PLACEMENT_UNIT_WIDTH / 2,
+        y: Math.sin(angle) * radius - PLACEMENT_UNIT_HEIGHT / 2,
+      });
+    }
+
+    unitIndex += ringCount;
+    ringIndex += 1;
+  }
+
+  const rectangles = [employee, ...units];
+  const minX = Math.min(...rectangles.map((rect) => rect.x));
+  const minY = Math.min(...rectangles.map((rect) => rect.y));
+  const maxX = Math.max(...rectangles.map((rect) => rect.x + rect.width));
+  const maxY = Math.max(...rectangles.map((rect) => rect.y + rect.height));
+
+  return {
+    bounds: { height: maxY - minY, width: maxX - minX, x: minX, y: minY },
+    employee,
+    units,
+  };
+};
+
+export const getEditorPlacementMapFitViewport = ({
+  bounds,
+  height,
+  padding = 40,
+  width,
+}: {
+  bounds: EditorDistributionRect;
+  height: number;
+  padding?: number;
+  width: number;
+}) => {
+  const availableWidth = Math.max(1, width - padding * 2);
+  const availableHeight = Math.max(1, height - padding * 2);
+  const scale = Math.min(
+    1.4,
+    Math.max(0.2, Math.min(availableWidth / bounds.width, availableHeight / bounds.height)),
+  );
+  return {
+    scale,
+    x: width / 2 - (bounds.x + bounds.width / 2) * scale,
+    y: height / 2 - (bounds.y + bounds.height / 2) * scale,
+  };
+};
+
 export const buildEditorEmployeeUnitIndex = (units: readonly OrgEditorUnit[]) => {
   const unitIdsByEmployeeId = new Map<EmployeeId, OrgEditorUnitId[]>();
 

@@ -60,8 +60,9 @@ control.
   invalid or canceled exact input does not change the Tag. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
-  Tag filters provide **Select all** and **Deselect all** for the complete catalog while keeping
-  **Without tags** as an independent choice.
+  Tag filters provide locale-aware alphabetic search plus **Select all** and **Deselect all** for
+  the visible result set while keeping hidden selections and **Without tags** unchanged. The Tag
+  catalog keeps both usage counts inline immediately after each Tag.
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
@@ -95,7 +96,10 @@ control.
   discard confirmation. View cloning and cross-View Copy/Paste carry notes; Image, JSON, and
   Template Editor exports omit them. **Distribution mode** in a Unit context menu independently
   marks direct members green when they also belong to another Unit in the active View and amber when
-  they exist only in the source Unit. Selecting exactly one Employee draws local placement links,
+  they exist only in the source Unit. Its tri-state context switch can update one Unit or the whole
+  selected Unit set in one operation. Every Employee assigned to several Units also exposes a
+  placement action: its read-only local map supports pan, zoom, Fit, and exact navigation back to an
+  expanded and selected Employee occurrence. Selecting exactly one Employee draws local placement links,
   including a card-edge marker for a collapsed target; multi-selection hides the links without
   disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
   or Editor output. Editor exports always use the active View.

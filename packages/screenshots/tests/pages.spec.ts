@@ -88,6 +88,13 @@ test("synchronizes Editor distribution mode between live Pages tabs", async ({ c
   await expect(sourceOnlyRow).toHaveAttribute("data-distribution-status", "sourceOnly");
   await sharedRow.click();
   await expect(page.locator("[data-distribution-connection]")).toHaveCount(1);
+  await sharedRow
+    .locator("..")
+    .locator('[data-demo-id="org-editor-employee-placements-action"]')
+    .click();
+  const placementDialog = page.locator('[data-demo-id="employee-placement-dialog"]');
+  await expect(placementDialog.locator('[data-placement-node="unit"]')).toHaveCount(2);
+  await placementDialog.getByRole("button", { name: "Close", exact: true }).click();
 
   const peer = await context.newPage();
   await peer.goto("./", { waitUntil: "domcontentloaded" });
@@ -100,6 +107,25 @@ test("synchronizes Editor distribution mode between live Pages tabs", async ({ c
   await expect(
     peer.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
   ).toHaveAttribute("aria-checked", "true");
+  await peer.keyboard.press("Escape");
+  const peerPlatformUnit = peer.locator('fieldset[aria-label="Canvas Unit Platform"]');
+  await peerProductUnit.click({ position: { x: 80, y: 40 } });
+  await peerPlatformUnit.click({ modifiers: ["Control"], position: { x: 80, y: 40 } });
+  await peerProductUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  await expect(
+    peer.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+  ).toHaveAttribute("aria-checked", "mixed");
+  await peer.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await expect
+    .poll(async () => {
+      await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
+      const checked = await page
+        .locator('[data-demo-id="org-editor-distribution-mode-action"]')
+        .getAttribute("aria-checked");
+      await page.keyboard.press("Escape");
+      return checked;
+    })
+    .toBe("true");
 });
 
 test("runs the complete state editor at the repository base path without APIs or file persistence", async ({
@@ -210,16 +236,51 @@ test("runs the complete state editor at the repository base path without APIs or
   const deselectAllTags = employeeFilters.locator(
     '[data-demo-id="employee-tag-filter-deselect-all"]',
   );
+  const tagSearch = employeeFilters.locator('[data-demo-id="employee-tag-filter-search"]');
+  await tagSearch.fill("Design");
   await selectAllTags.click();
   await expect(selectAllTags).toBeDisabled();
   await expect(deselectAllTags).toBeEnabled();
   await deselectAllTags.click();
   await expect(deselectAllTags).toBeDisabled();
+  await tagSearch.fill("");
   await page.keyboard.press("Escape");
 
   await page.locator('[data-demo-id="employee-tags-button"]').click();
   const tagCatalog = page.getByRole("dialog", { name: "Tags", exact: true });
   const tagRow = tagCatalog.locator('[data-demo-id="tag-catalog-row"]').first();
+  const tagSurfaceBox = await tagRow.locator("[data-tag-color-surface]").boundingBox();
+  const employeeCountBox = await tagRow
+    .locator('[data-demo-id="tag-catalog-employee-count"]')
+    .boundingBox();
+  const datedCountBox = await tagRow
+    .locator('[data-demo-id="tag-catalog-dated-count"]')
+    .boundingBox();
+  expect(tagSurfaceBox).not.toBeNull();
+  expect(employeeCountBox).not.toBeNull();
+  expect(datedCountBox).not.toBeNull();
+  expect(Math.abs((tagSurfaceBox?.y ?? 0) - (employeeCountBox?.y ?? 0))).toBeLessThanOrEqual(8);
+  expect(Math.abs((employeeCountBox?.y ?? 0) - (datedCountBox?.y ?? 0))).toBeLessThanOrEqual(4);
+  expect((employeeCountBox?.x ?? 0) - (tagSurfaceBox?.x ?? 0)).toBeGreaterThan(0);
+  expect((datedCountBox?.x ?? 0) - (employeeCountBox?.x ?? 0)).toBeGreaterThan(0);
+  await page.setViewportSize({ height: 844, width: 390 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    .toBe(true);
+  const narrowIdentityBox = await tagRow
+    .locator('[data-demo-id="tag-catalog-identity"]')
+    .boundingBox();
+  const narrowEmployeeCountBox = await tagRow
+    .locator('[data-demo-id="tag-catalog-employee-count"]')
+    .boundingBox();
+  const narrowDatedCountBox = await tagRow
+    .locator('[data-demo-id="tag-catalog-dated-count"]')
+    .boundingBox();
+  expect(narrowIdentityBox).not.toBeNull();
+  expect(narrowEmployeeCountBox).not.toBeNull();
+  expect(narrowDatedCountBox).not.toBeNull();
+  expect(narrowEmployeeCountBox?.y).toBeCloseTo(narrowDatedCountBox?.y ?? 0, 0);
+  await page.setViewportSize({ height: 900, width: 1440 });
   await tagRow.locator('[data-demo-id="tag-color-trigger"]').click();
   const colorDropdown = page.locator('[data-demo-id="tag-color-dropdown"]');
   await expect(colorDropdown.locator('[data-demo-id="tag-color-full-palette"]')).toBeVisible();

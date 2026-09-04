@@ -1,7 +1,7 @@
 # Screenshots
 
 The screenshot catalog is generated from the production applications and declared in
-`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 56
+`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 58
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
@@ -361,6 +361,24 @@ Inspect direct members of one Unit with green distributed and amber source-only 
 
 Capabilities: View-local mode, Direct membership, Manual and Live Units, Accessible status.
 
+### Bulk distribution mode
+
+[![Bulk distribution mode](screenshots/feature-editor-distribution-bulk.png)](screenshots/feature-editor-distribution-bulk.png)
+
+Apply the View-local distribution mode to a selected Unit set through one accessible mixed-state
+switch.
+
+Capabilities: Multi-selection, Mixed state, Single UI update, View-local persistence.
+
+### Employee placement map
+
+[![Employee placement map](screenshots/feature-editor-placement-map.png)](screenshots/feature-editor-placement-map.png)
+
+Inspect one Employee's direct Unit memberships on a read-only relationship canvas and navigate to
+an exact occurrence.
+
+Capabilities: Direct memberships, Manual and Live Units, Pan and zoom, Exact navigation.
+
 ### Employee placement connections
 
 [![Employee placement connections](screenshots/feature-editor-distribution-connections.png)](screenshots/feature-editor-distribution-connections.png)
@@ -554,10 +572,16 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   retain document-anchored previews, and commit no more than one viewport and one structural update.
 - Confirm deleting nested and overlapping Unit selections produces no diagnostics after reload and
   leaves no stale Editor, Units, filter, expansion, or active Download references.
-- Confirm distribution mode can be enabled on multiple Units, uses green and amber tonal rows for
+- Confirm distribution mode can be enabled on a selected Unit set through checked, unchecked, and
+  mixed switch states, uses green and amber tonal rows for
   direct manual or resolved Live membership, preserves status fill through selection, and draws
   paths only for one selected Employee occurrence. Collapsed targets use an endpoint marker,
-  multi-selection hides paths, and Editor output contains no overlay.
+  multi-selection hides paths, and Editor output contains no overlay. Confirm every multi-Unit
+  Employee exposes the independent placement map, its viewport controls remain transient, and Unit
+  actions navigate to an expanded, centered, selected occurrence.
+- Confirm every Employee Tag filter sorts and searches by the active locale. Select all and Deselect
+  all affect only visible search results while hidden selections and Without tags remain unchanged.
+  Tag catalog counts stay inline immediately after the Tag at desktop and narrow widths.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
@@ -572,5 +596,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 56 PNGs must retain identical hashes. Material differences require
+- Regenerate immediately; all 58 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

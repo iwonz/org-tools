@@ -34,10 +34,12 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Build the active View's direct `EmployeeId → UnitId[]` distribution index only when materialized
   manual or Live membership changes. Row status is an indexed lookup; selecting one Employee walks
   only that Employee's assignments and derives virtualized-row or collapsed-card anchors without a
-  full Unit scan.
+  full Unit scan. The read-only placement map consumes only that indexed assignment list, uses a
+  deterministic bounded ring layout, and keeps pan/zoom outside state.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
-- Tag-filter bulk selection derives the complete ordered Tag ID set in one linear pass and emits one
-  filter update; it never depends on or mounts off-screen virtual rows.
+- Tag-filter search normalizes and locale-sorts the catalog once per catalog or locale change. Its
+  virtualized visible result derives from a deferred transient query; search-scoped bulk selection
+  emits one filter update and never depends on mounted rows.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
   the ordinary Employee virtualizer; do not create virtual header rows or repeat count formatting.
 - Coalesce pan, zoom, and Unit, Employee, connection, or marquee drag samples through one

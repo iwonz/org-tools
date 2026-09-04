@@ -14,6 +14,7 @@ import {
 import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
+import { useAppLocale } from "@/components/locale-provider";
 import { TagColorPicker } from "@/components/tag-color-picker";
 import {
   AlertDialog,
@@ -38,8 +39,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
-import { normalizeSearchValue } from "@/lib/search-index";
 import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
+import { normalizeTagSearchValue, sortTagsByLocalizedLabel } from "@/lib/tag-order";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -52,6 +53,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
 }) {
   const store = useOrgStore();
   const t = useUiText();
+  const { locale } = useAppLocale();
   const countText = useCountText();
   const messageText = useMessageText();
   const [query, setQuery] = useState("");
@@ -63,11 +65,14 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   const units = store.units;
   const [editError, setEditError] = useState<UiMessageDescriptor | null>(null);
   const visible = useMemo(() => {
-    const normalized = normalizeSearchValue(query);
-    return [...store.tagDefinitions]
-      .filter((tag) => !normalized || normalizeSearchValue(tag.label).includes(normalized))
-      .sort((first, second) => first.label.localeCompare(second.label));
-  }, [query, store.tagDefinitions]);
+    const normalized = normalizeTagSearchValue(query);
+    return sortTagsByLocalizedLabel(
+      store.tagDefinitions.filter(
+        (tag) => !normalized || normalizeTagSearchValue(tag.label).includes(normalized),
+      ),
+      locale,
+    );
+  }, [locale, query, store.tagDefinitions]);
   const counts = useMemo(() => {
     const result = new Map<TagId, { dated: number; employees: number }>();
     for (const employee of store.organizationEmployees) {
@@ -127,10 +132,13 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                         data-demo-id="tag-catalog-row"
                         key={tag.id}
                       >
-                        <div className="min-w-0 flex-1">
+                        <div
+                          className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
+                          data-demo-id="tag-catalog-identity"
+                        >
                           <div
                             className={cn(
-                              "inline-flex max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
+                              "inline-flex min-w-0 max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
                               tagColorSurfaceClassName(tag.color),
                             )}
                             data-tag-color={tag.color ?? "none"}
@@ -139,10 +147,18 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                           >
                             <span className="truncate">{tag.label}</span>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {countText("employees", { count: count.employees })} ·{" "}
+                          <span
+                            className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+                            data-demo-id="tag-catalog-employee-count"
+                          >
+                            {countText("employees", { count: count.employees })}
+                          </span>
+                          <span
+                            className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+                            data-demo-id="tag-catalog-dated-count"
+                          >
                             {t("{count} dated", { count: count.dated })}
-                          </div>
+                          </span>
                         </div>
                         <Button
                           aria-label={t("View Employees with this Tag")}

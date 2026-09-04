@@ -1707,19 +1707,31 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   const deselectAllTags = filterPopover.locator(
     '[data-demo-id="employee-tag-filter-deselect-all"]',
   );
+  const tagSearch = filterPopover.locator('[data-demo-id="employee-tag-filter-search"]');
   await expect(selectAllTags).toBeEnabled();
   await expect(deselectAllTags).toBeDisabled();
   await withoutTags.click();
+  await tagSearch.fill("Design");
   await selectAllTags.click();
   await expect(selectAllTags).toBeDisabled();
   await expect(deselectAllTags).toBeEnabled();
   await expect(withoutTags).toBeChecked();
+  await tagSearch.fill("");
+  await expect(selectAllTags).toBeEnabled();
+  await selectAllTags.click();
   await expect(filterPopover.locator('[data-filter-section="Tags"]')).toContainText("13");
+  await tagSearch.fill("Design");
   await deselectAllTags.click();
   await expect(selectAllTags).toBeEnabled();
   await expect(deselectAllTags).toBeDisabled();
   await expect(withoutTags).toBeChecked();
+  await tagSearch.fill("");
+  await expect(deselectAllTags).toBeEnabled();
+  await deselectAllTags.click();
   await withoutTags.click();
+  await page.keyboard.press("Escape");
+  await page.locator('[data-demo-id="employees-position-filter"]').click();
+  await expect(tagSearch).toHaveValue("");
   await page.keyboard.press("Escape");
 
   await page.locator('[data-demo-id="employee-create-button"]').click();
@@ -2200,9 +2212,56 @@ test("persists Editor distribution highlighting and selected placement connectio
   await expect(page.locator("[data-distribution-connection]")).toHaveCount(0);
   await expect(sharedRow).toHaveAttribute("data-distribution-status", "assigned");
 
-  await platformUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  const placementAction = sharedRow
+    .locator("..")
+    .locator('[data-demo-id="org-editor-employee-placements-action"]');
+  await expect(placementAction).toBeVisible();
+  await placementAction.click();
+  const placementDialog = page.locator('[data-demo-id="employee-placement-dialog"]');
+  const placementCanvas = placementDialog.locator('[data-demo-id="employee-placement-canvas"]');
+  await expect(placementDialog).toBeVisible();
+  await expect(placementDialog.locator('[data-placement-node="unit"]')).toHaveCount(2);
+  await expect(placementDialog.locator("[data-placement-connection]")).toHaveCount(2);
+  const initialPlacementScale = Number(await placementCanvas.getAttribute("data-placement-scale"));
+  await placementDialog.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await expect
+    .poll(async () => Number(await placementCanvas.getAttribute("data-placement-scale")))
+    .toBeGreaterThan(initialPlacementScale);
+  const initialPlacementX = Number(await placementCanvas.getAttribute("data-placement-x"));
+  const placementBox = await placementCanvas.boundingBox();
+  if (!placementBox) throw new Error("Employee placement canvas is unavailable.");
+  await page.mouse.move(placementBox.x + 48, placementBox.y + 80);
+  await page.mouse.down();
+  await page.mouse.move(placementBox.x + 88, placementBox.y + 100, { steps: 4 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => Number(await placementCanvas.getAttribute("data-placement-x")))
+    .toBeGreaterThan(initialPlacementX);
+  await placementDialog.locator('[data-demo-id="employee-placement-fit"]').click();
+  await placementDialog
+    .getByRole("button", { name: /Locate Avery Stone in Unit Platform/u })
+    .click();
+  await expect(placementDialog).toHaveCount(0);
+  const platformSharedRow = platformUnit.locator(
+    '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]',
+  );
+  await expect(platformSharedRow).toBeVisible();
+  await expect(platformSharedRow.locator("..")).toHaveAttribute("data-selected", "true");
+
+  await productUnit.click({ position: { x: 80, y: 40 } });
+  await platformUnit.click({ modifiers: ["Control"], position: { x: 80, y: 40 } });
+  await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
   distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
+  await expect(distributionAction).toHaveAttribute("aria-checked", "mixed");
+  await distributionAction.press("Enter");
+  await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
+  await expect(distributionAction).toHaveAttribute("aria-checked", "true");
   await distributionAction.press("Space");
+  await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
+  await expect(distributionAction).toHaveAttribute("aria-checked", "false");
+  await distributionAction.press("Enter");
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
 

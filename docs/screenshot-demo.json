@@ -139,13 +139,14 @@
     "featured": false,
     "title": "Compound Employee filters",
     "file": "feature-employees-filters.png",
-    "description": "Compose ordered Team, Tag, position, gender, complete birthday, custom-field, and text criteria with visible match counts.",
+    "description": "Compose ordered Team, searchable locale-sorted Tag, position, gender, complete birthday, custom-field, and text criteria with visible match counts.",
     "capabilities": [
       "Ordered filters",
       "Complete birthday",
       "Custom values",
       "Not filled",
-      "Compound matching"
+      "Compound matching",
+      "Search-scoped bulk Tags"
     ]
   },
   {
@@ -195,7 +196,7 @@
     "featured": false,
     "title": "Tag catalog",
     "file": "feature-employees-tag-catalog.png",
-    "description": "Search the centralized Tag catalog and inspect global color, Employee usage, and dated-assignment counts.",
+    "description": "Search the locale-sorted Tag catalog and inspect inline Employee usage and dated-assignment counts beside each global color surface.",
     "capabilities": ["Tag catalog", "Search", "Global colors", "Usage counts"]
   },
   {
@@ -403,6 +404,29 @@
       "Direct membership",
       "Manual and Live Units",
       "Accessible status"
+    ]
+  },
+  {
+    "id": "editor-distribution-bulk",
+    "module": "editor",
+    "featured": false,
+    "title": "Bulk distribution mode",
+    "file": "feature-editor-distribution-bulk.png",
+    "description": "Apply the View-local distribution mode to a selected Unit set through one accessible mixed-state switch.",
+    "capabilities": ["Multi-selection", "Mixed state", "Single UI update", "View-local persistence"]
+  },
+  {
+    "id": "editor-placement-map",
+    "module": "editor",
+    "featured": false,
+    "title": "Employee placement map",
+    "file": "feature-editor-placement-map.png",
+    "description": "Inspect one Employee's direct Unit memberships on a read-only relationship canvas and navigate to an exact occurrence.",
+    "capabilities": [
+      "Direct memberships",
+      "Manual and Live Units",
+      "Pan and zoom",
+      "Exact navigation"
     ]
   },
   {

@@ -555,9 +555,29 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
     distributionProduct.locator('[data-distribution-status="sourceOnly"]'),
   ).toBeVisible();
   await capture(page, "editor-distribution-status");
-  await distributionProduct
-    .locator('[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]')
+  const distributionPlatform = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
+  await distributionProduct.click({ position: { x: 40, y: 40 } });
+  await distributionPlatform.click({ modifiers: ["Control"], position: { x: 40, y: 40 } });
+  await distributionProduct.click({ button: "right", position: { x: 40, y: 40 } });
+  await expect(
+    page.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+  ).toHaveAttribute("aria-checked", "mixed");
+  await capture(page, "editor-distribution-bulk");
+  await page.keyboard.press("Escape");
+  const distributionSharedRow = distributionProduct.locator(
+    '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]',
+  );
+  await distributionSharedRow
+    .locator("..")
+    .locator('[data-demo-id="org-editor-employee-placements-action"]')
     .click();
+  await expect(page.locator('[data-demo-id="employee-placement-dialog"]')).toBeVisible();
+  await capture(page, "editor-placement-map");
+  await page
+    .locator('[data-demo-id="employee-placement-dialog"]')
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
+  await distributionSharedRow.click();
   await expect(page.locator("[data-distribution-connection] circle")).toBeVisible();
   await capture(page, "editor-distribution-connections");
 

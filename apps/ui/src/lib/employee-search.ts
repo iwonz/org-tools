@@ -40,18 +40,22 @@ export const createEmptyEmployeeSearchFilters = (): EmployeeSearchFilters => ({
 
 export const selectAllEmployeeFilterTags = (
   filters: EmployeeSearchFilters,
-  availableTagIds: readonly TagId[],
+  visibleTagIds: readonly TagId[],
 ): EmployeeSearchFilters => ({
   ...filters,
-  selectedTags: [...new Set(availableTagIds)],
+  selectedTags: [...new Set([...filters.selectedTags, ...visibleTagIds])],
 });
 
 export const deselectAllEmployeeFilterTags = (
   filters: EmployeeSearchFilters,
-): EmployeeSearchFilters => ({
-  ...filters,
-  selectedTags: [],
-});
+  visibleTagIds: readonly TagId[],
+): EmployeeSearchFilters => {
+  const visibleTags = new Set(visibleTagIds);
+  return {
+    ...filters,
+    selectedTags: filters.selectedTags.filter((tagId) => !visibleTags.has(tagId)),
+  };
+};
 
 export const getEmployeeSearchFiltersKey = (filters: EmployeeSearchFilters) =>
   [

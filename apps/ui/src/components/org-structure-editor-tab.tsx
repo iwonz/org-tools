@@ -43,6 +43,7 @@ import {
   HiOutlinePencilSquare,
   HiOutlinePlus,
   HiOutlineQueueList,
+  HiOutlineShare,
   HiOutlineSquares2X2,
   HiOutlineTag,
   HiOutlineTrash,
@@ -58,6 +59,7 @@ import {
 import { ActionIconButton } from "@/components/action-icon-button";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeDialog } from "@/components/employee-dialog";
+import { EmployeePlacementDialog } from "@/components/employee-placement-dialog";
 import { EmployeeSourcePicker } from "@/components/employee-source-picker";
 import { EmployeeTagPickerPanel } from "@/components/employee-tag-picker";
 import { EmployeeTags } from "@/components/employee-tags";
@@ -94,9 +96,11 @@ import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
+  applyEditorDistributionBulkToggle,
   buildEditorEmployeeUnitIndex,
   createEditorDistributionConnection,
   editorDistributionConnectionIntersectsRect,
+  getEditorDistributionBulkState,
   getEditorDistributionPlacement,
   getEditorDistributionSelection,
   getEditorEmployeeOtherUnitCount,
@@ -458,7 +462,7 @@ function OrgEditorMenuButton({
   onKeyDown,
   variant = "default",
 }: {
-  ariaChecked?: boolean;
+  ariaChecked?: boolean | "mixed";
   ariaExpanded?: boolean;
   ariaHasPopup?: "menu";
   buttonRef?: Ref<HTMLButtonElement>;
@@ -990,6 +994,7 @@ function OrgEditorNode({
   onAddChild,
   onEditUnit,
   onOpenNote,
+  onOpenEmployeePlacements,
   onConnectionPointerDown,
   onEmployeeContextMenu,
   onEmployeePointerDown,
@@ -1012,6 +1017,7 @@ function OrgEditorNode({
   onAddChild: (unitId: OrgEditorUnitId) => void;
   onEditUnit: (unit: OrgEditorUnit) => void;
   onOpenNote: (unit: OrgEditorUnit) => void;
+  onOpenEmployeePlacements: (unitId: OrgEditorUnitId, employeeId: EmployeeId) => void;
   onConnectionPointerDown: (
     event: React.PointerEvent<HTMLButtonElement>,
     unit: OrgEditorUnit,
@@ -1242,6 +1248,8 @@ function OrgEditorNode({
                 }),
               );
               const isBoss = unit.bossEmployeeId === employeeId;
+              const placementUnitCount =
+                distributionUnitIdsByEmployeeId.get(employeeId)?.length ?? 0;
               const distributionOtherUnitCount = distributionEnabled
                 ? getEditorEmployeeOtherUnitCount(distributionUnitIdsByEmployeeId, employeeId)
                 : null;
@@ -1262,15 +1270,9 @@ function OrgEditorNode({
                     : null;
 
               return (
-                <button
-                  aria-label={
-                    distributionLabel ? `${employeeName}. ${distributionLabel}` : employeeName
-                  }
+                <div
                   className={cn(
-                    "flex min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-start text-xs outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
-                    unit.liveFilter === null
-                      ? "cursor-grab active:cursor-grabbing"
-                      : "cursor-default",
+                    "flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
                     distributionStatus === "assigned" &&
                       "bg-distribution-assigned text-distribution-assigned-foreground hover:bg-distribution-assigned",
                     distributionStatus === "sourceOnly" &&
@@ -1280,12 +1282,9 @@ function OrgEditorNode({
                         ? "ring-2 ring-inset ring-signal"
                         : "bg-primary text-primary-foreground hover:bg-primary"),
                   )}
-                  data-distribution-status={distributionStatus ?? "none"}
-                  data-org-editor-employee-id={employeeId}
-                  data-org-editor-employee-row
+                  data-org-editor-employee-row-container
+                  data-selected={employeeSelected ? "true" : "false"}
                   key={`${unit.id}:${employeeId}`}
-                  onContextMenu={(event) => onEmployeeContextMenu(event, unit, employeeId)}
-                  onPointerDown={(event) => onEmployeePointerDown(event, unit, employeeId)}
                   style={{
                     height: employeeRowLayout.heights[employeeIndex],
                     ...(shouldVirtualizeEmployees
@@ -1299,54 +1298,95 @@ function OrgEditorNode({
                         }
                       : {}),
                   }}
-                  title={employee?.fullName ?? t("Employee unavailable")}
-                  type="button"
                 >
-                  <span className="relative inline-flex shrink-0" data-org-editor-employee-avatar>
-                    {employee ? (
-                      <EmployeeAvatar
-                        className={cn(
-                          "size-5 text-[9px]",
-                          isBoss && "ring-2 ring-[#2787f5] ring-offset-1 ring-offset-background",
-                        )}
-                        employee={employee}
-                      />
-                    ) : (
-                      <span
-                        className={cn(
-                          "flex size-5 items-center justify-center rounded-full bg-muted text-muted-foreground",
-                          isBoss && "ring-2 ring-[#2787f5] ring-offset-1 ring-offset-background",
-                        )}
-                      >
-                        <HiOutlineUsers className="size-3" />
-                      </span>
+                  <button
+                    aria-label={
+                      distributionLabel ? `${employeeName}. ${distributionLabel}` : employeeName
+                    }
+                    className={cn(
+                      "flex h-full min-w-0 flex-1 items-center gap-2 overflow-hidden bg-[inherit] px-2 text-start text-xs outline-none hover:bg-[inherit]",
+                      unit.liveFilter === null
+                        ? "cursor-grab active:cursor-grabbing"
+                        : "cursor-default",
                     )}
-                    {isBoss && (
-                      <span className="absolute left-1/2 top-full inline-flex size-3.5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#2787f5] text-[8px] font-semibold leading-none text-white ring-1 ring-background">
-                        <HiOutlineUserGroup className="size-2.5" />
-                      </span>
-                    )}
-                  </span>
-                  <span
-                    className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pe-1"
-                    data-org-editor-employee-content
+                    data-distribution-status={distributionStatus ?? "none"}
+                    data-org-editor-employee-id={employeeId}
+                    data-org-editor-employee-row
+                    onContextMenu={(event) => onEmployeeContextMenu(event, unit, employeeId)}
+                    onPointerDown={(event) => onEmployeePointerDown(event, unit, employeeId)}
+                    title={employee?.fullName ?? t("Employee unavailable")}
+                    type="button"
                   >
-                    <span className="truncate">{employeeName}</span>
-                    {employee && (
-                      <EmployeeTags
-                        className={cn(
-                          "mt-0.5",
-                          employeeSelected &&
-                            !distributionStatus &&
-                            "[&_span]:text-primary-foreground",
-                        )}
-                        compact
-                        density="canvas"
-                        tags={employee.tags}
-                      />
-                    )}
-                  </span>
-                </button>
+                    <span className="relative inline-flex shrink-0" data-org-editor-employee-avatar>
+                      {employee ? (
+                        <EmployeeAvatar
+                          className={cn(
+                            "size-5 text-[9px]",
+                            isBoss && "ring-2 ring-[#2787f5] ring-offset-1 ring-offset-background",
+                          )}
+                          employee={employee}
+                        />
+                      ) : (
+                        <span
+                          className={cn(
+                            "flex size-5 items-center justify-center rounded-full bg-muted text-muted-foreground",
+                            isBoss && "ring-2 ring-[#2787f5] ring-offset-1 ring-offset-background",
+                          )}
+                        >
+                          <HiOutlineUsers className="size-3" />
+                        </span>
+                      )}
+                      {isBoss && (
+                        <span className="absolute left-1/2 top-full inline-flex size-3.5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#2787f5] text-[8px] font-semibold leading-none text-white ring-1 ring-background">
+                          <HiOutlineUserGroup className="size-2.5" />
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pe-1"
+                      data-org-editor-employee-content
+                    >
+                      <span className="truncate">{employeeName}</span>
+                      {employee && (
+                        <EmployeeTags
+                          className={cn(
+                            "mt-0.5",
+                            employeeSelected &&
+                              !distributionStatus &&
+                              "[&_span]:text-primary-foreground",
+                          )}
+                          compact
+                          density="canvas"
+                          tags={employee.tags}
+                        />
+                      )}
+                    </span>
+                  </button>
+                  {employee && placementUnitCount > 1 && (
+                    <Button
+                      aria-label={t("Show {name} in {count} Units", {
+                        count: placementUnitCount,
+                        name: employee.fullName,
+                      })}
+                      className="me-1 size-7 shrink-0 border-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-background/55 hover:text-foreground"
+                      data-demo-id="org-editor-employee-placements-action"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenEmployeePlacements(unit.id, employeeId);
+                      }}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <HiOutlineShare className="size-4" />
+                    </Button>
+                  )}
+                </div>
               );
             })
           )}
@@ -1765,6 +1805,10 @@ export const OrgStructureEditorTab = observer(() => {
   } | null>(null);
   const [exportUnitId, setExportUnitId] = useState<OrgEditorUnitId | null>(null);
   const [noteUnitId, setNoteUnitId] = useState<OrgEditorUnitId | null>(null);
+  const [placementTarget, setPlacementTarget] = useState<{
+    employeeId: EmployeeId;
+    sourceUnitId: OrgEditorUnitId;
+  } | null>(null);
   const { searchOpen, searchQuery } = store.editorUi;
   const [searchPinnedUnitId, setSearchPinnedUnitId] = useState<OrgEditorUnitId | null>(null);
   const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
@@ -2015,10 +2059,24 @@ export const OrgStructureEditorTab = observer(() => {
   );
   const exportUnit = exportUnitId ? (unitById.get(exportUnitId) ?? null) : null;
   const noteUnit = noteUnitId ? (unitById.get(noteUnitId) ?? null) : null;
+  const placementEmployee = placementTarget
+    ? (employeeById.get(placementTarget.employeeId) ?? null)
+    : null;
+  const placementUnits = placementTarget
+    ? (distributionUnitIdsByEmployeeId.get(placementTarget.employeeId) ?? []).flatMap((unitId) => {
+        const unit = unitById.get(unitId);
+        return unit ? [unit] : [];
+      })
+    : [];
 
   useEffect(() => {
     if (noteUnitId && !noteUnit) setNoteUnitId(null);
   }, [noteUnit, noteUnitId]);
+  useEffect(() => {
+    if (placementTarget && (!placementEmployee || placementUnits.length < 2)) {
+      setPlacementTarget(null);
+    }
+  }, [placementEmployee, placementTarget, placementUnits.length]);
   const orgEditorSearchResults = useMemo<OrgEditorSearchResult[]>(() => {
     if (!units || orgEditorSearchTokens.length === 0) return [];
 
@@ -2183,52 +2241,58 @@ export const OrgStructureEditorTab = observer(() => {
     centerUnitInViewport(primaryRootUnit, renderViewportRef.current.scale);
   }, [centerUnitInViewport, editor, primaryRootUnit]);
 
-  const selectOrgEditorSearchResult = useCallback(
-    (result: OrgEditorSearchResult) => {
-      const shouldRevealEmployee =
-        result.type === "employee" &&
-        result.unit.collapsed &&
-        result.unit.bossEmployeeId !== result.employee.id;
-
+  const focusEmployeeOccurrence = useCallback(
+    (unitId: OrgEditorUnitId, employeeId: EmployeeId, closeSearch = false) => {
+      const unit = unitById.get(unitId);
+      if (!unit) return;
+      const shouldRevealEmployee = unit.collapsed && unit.bossEmployeeId !== employeeId;
       setContextMenu(null);
-      setSearchPinnedUnitId(result.unit.id);
+      setSearchPinnedUnitId(unitId);
 
       if (shouldRevealEmployee) {
-        editor.setUnitsCollapsed([result.unit.id], false);
+        editor.setUnitsCollapsed([unitId], false);
       }
 
-      const nextUnit = unitById.get(result.unit.id) ?? result.unit;
+      const nextUnit = unitById.get(unitId) ?? unit;
       const unitBounds = getOrgEditorUnitBounds(nextUnit);
-
-      if (result.type === "unit") {
-        editor.setSelectedItems([{ type: "unit", unitId: nextUnit.id }]);
-        centerCanvasRectInViewport(unitBounds, 1);
-        store.setEditorUi({ searchOpen: false, searchQuery: "" });
-        return;
-      }
-
       const visibleEmployeeIds = getOrgEditorOrderedEmployeeIds(nextUnit, employeeById);
-      const employeeIndex = visibleEmployeeIds.indexOf(result.employee.id);
+      const employeeIndex = visibleEmployeeIds.indexOf(employeeId);
       const employeeBounds =
         employeeIndex >= 0 ? getOrgEditorEmployeeBounds(nextUnit, employeeIndex) : null;
 
       editor.setSelectedItems([
         {
-          employeeId: result.employee.id,
+          employeeId,
           type: "employee",
           unitId: nextUnit.id,
         },
       ]);
       lastEmployeeSelectionRef.current = {
-        employeeId: result.employee.id,
+        employeeId,
         unitId: nextUnit.id,
       };
-      centerCanvasRectInViewport(unitBounds, 1, {
+      centerCanvasRectInViewport(unitBounds, renderViewportRef.current.scale, {
         ensureRect: employeeBounds,
       });
-      store.setEditorUi({ searchOpen: false, searchQuery: "" });
+      if (closeSearch) store.setEditorUi({ searchOpen: false, searchQuery: "" });
     },
     [centerCanvasRectInViewport, editor, employeeById, store, unitById],
+  );
+
+  const selectOrgEditorSearchResult = useCallback(
+    (result: OrgEditorSearchResult) => {
+      if (result.type === "unit") {
+        setContextMenu(null);
+        setSearchPinnedUnitId(result.unit.id);
+        editor.setSelectedItems([{ type: "unit", unitId: result.unit.id }]);
+        centerCanvasRectInViewport(getOrgEditorUnitBounds(result.unit), 1);
+        store.setEditorUi({ searchOpen: false, searchQuery: "" });
+        return;
+      }
+
+      focusEmployeeOccurrence(result.unit.id, result.employee.id, true);
+    },
+    [centerCanvasRectInViewport, editor, focusEmployeeOccurrence, store],
   );
 
   useEffect(() => {
@@ -3395,6 +3459,10 @@ export const OrgStructureEditorTab = observer(() => {
       : null;
   const contextMenuSingleUnit =
     contextMenuSingleUnitId !== null ? (unitById.get(contextMenuSingleUnitId) ?? null) : null;
+  const contextMenuDistributionState =
+    contextMenu?.type === "units"
+      ? getEditorDistributionBulkState(distributionModeUnitIdSet, contextMenu.unitIds)
+      : "unchecked";
   const editedUnit =
     unitDialog?.unitId !== null && unitDialog?.unitId !== undefined
       ? (editor.units.find((unit) => unit.id === unitDialog.unitId) ?? null)
@@ -3546,6 +3614,9 @@ export const OrgStructureEditorTab = observer(() => {
                 onConnectionPointerDown={handleConnectionPointerDown}
                 onEditUnit={openEditUnit}
                 onOpenNote={(unit) => setNoteUnitId(unit.id)}
+                onOpenEmployeePlacements={(sourceUnitId, employeeId) =>
+                  setPlacementTarget({ employeeId, sourceUnitId })
+                }
                 onEmployeeContextMenu={handleEmployeeContextMenu}
                 onEmployeePointerDown={handleEmployeePointerDown}
                 onUnitContextMenu={handleUnitContextMenu}
@@ -3771,40 +3842,51 @@ export const OrgStructureEditorTab = observer(() => {
                       {t("Create Employee")}
                     </OrgEditorMenuButton>
                   )}
-                  {contextMenuSingleUnit && (
-                    <OrgEditorMenuButton
-                      ariaChecked={distributionModeUnitIdSet.has(contextMenuSingleUnit.id)}
-                      dataDemoId="org-editor-distribution-mode-action"
-                      onClick={() => {
-                        editor.toggleUnitDistributionMode(contextMenuSingleUnit.id);
-                        setContextMenu(null);
-                      }}
-                    >
-                      <HiOutlineArrowsRightLeft />
-                      <span className="min-w-0 flex-1 truncate">{t("Distribution mode")}</span>
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          "relative ms-auto h-4 w-7 shrink-0 rounded-full transition-colors",
-                          distributionModeUnitIdSet.has(contextMenuSingleUnit.id)
-                            ? "bg-signal"
-                            : "bg-muted-foreground/35",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-0.5 size-3 rounded-full bg-background transition-[inset-inline-start]",
-                            distributionModeUnitIdSet.has(contextMenuSingleUnit.id)
-                              ? "start-3.5"
-                              : "start-0.5",
-                          )}
-                        />
-                      </span>
-                    </OrgEditorMenuButton>
-                  )}
-                  <span className="my-1 h-px bg-border" />
                 </>
               )}
+              <OrgEditorMenuButton
+                ariaChecked={
+                  contextMenuDistributionState === "mixed"
+                    ? "mixed"
+                    : contextMenuDistributionState === "checked"
+                }
+                dataDemoId="org-editor-distribution-mode-action"
+                onClick={() => {
+                  editor.setDistributionModeUnitIds(
+                    applyEditorDistributionBulkToggle(
+                      editor.distributionModeUnitIds,
+                      contextMenu.unitIds,
+                    ),
+                  );
+                  setContextMenu(null);
+                }}
+              >
+                <HiOutlineArrowsRightLeft />
+                <span className="min-w-0 flex-1 truncate">{t("Distribution mode")}</span>
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "relative ms-auto h-4 w-7 shrink-0 rounded-full transition-colors",
+                    contextMenuDistributionState === "checked"
+                      ? "bg-signal"
+                      : contextMenuDistributionState === "mixed"
+                        ? "bg-signal/45"
+                        : "bg-muted-foreground/35",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 size-3 rounded-full bg-background transition-[inset-inline-start]",
+                      contextMenuDistributionState === "checked"
+                        ? "start-3.5"
+                        : contextMenuDistributionState === "mixed"
+                          ? "start-2"
+                          : "start-0.5",
+                    )}
+                  />
+                </span>
+              </OrgEditorMenuButton>
+              <span className="my-1 h-px bg-border" />
               <OrgEditorMenuButton
                 onClick={() => {
                   editor.setUnitsCollapsed(contextMenu.unitIds, true, {
@@ -4079,6 +4161,20 @@ export const OrgStructureEditorTab = observer(() => {
           onSave={(unitId, source) => editor.setUnitNoteMarkdown(unitId, source)}
           open
           unit={noteUnit}
+        />
+      )}
+      {placementTarget && placementEmployee && placementUnits.length >= 2 && (
+        <EmployeePlacementDialog
+          employee={placementEmployee}
+          onLocate={(unitId) => {
+            setPlacementTarget(null);
+            focusEmployeeOccurrence(unitId, placementEmployee.id);
+          }}
+          onOpenChange={(open) => !open && setPlacementTarget(null)}
+          open
+          sourceUnitId={placementTarget.sourceUnitId}
+          textDirection={textDirection}
+          units={placementUnits}
         />
       )}
     </>

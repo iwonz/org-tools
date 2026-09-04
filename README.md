@@ -23,7 +23,7 @@ requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 56 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 58 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
@@ -34,6 +34,8 @@ named presets, a full palette, and exact HTML Keyword, HEX, RGB, or RGBA entry r
 are normalized to canonical HEX, including retained alpha. Custom fields participate in forms, filters, Employee Import,
 structured JSON, Template output, and colored PNG chips. The Calendar uses locale-aware weeks, soft rose weekend tones, a
 compact dated-Tag rail, direct Today navigation when browsing another month, and day details only for dates containing events.
+Tag-heavy Employee filters add locale-aware search and search-scoped bulk selection, while catalog
+usage counts remain inline beside each Tag.
 
 The complete interface is bundled in English, Simplified Chinese, Russian, Spanish, French, and
 Modern Standard Arabic. The language dialog uses bundled local flags. New in-memory states follow the first supported browser language, Arabic
@@ -48,8 +50,10 @@ Employees and Tags remain global while each View keeps its own Units, assignment
 history, selection, and viewport. Data Download can use any View as its source.
 Each Unit can carry a View-local Markdown note. Notes open in a safe Preview, edit as an isolated
 draft, participate in View clone and cross-View Copy/Paste, and stay out of PNG and Employee data
-outputs. A View-local distribution mode highlights direct members already placed elsewhere and
-traces one selected Employee to every other placement without changing or exporting the structure.
+outputs. A View-local distribution mode can update one or many selected Units, highlights direct
+members already placed elsewhere, and traces one selected Employee to every other placement without
+changing or exporting the structure. Multi-Unit Employees expose a separate read-only relationship
+map with pan, zoom, and exact navigation back to their occurrence on the Editor canvas.
 Analytics includes known birth-year distributions plus average, youngest, and oldest age summaries
 for the whole catalog, men, and women; unknown `1900` years are excluded.
 Template formats in Data Download, Editor export, and the Employee model place a help affordance

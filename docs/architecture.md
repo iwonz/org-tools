@@ -124,6 +124,9 @@ history, collaborative cursors, or remote synchronization.
 - `OrgStore` owns global Employees, custom field definitions, the Tag catalog, derived indexes,
   durable UI projection, and separate organization/UI change sequences. It materializes only the
   system, active Editor, and selected Download Views.
+- Shared Employee filters derive one locale-aware Tag option list, filter it through a deferred
+  transient query, and apply bulk selection to visible IDs without disturbing hidden selections.
+  The Tag catalog uses the same comparator and keeps both usage counts inline after the filled Tag.
 - Shared Tag color helpers keep named palette classes static and derive bounded light/dark and canvas
   fill/foreground pairs for named, custom, alpha, and neutral values. Flat catalog rows expose Eye,
   Color, Edit, and Delete in that order. The row-level color Popover owns transient HSV selection plus
@@ -224,6 +227,11 @@ source-only tonal states in constant time. An exact single Employee occurrence d
 set of pointer-inert SVG paths from deterministic row rectangles; hidden rows in collapsed targets
 fall back to the nearest card edge. The overlay sits above hierarchy paths and below cards, stays
 outside history and spatial geometry, and is omitted from every Editor or Employee report output.
+The same index drives a row-level multi-placement action independent of distribution highlighting.
+Its transient read-only modal lays only that Employee's Units on deterministic rings, offers bounded
+pan/zoom/Fit controls, and delegates exact reveal, centering, and selection back to the Editor's
+shared occurrence-navigation coordinator. The Unit context menu derives checked, unchecked, or
+mixed state for the selected Unit set and persists one bounded UI update.
 Unit, Employee, connection, and marquee drags share one edge-pan loop. After the movement threshold,
 the last 64 screen pixels accelerate quadratically to a bounded six-pixel-per-frame viewport delta;
 diagonal motion uses the same total cap. Drag and document-anchored marquee previews remain
