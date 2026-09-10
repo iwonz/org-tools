@@ -492,6 +492,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     !hasExactKeys(value, [
       "bossEmployeeId",
       "collapsed",
+      "groupByTag",
       "createdAt",
       "employeeIds",
       "employeePositions",
@@ -509,6 +510,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     !(value.parentId === null || isUuid(value.parentId)) ||
     !(value.bossEmployeeId === null || isEmployeeId(value.bossEmployeeId)) ||
     typeof value.collapsed !== "boolean" ||
+    typeof value.groupByTag !== "boolean" ||
     !isTimestamp(value.createdAt) ||
     !isEmployeeIdArray(value.employeeIds) ||
     !isString(value.name) ||
@@ -532,6 +534,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
   return {
     bossEmployeeId: value.bossEmployeeId,
     collapsed: value.collapsed,
+    groupByTag: value.groupByTag,
     createdAt: value.createdAt,
     employeeIds: [...value.employeeIds],
     employeePositions,

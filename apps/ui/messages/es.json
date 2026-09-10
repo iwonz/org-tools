@@ -176,7 +176,6 @@
     "Teal": "Verde azulado",
     "Cyan": "Cian",
     "Blue": "Azul",
-    "{count} dated": "fecha · {count}",
     "Employee is the boss": "El empleado es el jefe.",
     "Employee position {name} in Live Unit": "Puesto del empleado en el equipo dinámico · {name}",
     "Employee position {name} in Unit": "Posición de empleados en la unidad · {name}",
@@ -559,6 +558,12 @@
     "Unit notes can contain at most 64 KiB.": "Las notas de equipo pueden contener como máximo 64 KiB.",
     "Markdown image {alt}": "Imagen no mostrada: {alt}",
     "Markdown preview": "Vista previa de Markdown",
-    "Markdown editor": "Editor de Markdown"
+    "Markdown editor": "Editor de Markdown",
+    "With date: {count}": "Con fecha: {count}",
+    "Group by tag": "Agrupar por etiqueta",
+    "Unit settings for {name}": "Configuración de la unidad {name}",
+    "Change Unit grouping": "Cambiar agrupación de la unidad",
+    "{name} moved to position {position}": "{name} se movió a la posición {position}",
+    "Drag to reorder or use the arrow keys": "Arrastra para reordenar o usa las teclas de flecha"
   }
 }

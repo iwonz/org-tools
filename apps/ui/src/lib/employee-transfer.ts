@@ -640,6 +640,7 @@ export const applyEmployeeImport = ({
         resolved = {
           bossEmployeeId: null,
           collapsed: false,
+          groupByTag: true,
           createdAt: now,
           employeeIds: [],
           employeePositions: [],

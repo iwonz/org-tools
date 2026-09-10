@@ -35,6 +35,7 @@ import {
   HiOutlineBuildingOffice2,
   HiOutlineChevronRight,
   HiOutlineClipboard,
+  HiOutlineCog6Tooth,
   HiOutlineDocumentDuplicate,
   HiOutlineDocumentText,
   HiOutlineFolder,
@@ -92,6 +93,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitDialog } from "@/components/unit-dialog";
 import { UnitNoteDialog } from "@/components/unit-note-dialog";
+import { UnitSettingsDialog } from "@/components/unit-settings-dialog";
 import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
@@ -994,6 +996,7 @@ function OrgEditorNode({
   onAddChild,
   onEditUnit,
   onOpenNote,
+  onOpenSettings,
   onOpenEmployeePlacements,
   onConnectionPointerDown,
   onEmployeeContextMenu,
@@ -1017,6 +1020,7 @@ function OrgEditorNode({
   onAddChild: (unitId: OrgEditorUnitId) => void;
   onEditUnit: (unit: OrgEditorUnit) => void;
   onOpenNote: (unit: OrgEditorUnit) => void;
+  onOpenSettings: (unit: OrgEditorUnit, trigger: HTMLButtonElement) => void;
   onOpenEmployeePlacements: (unitId: OrgEditorUnitId, employeeId: EmployeeId) => void;
   onConnectionPointerDown: (
     event: React.PointerEvent<HTMLButtonElement>,
@@ -1160,9 +1164,26 @@ function OrgEditorNode({
         <HiOutlinePlus className="size-4" />
       </Button>
       <Button
+        aria-label={t("Unit settings for {name}", { name: unit.name })}
+        className="pointer-events-none absolute end-2 top-2 z-20 size-7 rounded-md border-0 bg-transparent p-0 text-muted-foreground opacity-0 shadow-none transition-opacity hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
+        data-demo-id="unit-settings-action"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenSettings(unit, event.currentTarget);
+        }}
+        onDoubleClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        size="icon"
+        title={t("Unit settings for {name}", { name: unit.name })}
+        type="button"
+        variant="ghost"
+      >
+        <HiOutlineCog6Tooth className="size-4" />
+      </Button>
+      <Button
         aria-label={t("Open Unit note for {name}", { name: unit.name })}
         className={cn(
-          "absolute end-2 top-2 z-20 size-7 rounded-md border-0 p-0 shadow-none transition-[color,background-color,opacity]",
+          "absolute end-10 top-2 z-20 size-7 rounded-md border-0 p-0 shadow-none transition-[color,background-color,opacity]",
           unit.noteMarkdown.trim()
             ? "bg-signal/10 text-signal opacity-100 hover:bg-signal/15 hover:text-signal"
             : "pointer-events-none bg-transparent text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100",
@@ -1185,7 +1206,7 @@ function OrgEditorNode({
         data-org-editor-unit-header
         style={{ height: ORG_EDITOR_UNIT_HEADER_HEIGHT }}
       >
-        <div className="flex items-center gap-2 pe-8">
+        <div className="flex items-center gap-2 pe-16">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground">
             <HiOutlineBuildingOffice2 className="size-4" />
           </span>
@@ -1805,6 +1826,8 @@ export const OrgStructureEditorTab = observer(() => {
   } | null>(null);
   const [exportUnitId, setExportUnitId] = useState<OrgEditorUnitId | null>(null);
   const [noteUnitId, setNoteUnitId] = useState<OrgEditorUnitId | null>(null);
+  const [settingsUnitId, setSettingsUnitId] = useState<OrgEditorUnitId | null>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [placementTarget, setPlacementTarget] = useState<{
     employeeId: EmployeeId;
     sourceUnitId: OrgEditorUnitId;
@@ -2058,6 +2081,7 @@ export const OrgStructureEditorTab = observer(() => {
     [employeeById],
   );
   const exportUnit = exportUnitId ? (unitById.get(exportUnitId) ?? null) : null;
+  const settingsUnit = settingsUnitId ? (unitById.get(settingsUnitId) ?? null) : null;
   const noteUnit = noteUnitId ? (unitById.get(noteUnitId) ?? null) : null;
   const placementEmployee = placementTarget
     ? (employeeById.get(placementTarget.employeeId) ?? null)
@@ -2072,6 +2096,9 @@ export const OrgStructureEditorTab = observer(() => {
   useEffect(() => {
     if (noteUnitId && !noteUnit) setNoteUnitId(null);
   }, [noteUnit, noteUnitId]);
+  useEffect(() => {
+    if (settingsUnitId && !settingsUnit) setSettingsUnitId(null);
+  }, [settingsUnit, settingsUnitId]);
   useEffect(() => {
     if (placementTarget && (!placementEmployee || placementUnits.length < 2)) {
       setPlacementTarget(null);
@@ -3614,6 +3641,10 @@ export const OrgStructureEditorTab = observer(() => {
                 onConnectionPointerDown={handleConnectionPointerDown}
                 onEditUnit={openEditUnit}
                 onOpenNote={(unit) => setNoteUnitId(unit.id)}
+                onOpenSettings={(unit, trigger) => {
+                  settingsTriggerRef.current = trigger;
+                  setSettingsUnitId(unit.id);
+                }}
                 onOpenEmployeePlacements={(sourceUnitId, employeeId) =>
                   setPlacementTarget({ employeeId, sourceUnitId })
                 }
@@ -4155,6 +4186,14 @@ export const OrgStructureEditorTab = observer(() => {
         unit={exportUnit}
         units={displayUnits}
       />
+      {settingsUnit && (
+        <UnitSettingsDialog
+          unit={settingsUnit}
+          onCloseAutoFocus={() => settingsTriggerRef.current?.focus()}
+          onGroupByTagChange={(enabled) => editor.setUnitGroupByTag(settingsUnit.id, enabled)}
+          onOpenChange={(open) => !open && setSettingsUnitId(null)}
+        />
+      )}
       {noteUnit && (
         <UnitNoteDialog
           onOpenChange={(open) => !open && setNoteUnitId(null)}

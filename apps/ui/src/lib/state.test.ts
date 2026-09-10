@@ -539,6 +539,7 @@ describe("OrgToolsState", () => {
       {
         bossEmployeeId: null,
         collapsed: false,
+        groupByTag: true,
         createdAt: now,
         employeeIds: [],
         employeePositions: [],
@@ -555,6 +556,7 @@ describe("OrgToolsState", () => {
       {
         bossEmployeeId: null,
         collapsed: false,
+        groupByTag: true,
         createdAt: now,
         employeeIds: [],
         employeePositions: [],

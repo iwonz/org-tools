@@ -23,7 +23,7 @@ requests.
 | Calendar | Data Download |
 | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 58 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 59 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.

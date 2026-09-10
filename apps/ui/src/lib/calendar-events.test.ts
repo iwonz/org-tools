@@ -18,6 +18,7 @@ const employee = (id: string): Employee => ({
   phone: null,
   profileUrl: null,
   tags: [],
+  tagPriority: null,
   unitIds: [],
   unitPositions: [],
   username: null,
@@ -65,7 +66,7 @@ describe("calendar event dates", () => {
     expect(structure.indexes.datedTagGroups[0]?.events).toHaveLength(2);
   });
 
-  test("builds Birthdays and localized Tag groups as one stable row stream", () => {
+  test("builds Birthdays and catalog-ordered Tag groups as one stable row stream", () => {
     const first = { ...employee("00000000-0000-4000-8000-000000000001"), fullName: "Avery One" };
     const second = {
       ...employee("00000000-0000-4000-8000-000000000002"),
@@ -102,11 +103,11 @@ describe("calendar event dates", () => {
     expect(rows.map((row) => row.key)).toEqual([
       "birthdays",
       `birthdays:${second.id}`,
-      "tag:anniversary",
-      `tag:anniversary:${first.id}`,
       "tag:release",
       `tag:release:${first.id}`,
       `tag:release:${second.id}`,
+      "tag:anniversary",
+      `tag:anniversary:${first.id}`,
     ]);
   });
 });

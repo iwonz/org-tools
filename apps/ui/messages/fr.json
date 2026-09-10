@@ -176,7 +176,6 @@
     "Teal": "FEUILLES",
     "Cyan": "Cyan",
     "Blue": "Bleu",
-    "{count} dated": "datée · {count}",
     "Employee is the boss": "L'employé est le patron",
     "Employee position {name} in Live Unit": "Poste de l'employé dans l'équipe dynamique · {name}",
     "Employee position {name} in Unit": "Fonction de fonctionnaire dans l'unité · {name}",
@@ -559,6 +558,12 @@
     "Unit notes can contain at most 64 KiB.": "Les notes d’équipe sont limitées à 64 Kio.",
     "Markdown image {alt}": "Image non affichée : {alt}",
     "Markdown preview": "Aperçu Markdown",
-    "Markdown editor": "Éditeur Markdown"
+    "Markdown editor": "Éditeur Markdown",
+    "With date: {count}": "Avec date : {count}",
+    "Group by tag": "Grouper par étiquette",
+    "Unit settings for {name}": "Paramètres de l’unité {name}",
+    "Change Unit grouping": "Modifier le regroupement de l’unité",
+    "{name} moved to position {position}": "{name} a été déplacé à la position {position}",
+    "Drag to reorder or use the arrow keys": "Faites glisser pour réordonner ou utilisez les touches fléchées"
   }
 }

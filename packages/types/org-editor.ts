@@ -37,6 +37,7 @@ export type OrgEditorUnit = {
   y: number;
   bossEmployeeId: EmployeeId | null;
   collapsed: boolean;
+  groupByTag: boolean;
   employeeIds: EmployeeId[];
   /**
    * Manual Units persist positions for assigned Employees. Live Units keep

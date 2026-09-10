@@ -61,6 +61,7 @@ const units = Array.from({ length: unitCount }, (_, index) => {
   return {
     bossEmployeeId: employeeIds[0] ?? null,
     collapsed: false,
+    groupByTag: true,
     createdAt: timestamp,
     employeeIds,
     employeePositions: employeeIds.map((id, positionIndex) => ({

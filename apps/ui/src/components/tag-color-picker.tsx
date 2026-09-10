@@ -123,6 +123,7 @@ export function TagColorPicker({
 
   return (
     <Popover
+      modal
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (nextOpen) {

@@ -176,7 +176,6 @@
     "Teal": "أخضر مزرق",
     "Cyan": "سيان",
     "Blue": "الأزرق",
-    "{count} dated": "{count} مؤرخة",
     "Employee is the boss": "الموظف هو الرئيس",
     "Employee position {name} in Live Unit": "منصب الموظف {name} في الفريق الديناميكي",
     "Employee position {name} in Unit": "منصب الموظف {name} في الفريق",
@@ -559,6 +558,12 @@
     "Unit notes can contain at most 64 KiB.": "يمكن أن تحتوي ملاحظات الفريق على 64 KiB كحد أقصى.",
     "Markdown image {alt}": "الصورة غير معروضة: {alt}",
     "Markdown preview": "معاينة Markdown",
-    "Markdown editor": "محرر Markdown"
+    "Markdown editor": "محرر Markdown",
+    "With date: {count}": "بتاريخ: {count}",
+    "Group by tag": "التجميع حسب الوسم",
+    "Unit settings for {name}": "إعدادات الوحدة {name}",
+    "Change Unit grouping": "تغيير تجميع الوحدة",
+    "{name} moved to position {position}": "تم نقل {name} إلى الموضع {position}",
+    "Drag to reorder or use the arrow keys": "اسحب لإعادة الترتيب أو استخدم مفاتيح الأسهم"
   }
 }

@@ -255,14 +255,16 @@ export function OrgEditorExportDialog({
     [scope, sourceIndex, unit, units],
   );
   const tagOptions = useMemo(() => {
-    const labels = new Map<string, string>();
+    const tagIds = new Set<string>();
     for (const row of exportRows) {
       for (const tag of row.employee.tags) {
-        labels.set(normalizeSearchValue(tag.label), tag.label);
+        if (tag.tagId) tagIds.add(tag.tagId);
       }
     }
-    return [...labels].map(([value, label]) => ({ label, value }));
-  }, [exportRows]);
+    return store.tagDefinitions
+      .filter((tag) => tagIds.has(tag.id))
+      .map(({ label }) => ({ label, value: normalizeSearchValue(label) }));
+  }, [exportRows, store.tagDefinitions]);
   const jsonValidation = useMemo(
     () =>
       validateExportFieldNames({

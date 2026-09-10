@@ -21,6 +21,7 @@ const employee = (
   phone: null,
   profileUrl: null,
   tags: [],
+  tagPriority: null,
   unitIds: [],
   unitPositions: [],
   username: null,

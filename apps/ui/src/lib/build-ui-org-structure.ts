@@ -17,6 +17,7 @@ import {
   createUnitSearchDocument,
   getPositionOptionsFromSearchDocuments,
 } from "@/lib/search-index";
+import { createTagOrderIndex, orderByTagCatalog } from "@/lib/tag-order";
 
 export const UI_UNIT_PATH_SEPARATOR = " · ";
 
@@ -124,24 +125,31 @@ export const createUiOrgStructure = ({
   for (const [birthdayKey, birthdayEmployees] of birthdayEmployeesByKey) {
     birthdayEmployeesByKey.set(birthdayKey, [...birthdayEmployees].sort(compareEmployeesByName));
   }
+  const tagOrderById = createTagOrderIndex(tagDefinitions.map((tag) => tag.id));
   for (const [date, events] of datedTagEventsByDate) {
     datedTagEventsByDate.set(
       date,
-      [...events].sort((first, second) => compareEmployeesByName(first.employee, second.employee)),
+      orderByTagCatalog(
+        [...events].sort((first, second) =>
+          compareEmployeesByName(first.employee, second.employee),
+        ),
+        tagOrderById,
+        (event) => event.tagId,
+      ),
     );
   }
-  const datedTagGroups = [...datedTagGroupByNormalizedLabel.values()]
-    .map((group) => ({
-      ...group,
-      events: [...group.events].sort(
-        (first, second) =>
-          first.date.localeCompare(second.date) ||
-          compareEmployeesByName(first.employee, second.employee),
-      ),
-    }))
-    .sort((first, second) =>
-      first.label.localeCompare(second.label, "en", { sensitivity: "base" }),
-    );
+  const datedTagGroups = orderByTagCatalog(
+    [...datedTagGroupByNormalizedLabel.values()],
+    tagOrderById,
+    (group) => group.tagId,
+  ).map((group) => ({
+    ...group,
+    events: [...group.events].sort(
+      (first, second) =>
+        first.date.localeCompare(second.date) ||
+        compareEmployeesByName(first.employee, second.employee),
+    ),
+  }));
 
   return {
     allEmployees,
@@ -179,7 +187,10 @@ export const createUiOrgStructure = ({
       manualEmployeeSearchDocuments,
       manualPositionOptions: getPositionOptionsFromSearchDocuments(manualEmployeeSearchDocuments),
       positionOptions: getPositionOptionsFromSearchDocuments(employeeSearchDocuments),
-      tagOptions: getEmployeeTagOptionsFromSearchDocuments(employeeSearchDocuments),
+      tagOptions:
+        tagDefinitions.length > 0
+          ? tagDefinitions.map((tag) => tag.label)
+          : getEmployeeTagOptionsFromSearchDocuments(employeeSearchDocuments),
       tagsById: new Map(tagDefinitions.map((tag) => [tag.id, tag])),
       unitOrderById,
       unitSearchDocuments: deepUnits.map(createUnitSearchDocument),

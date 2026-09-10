@@ -9,6 +9,7 @@ import type {
   EmployeeTagDefinition,
   OrganizationEmployee,
   OrgToolsState,
+  TagId,
   UiActiveTab,
   UiOrgStructure,
   UiTheme,
@@ -54,6 +55,7 @@ import {
   parseOrgToolsState,
 } from "@/lib/org-file";
 import { normalizeSearchValue } from "@/lib/search-index";
+import { moveCatalogTag } from "@/lib/tag-order";
 import type {
   ExportFieldDropPlacement,
   ExportJsonEmployeeFieldKey,
@@ -1413,6 +1415,13 @@ export class OrgStore {
         this.orgViews.markViewDocumentChanged(viewId);
       }
     });
+  }
+
+  moveTag(sourceId: TagId, targetId: TagId, placement: "before" | "after"): void {
+    const next = moveCatalogTag(this.tagDefinitions, sourceId, targetId, placement);
+    if (next === this.tagDefinitions) return;
+    this.tagDefinitions = [...next];
+    this.rebuildMainModel();
   }
 
   saveTagDefinition(definition: EmployeeTagDefinition): void {

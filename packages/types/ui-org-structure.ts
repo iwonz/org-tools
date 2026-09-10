@@ -109,6 +109,8 @@ export type Employee = {
   phone: string | null;
   profileUrl: string | null;
   tags: EmployeeTag[];
+  /** Earliest catalog Tag rank, or null when untagged; never persisted. */
+  tagPriority: number | null;
   unitIds: UnitId[];
   unitPositions: EmployeeUnitPosition[];
   username: string | null;

@@ -316,16 +316,7 @@ export const CalendarTab = observer(() => {
     store.units?.indexes.birthdayEmployeesByKey ?? EMPTY_BIRTHDAY_EMPLOYEES_BY_KEY;
   const datedEventsByDate = store.units?.indexes.datedTagEventsByDate ?? EMPTY_DATED_EVENTS_BY_DATE;
   const indexedDatedTagGroups = store.units?.indexes.datedTagGroups ?? EMPTY_DATED_TAG_GROUPS;
-  const datedTagGroups = useMemo(
-    () =>
-      [...indexedDatedTagGroups].sort((first, second) =>
-        new Intl.Collator(locale, { numeric: true, sensitivity: "base" }).compare(
-          first.label,
-          second.label,
-        ),
-      ),
-    [indexedDatedTagGroups, locale],
-  );
+  const datedTagGroups = indexedDatedTagGroups;
   const { monthIndex, year } = store.calendarUi;
   const [dialogDayKey, setDialogDayKey] = useState<string | null>(null);
   const [dialogTagKey, setDialogTagKey] = useState<string | null>(null);

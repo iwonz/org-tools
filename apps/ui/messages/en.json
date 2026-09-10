@@ -176,7 +176,6 @@
     "Teal": "Teal",
     "Cyan": "Cyan",
     "Blue": "Blue",
-    "{count} dated": "{count} dated",
     "Employee is the boss": "Employee is the boss",
     "Employee position {name} in Live Unit": "Employee position {name} in Live Unit",
     "Employee position {name} in Unit": "Employee position {name} in Unit",
@@ -559,6 +558,12 @@
     "Unit notes can contain at most 64 KiB.": "Unit notes can contain at most 64 KiB.",
     "Markdown image {alt}": "Image not displayed: {alt}",
     "Markdown preview": "Markdown preview",
-    "Markdown editor": "Markdown editor"
+    "Markdown editor": "Markdown editor",
+    "With date: {count}": "With date: {count}",
+    "Group by tag": "Group by tag",
+    "Unit settings for {name}": "Unit settings for {name}",
+    "Change Unit grouping": "Change Unit grouping",
+    "{name} moved to position {position}": "{name} moved to position {position}",
+    "Drag to reorder or use the arrow keys": "Drag to reorder or use the arrow keys"
   }
 }

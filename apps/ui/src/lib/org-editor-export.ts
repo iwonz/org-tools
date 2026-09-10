@@ -8,7 +8,6 @@ import type {
   TagId,
 } from "@org-tools/types";
 import { isSafeAvatarBase64Url } from "@/lib/employee-data";
-import { sortEmployeeTags } from "@/lib/employee-tags";
 import { getEmployeeInitials } from "@/lib/employee-utils";
 import {
   asExportText,
@@ -664,7 +663,7 @@ export const getOrgEditorExportEmployeeTagLabels = (employee: Employee, locale: 
     timeZone: "UTC",
     year: "numeric",
   });
-  return sortEmployeeTags(employee.tags).map((tag) =>
+  return employee.tags.map((tag) =>
     tag.date ? `${tag.label} · ${formatter.format(new Date(`${tag.date}T00:00:00Z`))}` : tag.label,
   );
 };
@@ -679,7 +678,7 @@ export const getOrgEditorExportEmployeeTags = (
   locale: string,
 ): OrgEditorExportEmployeeTag[] => {
   const labels = getOrgEditorExportEmployeeTagLabels(employee, locale);
-  return sortEmployeeTags(employee.tags).map((tag, index) => ({
+  return employee.tags.map((tag, index) => ({
     color: tag.color ?? null,
     label: labels[index] ?? tag.label,
   }));

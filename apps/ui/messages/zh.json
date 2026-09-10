@@ -176,7 +176,6 @@
     "Teal": "青绿色",
     "Cyan": "青色",
     "Blue": "蓝色",
-    "{count} dated": "日期 · {count}",
     "Employee is the boss": "员工是负责人",
     "Employee position {name} in Live Unit": "员工在动态团队“{name}”中的职位",
     "Employee position {name} in Unit": "员工在团队“{name}”中的职位",
@@ -559,6 +558,12 @@
     "Unit notes can contain at most 64 KiB.": "团队备注最多可包含 64 KiB。",
     "Markdown image {alt}": "未显示图片：{alt}",
     "Markdown preview": "Markdown 预览",
-    "Markdown editor": "Markdown 编辑器"
+    "Markdown editor": "Markdown 编辑器",
+    "With date: {count}": "有日期：{count}",
+    "Group by tag": "按标签分组",
+    "Unit settings for {name}": "{name} 的团队设置",
+    "Change Unit grouping": "更改团队分组",
+    "{name} moved to position {position}": "{name} 已移至第 {position} 位",
+    "Drag to reorder or use the arrow keys": "拖动或使用方向键调整顺序"
   }
 }

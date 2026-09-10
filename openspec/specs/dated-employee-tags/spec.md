@@ -38,7 +38,7 @@ calendar instead of a native date input and SHALL NOT repeat the tag label insid
 ### Requirement: Dated tags are visible without changing label semantics
 The application SHALL display every assigned tag without caps or overflow counters, wrap chips onto
 additional rows, render dated labels as `label · localized date` with a full-date tooltip, and keep
-sorting, searching, identity, and Live filtering based only on the label.
+searching and Live filtering based only on the label, identity based on the catalog ID, and ordering based on the global catalog rather than dates.
 
 #### Scenario: Wrap all tags
 - **WHEN** an Employee has more tags than fit on one row in a card, list, dialog, or the Org Editor
@@ -57,7 +57,7 @@ The application SHALL render only populated content in one vertical Calendar day
 nonempty Birthday section SHALL appear first. Dated events SHALL be grouped by normalized tag label,
 with one interactive localized tag heading followed by complete shared Employee cards with ordinary
 identity, Unit, Tag, Edit, and Delete content. Activating a tag heading SHALL open its existing tag
-history. Groups SHALL sort by localized label, Employees SHALL use stable name order, and an Employee
+history. Groups SHALL follow catalog order, Employees SHALL use stable name order, and an Employee
 with multiple labels on the day SHALL appear once in every corresponding tag group. The dialog SHALL
 use one mixed section-header/Employee-row virtualizer and one body scroll, without a special event
 subtitle inside an Employee card or an empty reserved section.
@@ -119,3 +119,10 @@ event grouping, date identity, or interaction results.
 #### Scenario: Open Arabic day events
 - **WHEN** Arabic is active and a populated Calendar date opens
 - **THEN** owned labels and layout are RTL while Tag labels, Employee identities, and actions remain intact
+
+### Requirement: Calendar Tag rails follow catalog order
+The Calendar dated-Tag rail SHALL follow the global catalog order while each Tag history retains chronological ordering and stable Employee name ordering.
+
+#### Scenario: Reorder dated Tags
+- **WHEN** the global Tag order changes
+- **THEN** the rail and day-dialog groups reflect that order without changing dates or chronological history

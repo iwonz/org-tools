@@ -19,6 +19,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 ## Indexing and rendering
 
 - Persist identifiers and relationships rather than nested Employee copies.
+- Build catalog Tag ranks once per derived model and resolve each Employee's ordered Tags and earliest
+  rank outside rendering and comparator calls. Unit grouping reads that cached scalar and shares its
+  final row order with PNG, prefix geometry, and distribution anchors. Catalog drag previews never
+  rebuild Employees or Views; a completed drop commits one global change.
 - Build shared maps, search documents, Unit order, membership, birthday, gender, dated-tag,
   position, Tag-catalog, and custom-field indexes outside React render paths.
 - Derive custom Tag tonal variables from one six- or eight-digit HEX value when its surface renders;
@@ -37,7 +41,7 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   full Unit scan. The read-only placement map consumes only that indexed assignment list, uses a
   deterministic bounded ring layout, and keeps pan/zoom outside state.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
-- Tag-filter search normalizes and locale-sorts the catalog once per catalog or locale change. Its
+- Tag-filter search preserves the catalog array order and normalizes labels for matching. Its
   virtualized visible result derives from a deferred transient query; search-scoped bulk selection
   emits one filter update and never depends on mounted rows.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through

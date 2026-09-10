@@ -2,8 +2,9 @@
 
 import type { Employee, EmployeeTagDefinition, TagId } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
+  HiOutlineBars3,
   HiOutlineEye,
   HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
@@ -14,7 +15,7 @@ import {
 import { EmployeeCardActions } from "@/components/employee-card-actions";
 import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
-import { useAppLocale } from "@/components/locale-provider";
+import { HighlightedText } from "@/components/highlighted-text";
 import { TagColorPicker } from "@/components/tag-color-picker";
 import {
   AlertDialog,
@@ -40,7 +41,7 @@ import { Label } from "@/components/ui/label";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
-import { normalizeTagSearchValue, sortTagsByLocalizedLabel } from "@/lib/tag-order";
+import { normalizeTagSearchValue } from "@/lib/tag-order";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -53,7 +54,6 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
 }) {
   const store = useOrgStore();
   const t = useUiText();
-  const { locale } = useAppLocale();
   const countText = useCountText();
   const messageText = useMessageText();
   const [query, setQuery] = useState("");
@@ -64,15 +64,30 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const units = store.units;
   const [editError, setEditError] = useState<UiMessageDescriptor | null>(null);
+  const dragSource = useRef<TagId | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: TagId; placement: "before" | "after" } | null>(
+    null,
+  );
+  const [announcement, setAnnouncement] = useState("");
+  const clearDrag = () => {
+    dragSource.current = null;
+    setDropTarget(null);
+  };
+  const moveTag = (sourceId: TagId, targetId: TagId, placement: "before" | "after") => {
+    store.moveTag(sourceId, targetId, placement);
+    const index = store.tagDefinitions.findIndex((tag) => tag.id === sourceId);
+    const tag = store.tagDefinitions[index];
+    if (tag)
+      setAnnouncement(
+        t("{name} moved to position {position}", { name: tag.label, position: index + 1 }),
+      );
+  };
   const visible = useMemo(() => {
     const normalized = normalizeTagSearchValue(query);
-    return sortTagsByLocalizedLabel(
-      store.tagDefinitions.filter(
-        (tag) => !normalized || normalizeTagSearchValue(tag.label).includes(normalized),
-      ),
-      locale,
+    return store.tagDefinitions.filter(
+      (tag) => !normalized || normalizeTagSearchValue(tag.label).includes(normalized),
     );
-  }, [locale, query, store.tagDefinitions]);
+  }, [query, store.tagDefinitions]);
   const counts = useMemo(() => {
     const result = new Map<TagId, { dated: number; employees: number }>();
     for (const employee of store.organizationEmployees) {
@@ -97,7 +112,13 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   );
   return (
     <>
-      <Dialog onOpenChange={onOpenChange} open={open}>
+      <Dialog
+        onOpenChange={(nextOpen) => {
+          clearDrag();
+          onOpenChange(nextOpen);
+        }}
+        open={open}
+      >
         <DialogContent
           className="flex max-h-[86dvh] max-w-2xl flex-col"
           data-demo-id="tag-catalog-dialog"
@@ -106,6 +127,9 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
             <DialogTitle>{t("Tags")}</DialogTitle>
           </DialogHeader>
           <DialogBody className="grid min-h-0 flex-1 gap-3 overflow-hidden">
+            <span aria-live="polite" className="sr-only">
+              {announcement}
+            </span>
             <div className="relative">
               <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -124,14 +148,74 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {visible.map((tag) => {
+                  {visible.map((tag, visibleIndex) => {
                     const count = counts.get(tag.id) ?? { dated: 0, employees: 0 };
                     return (
-                      <div
-                        className="flex items-center gap-3"
+                      <fieldset
+                        className="relative m-0 flex min-w-0 items-center gap-2 border-0 p-0"
                         data-demo-id="tag-catalog-row"
+                        data-tag-id={tag.id}
+                        aria-label={tag.label}
                         key={tag.id}
+                        onDragOver={(event) => {
+                          if (!dragSource.current) return;
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = "move";
+                          const bounds = event.currentTarget.getBoundingClientRect();
+                          const placement =
+                            event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+                          setDropTarget({ id: tag.id, placement });
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (dragSource.current) {
+                            const bounds = event.currentTarget.getBoundingClientRect();
+                            moveTag(
+                              dragSource.current,
+                              tag.id,
+                              event.clientY < bounds.top + bounds.height / 2 ? "before" : "after",
+                            );
+                          }
+                          clearDrag();
+                        }}
                       >
+                        {dropTarget?.id === tag.id && dragSource.current !== tag.id && (
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "pointer-events-none absolute inset-x-0 h-0.5 bg-signal",
+                              dropTarget.placement === "before" ? "-top-1.5" : "-bottom-1.5",
+                            )}
+                          />
+                        )}
+                        <button
+                          aria-label={t("Drag {name} to reorder", { name: tag.label })}
+                          className="grid size-8 shrink-0 cursor-grab place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+                          data-demo-id="tag-catalog-drag-handle"
+                          draggable
+                          onDragStart={(event) => {
+                            dragSource.current = tag.id;
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", tag.id);
+                          }}
+                          onDragEnd={clearDrag}
+                          onKeyDown={(event) => {
+                            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                            event.preventDefault();
+                            const target =
+                              visible[visibleIndex + (event.key === "ArrowUp" ? -1 : 1)];
+                            if (target)
+                              moveTag(
+                                tag.id,
+                                target.id,
+                                event.key === "ArrowUp" ? "before" : "after",
+                              );
+                          }}
+                          title={t("Drag to reorder or use the arrow keys")}
+                          type="button"
+                        >
+                          <HiOutlineBars3 className="size-4" />
+                        </button>
                         <div
                           className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
                           data-demo-id="tag-catalog-identity"
@@ -145,7 +229,11 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                             data-tag-color-surface
                             style={customTagColorSurfaceStyle(tag.color)}
                           >
-                            <span className="truncate">{tag.label}</span>
+                            <HighlightedText
+                              className="truncate"
+                              queryTokens={[normalizeTagSearchValue(query)]}
+                              text={tag.label}
+                            />
                           </div>
                           <span
                             className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
@@ -153,12 +241,14 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                           >
                             {countText("employees", { count: count.employees })}
                           </span>
-                          <span
-                            className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-                            data-demo-id="tag-catalog-dated-count"
-                          >
-                            {t("{count} dated", { count: count.dated })}
-                          </span>
+                          {count.dated > 0 && (
+                            <span
+                              className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+                              data-demo-id="tag-catalog-dated-count"
+                            >
+                              {t("With date: {count}", { count: count.dated })}
+                            </span>
+                          )}
                         </div>
                         <Button
                           aria-label={t("View Employees with this Tag")}
@@ -199,7 +289,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                         >
                           <HiOutlineTrash />
                         </Button>
-                      </div>
+                      </fieldset>
                     );
                   })}
                 </div>

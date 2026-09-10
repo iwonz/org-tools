@@ -60,9 +60,13 @@ control.
   invalid or canceled exact input does not change the Tag. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
-  Tag filters provide locale-aware alphabetic search plus **Select all** and **Deselect all** for
+  Tag filters preserve the catalog order and provide normalized label search plus **Select all** and **Deselect all** for
   the visible result set while keeping hidden selections and **Without tags** unchanged. The Tag
-  catalog keeps both usage counts inline immediately after each Tag.
+  catalog keeps Employee usage and a nonzero **With date** count inline after each Tag. Drag a Tag
+  by its leading handle, or focus the handle and use Up/Down, to change its global order. A filtered
+  move inserts the Tag relative to its target in the full catalog. All Tag chips, pickers, Calendar
+  groups, and export values follow that order; searching does not promote matching chips. New Tags
+  append, and renaming or recoloring retains position.
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
@@ -79,7 +83,13 @@ control.
   Arrange, and Collapse/Expand are at the logical end. Search expands inward without moving the
   other controls. Dragging one Unit in an existing multi-selection keeps the group selected;
   **Arrange selected** moves only those Units in one undoable snapped operation. Closing Search
-  clears its query. Unit cards keep the same opaque background
+  clears its query. A settings gear beside each Unit note action opens a dialog with **Group by tag**, enabled by
+  default. Each Employee appears once under their earliest catalog Tag priority; groups have no
+  headings or separators and use alphabetical full-name order within them. Untagged Employees come
+  last, and the boss always remains first. Turning grouping off gives one alphabetical list after
+  the boss. The setting belongs to that Unit in its View, applies immediately, supports Undo/Redo,
+  and is preserved by copying. PNG follows the same Employee sequence.
+  Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights,
   direct-membership Tag summary footer, and hierarchy connections while retaining configurable

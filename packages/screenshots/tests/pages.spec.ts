@@ -16,6 +16,39 @@ import {
   syntheticStatePath,
 } from "./helpers.js";
 
+import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
+
+test("synchronizes global Tag order and Unit grouping with scrollable presets", async ({
+  context,
+  page,
+}) => {
+  await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  const { groupedOrder, alphabeticalOrder } = await exerciseTagGrouping(page);
+  const peer = await context.newPage();
+  await peer.goto("./", { waitUntil: "domcontentloaded" });
+  await peer.getByRole("tab", { name: "Editor", exact: true }).click();
+  const card = peer.locator('fieldset[aria-label="Canvas Unit Product"]');
+  await expect
+    .poll(() =>
+      card
+        .locator("[data-org-editor-employee-id]")
+        .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-org-editor-employee-id"))),
+    )
+    .toEqual(groupedOrder);
+  await card.hover();
+  await card.locator('[data-demo-id="unit-settings-action"]').click();
+  await peer.getByRole("switch", { name: "Group by tag", exact: true }).click();
+  await expect
+    .poll(() =>
+      page
+        .locator('fieldset[aria-label="Canvas Unit Product"] [data-org-editor-employee-id]')
+        .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-org-editor-employee-id"))),
+    )
+    .toEqual(alphabeticalOrder);
+  await peer.close();
+});
+
 const useEnglish = (key: string) => window.localStorage.setItem(key, "en");
 
 const localeCases = [
@@ -248,7 +281,9 @@ test("runs the complete state editor at the repository base path without APIs or
 
   await page.locator('[data-demo-id="employee-tags-button"]').click();
   const tagCatalog = page.getByRole("dialog", { name: "Tags", exact: true });
-  const tagRow = tagCatalog.locator('[data-demo-id="tag-catalog-row"]').first();
+  const tagRow = tagCatalog
+    .locator('[data-demo-id="tag-catalog-row"]:has([data-demo-id="tag-catalog-dated-count"])')
+    .first();
   const tagSurfaceBox = await tagRow.locator("[data-tag-color-surface]").boundingBox();
   const employeeCountBox = await tagRow
     .locator('[data-demo-id="tag-catalog-employee-count"]')

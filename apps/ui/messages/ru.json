@@ -176,7 +176,6 @@
     "Teal": "Бирюзовый",
     "Cyan": "Голубой",
     "Blue": "Синий",
-    "{count} dated": "Датированных: {count}",
     "Employee is the boss": "Сотрудник является руководителем",
     "Employee position {name} in Live Unit": "Должность сотрудника {name} в динамической команде",
     "Employee position {name} in Unit": "Должность сотрудника {name} в команде",
@@ -559,6 +558,12 @@
     "Unit notes can contain at most 64 KiB.": "Заметка команды может занимать не более 64 КиБ.",
     "Markdown image {alt}": "Изображение не показано: {alt}",
     "Markdown preview": "Предпросмотр Markdown",
-    "Markdown editor": "Редактор Markdown"
+    "Markdown editor": "Редактор Markdown",
+    "With date: {count}": "С датой: {count}",
+    "Group by tag": "Группировать по тегу",
+    "Unit settings for {name}": "Настройки команды «{name}»",
+    "Change Unit grouping": "Изменить группировку команды",
+    "{name} moved to position {position}": "Тег «{name}» перемещён на позицию {position}",
+    "Drag to reorder or use the arrow keys": "Перетащите для изменения порядка или используйте клавиши со стрелками"
   }
 }

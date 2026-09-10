@@ -50,7 +50,7 @@ the exact canonical value, including `1900` for unknown year.
 
 ### Requirement: Shared Tag filters support bulk selection
 Every shared Employee Tag filter, including Live Unit rules, SHALL expose a transient search field,
-locale-aware alphabetic option ordering, Select all and Deselect all actions, and the independent
+catalog option ordering, Select all and Deselect all actions, and the independent
 Without tags option. Search SHALL match normalized Tag labels without case or diacritic sensitivity
 and SHALL keep the option list virtualized. Select all SHALL add every currently visible Tag exactly
 once while preserving selected Tags outside the query. Deselect all SHALL remove every currently
@@ -59,7 +59,7 @@ unchanged and MUST produce one logical filter update.
 
 #### Scenario: Search a large Tag catalog
 - **WHEN** the user enters part of a Tag label
-- **THEN** the virtualized list shows matching Tags in locale-aware alphabetic order without changing selection
+- **THEN** the virtualized list shows matching Tags in catalog order without changing selection
 
 #### Scenario: Select found Tags
 - **WHEN** at least one visible Tag is not selected and the user activates Select all
@@ -71,7 +71,7 @@ unchanged and MUST produce one logical filter update.
 
 #### Scenario: Use bulk actions without a query
 - **WHEN** the search field is empty
-- **THEN** Select all and Deselect all operate on the complete sorted Tag catalog rather than mounted rows
+- **THEN** Select all and Deselect all operate on the complete ordered Tag catalog rather than mounted rows
 
 #### Scenario: Reopen the filter
 - **WHEN** the filter popover closes and opens again

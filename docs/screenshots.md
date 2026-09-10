@@ -1,7 +1,7 @@
 # Screenshots
 
 The screenshot catalog is generated from the production applications and declared in
-`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 58
+`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 59
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
@@ -179,7 +179,8 @@ Capabilities: Custom fields, Virtualized values, Not filled, Compound filtering.
 [![Tag catalog](screenshots/feature-employees-tag-catalog.png)](screenshots/feature-employees-tag-catalog.png)
 
 Search centralized Tags in padding-free inert rows and inspect named or arbitrary global filled
-colors, Employee usage, dated-assignment counts, and the ordered Eye, Color, Edit, and Delete actions.
+colors, Employee usage, positive With date counts, a leading reorder handle, and Eye, Color, Edit,
+and Delete actions.
 
 Capabilities: Tag catalog, Search, Global colors, Usage counts.
 
@@ -275,6 +276,16 @@ bounded edge-pan, hierarchy lines, zoom, history, and normal-weight layout contr
 
 Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse, Complete Tag
 footers.
+
+### Unit grouping settings
+
+[![Unit grouping settings](screenshots/feature-editor-unit-settings.png)](screenshots/feature-editor-unit-settings.png)
+
+Use the gear beside the note action to control the Unit's immediate, undoable **Group by tag**
+setting. The default groups each Employee once by their earliest catalog Tag with alphabetical
+ordering within groups and the boss always first, without group headings or separators.
+
+Capabilities: Unit settings, Tag priority, Grouping, View-local state, Undo and Redo.
 
 ### Unit Markdown note preview
 
@@ -579,9 +590,13 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   multi-selection hides paths, and Editor output contains no overlay. Confirm every multi-Unit
   Employee exposes the independent placement map, its viewport controls remain transient, and Unit
   actions navigate to an expanded, centered, selected occurrence.
-- Confirm every Employee Tag filter sorts and searches by the active locale. Select all and Deselect
+- Confirm every Employee Tag filter preserves catalog order and searches normalized labels. Select all and Deselect
   all affect only visible search results while hidden selections and Without tags remain unchanged.
-  Tag catalog counts stay inline immediately after the Tag at desktop and narrow widths.
+  Tag catalog counts stay inline immediately after the Tag at desktop and narrow widths; zero With
+  date counts are hidden. Check native drag cancellation, filtered insertion, and keyboard moves.
+- Confirm the Unit settings gear is accessible by hover, keyboard, and touch. Its sole Group by tag
+  switch defaults on, commits one undoable update, keeps the boss first, and groups each Employee
+  once without separators. Canvas and PNG use the same sequence.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
@@ -596,5 +611,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 58 PNGs must retain identical hashes. Material differences require
+- Regenerate immediately; all 59 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

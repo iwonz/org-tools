@@ -931,7 +931,9 @@ export const sortOrgEditorEmployeeIds = ({
   bossEmployeeId,
   employeeById,
   employeeIds,
+  groupByTag = false,
 }: {
+  groupByTag?: boolean;
   bossEmployeeId: EmployeeId | null;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   employeeIds: EmployeeId[];
@@ -942,6 +944,12 @@ export const sortOrgEditorEmployeeIds = ({
 
     const firstEmployee = employeeById.get(firstEmployeeId);
     const secondEmployee = employeeById.get(secondEmployeeId);
+    if (groupByTag) {
+      const priority =
+        (firstEmployee?.tagPriority ?? Number.MAX_SAFE_INTEGER) -
+        (secondEmployee?.tagPriority ?? Number.MAX_SAFE_INTEGER);
+      if (priority !== 0) return priority;
+    }
     const nameCompare = (firstEmployee?.fullName ?? "").localeCompare(
       secondEmployee?.fullName ?? "",
       "en-US",
@@ -965,6 +973,7 @@ export const getOrgEditorOrderedEmployeeIds = (
     bossEmployeeId: unit.bossEmployeeId,
     employeeById,
     employeeIds: unit.employeeIds,
+    groupByTag: unit.groupByTag,
   });
 
 export const getOrgEditorEmployeePosition = (
@@ -988,6 +997,7 @@ export const getOrgEditorVisibleEmployeeIds = (
 export const createOrgEditorUnitFromScratch = ({
   bossEmployeeId = null,
   collapsed = false,
+  groupByTag = true,
   employeeIds = [],
   employeePositions = [],
   id = createOrgEditorUnitId(),
@@ -1001,6 +1011,7 @@ export const createOrgEditorUnitFromScratch = ({
 }: {
   bossEmployeeId?: EmployeeId | null;
   collapsed?: boolean;
+  groupByTag?: boolean;
   employeeIds?: EmployeeId[];
   employeePositions?: OrgEditorEmployeePosition[];
   id?: OrgEditorUnitId;
@@ -1032,6 +1043,7 @@ export const createOrgEditorUnitFromScratch = ({
   return {
     bossEmployeeId,
     collapsed,
+    groupByTag,
     createdAt: now,
     employeeIds: uniqueEmployeeIds,
     employeePositions: [...employeePositionByEmployeeId.values()],

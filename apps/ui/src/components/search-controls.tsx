@@ -19,7 +19,6 @@ import {
 } from "react-icons/hi2";
 
 import { HighlightedText } from "@/components/highlighted-text";
-import { useAppLocale } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -40,7 +39,7 @@ import {
   selectAllEmployeeFilterTags,
 } from "@/lib/employee-search";
 import { getSearchTokens, normalizeSearchValue } from "@/lib/search-index";
-import { normalizeTagSearchValue, sortTagsByLocalizedLabel } from "@/lib/tag-order";
+import { normalizeTagSearchValue } from "@/lib/tag-order";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -501,7 +500,6 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
 }: EmployeeSearchInputProps) {
   const store = useOrgStore();
   const t = useUiText();
-  const { locale } = useAppLocale();
   const format = useAppFormatter();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedSectionId, setExpandedSectionId] = useState<EmployeeFilterSectionId | null>(null);
@@ -523,13 +521,10 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   );
   const tagFilterOptions = useMemo(
     () =>
-      sortTagsByLocalizedLabel(
-        store.tagDefinitions.length > 0
-          ? store.tagDefinitions.map((tag) => ({ id: tag.id, label: tag.label }))
-          : tagOptions.map((label) => ({ id: label, label })),
-        locale,
-      ),
-    [locale, store.tagDefinitions, tagOptions],
+      store.tagDefinitions.length > 0
+        ? store.tagDefinitions.map((tag) => ({ id: tag.id, label: tag.label }))
+        : tagOptions.map((label) => ({ id: label, label })),
+    [store.tagDefinitions, tagOptions],
   );
   const tagQueryTokens = useMemo(
     () => normalizeTagSearchValue(deferredTagQuery).split(/\s+/u).filter(Boolean),

@@ -63,7 +63,9 @@ import {
   parseEmployeeBirthday,
   UNKNOWN_BIRTH_YEAR,
 } from "@/lib/birthday";
-import { normalizeEmployeeTags, sortEmployeeTagLabels } from "@/lib/employee-tags";
+import { normalizeEmployeeTags } from "@/lib/employee-tags";
+import { normalizeSearchValue } from "@/lib/search-index";
+import { createTagOrderIndex, orderByTagCatalog } from "@/lib/tag-order";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -178,8 +180,17 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
   );
   const employeeTagOptions = useMemo(() => {
     const tags = normalizeEmployeeTags([...props.tagOptions, ...fields.tags]);
-    return sortEmployeeTagLabels(tags.map((tag) => tag.label));
+    return tags.map((tag) => tag.label);
   }, [fields.tags, props.tagOptions]);
+  const orderedDraftTags = useMemo(
+    () =>
+      orderByTagCatalog(
+        fields.tags,
+        createTagOrderIndex(employeeTagOptions.map((label) => normalizeSearchValue(label))),
+        (tag) => normalizeSearchValue(tag.label),
+      ),
+    [fields.tags, employeeTagOptions],
+  );
   const birthdayYearOptions = useMemo(() => {
     const currentYear = new Date().getUTCFullYear();
     return Array.from(
@@ -743,7 +754,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                           {t("Select or create tags")}
                         </span>
                       ) : (
-                        fields.tags.map((tag) => (
+                        orderedDraftTags.map((tag) => (
                           <span
                             className="max-w-full break-words whitespace-normal rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground"
                             key={tag.label.toLocaleLowerCase("en-US")}

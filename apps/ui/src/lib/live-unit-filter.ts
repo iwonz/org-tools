@@ -151,6 +151,7 @@ export const validateEmployeeLiveFilterRule = ({
     nextUnits.push({
       bossEmployeeId: null,
       collapsed: false,
+      groupByTag: true,
       createdAt: now,
       employeeIds: [],
       employeePositions: [],

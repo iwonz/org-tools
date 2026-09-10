@@ -3,44 +3,6 @@ import type { EmployeeId, EmployeeSearchDocument, EmployeeTag } from "@org-tools
 import { LocalizedError, uiMessage } from "@/i18n/messages";
 import { normalizeSearchValue } from "@/lib/search-index";
 
-const EMPLOYEE_TAG_COLLATOR = new Intl.Collator("en", {
-  numeric: true,
-  sensitivity: "base",
-});
-
-export const compareEmployeeTagLabels = (firstTag: string, secondTag: string) =>
-  EMPLOYEE_TAG_COLLATOR.compare(firstTag, secondTag);
-
-export const compareEmployeeTags = (firstTag: EmployeeTag, secondTag: EmployeeTag) =>
-  compareEmployeeTagLabels(firstTag.label, secondTag.label);
-
-export const sortEmployeeTagLabels = (tags: readonly string[]) =>
-  [...tags].sort(compareEmployeeTagLabels);
-
-export const sortEmployeeTags = (tags: readonly EmployeeTag[]) =>
-  [...tags].sort(compareEmployeeTags);
-
-export const orderEmployeeTagsForDisplay = (
-  tags: readonly EmployeeTag[],
-  queryTokens: readonly string[] = [],
-) => {
-  const sortedTags = sortEmployeeTags(tags);
-  if (queryTokens.length === 0) return sortedTags;
-
-  const matchingTags: EmployeeTag[] = [];
-  const otherTags: EmployeeTag[] = [];
-
-  for (const tag of sortedTags) {
-    const normalizedTag = normalizeSearchValue(tag.label);
-    const target = queryTokens.some((token) => normalizedTag.includes(token))
-      ? matchingTags
-      : otherTags;
-    target.push(tag);
-  }
-
-  return [...matchingTags, ...otherTags];
-};
-
 export const isValidEmployeeTagDate = (value: string): boolean => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
@@ -107,7 +69,7 @@ export const getEmployeeTagOptionsFromSearchDocuments = (
     }
   }
 
-  return sortEmployeeTagLabels([...optionByNormalizedLabel.values()]);
+  return [...optionByNormalizedLabel.values()];
 };
 
 export type EmployeeTagTarget = {

@@ -658,5 +658,20 @@
     "file": "feature-download-json-preview.png",
     "description": "Inspect the lower field list and formatted JSON structure before copying or downloading the local file.",
     "capabilities": ["Remaining fields", "Formatted JSON", "Copy", "Local download"]
+  },
+  {
+    "capabilities": [
+      "Unit settings",
+      "Tag priority",
+      "Grouping",
+      "View-local state",
+      "Undo and Redo"
+    ],
+    "description": "Configure immediate, undoable Tag grouping for one Unit while retaining the boss first.",
+    "featured": false,
+    "file": "feature-editor-unit-settings.png",
+    "id": "editor-unit-settings",
+    "module": "editor",
+    "title": "Unit grouping settings"
   }
 ]

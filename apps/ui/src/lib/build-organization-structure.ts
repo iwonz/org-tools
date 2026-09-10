@@ -20,9 +20,12 @@ import { resolveLiveUnitMemberships } from "@/lib/live-unit-filter";
 import { getEffectiveLiveEmployeePosition } from "@/lib/live-unit-position";
 import { createEmployeeSearchDocument } from "@/lib/search-index";
 
+import { createTagOrderIndex, orderByTagCatalog } from "@/lib/tag-order";
+
 const createOrganizationEmployee = (
   employee: OrganizationEmployee,
   tagById: ReadonlyMap<string, EmployeeTagDefinition>,
+  tagOrderById: ReadonlyMap<string, number>,
 ): Employee => ({
   avatarBase64Url: employee.avatarBase64Url,
   birthday: employee.birthday,
@@ -39,7 +42,11 @@ const createOrganizationEmployee = (
   lastName: employee.lastName,
   phone: employee.phone,
   profileUrl: employee.profileUrl,
-  tags: employee.tags.flatMap((assignment) => {
+  tagPriority: employee.tags.reduce<number | null>((priority, tag) => {
+    const rank = tagOrderById.get(tag.tagId);
+    return rank === undefined ? priority : Math.min(priority ?? rank, rank);
+  }, null),
+  tags: orderByTagCatalog(employee.tags, tagOrderById, (tag) => tag.tagId).flatMap((assignment) => {
     const tag = tagById.get(assignment.tagId);
     return tag ? [{ ...assignment, color: tag.color, label: tag.label }] : [];
   }),
@@ -88,6 +95,7 @@ export const buildOrganizationStructureWithResolution = (
 ): OrganizationStructureBuildResult => {
   const employeesById = new Map<EmployeeId, Employee>();
   const tagById = new Map(tagDefinitions.map((tag) => [tag.id, tag]));
+  const tagOrderById = createTagOrderIndex(tagDefinitions.map((tag) => tag.id));
 
   for (const organizationEmployee of organizationEmployees) {
     if (employeesById.has(organizationEmployee.id)) {
@@ -96,7 +104,7 @@ export const buildOrganizationStructureWithResolution = (
 
     employeesById.set(
       organizationEmployee.id,
-      createOrganizationEmployee(organizationEmployee, tagById),
+      createOrganizationEmployee(organizationEmployee, tagById, tagOrderById),
     );
   }
 

@@ -468,6 +468,13 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
 
   const productNoteUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   await productNoteUnit.hover();
+  await productNoteUnit.locator('[data-demo-id="unit-settings-action"]').click();
+  await expect(page.getByRole("switch", { name: "Group by tag", exact: true })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await capture(page, "editor-unit-settings");
+  await page.keyboard.press("Escape");
   await productNoteUnit.locator('[data-demo-id="unit-note-action"]').click();
   const noteDialog = page.getByRole("dialog", { name: "Note for Product", exact: true });
   await noteDialog.getByRole("tab", { name: "Editor", exact: true }).click();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { observer } from "mobx-react-lite";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineTag } from "react-icons/hi2";
 import {
@@ -20,7 +21,6 @@ import {
   getEmployeeTagLabels,
   getEmployeeTagSelectionState,
   normalizeEmployeeTags,
-  sortEmployeeTagLabels,
   toggleEmployeeTagForTargets,
 } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
@@ -30,7 +30,7 @@ import { useOrgStore } from "@/stores/org-store-context";
 
 const TAG_OPTION_HEIGHT = 44;
 
-export function EmployeeTagPickerPanel({
+export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
   className,
   dataDemoId,
   employees,
@@ -52,12 +52,18 @@ export function EmployeeTagPickerPanel({
   const t = useUiText();
   const store = useOrgStore();
   const [query, setQuery] = useState("");
-  const [sessionOptions, setSessionOptions] = useState(() =>
-    sortEmployeeTagLabels(
+  const [createdOptions, setCreatedOptions] = useState<string[]>([]);
+  const sessionOptions = useMemo(
+    () =>
       getEmployeeTagLabels(
-        normalizeEmployeeTags([...tagOptions, ...employees.flatMap((employee) => employee.tags)]),
+        normalizeEmployeeTags([
+          ...store.tagDefinitions.map((tag) => tag.label),
+          ...tagOptions,
+          ...employees.flatMap((employee) => employee.tags),
+          ...createdOptions,
+        ]),
       ),
-    ),
+    [store.tagDefinitions, tagOptions, employees, createdOptions],
   );
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const normalizedQuery = normalizeSearchValue(query);
@@ -83,11 +89,7 @@ export function EmployeeTagPickerPanel({
     if (!createdTag) return;
     const tag = createdTag.label;
 
-    setSessionOptions((currentOptions) =>
-      sortEmployeeTagLabels(
-        getEmployeeTagLabels(normalizeEmployeeTags([...currentOptions, createdTag])),
-      ),
-    );
+    setCreatedOptions((options) => [...options, tag]);
     onApply(
       createEmployeeTagUpdates({
         employees,
@@ -230,7 +232,7 @@ export function EmployeeTagPickerPanel({
       )}
     </fieldset>
   );
-}
+});
 
 export function EmployeeTagPopover({
   dataDemoId = "employee-tag-picker",

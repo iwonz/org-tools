@@ -30,9 +30,7 @@ export const buildCalendarDayDialogRows = ({
     group.employees.set(event.employee.id, event.employee);
     groups.set(normalizedLabel, group);
   }
-  for (const [normalizedLabel, group] of [...groups].sort((first, second) =>
-    collator.compare(first[1].label, second[1].label),
-  )) {
+  for (const [normalizedLabel, group] of groups) {
     rows.push({
       key: `tag:${normalizedLabel}`,
       kind: "header",

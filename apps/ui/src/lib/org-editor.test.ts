@@ -70,6 +70,7 @@ describe("Org Editor adaptive grid", () => {
 const createUnit = (unit: Partial<OrgEditorUnit> & Pick<OrgEditorUnit, "id">): OrgEditorUnit => ({
   bossEmployeeId: null,
   collapsed: false,
+  groupByTag: true,
   createdAt: "2026-07-31T00:00:00.000Z",
   employeeIds: [],
   employeePositions: [],

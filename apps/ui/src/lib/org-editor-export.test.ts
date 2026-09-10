@@ -39,6 +39,7 @@ const employee: Employee = {
   phone: "+1 555-0111",
   profileUrl: null,
   tags: [],
+  tagPriority: null,
   unitIds: [],
   unitPositions: [],
   username: "avery",
@@ -47,6 +48,7 @@ const employee: Employee = {
 const unit: OrgEditorUnit = {
   bossEmployeeId: null,
   collapsed: false,
+  groupByTag: true,
   createdAt: "2026-01-01T00:00:00.000Z",
   employeeIds: [],
   employeePositions: [],

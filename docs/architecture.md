@@ -36,6 +36,12 @@ live per View in the bounded
 writes therefore do not serialize Employees or structural documents. Open surfaces, notifications,
 search suggestions, and unfinished forms are transient.
 
+Every `OrgEditorUnit` owns a required boolean `groupByTag`, defaulting to true. Its settings switch
+commits one View-local history command. The boss is always first; remaining Employees group by their
+earliest catalog Tag rank, then use stable full-name/ID order, with untagged Employees last. Disabled
+grouping uses full-name order after the boss. The same sequence drives DOM, PNG, virtual row offsets,
+selection, reveal, and distribution anchors. No group headings or duplicate rows are introduced.
+
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
 Copy/Paste preserve their source content while later edits remain independent. A note Save is one
@@ -54,6 +60,11 @@ An Employee ID is a stable UUID v4 and never changes after identity edits. Dupli
 first name, last name, and email normalized with Unicode NFKC, trimmed and collapsed whitespace,
 and locale-independent lowercase. Employee Import requires UUID plus all three identity fields,
 keeps the current UUID for an identity match, and blocks UUID collisions with another identity.
+
+The `organization.tags` array is the sole persisted global Tag order. Derived Employees resolve
+assignments in that order and carry one transient nullable `tagPriority` for the earliest Tag rank.
+No rank is stored on Employee assignments. Catalog reordering replaces only the Tag array in one
+logical operation and invalidates the existing derived View caches.
 
 Tags are normalized shared catalog entities with stable UUIDs and an optional supplied semantic
 color name or canonical lowercase six- or eight-digit HEX color;
@@ -124,12 +135,14 @@ history, collaborative cursors, or remote synchronization.
 - `OrgStore` owns global Employees, custom field definitions, the Tag catalog, derived indexes,
   durable UI projection, and separate organization/UI change sequences. It materializes only the
   system, active Editor, and selected Download Views.
-- Shared Employee filters derive one locale-aware Tag option list, filter it through a deferred
+- Shared Employee filters derive one catalog-ordered Tag option list, filter it through a deferred
   transient query, and apply bulk selection to visible IDs without disturbing hidden selections.
-  The Tag catalog uses the same comparator and keeps both usage counts inline after the filled Tag.
+  The Tag catalog retains that order and keeps Employee usage plus a positive With date count inline
+  after the filled Tag. A leading handle supports native drag/drop and keyboard moves; dragging only
+  previews insertion until drop commits. Filtered moves insert relative to the target in the full catalog.
 - Shared Tag color helpers keep named palette classes static and derive bounded light/dark and canvas
   fill/foreground pairs for named, custom, alpha, and neutral values. Flat catalog rows expose Eye,
-  Color, Edit, and Delete in that order. The row-level color Popover owns transient HSV selection plus
+  Color, Edit, and Delete in that order. The row-level modal color Popover owns its nested scroll lock and transient HSV selection plus
   exact HTML Keyword, HEX, RGB, or RGBA input; pointer gestures commit once on completion, exact input
   commits on Enter or blur, and cancel or invalid input does not mutate the Tag. Edit is a separate
   rename-only modal. Eye resolves the current `tagId` into a virtualized full Employee-card list.

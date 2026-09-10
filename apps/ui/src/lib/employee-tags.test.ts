@@ -6,8 +6,6 @@ import {
   getEmployeeTagDateSelectionState,
   getEmployeeTagSelectionState,
   normalizeEmployeeTags,
-  orderEmployeeTagsForDisplay,
-  sortEmployeeTags,
   toggleEmployeeTagForTargets,
 } from "@/lib/employee-tags";
 
@@ -72,21 +70,6 @@ describe("Employee tag selection", () => {
       { employeeId: FIRST_ID, tags: [tag("New team")] },
       { employeeId: SECOND_ID, tags: [tag("QA"), tag("New team")] },
     ]);
-  });
-
-  test("sorts numeric labels and keeps every matching-first display tag", () => {
-    expect(sortEmployeeTags([tag("Core"), tag("Team 10"), tag("Alpha"), tag("Team 2")])).toEqual([
-      tag("Alpha"),
-      tag("Core"),
-      tag("Team 2"),
-      tag("Team 10"),
-    ]);
-    expect(
-      orderEmployeeTagsForDisplay(
-        [tag("Core"), tag("QA 10"), tag("Alpha"), tag("QA 2"), tag("Beta")],
-        ["qa"],
-      ),
-    ).toEqual([tag("QA 2"), tag("QA 10"), tag("Alpha"), tag("Beta"), tag("Core")]);
   });
 
   test("reports mixed dates and applies a common date without adding missing tags", () => {

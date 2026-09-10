@@ -415,6 +415,7 @@ const areUnitsEqual = (firstUnits: OrgEditorUnit[], secondUnits: OrgEditorUnit[]
       firstUnit.parentId === secondUnit.parentId &&
       firstUnit.name === secondUnit.name &&
       firstUnit.noteMarkdown === secondUnit.noteMarkdown &&
+      firstUnit.groupByTag === secondUnit.groupByTag &&
       firstUnit.order === secondUnit.order &&
       firstUnit.x === secondUnit.x &&
       firstUnit.y === secondUnit.y &&
@@ -1036,6 +1037,18 @@ export class OrgEditorStore {
           : unit,
       );
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
+    });
+  }
+
+  setUnitGroupByTag(unitId: OrgEditorUnitId, groupByTag: boolean): void {
+    const currentUnit = this.units.find((unit) => unit.id === unitId);
+    if (!currentUnit) throw new LocalizedError(uiMessage("Unit not found."));
+    if (currentUnit.groupByTag === groupByTag) return;
+    this.runCommand("Change Unit grouping", () => {
+      const updatedAt = new Date().toISOString();
+      this.units = this.units.map((unit) =>
+        unit.id === unitId ? { ...unit, groupByTag, updatedAt } : unit,
+      );
     });
   }
 

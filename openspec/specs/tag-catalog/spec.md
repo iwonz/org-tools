@@ -26,8 +26,8 @@ Unassigned definitions SHALL remain until explicitly deleted.
 - **THEN** the Tag stores a canonical lowercase eight-digit HEX color and restores the same alpha
 
 ### Requirement: Users manage Tags centrally
-The Employees header SHALL expose a Tag dialog with search, locale-aware alphabetic ordering,
-Employee count, dated-assignment count, flat borderless rows, and confirmed deletion. Each row SHALL
+The Employees header SHALL expose a Tag dialog with search, persisted catalog ordering,
+Employee count, positive dated-assignment count, flat borderless rows, and confirmed deletion. Each row SHALL
 place its colored Tag surface, Employee count, and dated-assignment count in one inline identity
 group with equal compact gaps; counts MUST NOT render below the Tag. Tag rows SHALL have no wrapper
 padding, row hover effect, border, shadow, or resting card fill; only their explicit controls SHALL
@@ -39,11 +39,11 @@ output exclusions.
 
 #### Scenario: Search and order Tags
 - **WHEN** the catalog opens or its query changes
-- **THEN** visible Tags use the active locale's alphabetic order with stable ID tie-breaking
+- **THEN** visible Tags preserve their relative order in organization.tags
 
 #### Scenario: Render inline counts
 - **WHEN** a catalog Tag has Employee and dated-assignment counts
-- **THEN** both non-wrapping count labels appear immediately after the Tag at equal gaps rather than below it
+- **THEN** the Employee count and a nonzero With date count appear immediately after the Tag at equal gaps rather than below it
 
 #### Scenario: Render a narrow catalog
 - **WHEN** the dialog renders at narrow width
@@ -84,6 +84,10 @@ output exclusions.
 #### Scenario: Render flat Tag rows
 - **WHEN** the Tag catalog row is idle or the pointer is over its non-control area
 - **THEN** the row has zero wrapper padding and no border, shadow, resting fill, hover fill, or geometry change
+
+#### Scenario: Hide zero dated assignments
+- **WHEN** a Tag has no dated assignments
+- **THEN** its With date label is absent and the Employee count remains visible
 
 ### Requirement: Tag membership is inspectable through full Employee cards
 The Tag catalog SHALL provide an Eye action that opens a separate modal resolved by stable Tag ID.
@@ -167,3 +171,25 @@ View atomically.
 #### Scenario: Delete a Tag used by several Views
 - **WHEN** Tag deletion is confirmed
 - **THEN** no Employee, View Live rule, filter, footer, or export setting retains its ID or normalized label
+
+### Requirement: Catalog order governs every Tag surface
+The system SHALL use `organization.tags` as the only global Tag order. Catalog rows SHALL expose a leading drag handle and keyboard reordering. One completed move SHALL insert the source before or after its target in the full catalog, preserving other Tags' relative order even during search. Preview, cancel, invalid, and no-op drops MUST NOT write state. Renames and color edits SHALL retain position; new Tags SHALL append. Employee chips, draft pickers, filters, Calendar, Unit footers, and exports SHALL preserve this order without promoting search matches.
+
+#### Scenario: Reorder filtered Tags
+- **WHEN** a user completes a drag between visible filtered rows
+- **THEN** the source moves relative to its target in the complete catalog with one logical write and all other Tags retain their relative order
+
+#### Scenario: Cancel or use the keyboard
+- **WHEN** a drag is canceled or a focused handle receives an arrow key
+- **THEN** cancellation leaves state unchanged and an available keyboard move performs one adjacent move
+
+#### Scenario: Reopen ordered state
+- **WHEN** state is restored from SQLite, Import, or a live peer
+- **THEN** all Tag surfaces use the restored catalog order
+
+### Requirement: Nested Tag color selection remains scrollable
+The bounded Tag color Popover SHALL permit wheel, trackpad, touch, and keyboard access to every preset inside the catalog Dialog while keeping the background locked. Escape SHALL close the picker and restore focus to its trigger.
+
+#### Scenario: Reach the last preset
+- **WHEN** the picker exceeds the available viewport height and the user scrolls over its preset rows
+- **THEN** the last preset can be reached and selected without moving the background or catalog dialog

@@ -19,6 +19,22 @@ import {
   syntheticStatePath,
 } from "./helpers.js";
 
+import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
+
+test("persists global Tag order and Unit grouping with scrollable presets", async ({ page }) => {
+  await openBlankState(page);
+  const { groupedOrder } = await exerciseTagGrouping(page);
+  await page.reload();
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await expect
+    .poll(() =>
+      page
+        .locator('fieldset[aria-label="Canvas Unit Product"] [data-org-editor-employee-id]')
+        .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-org-editor-employee-id"))),
+    )
+    .toEqual(groupedOrder);
+});
+
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
 
 const createTestEmployeeId = (fields: {
@@ -2711,6 +2727,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     return {
       bossEmployeeId: employeeIds[0] ?? null,
       collapsed: false,
+      groupByTag: true,
       createdAt: timestamp,
       employeeIds,
       employeePositions: employeeIds.map((id, positionIndex) => ({
@@ -3291,7 +3308,13 @@ test("uses the configured Tag color as fill without leading marker dots", async 
     await tagRow
       .getByRole("button")
       .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label"))),
-  ).toEqual(["View Employees with this Tag", "Choose Tag color", "Edit tag", "Delete tag"]);
+  ).toEqual([
+    "Drag Accessibility to reorder",
+    "View Employees with this Tag",
+    "Choose Tag color",
+    "Edit tag",
+    "Delete tag",
+  ]);
   await tagRow.getByRole("button", { name: "Edit tag", exact: true }).click();
   const tagEditor = page.getByRole("dialog", { name: "Edit tag", exact: true });
   await expect(catalog.locator('[data-demo-id="tag-catalog-editor"]')).toHaveCount(0);

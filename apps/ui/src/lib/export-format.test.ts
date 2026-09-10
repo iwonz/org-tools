@@ -58,6 +58,7 @@ const createEmployee = (overrides: Partial<Employee> = {}): Employee => ({
     { date: null, label: "Research" },
     { date: "2026-12-10", label: "Computing" },
   ],
+  tagPriority: null,
   unitIds: [ROOT_UNIT_ID, CHILD_UNIT_ID],
   unitPositions: [rootPosition, childPosition],
   username: "ada",
