@@ -11,6 +11,11 @@ stores one state in SQLite. Every organization action is written automatically; 
 theme, locale, sidebar, active sections, calendar period, selection, and viewport follow after a
 short bounded delay. There is no Save action or state switcher.
 
+On macOS or Linux, `pnpm dev-stop` stops all identified server and Pages development instances of
+this checkout, including instances in other terminals or on custom ports. It waits for shutdown,
+leaves production servers and other checkouts running, and succeeds if nothing is running.
+Start development again with `pnpm dev` or `pnpm pages:dev`.
+
 While either runtime resolves its initial state, the shell shows only one centered circular loader
 without technical status copy. The indicator uses local styles, respects reduced motion, and keeps
 a localized accessible status name.

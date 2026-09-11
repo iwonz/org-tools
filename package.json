@@ -18,6 +18,7 @@
     "build": "pnpm --filter @org-tools/ui build",
     "build:ui": "pnpm --filter @org-tools/ui build",
     "dev": "pnpm --filter @org-tools/ui dev",
+    "dev-stop": "node scripts/stop-development.mjs",
     "dev:check": "node scripts/check-dev-server.mjs",
     "dev:ui": "pnpm --filter @org-tools/ui dev",
     "format": "biome format --write .",

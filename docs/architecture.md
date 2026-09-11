@@ -301,6 +301,14 @@ SIGTERM stop the owned child cleanly with bounded escalation. Shared completion 
 prevent missed exit events and unsettled top-level awaits. Unit coverage runs the real launcher
 against isolated synthetic loopback subprocesses; the development check also verifies actual Next.js.
 
+`pnpm dev-stop` discovers existing development process trees for this checkout on macOS and Linux,
+using `ps` plus canonical working directories (`lsof` on macOS, `/proc` on Linux). It matches the
+launcher or exact Next.js entry with `dev`, covering both apps and arbitrary ports without a PID
+registry. It signals outer roots gracefully, tracks their descendants through reparenting, and
+rechecks PID, start time, and command before bounded escalation. Production commands and other
+checkouts do not match. Generic workers already orphaned before discovery are not guessed to be dev
+servers. Missing inspection tools, denied access, or surviving verified processes fail the command.
+
 `pnpm pages:build` creates the ignored `pages-out` static application. `pnpm pages:check` requires
 the `/org-tools` base path and rejects server chunks, SQLite symbols, database configuration, and
 state API references. Publication is a separate guarded maintainer action.

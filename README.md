@@ -75,6 +75,9 @@ database is `.org-tools/org-tools.sqlite3`. Override it with `ORG_TOOLS_DB_PATH`
 `.org-tools/config.example.json` to `.org-tools/config.json` and set `databasePath`. Stop the server
 before copying the SQLite file.
 
+Run `pnpm dev-stop` from another terminal to stop this checkout's development instances on macOS
+or Linux, including Pages and custom ports. It leaves production servers and other checkouts running.
+
 Use `pnpm pages:dev` for the in-memory static runtime. `pnpm pages:build` exports it to ignored
 `pages-out`, and `pnpm pages:check` verifies the `/org-tools` base path and absence of API or SQLite
 code. Publishing remains an explicit maintainer action through `pnpm pages:publish`.

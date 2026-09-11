@@ -53,6 +53,11 @@ The default `.org-tools/` runtime directory is ignored by Git. Stop the local se
 the SQLite file so rollback-journal transactions are settled. A custom path may be outside the
 repository, but invalid configuration is a blocking error.
 
+The macOS/Linux `pnpm dev-stop` command reads local process identities, commands, parent links, and
+working directories only to identify this checkout's development processes. It does not read
+process environments or organization state, persist a process registry, log command lines, access
+the network, or remove runtime files. Graceful shutdown precedes any verified forceful termination.
+
 The Pages artifact contains HTML, CSS, JavaScript, locally bundled Noto UI families, and the
 export-only font choices. Language and theme selectors never download catalogs or fonts. It
 contains no SQLite code, state endpoint, organization fixture, secret, remote asset, or external

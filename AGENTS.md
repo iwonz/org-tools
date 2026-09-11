@@ -48,6 +48,7 @@ Keep the README concise and link to the detailed documents.
 ## Commands
 
 - `pnpm dev` starts the local development UI.
+- `pnpm dev-stop` stops this checkout's server and Pages development instances on macOS and Linux.
 - `pnpm dev:check` starts and probes an isolated development server in Chromium, fails on runtime
   browser diagnostics, then stops it.
 - `pnpm lint` performs non-mutating Biome checks.
