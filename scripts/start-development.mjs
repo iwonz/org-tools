@@ -2,6 +2,7 @@
 
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -18,10 +19,6 @@ if (!/^\d+$/u.test(port) || Number(port) < 1 || Number(port) > 65_535) {
   throw new Error(`PORT must be an integer from 1 to 65535, received ${JSON.stringify(port)}.`);
 }
 
-function delay(milliseconds) {
-  return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
-}
-
 function appendBounded(current, chunk) {
   const combined = `${current}${chunk.toString("utf8")}`;
   return combined.length <= maximumBufferedBytes ? combined : combined.slice(-maximumBufferedBytes);
@@ -29,7 +26,10 @@ function appendBounded(current, chunk) {
 
 let bufferedOutput = "";
 let outputRevealed = false;
-let stopping = false;
+let interrupted = false;
+let stopPromise;
+let childResult;
+const startupController = new AbortController();
 
 const child = spawn(
   process.execPath,
@@ -43,6 +43,20 @@ const child = spawn(
     stdio: ["inherit", "pipe", "pipe"],
   },
 );
+
+// Register before warmup so an exit during a request or settling delay is never lost.
+const childCompletion = new Promise((resolveCompletion) => {
+  const complete = (result) => {
+    if (childResult) return;
+    childResult = result;
+    startupController.abort(
+      result.error ?? new Error(`Next.js exited during startup (${result.code ?? result.signal}).`),
+    );
+    resolveCompletion(result);
+  };
+  child.once("error", (error) => complete({ error }));
+  child.once("exit", (code, signal) => complete({ code, signal }));
+});
 
 function forwardOutput(chunk, destination) {
   if (outputRevealed) {
@@ -63,63 +77,87 @@ function revealOutput() {
 }
 
 async function stopChild() {
-  if (stopping || child.exitCode !== null || child.signalCode !== null) return;
-  stopping = true;
-  child.kill("SIGTERM");
-  await Promise.race([new Promise((resolveExit) => child.once("exit", resolveExit)), delay(5_000)]);
-  if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+  if (stopPromise) return stopPromise;
+  if (childResult) return;
+  stopPromise = (async () => {
+    const timeoutController = new AbortController();
+    child.kill("SIGTERM");
+    try {
+      await Promise.race([
+        childCompletion,
+        delay(5_000, undefined, { signal: timeoutController.signal }),
+      ]);
+      if (!childResult) {
+        child.kill("SIGKILL");
+        await childCompletion;
+      }
+    } finally {
+      timeoutController.abort();
+    }
+  })();
+  return stopPromise;
 }
 
 async function warmDevelopmentState() {
-  const deadline = Date.now() + startupTimeoutMs;
+  const { signal } = startupController;
   let lastError = new Error("Development server did not answer.");
+  const timeout = setTimeout(() => {
+    startupController.abort(new Error(`Development startup timed out: ${lastError.message}`));
+  }, startupTimeoutMs);
 
-  while (Date.now() < deadline) {
-    if (child.exitCode !== null || child.signalCode !== null) {
-      throw new Error(`Next.js exited during startup (${child.exitCode ?? child.signalCode}).`);
-    }
+  try {
+    while (true) {
+      signal.throwIfAborted();
+      try {
+        const rootResponse = await fetch(`${origin}/`, { signal });
+        const rootHtml = await rootResponse.text();
+        if (!rootResponse.ok || !rootHtml.includes("<title>Org Tools</title>")) {
+          throw new Error(`Root route returned HTTP ${rootResponse.status}.`);
+        }
+        const apiResponse = await fetch(`${origin}/api/state`, {
+          headers: { Accept: "application/json" },
+          signal,
+        });
+        await apiResponse.body?.cancel();
+        if (!apiResponse.ok) throw new Error(`State API returned HTTP ${apiResponse.status}.`);
 
-    try {
-      const rootResponse = await fetch(`${origin}/`);
-      const rootHtml = await rootResponse.text();
-      if (!rootResponse.ok || !rootHtml.includes("<title>Org Tools</title>")) {
-        throw new Error(`Root route returned HTTP ${rootResponse.status}.`);
+        await delay(500, undefined, { signal });
+        return origin;
+      } catch (error) {
+        signal.throwIfAborted();
+        lastError = error instanceof Error ? error : new Error(String(error));
+        await delay(pollIntervalMs, undefined, { signal });
       }
-      const apiResponse = await fetch(`${origin}/api/state`, {
-        headers: { Accept: "application/json" },
-      });
-      if (!apiResponse.ok) throw new Error(`State API returned HTTP ${apiResponse.status}.`);
-
-      await delay(500);
-      return origin;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      await delay(pollIntervalMs);
     }
+  } catch (error) {
+    throw signal.aborted ? signal.reason : error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  throw new Error(`Development startup timed out: ${lastError.message}`);
 }
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, async () => {
+    if (interrupted) return;
+    interrupted = true;
+    startupController.abort(new Error("Development startup interrupted."));
     revealOutput();
     await stopChild();
-    process.exit(0);
+    process.exitCode = 0;
   });
 }
 
 try {
   const stateUrl = await warmDevelopmentState();
+  startupController.signal.throwIfAborted();
   revealOutput();
   console.log(`\n✓ Development state runtime ready: ${stateUrl}`);
-  const exitCode = await new Promise((resolveExit) => {
-    child.once("exit", (code) => resolveExit(code ?? 1));
-  });
-  process.exitCode = exitCode;
+  const result = await childCompletion;
+  if (result.error) throw result.error;
+  process.exitCode = interrupted ? 0 : (result.code ?? 1);
 } catch (error) {
   revealOutput();
-  console.error(error instanceof Error ? error.message : String(error));
+  if (!interrupted) console.error(error instanceof Error ? error.message : String(error));
   await stopChild();
-  process.exitCode = 1;
+  process.exitCode = interrupted ? 0 : 1;
 }

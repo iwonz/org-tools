@@ -11,6 +11,6 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["apps/ui/src/**/*.test.ts"],
+    include: ["apps/ui/src/**/*.test.ts", "scripts/**/*.test.mjs"],
   },
 });

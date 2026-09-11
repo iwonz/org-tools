@@ -294,6 +294,13 @@ does not paint or serialize notes into Image, JSON, or Template output.
 uses an isolated ignored database and Chromium to verify the root application, state API, local-only
 requests, and Editor canvas. `pnpm build` produces the server build.
 
+The development launcher observes child completion immediately after spawn. Startup probes and the
+settling delay abort on child exit, interruption, or the 90-second startup deadline, so a stopped
+server cannot be announced as ready. Running exits retain the child's numeric status; Ctrl+C and
+SIGTERM stop the owned child cleanly with bounded escalation. Shared completion and canceled timers
+prevent missed exit events and unsettled top-level awaits. Unit coverage runs the real launcher
+against isolated synthetic loopback subprocesses; the development check also verifies actual Next.js.
+
 `pnpm pages:build` creates the ignored `pages-out` static application. `pnpm pages:check` requires
 the `/org-tools` base path and rejects server chunks, SQLite symbols, database configuration, and
 state API references. Publication is a separate guarded maintainer action.
