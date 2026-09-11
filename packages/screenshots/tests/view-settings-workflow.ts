@@ -15,6 +15,13 @@ export async function exerciseViewSettings(page: Page) {
   await expect(page.locator('[data-demo-id="unit-settings-action"]')).toHaveCount(0);
   await expect(footer).toBeVisible();
   const originalHeight = await card.evaluate((element) => element.clientHeight);
+  const nameColors = () =>
+    card
+      .locator("[data-org-editor-employee-content] > span:first-child")
+      .evaluateAll((names) =>
+        Array.from(new Set(names.map((name) => getComputedStyle(name).color))),
+      );
+  const normalNameColors = await nameColors();
   await card.click({ button: "right", position: { x: 50, y: 40 } });
   await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
   const assigned = card.locator('[data-distribution-status="assigned"]').first();
@@ -90,18 +97,16 @@ export async function exerciseViewSettings(page: Page) {
       .locator("[data-distribution-connection] path")
       .evaluate((path) => getComputedStyle(path).stroke);
   const lightPathColor = await pathColor();
-  await expect
-    .poll(() => assigned.locator("..").evaluate((element) => getComputedStyle(element).color))
-    .toBe(lightPathColor);
-  const rowForeground = lightPathColor;
+  await expect.poll(nameColors).toEqual(normalNameColors);
   expect(
     await page
       .locator("[data-distribution-connection] circle")
       .evaluate((marker) => getComputedStyle(marker).fill),
-  ).toBe(rowForeground);
+  ).toBe(lightPathColor);
   await dialog.getByRole("button", { name: "Not distributed", exact: true }).click();
   await picker.getByRole("option", { name: "Rose", exact: true }).click();
   await expect.poll(writes).toBe(3);
+  await expect.poll(nameColors).toEqual(normalNameColors);
   await page.keyboard.press("Escape");
   await expect(gear).toBeFocused();
   await page.keyboard.press("Control+z");
@@ -116,8 +121,9 @@ export async function exerciseViewSettings(page: Page) {
   await page.locator('[data-demo-id="theme-dialog"] label:has(input[value="dark"])').click();
   await expect.poll(pathColor).not.toBe(lightPathColor);
   await expect
-    .poll(() => assigned.locator("..").evaluate((element) => getComputedStyle(element).color))
-    .toBe(await pathColor());
+    .poll(nameColors)
+    .toEqual([await card.evaluate((element) => getComputedStyle(element).color)]);
+  expect(await nameColors()).not.toEqual(normalNameColors);
   expect(
     await sourceOnly.locator("..").evaluate((element) => getComputedStyle(element).backgroundColor),
   ).not.toBe(await rowColor());

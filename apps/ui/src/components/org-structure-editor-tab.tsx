@@ -1284,7 +1284,7 @@ function OrgEditorNode({
                 <div
                   className={cn(
                     "flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
-                    distributionStatus && "editor-distribution-tone editor-distribution-row",
+                    distributionStatus && "editor-distribution-row",
                     employeeSelected &&
                       (distributionStatus
                         ? "ring-2 ring-inset ring-signal"

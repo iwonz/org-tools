@@ -585,7 +585,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   leaves no stale Editor, Units, filter, expansion, or active Download references.
 - Confirm distribution mode can be enabled on a selected Unit set through checked, unchecked, and
   mixed switch states, uses green and amber tonal rows for
-  direct manual or resolved Live membership, preserves status fill through selection, and draws
+  direct manual or resolved Live membership, preserves status fill through selection, keeps Employee
+  names in the normal theme text color for both statuses, and draws
   paths only for one selected Employee occurrence. Collapsed targets use an endpoint marker,
   multi-selection hides paths, and Editor output contains no overlay. Confirm ordinary sources exclude
   distribution-enabled references from their placement actions

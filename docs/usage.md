@@ -95,7 +95,8 @@ control.
   the boss. Turning the cloud off removes the footer and its height from both Editor and PNG while
   retaining Employee Tags. **Distribution mode** settings choose **Distributed** and **Not
   distributed** colors through the existing palette and exact color input. Green and amber are the
-  defaults; the distributed color also controls placement lines and endpoint markers. Settings
+  defaults; the distributed color also controls placement lines and endpoint markers. Employee names
+  keep the normal theme text color for both distribution statuses, including selected rows. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
   Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
