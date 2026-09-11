@@ -441,7 +441,7 @@ export class OrgStore {
           );
           setOrgEditorUnitTagFooterHeight(
             unit.id,
-            unit.collapsed
+            unit.collapsed || !editor.settings.showTagCloud
               ? 0
               : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16),
           );
@@ -581,7 +581,7 @@ export class OrgStore {
       );
       setOrgEditorUnitTagFooterHeight(
         unit.id,
-        unit.collapsed
+        unit.collapsed || !editor.settings.showTagCloud
           ? 0
           : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16),
       );

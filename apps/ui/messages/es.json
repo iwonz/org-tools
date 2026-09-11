@@ -561,9 +561,13 @@
     "Markdown editor": "Editor de Markdown",
     "With date: {count}": "Con fecha: {count}",
     "Group by tag": "Agrupar por etiqueta",
-    "Unit settings for {name}": "Configuración de la unidad {name}",
-    "Change Unit grouping": "Cambiar agrupación de la unidad",
     "{name} moved to position {position}": "{name} se movió a la posición {position}",
-    "Drag to reorder or use the arrow keys": "Arrastra para reordenar o usa las teclas de flecha"
+    "Drag to reorder or use the arrow keys": "Arrastra para reordenar o usa las teclas de flecha",
+    "View settings": "Configuración de la Vista",
+    "Unit display": "Visualización de Equipos",
+    "Show Tag cloud": "Mostrar nube de Etiquetas",
+    "Distributed": "Distribuido",
+    "Not distributed": "Sin distribuir",
+    "Change View settings": "Cambiar configuración de la Vista"
   }
 }

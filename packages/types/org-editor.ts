@@ -1,3 +1,4 @@
+import type { EmployeeTagColor } from "./employee.js";
 import type { EmployeeId, UnitId } from "./ids.js";
 import type { EmployeeLiveFilterRule } from "./organization.js";
 
@@ -37,7 +38,6 @@ export type OrgEditorUnit = {
   y: number;
   bossEmployeeId: EmployeeId | null;
   collapsed: boolean;
-  groupByTag: boolean;
   employeeIds: EmployeeId[];
   /**
    * Manual Units persist positions for assigned Employees. Live Units keep
@@ -50,7 +50,15 @@ export type OrgEditorUnit = {
   updatedAt: string;
 };
 
+export type OrgEditorViewSettings = {
+  groupByTag: boolean;
+  showTagCloud: boolean;
+  distributedColor: EmployeeTagColor;
+  undistributedColor: EmployeeTagColor;
+};
+
 export type StructureDocument = {
+  settings: OrgEditorViewSettings;
   distributionModeUnitIds: OrgEditorUnitId[];
   units: OrgEditorUnit[];
   selectedItems: OrgEditorSelectedItem[];

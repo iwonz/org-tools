@@ -205,6 +205,7 @@ export const getEditorDistributionSelection = (
 };
 
 export const getEditorDistributionPlacement = ({
+  groupByTag,
   employeeById,
   employeeId,
   unit,
@@ -212,8 +213,9 @@ export const getEditorDistributionPlacement = ({
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   employeeId: EmployeeId;
   unit: OrgEditorUnit;
+  groupByTag: boolean;
 }): EditorDistributionPlacement => {
-  const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById);
+  const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById, groupByTag);
   const visibleIndex = visibleEmployeeIds.indexOf(employeeId);
   if (visibleIndex >= 0) {
     return {
@@ -222,7 +224,9 @@ export const getEditorDistributionPlacement = ({
     };
   }
 
-  const isDirectMember = getOrgEditorOrderedEmployeeIds(unit, employeeById).includes(employeeId);
+  const isDirectMember = getOrgEditorOrderedEmployeeIds(unit, employeeById, groupByTag).includes(
+    employeeId,
+  );
   return {
     bounds: getOrgEditorUnitBounds(unit),
     hiddenByCollapse: unit.collapsed && isDirectMember,

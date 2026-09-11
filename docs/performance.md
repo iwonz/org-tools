@@ -20,7 +20,7 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 
 - Persist identifiers and relationships rather than nested Employee copies.
 - Build catalog Tag ranks once per derived model and resolve each Employee's ordered Tags and earliest
-  rank outside rendering and comparator calls. Unit grouping reads that cached scalar and shares its
+  rank outside rendering and comparator calls. View grouping reads that cached scalar and shares its
   final row order with PNG, prefix geometry, and distribution anchors. Catalog drag previews never
   rebuild Employees or Views; a completed drop commits one global change.
 - Build shared maps, search documents, Unit order, membership, birthday, gender, dated-tag,
@@ -60,7 +60,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
   View; a deterministic glyph-aware width packs intrinsic short chips and grapheme-safe long lines,
   and the cached wrapped footer heights participate in the same geometry pass without DOM
-measurement. DOM and PNG consume the same line rectangles and indivisible count suffix.
+measurement. DOM and PNG consume the same line rectangles and indivisible count suffix. Disabling the View Tag
+  cloud sets every footer height to zero, including cached geometry. Distribution color drafts stay
+  local to the open picker; shared tonal styles are derived once per color change outside row loops.
 - Keep the Unit Markdown renderer out of the main Editor bundle and mount it only while a note
   Preview is open. Closed notes are opaque bounded strings: canvas layout, spatial indexing, search,
   PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save

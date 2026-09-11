@@ -291,7 +291,9 @@ export const StateRuntimeController = observer(
           if (!transport) throw new Error("State runtime transport is missing.");
           const document = await transport.load();
           if (!active) return;
-          installState(document.state, { counter: document.revision, originId: "server" });
+          const stamp = { counter: document.revision, originId: "server" };
+          // A live peer may already have supplied newer state while SQLite was loading.
+          if (compareStateStamps(stamp, stampRef.current) > 0) installState(document.state, stamp);
           setReady(true);
         } catch (loadError) {
           if (!active) return;

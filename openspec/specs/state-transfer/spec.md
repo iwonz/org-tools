@@ -198,13 +198,17 @@ settings.
 - **WHEN** complete State omits `distributionModeUnitIds`
 - **THEN** validation rejects it without changing the current state
 
-### Requirement: Complete state requires Unit grouping settings
-Every Unit in every View SHALL contain a required boolean `groupByTag`. Missing or non-boolean values SHALL reject the complete candidate atomically. New Units SHALL default to true. Complete Export and Import SHALL preserve the field and catalog array order exactly.
+### Requirement: Complete state requires View settings
+Every View SHALL contain exact required `structure.settings` with boolean groupByTag and showTagCloud
+plus non-null distributedColor and undistributedColor using the existing named or canonical lowercase
+six/eight-digit HEX contract. Missing, extra, or invalid settings and obsolete Unit groupByTag SHALL
+reject the complete candidate atomically. New Views SHALL default to true, true, green, and amber.
+Complete Export and Import SHALL preserve View settings and catalog array order exactly.
 
 #### Scenario: Round-trip grouping
 - **WHEN** a complete current state is exported and imported
-- **THEN** per-Unit grouping and global Tag order are preserved
+- **THEN** every View's settings and the global Tag order are preserved
 
 #### Scenario: Reject obsolete grouping shape
-- **WHEN** any Unit omits groupByTag or supplies a non-boolean value
+- **WHEN** a View lacks valid settings or any Unit retains groupByTag
 - **THEN** the complete import fails without changing current state

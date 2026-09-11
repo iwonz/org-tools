@@ -14,8 +14,8 @@ import {
   syntheticStatePath,
 } from "./helpers.js";
 import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
-
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
+import { exerciseViewSettings } from "./view-settings-workflow.js";
 
 test("synchronizes global Tag order and Unit grouping with scrollable presets", async ({
   context,
@@ -36,7 +36,7 @@ test("synchronizes global Tag order and Unit grouping with scrollable presets", 
     )
     .toEqual(groupedOrder);
   await card.hover();
-  await card.locator('[data-demo-id="unit-settings-action"]').click();
+  await peer.locator('[data-demo-id="org-editor-view-settings"]').click();
   await peer.getByRole("switch", { name: "Group by tag", exact: true }).click();
   await expect
     .poll(() =>
@@ -503,4 +503,12 @@ test("previews and commits pointer Tag sorting with cancellation and peer replac
   await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await exercisePointerTagSorting(page);
+});
+
+test("synchronizes View settings and distribution colors with matching PNG footers", async ({
+  page,
+}) => {
+  await page.addInitScript(useEnglish, localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await exerciseViewSettings(page);
 });

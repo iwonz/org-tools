@@ -561,9 +561,13 @@
     "Markdown editor": "Markdown editor",
     "With date: {count}": "With date: {count}",
     "Group by tag": "Group by tag",
-    "Unit settings for {name}": "Unit settings for {name}",
-    "Change Unit grouping": "Change Unit grouping",
     "{name} moved to position {position}": "{name} moved to position {position}",
-    "Drag to reorder or use the arrow keys": "Drag to reorder or use the arrow keys"
+    "Drag to reorder or use the arrow keys": "Drag to reorder or use the arrow keys",
+    "View settings": "View settings",
+    "Unit display": "Unit display",
+    "Show Tag cloud": "Show Tag cloud",
+    "Distributed": "Distributed",
+    "Not distributed": "Not distributed",
+    "Change View settings": "Change View settings"
   }
 }

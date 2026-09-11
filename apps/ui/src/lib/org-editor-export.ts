@@ -5,6 +5,7 @@ import type {
   OrgEditorLayoutMode,
   OrgEditorUnit,
   OrgEditorUnitId,
+  OrgEditorViewSettings,
   TagId,
 } from "@org-tools/types";
 import { isSafeAvatarBase64Url } from "@/lib/employee-data";
@@ -560,7 +561,7 @@ const getOrgEditorExportUnitHeight = (
 ) =>
   getOrgEditorUnitHeightForEmployeeRows({
     collapsed: unit.collapsed,
-    employeeRowHeights: getOrgEditorVisibleEmployeeIds(unit, employeeById).map(
+    employeeRowHeights: getOrgEditorVisibleEmployeeIds(unit, employeeById, false).map(
       () => ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
     ),
   });
@@ -1032,6 +1033,7 @@ const renderOrgEditorTemplate = ({
   });
 
 export const createOrgEditorUnitImageBlob = async ({
+  viewSettings,
   avatarLoadLimit = ORG_EDITOR_EXPORT_DEFAULT_AVATAR_LOAD_LIMIT,
   employeeById,
   formatUnitSummary,
@@ -1044,6 +1046,7 @@ export const createOrgEditorUnitImageBlob = async ({
   tagOrder = [],
   units,
 }: {
+  viewSettings: OrgEditorViewSettings;
   avatarLoadLimit?: number;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   formatUnitSummary: (summary: OrgEditorUnitEmployeeSummary) => string;
@@ -1074,7 +1077,7 @@ export const createOrgEditorUnitImageBlob = async ({
   const imageUnits = getOrgEditorExportUnits({ rootUnit, scope, units });
   const employeeSummaryByUnitId = buildOrgEditorUnitEmployeeSummaryById(units);
   const imageUnitRenderData = imageUnits.map((unit) => {
-    const employeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById);
+    const employeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById, viewSettings.groupByTag);
     const width = getOrgEditorUnitBounds(unit).width;
     const availableTagWidth = getOrgEditorEmployeeTextMaxWidth(width);
     const employeeTagLayouts = employeeIds.map((employeeId) => {
@@ -1097,7 +1100,9 @@ export const createOrgEditorUnitImageBlob = async ({
       rowOffset += height;
     }
 
-    const tagSummaries = buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder);
+    const tagSummaries = viewSettings.showTagCloud
+      ? buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder)
+      : [];
     const footerHeight = unit.collapsed
       ? 0
       : getOrgEditorUnitTagFooterHeight(tagSummaries, width - 16);

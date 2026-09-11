@@ -190,11 +190,16 @@
         "name": null,
         "structure": {
           "layoutMode": "topDown",
+          "settings": {
+            "groupByTag": true,
+            "showTagCloud": true,
+            "distributedColor": "green",
+            "undistributedColor": "amber"
+          },
           "units": [
             {
               "bossEmployeeId": "10000000-0000-4000-8000-000000000001",
               "collapsed": false,
-              "groupByTag": true,
               "createdAt": "2026-01-15T12:00:00.000Z",
               "employeeIds": [
                 "10000000-0000-4000-8000-000000000001",
@@ -223,7 +228,6 @@
             {
               "bossEmployeeId": "10000000-0000-4000-8000-000000000002",
               "collapsed": false,
-              "groupByTag": true,
               "createdAt": "2026-01-15T12:00:00.000Z",
               "employeeIds": [
                 "10000000-0000-4000-8000-000000000002",

@@ -13,6 +13,7 @@ import type {
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
   OrgEditorUnit,
+  OrgEditorViewSettings,
   OrgToolsDownloadEmployeeFieldKey,
   OrgToolsDownloadJsonTopLevelFieldKey,
   OrgToolsDownloadSelection,
@@ -492,7 +493,6 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     !hasExactKeys(value, [
       "bossEmployeeId",
       "collapsed",
-      "groupByTag",
       "createdAt",
       "employeeIds",
       "employeePositions",
@@ -510,7 +510,6 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     !(value.parentId === null || isUuid(value.parentId)) ||
     !(value.bossEmployeeId === null || isEmployeeId(value.bossEmployeeId)) ||
     typeof value.collapsed !== "boolean" ||
-    typeof value.groupByTag !== "boolean" ||
     !isTimestamp(value.createdAt) ||
     !isEmployeeIdArray(value.employeeIds) ||
     !isString(value.name) ||
@@ -534,7 +533,6 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
   return {
     bossEmployeeId: value.bossEmployeeId,
     collapsed: value.collapsed,
-    groupByTag: value.groupByTag,
     createdAt: value.createdAt,
     employeeIds: [...value.employeeIds],
     employeePositions,
@@ -854,6 +852,33 @@ const assertUniqueIds = (ids: readonly string[], message: string): void => {
 
 const normalizeViewName = (value: string) => value.normalize("NFKC").trim().replace(/\s+/gu, " ");
 
+const isSettingsColor = (value: unknown): value is EmployeeTagColor =>
+  typeof value === "string" &&
+  ((TAG_COLOR_NAMES as readonly string[]).includes(value) || CUSTOM_TAG_COLOR_PATTERN.test(value));
+
+const normalizeViewSettings = (value: unknown): OrgEditorViewSettings | null => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "groupByTag",
+      "showTagCloud",
+      "distributedColor",
+      "undistributedColor",
+    ]) ||
+    typeof value.groupByTag !== "boolean" ||
+    typeof value.showTagCloud !== "boolean" ||
+    !isSettingsColor(value.distributedColor) ||
+    !isSettingsColor(value.undistributedColor)
+  )
+    return null;
+  return {
+    groupByTag: value.groupByTag,
+    showTagCloud: value.showTagCloud,
+    distributedColor: value.distributedColor,
+    undistributedColor: value.undistributedColor,
+  };
+};
+
 const normalizeViewDocument = (value: unknown): OrgToolsViewDocument | null => {
   if (
     !isRecord(value) ||
@@ -863,7 +888,7 @@ const normalizeViewDocument = (value: unknown): OrgToolsViewDocument | null => {
     !isTimestamp(value.updatedAt) ||
     (value.kind !== "custom" && value.kind !== "system") ||
     !isRecord(value.structure) ||
-    !hasExactKeys(value.structure, ["layoutMode", "units"]) ||
+    !hasExactKeys(value.structure, ["layoutMode", "settings", "units"]) ||
     !isLayoutMode(value.structure.layoutMode) ||
     !Array.isArray(value.structure.units)
   ) {
@@ -874,6 +899,8 @@ const normalizeViewDocument = (value: unknown): OrgToolsViewDocument | null => {
     const name = normalizeViewName(value.name as string);
     if (!name || name.length > 100 || name !== value.name) return null;
   }
+  const settings = normalizeViewSettings(value.structure.settings);
+  if (!settings) return null;
   const units = value.structure.units.map(normalizeEditorUnit);
   if (units.some((unit) => !unit)) return null;
   return {
@@ -883,6 +910,7 @@ const normalizeViewDocument = (value: unknown): OrgToolsViewDocument | null => {
     name: value.kind === "system" ? null : (value.name as string),
     structure: {
       layoutMode: value.structure.layoutMode,
+      settings,
       units: units as OrgEditorUnit[],
     },
     updatedAt: value.updatedAt,
@@ -1339,7 +1367,11 @@ export const createBlankOrgToolsState = (
           id: systemViewId,
           kind: "system",
           name: null,
-          structure: { layoutMode: editor.layoutMode, units: editor.units },
+          structure: {
+            layoutMode: editor.layoutMode,
+            settings: editor.settings,
+            units: editor.units,
+          },
           updatedAt: now,
         },
       ],

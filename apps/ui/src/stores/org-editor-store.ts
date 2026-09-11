@@ -8,6 +8,7 @@ import type {
   OrgEditorState,
   OrgEditorUnit,
   OrgEditorUnitId,
+  OrgEditorViewSettings,
   ViewId,
 } from "@org-tools/types";
 import { makeAutoObservable, observable } from "mobx";
@@ -19,6 +20,7 @@ import {
 import { normalizeLivePositionOverrides } from "@/lib/live-unit-position";
 import {
   createDefaultOrgEditorState,
+  createDefaultOrgEditorViewSettings,
   createOrgEditorSelectedItemKey,
   createOrgEditorUnitFromScratch,
   getOrgEditorUnitBounds,
@@ -48,6 +50,7 @@ export type OrgEditorClipboardController = {
 };
 
 export type OrgEditorHistorySnapshot = {
+  settings: OrgEditorViewSettings;
   layoutMode: OrgEditorLayoutMode;
   units: OrgEditorUnit[];
 };
@@ -171,6 +174,7 @@ const cloneViewport = (viewport: OrgEditorCanvasViewport): OrgEditorCanvasViewpo
 });
 
 const cloneHistorySnapshot = (snapshot: OrgEditorHistorySnapshot): OrgEditorHistorySnapshot => ({
+  settings: { ...snapshot.settings },
   layoutMode: snapshot.layoutMode,
   units: snapshot.units.map(cloneUnit),
 });
@@ -188,6 +192,7 @@ const ensureStateHasCanvasShape = (state: OrgEditorState): OrgEditorState => {
     units: Array.isArray(state.units) ? state.units.map(cloneUnit) : fallbackState.units,
     viewport: state.viewport ? cloneViewport(state.viewport) : fallbackState.viewport,
     layoutMode: state.layoutMode ?? fallbackState.layoutMode,
+    settings: { ...state.settings },
   };
 };
 
@@ -415,7 +420,6 @@ const areUnitsEqual = (firstUnits: OrgEditorUnit[], secondUnits: OrgEditorUnit[]
       firstUnit.parentId === secondUnit.parentId &&
       firstUnit.name === secondUnit.name &&
       firstUnit.noteMarkdown === secondUnit.noteMarkdown &&
-      firstUnit.groupByTag === secondUnit.groupByTag &&
       firstUnit.order === secondUnit.order &&
       firstUnit.x === secondUnit.x &&
       firstUnit.y === secondUnit.y &&
@@ -434,10 +438,18 @@ const areHistorySnapshotsEqual = (
   firstSnapshot: OrgEditorHistorySnapshot,
   secondSnapshot: OrgEditorHistorySnapshot,
 ) =>
+  areViewSettingsEqual(firstSnapshot.settings, secondSnapshot.settings) &&
   firstSnapshot.layoutMode === secondSnapshot.layoutMode &&
   areUnitsEqual(firstSnapshot.units, secondSnapshot.units);
 
+const areViewSettingsEqual = (a: OrgEditorViewSettings, b: OrgEditorViewSettings) =>
+  a.groupByTag === b.groupByTag &&
+  a.showTagCloud === b.showTagCloud &&
+  a.distributedColor === b.distributedColor &&
+  a.undistributedColor === b.undistributedColor;
+
 export class OrgEditorStore {
+  settings = createDefaultOrgEditorViewSettings();
   units: OrgEditorUnit[] = [];
   distributionModeUnitIds: OrgEditorUnitId[] = [];
   selectedItems: OrgEditorSelectedItem[] = [];
@@ -472,6 +484,7 @@ export class OrgEditorStore {
         redoStack: observable.shallow,
         resolvedLiveEmployeeIdsByUnitId: observable.shallow,
         selectedItems: observable.shallow,
+        settings: observable.ref,
         undoStack: observable.shallow,
         units: observable.shallow,
         viewport: observable.ref,
@@ -561,6 +574,7 @@ export class OrgEditorStore {
       units: this.units.map(cloneUnit),
       viewport: cloneViewport(this.viewport),
       layoutMode: this.layoutMode,
+      settings: { ...this.settings },
     };
   }
 
@@ -573,6 +587,7 @@ export class OrgEditorStore {
     );
     this.viewport = nextState.viewport;
     this.layoutMode = nextState.layoutMode;
+    this.settings = nextState.settings;
     this.selectedItems = filterSelectedItemsForUnits(nextState.selectedItems, nextState.units);
     this.resolvedLiveEmployeeIdsByUnitId = new Map();
     this.clearHistory();
@@ -587,6 +602,7 @@ export class OrgEditorStore {
   createCommandSnapshot(): OrgEditorHistorySnapshot {
     return {
       layoutMode: this.layoutMode,
+      settings: { ...this.settings },
       units: this.units.map(cloneUnit),
     };
   }
@@ -681,6 +697,7 @@ export class OrgEditorStore {
   private applyHistorySnapshot(snapshot: OrgEditorHistorySnapshot): void {
     this.units = snapshot.units.map(cloneUnit);
     this.layoutMode = snapshot.layoutMode;
+    this.settings = { ...snapshot.settings };
     this.selectedItems = filterSelectedItemsForUnits(this.selectedItems, this.units);
     this.pruneDistributionModeUnitIds();
   }
@@ -1040,15 +1057,11 @@ export class OrgEditorStore {
     });
   }
 
-  setUnitGroupByTag(unitId: OrgEditorUnitId, groupByTag: boolean): void {
-    const currentUnit = this.units.find((unit) => unit.id === unitId);
-    if (!currentUnit) throw new LocalizedError(uiMessage("Unit not found."));
-    if (currentUnit.groupByTag === groupByTag) return;
-    this.runCommand("Change Unit grouping", () => {
-      const updatedAt = new Date().toISOString();
-      this.units = this.units.map((unit) =>
-        unit.id === unitId ? { ...unit, groupByTag, updatedAt } : unit,
-      );
+  setViewSettings(patch: Partial<OrgEditorViewSettings>): void {
+    const settings = { ...this.settings, ...patch };
+    if (areViewSettingsEqual(this.settings, settings)) return;
+    this.runCommand("Change View settings", () => {
+      this.settings = settings;
     });
   }
 

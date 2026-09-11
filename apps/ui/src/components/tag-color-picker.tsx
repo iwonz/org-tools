@@ -71,13 +71,18 @@ export function TagColorPicker({
   onChange,
   value,
   variant = "field",
+  label,
+  allowNoColor = true,
 }: {
   onChange: (color: EmployeeTagColor | null) => void;
+  label?: string;
+  allowNoColor?: boolean;
   value: EmployeeTagColor | null;
   variant?: "field" | "icon";
 }) {
   const t = useUiText();
   const [open, setOpen] = useState(false);
+  const canceledRef = useRef(false);
   const [inputMode, setInputMode] = useState<TagColorInputMode>("hex");
   const [inputValue, setInputValue] = useState(() => formatTagColorInput("hex", value));
   const [inputInvalid, setInputInvalid] = useState(false);
@@ -103,6 +108,7 @@ export function TagColorPicker({
   };
 
   const commitColor = (color: EmployeeTagColor | null) => {
+    if (canceledRef.current) return;
     previewColor(color);
     if (lastCommittedRef.current === color) return;
     lastCommittedRef.current = color;
@@ -127,6 +133,7 @@ export function TagColorPicker({
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (nextOpen) {
+          canceledRef.current = false;
           previewColor(value);
           lastCommittedRef.current = value;
           return;
@@ -139,10 +146,10 @@ export function TagColorPicker({
         {variant === "icon" ? (
           <button
             aria-expanded={open}
-            aria-label={t("Choose Tag color")}
+            aria-label={label ?? t("Choose Tag color")}
             className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent/65 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
             data-demo-id="tag-color-trigger"
-            title={t("Choose Tag color")}
+            title={label ?? t("Choose Tag color")}
             type="button"
           >
             <HiOutlineSwatch className="size-5" />
@@ -150,7 +157,7 @@ export function TagColorPicker({
         ) : (
           <button
             aria-expanded={open}
-            aria-label={t("Choose Tag color")}
+            aria-label={label ?? t("Choose Tag color")}
             className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-start outline-none transition-colors hover:bg-accent/45 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
             data-demo-id="tag-color-trigger"
             type="button"
@@ -161,6 +168,10 @@ export function TagColorPicker({
         )}
       </PopoverTrigger>
       <PopoverContent
+        onEscapeKeyDown={() => {
+          canceledRef.current = true;
+          previewColor(value);
+        }}
         align="start"
         className="max-h-[min(36rem,var(--radix-popover-content-available-height))] w-[min(19rem,var(--radix-popover-content-available-width))] overflow-y-auto p-2"
         data-demo-id="tag-color-dropdown"
@@ -188,6 +199,7 @@ export function TagColorPicker({
               else if (event.key === "ArrowDown") next.value -= step;
               else return;
               event.preventDefault();
+              canceledRef.current = false;
               previewColor(
                 hsvToHex({
                   ...next,
@@ -196,7 +208,15 @@ export function TagColorPicker({
                 }),
               );
             }}
+            onPointerCancel={() => {
+              canceledRef.current = true;
+              previewColor(value);
+            }}
+            onKeyUp={(event) => {
+              if (event.key.startsWith("Arrow")) commitColor(draftColorRef.current);
+            }}
             onPointerDown={(event) => {
+              canceledRef.current = false;
               event.currentTarget.setPointerCapture(event.pointerId);
               updateSaturationAndValue(event.clientX, event.clientY, event.currentTarget);
             }}
@@ -239,7 +259,21 @@ export function TagColorPicker({
             onChange={(event) =>
               previewColor(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
             }
-            onKeyUp={() => commitColor(draftColorRef.current)}
+            onPointerDown={() => {
+              canceledRef.current = false;
+            }}
+            onPointerCancel={() => {
+              canceledRef.current = true;
+              previewColor(value);
+            }}
+            onKeyDown={(event) => {
+              if (event.key.startsWith("Arrow") || event.key === "Home" || event.key === "End")
+                canceledRef.current = false;
+            }}
+            onKeyUp={(event) => {
+              if (event.key.startsWith("Arrow") || event.key === "Home" || event.key === "End")
+                commitColor(draftColorRef.current);
+            }}
             onPointerUp={() => commitColor(draftColorRef.current)}
             type="range"
             value={Math.round(hsv.hue)}
@@ -267,6 +301,7 @@ export function TagColorPicker({
               aria-invalid={inputInvalid}
               aria-label={t("Color value")}
               onChange={(event) => {
+                canceledRef.current = false;
                 const nextValue = event.currentTarget.value;
                 const parsed = parseTagColorInput(inputMode, nextValue);
                 setInputValue(nextValue);
@@ -301,7 +336,7 @@ export function TagColorPicker({
         </div>
         <div className="my-2 h-px bg-border/80" />
         <div className="grid gap-0.5" role="listbox">
-          {[null, ...EMPLOYEE_TAG_COLOR_NAMES].map((color) => {
+          {[...(allowNoColor ? [null] : []), ...EMPLOYEE_TAG_COLOR_NAMES].map((color) => {
             const selected = draftColor === color;
             return (
               <button
@@ -309,6 +344,7 @@ export function TagColorPicker({
                 className="flex min-h-9 cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5 text-start outline-none transition-colors hover:bg-accent/65 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40"
                 key={color ?? "none"}
                 onClick={() => {
+                  canceledRef.current = false;
                   commitColor(color);
                   setOpen(false);
                 }}

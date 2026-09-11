@@ -9,6 +9,7 @@ import type {
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
   OrgEditorUnit,
+  OrgEditorViewSettings,
 } from "./org-editor.js";
 import type { EmployeeCustomFieldFilter, OrganizationEmployee } from "./organization.js";
 
@@ -95,6 +96,7 @@ type OrgToolsViewDocumentBase = {
   createdAt: string;
   id: ViewId;
   structure: {
+    settings: OrgEditorViewSettings;
     layoutMode: OrgEditorLayoutMode;
     units: OrgEditorUnit[];
   };

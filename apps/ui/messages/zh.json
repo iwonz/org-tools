@@ -561,9 +561,13 @@
     "Markdown editor": "Markdown 编辑器",
     "With date: {count}": "有日期：{count}",
     "Group by tag": "按标签分组",
-    "Unit settings for {name}": "{name} 的团队设置",
-    "Change Unit grouping": "更改团队分组",
     "{name} moved to position {position}": "{name} 已移至第 {position} 位",
-    "Drag to reorder or use the arrow keys": "拖动或使用方向键调整顺序"
+    "Drag to reorder or use the arrow keys": "拖动或使用方向键调整顺序",
+    "View settings": "视图设置",
+    "Unit display": "团队显示",
+    "Show Tag cloud": "显示标签云",
+    "Distributed": "已分配",
+    "Not distributed": "未分配",
+    "Change View settings": "更改视图设置"
   }
 }

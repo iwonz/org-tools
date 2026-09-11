@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrgToolsViewDocument, ViewId } from "@org-tools/types";
+import type { OrgEditorViewSettings, OrgToolsViewDocument, ViewId } from "@org-tools/types";
 import { useEffect, useState } from "react";
 import {
   HiOutlineDocumentDuplicate,
@@ -8,7 +8,6 @@ import {
   HiOutlinePlus,
   HiOutlineTrash,
 } from "react-icons/hi2";
-
 import { ActionIconButton } from "@/components/action-icon-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ViewSettingsDialog } from "@/components/view-settings-dialog";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useMessageText, useUiText } from "@/i18n/use-ui-text";
 import type { NewOrgViewSource } from "@/stores/org-views-store";
@@ -38,6 +38,8 @@ const displayViewName = (view: Omit<OrgToolsViewDocument, "structure">, systemNa
 
 export function OrgViewToolbar({
   activeViewId,
+  settings,
+  onSettingsChange,
   onCreate,
   onDelete,
   onRename,
@@ -45,6 +47,8 @@ export function OrgViewToolbar({
   views,
 }: {
   activeViewId: ViewId;
+  settings: OrgEditorViewSettings;
+  onSettingsChange: (patch: Partial<OrgEditorViewSettings>) => void;
   onCreate: (name: string, source: NewOrgViewSource) => void;
   onDelete: (viewId: ViewId) => void;
   onRename: (viewId: ViewId, name: string) => void;
@@ -111,6 +115,7 @@ export function OrgViewToolbar({
             ))}
           </SelectContent>
         </Select>
+        <ViewSettingsDialog key={activeViewId} settings={settings} onChange={onSettingsChange} />
         <ActionIconButton
           dataDemoId="org-editor-create-view"
           disabled={false}

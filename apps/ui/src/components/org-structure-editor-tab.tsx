@@ -10,6 +10,7 @@ import type {
   OrgEditorSelectedItem,
   OrgEditorUnit,
   OrgEditorUnitId,
+  OrgEditorViewSettings,
   UnitId,
 } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
@@ -35,7 +36,6 @@ import {
   HiOutlineBuildingOffice2,
   HiOutlineChevronRight,
   HiOutlineClipboard,
-  HiOutlineCog6Tooth,
   HiOutlineDocumentDuplicate,
   HiOutlineDocumentText,
   HiOutlineFolder,
@@ -93,7 +93,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitDialog } from "@/components/unit-dialog";
 import { UnitNoteDialog } from "@/components/unit-note-dialog";
-import { UnitSettingsDialog } from "@/components/unit-settings-dialog";
 import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
@@ -158,7 +157,11 @@ import {
   getOrgEditorEdgePanVelocity,
   getUnitPointerSelectionIntent,
 } from "@/lib/org-editor-interaction";
-import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
+import {
+  customTagColorSurfaceStyle,
+  employeeTagColorToHex,
+  tagColorSurfaceClassName,
+} from "@/lib/tag-color";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { cn } from "@/lib/utils";
@@ -980,6 +983,8 @@ function OrgEditorEmployeeDragPreview({
 }
 
 function OrgEditorNode({
+  viewSettings,
+  distributionStyles,
   distributionEnabled,
   distributionUnitIdsByEmployeeId,
   placementUnitIdsByEmployeeId,
@@ -990,7 +995,6 @@ function OrgEditorNode({
   onAddChild,
   onEditUnit,
   onOpenNote,
-  onOpenSettings,
   onOpenEmployeePlacements,
   onConnectionPointerDown,
   onEmployeeContextMenu,
@@ -1005,6 +1009,11 @@ function OrgEditorNode({
   unit,
   visibleWorldRect,
 }: {
+  viewSettings: OrgEditorViewSettings;
+  distributionStyles: {
+    assigned: React.CSSProperties | undefined;
+    sourceOnly: React.CSSProperties | undefined;
+  };
   distributionEnabled: boolean;
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   placementUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
@@ -1015,7 +1024,6 @@ function OrgEditorNode({
   onAddChild: (unitId: OrgEditorUnitId) => void;
   onEditUnit: (unit: OrgEditorUnit) => void;
   onOpenNote: (unit: OrgEditorUnit) => void;
-  onOpenSettings: (unit: OrgEditorUnit, trigger: HTMLButtonElement) => void;
   onOpenEmployeePlacements: (unitId: OrgEditorUnitId, employeeId: EmployeeId) => void;
   onConnectionPointerDown: (
     event: React.PointerEvent<HTMLButtonElement>,
@@ -1048,11 +1056,16 @@ function OrgEditorNode({
   );
   const unitHeight = getOrgEditorUnitHeight(unit);
   const unitWidth = getOrgEditorUnitWidth(unit);
-  const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById);
+  const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(
+    unit,
+    employeeById,
+    viewSettings.groupByTag,
+  );
   const employeeRowLayout = getOrgEditorEmployeeRowLayout(unit);
-  const tagFooterLayout = unit.collapsed
-    ? { chips: [], height: 0, rowCount: 0 }
-    : createOrgEditorUnitTagFooterLayout(tagSummary, unitWidth - 16);
+  const tagFooterLayout =
+    unit.collapsed || !viewSettings.showTagCloud
+      ? { chips: [], height: 0, rowCount: 0 }
+      : createOrgEditorUnitTagFooterLayout(tagSummary, unitWidth - 16);
   const tagFooterHeight = tagFooterLayout.height;
   const shouldRenderEmployeeList = !unit.collapsed || visibleEmployeeIds.length > 0;
   const employeeListHeight = Math.max(
@@ -1159,26 +1172,9 @@ function OrgEditorNode({
         <HiOutlinePlus className="size-4" />
       </Button>
       <Button
-        aria-label={t("Unit settings for {name}", { name: unit.name })}
-        className="pointer-events-none absolute end-2 top-2 z-20 size-7 rounded-md border-0 bg-transparent p-0 text-muted-foreground opacity-0 shadow-none transition-opacity hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
-        data-demo-id="unit-settings-action"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenSettings(unit, event.currentTarget);
-        }}
-        onDoubleClick={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        size="icon"
-        title={t("Unit settings for {name}", { name: unit.name })}
-        type="button"
-        variant="ghost"
-      >
-        <HiOutlineCog6Tooth className="size-4" />
-      </Button>
-      <Button
         aria-label={t("Open Unit note for {name}", { name: unit.name })}
         className={cn(
-          "absolute end-10 top-2 z-20 size-7 rounded-md border-0 p-0 shadow-none transition-[color,background-color,opacity]",
+          "absolute end-2 top-2 z-20 size-7 rounded-md border-0 p-0 shadow-none transition-[color,background-color,opacity]",
           unit.noteMarkdown.trim()
             ? "bg-signal/10 text-signal opacity-100 hover:bg-signal/15 hover:text-signal"
             : "pointer-events-none bg-transparent text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100",
@@ -1288,10 +1284,7 @@ function OrgEditorNode({
                 <div
                   className={cn(
                     "flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
-                    distributionStatus === "assigned" &&
-                      "bg-distribution-assigned text-distribution-assigned-foreground hover:bg-distribution-assigned",
-                    distributionStatus === "sourceOnly" &&
-                      "bg-distribution-source-only text-distribution-source-only-foreground hover:bg-distribution-source-only",
+                    distributionStatus && "editor-distribution-tone editor-distribution-row",
                     employeeSelected &&
                       (distributionStatus
                         ? "ring-2 ring-inset ring-signal"
@@ -1301,6 +1294,7 @@ function OrgEditorNode({
                   data-selected={employeeSelected ? "true" : "false"}
                   key={`${unit.id}:${employeeId}`}
                   style={{
+                    ...(distributionStatus ? distributionStyles[distributionStatus] : {}),
                     height: employeeRowLayout.heights[employeeIndex],
                     ...(shouldVirtualizeEmployees
                       ? {
@@ -1803,6 +1797,16 @@ export const OrgStructureEditorTab = observer(() => {
   const store = useOrgStore();
   const units = store.editorUnits;
   const editor = store.orgEditor;
+  const viewSettings = editor.settings;
+  const distributionStyles = useMemo(
+    () => ({
+      assigned: customTagColorSurfaceStyle(employeeTagColorToHex(viewSettings.distributedColor)),
+      sourceOnly: customTagColorSurfaceStyle(
+        employeeTagColorToHex(viewSettings.undistributedColor),
+      ),
+    }),
+    [viewSettings.distributedColor, viewSettings.undistributedColor],
+  );
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const lastEmployeeSelectionRef = useRef<{
@@ -1820,8 +1824,6 @@ export const OrgStructureEditorTab = observer(() => {
   } | null>(null);
   const [exportUnitId, setExportUnitId] = useState<OrgEditorUnitId | null>(null);
   const [noteUnitId, setNoteUnitId] = useState<OrgEditorUnitId | null>(null);
-  const [settingsUnitId, setSettingsUnitId] = useState<OrgEditorUnitId | null>(null);
-  const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [placementTarget, setPlacementTarget] = useState<{
     employeeId: EmployeeId;
     sourceUnitId: OrgEditorUnitId;
@@ -2030,7 +2032,11 @@ export const OrgStructureEditorTab = observer(() => {
         getOrgEditorEmployeeTextMaxWidth(getOrgEditorUnitWidth(unit)),
       );
       const heights = new Map<EmployeeId, number>();
-      const orderedEmployeeIds = getOrgEditorOrderedEmployeeIds(unit, employeeById);
+      const orderedEmployeeIds = getOrgEditorOrderedEmployeeIds(
+        unit,
+        employeeById,
+        viewSettings.groupByTag,
+      );
       for (const employeeId of orderedEmployeeIds) {
         const employee = employeeById.get(employeeId);
         const labels =
@@ -2048,19 +2054,20 @@ export const OrgStructureEditorTab = observer(() => {
       }
       setOrgEditorUnitEmployeeRowHeights(unit.id, heights, orderedEmployeeIds);
     }
-  }, [displayUnits, employeeById, format]);
+  }, [displayUnits, employeeById, format, viewSettings.groupByTag]);
   const unitTagSummaryByUnitId = useMemo(() => {
     const summaryByUnitId = new Map<OrgEditorUnitId, OrgEditorUnitTagSummary[]>();
     for (const unit of displayUnits) {
       const summary = buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder);
-      const footerHeight = unit.collapsed
-        ? 0
-        : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16);
+      const footerHeight =
+        unit.collapsed || !viewSettings.showTagCloud
+          ? 0
+          : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16);
       summaryByUnitId.set(unit.id, summary);
       setOrgEditorUnitTagFooterHeight(unit.id, footerHeight);
     }
     return summaryByUnitId;
-  }, [displayUnits, employeeById, tagOrder]);
+  }, [displayUnits, employeeById, tagOrder, viewSettings.showTagCloud]);
   const unitById = useMemo(
     () => new Map(displayUnits.map((unit) => [unit.id, unit] as const)),
     [displayUnits],
@@ -2083,7 +2090,6 @@ export const OrgStructureEditorTab = observer(() => {
     [employeeById],
   );
   const exportUnit = exportUnitId ? (unitById.get(exportUnitId) ?? null) : null;
-  const settingsUnit = settingsUnitId ? (unitById.get(settingsUnitId) ?? null) : null;
   const noteUnit = noteUnitId ? (unitById.get(noteUnitId) ?? null) : null;
   const placementEmployee = placementTarget
     ? (employeeById.get(placementTarget.employeeId) ?? null)
@@ -2106,9 +2112,6 @@ export const OrgStructureEditorTab = observer(() => {
   useEffect(() => {
     if (noteUnitId && !noteUnit) setNoteUnitId(null);
   }, [noteUnit, noteUnitId]);
-  useEffect(() => {
-    if (settingsUnitId && !settingsUnit) setSettingsUnitId(null);
-  }, [settingsUnit, settingsUnitId]);
   useEffect(() => {
     if (
       placementTarget &&
@@ -2295,7 +2298,11 @@ export const OrgStructureEditorTab = observer(() => {
 
       const nextUnit = unitById.get(unitId) ?? unit;
       const unitBounds = getOrgEditorUnitBounds(nextUnit);
-      const visibleEmployeeIds = getOrgEditorOrderedEmployeeIds(nextUnit, employeeById);
+      const visibleEmployeeIds = getOrgEditorOrderedEmployeeIds(
+        nextUnit,
+        employeeById,
+        viewSettings.groupByTag,
+      );
       const employeeIndex = visibleEmployeeIds.indexOf(employeeId);
       const employeeBounds =
         employeeIndex >= 0 ? getOrgEditorEmployeeBounds(nextUnit, employeeIndex) : null;
@@ -2316,7 +2323,7 @@ export const OrgStructureEditorTab = observer(() => {
       });
       if (closeSearch) store.setEditorUi({ searchOpen: false, searchQuery: "" });
     },
-    [centerCanvasRectInViewport, editor, employeeById, store, unitById],
+    [centerCanvasRectInViewport, editor, employeeById, store, unitById, viewSettings.groupByTag],
   );
 
   const selectOrgEditorSearchResult = useCallback(
@@ -2528,6 +2535,7 @@ export const OrgStructureEditorTab = observer(() => {
     const sourceUnit = unitById.get(selectedItem.unitId);
     if (!sourceUnit) return [];
     const sourcePlacement = getEditorDistributionPlacement({
+      groupByTag: viewSettings.groupByTag,
       employeeById,
       employeeId: selectedItem.employeeId,
       unit: withUnitPreviewPosition(sourceUnit),
@@ -2541,6 +2549,7 @@ export const OrgStructureEditorTab = observer(() => {
       const targetUnit = unitById.get(targetUnitId);
       if (!targetUnit) return [];
       const targetPlacement = getEditorDistributionPlacement({
+        groupByTag: viewSettings.groupByTag,
         employeeById,
         employeeId: selectedItem.employeeId,
         unit: withUnitPreviewPosition(targetUnit),
@@ -2554,6 +2563,7 @@ export const OrgStructureEditorTab = observer(() => {
       return [{ ...connection, targetUnitId }];
     });
   }, [
+    viewSettings.groupByTag,
     distributionModeUnitIdSet,
     distributionUnitIdsByEmployeeId,
     editor.selectedItems,
@@ -3338,7 +3348,11 @@ export const OrgStructureEditorTab = observer(() => {
     } satisfies OrgEditorSelectedItem;
 
     if (event.shiftKey) {
-      const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById);
+      const visibleEmployeeIds = getOrgEditorVisibleEmployeeIds(
+        unit,
+        employeeById,
+        viewSettings.groupByTag,
+      );
       const sameUnitAnchor =
         lastEmployeeSelectionRef.current?.unitId === unit.id
           ? lastEmployeeSelectionRef.current.employeeId
@@ -3605,11 +3619,13 @@ export const OrgStructureEditorTab = observer(() => {
               ))}
               {distributionConnections.map((connection) => (
                 <g
+                  className="editor-distribution-tone"
+                  style={distributionStyles.assigned}
                   data-distribution-connection={connection.targetUnitId}
                   key={connection.targetUnitId}
                 >
                   <path
-                    className="stroke-distribution-assigned-foreground"
+                    className="stroke-current"
                     d={connection.path}
                     fill="none"
                     strokeLinecap="round"
@@ -3617,7 +3633,7 @@ export const OrgStructureEditorTab = observer(() => {
                   />
                   {connection.showEndpointMarker && (
                     <circle
-                      className="fill-distribution-assigned-foreground stroke-card"
+                      className="fill-current stroke-card"
                       cx={connection.end.x}
                       cy={connection.end.y}
                       r={4}
@@ -3639,6 +3655,8 @@ export const OrgStructureEditorTab = observer(() => {
             </svg>
             {visibleUnits.map((unit) => (
               <OrgEditorNode
+                viewSettings={viewSettings}
+                distributionStyles={distributionStyles}
                 distributionEnabled={distributionModeUnitIdSet.has(unit.id)}
                 distributionUnitIdsByEmployeeId={distributionUnitIdsByEmployeeId}
                 placementUnitIdsByEmployeeId={
@@ -3655,10 +3673,6 @@ export const OrgStructureEditorTab = observer(() => {
                 onConnectionPointerDown={handleConnectionPointerDown}
                 onEditUnit={openEditUnit}
                 onOpenNote={(unit) => setNoteUnitId(unit.id)}
-                onOpenSettings={(unit, trigger) => {
-                  settingsTriggerRef.current = trigger;
-                  setSettingsUnitId(unit.id);
-                }}
                 onOpenEmployeePlacements={(sourceUnitId, employeeId) =>
                   setPlacementTarget({ employeeId, sourceUnitId })
                 }
@@ -3992,6 +4006,8 @@ export const OrgStructureEditorTab = observer(() => {
           <div className={ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME}>
             <OrgViewToolbar
               activeViewId={store.activeOrgViewId}
+              settings={viewSettings}
+              onSettingsChange={editor.setViewSettings}
               onCreate={store.createOrgView}
               onDelete={store.deleteOrgView}
               onRename={store.renameOrgView}
@@ -4192,6 +4208,7 @@ export const OrgStructureEditorTab = observer(() => {
         />
       )}
       <OrgEditorExportDialog
+        viewSettings={viewSettings}
         employeeById={employeeById}
         layoutMode={editor.layoutMode}
         onOpenChange={(open) => {
@@ -4203,14 +4220,7 @@ export const OrgStructureEditorTab = observer(() => {
         unit={exportUnit}
         units={displayUnits}
       />
-      {settingsUnit && (
-        <UnitSettingsDialog
-          unit={settingsUnit}
-          onCloseAutoFocus={() => settingsTriggerRef.current?.focus()}
-          onGroupByTagChange={(enabled) => editor.setUnitGroupByTag(settingsUnit.id, enabled)}
-          onOpenChange={(open) => !open && setSettingsUnitId(null)}
-        />
-      )}
+
       {noteUnit && (
         <UnitNoteDialog
           onOpenChange={(open) => !open && setNoteUnitId(null)}

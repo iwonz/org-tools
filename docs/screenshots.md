@@ -277,15 +277,15 @@ bounded edge-pan, hierarchy lines, zoom, history, and normal-weight layout contr
 Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse, Complete Tag
 footers.
 
-### Unit grouping settings
+### View settings
 
-[![Unit grouping settings](screenshots/feature-editor-unit-settings.png)](screenshots/feature-editor-unit-settings.png)
+[![View settings](screenshots/feature-editor-view-settings.png)](screenshots/feature-editor-view-settings.png)
 
-Use the gear beside the note action to control the Unit's immediate, undoable **Group by tag**
-setting. The default groups each Employee once by their earliest catalog Tag with alphabetical
-ordering within groups and the boss always first, without group headings or separators.
+Use the gear beside the View selector for **Group by tag**, **Show Tag cloud**, and the two
+distribution colors. Changes apply immediately to the entire View and support Undo/Redo. PNG follows
+the same grouping and footer visibility; distribution colors remain Editor-only.
 
-Capabilities: Unit settings, Tag priority, Grouping, View-local state, Undo and Redo.
+Capabilities: View settings, Grouping, Tag cloud, Distribution colors, Undo and Redo.
 
 ### Unit Markdown note preview
 
@@ -601,9 +601,11 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm each layout direction button explicitly selects its direction, repeated activation does
   nothing, and Undo/Redo restores both direction and geometry. Verify every hierarchy total includes
   unique direct and descendant Employees, including repeated ancestor memberships and bosses.
-- Confirm the Unit settings gear is accessible by hover, keyboard, and touch. Its sole Group by tag
-  switch defaults on, commits one undoable update, keeps the boss first, and groups each Employee
-  once without separators. Canvas and PNG use the same sequence.
+- Confirm View settings is available beside the selector for system, custom, and empty Views. Its
+  Unit display switches control all manual/Live Units and PNG, default on, and support Undo/Redo.
+  Distribution colors adapt rows, paths, and endpoint markers in both themes. Nested color selection
+  stays scrollable, restores focus, commits once, and cancels cleanly. Unit cards retain only the
+  note action in their upper corner. Copying a View retains settings; Unit Paste uses target settings.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field

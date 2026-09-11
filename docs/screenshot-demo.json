@@ -661,17 +661,17 @@
   },
   {
     "capabilities": [
-      "Unit settings",
-      "Tag priority",
+      "View settings",
       "Grouping",
-      "View-local state",
+      "Tag cloud",
+      "Distribution colors",
       "Undo and Redo"
     ],
-    "description": "Configure immediate, undoable Tag grouping for one Unit while retaining the boss first.",
+    "description": "Configure View-wide Tag grouping, cloud visibility, and readable distribution colors.",
     "featured": false,
-    "file": "feature-editor-unit-settings.png",
-    "id": "editor-unit-settings",
+    "file": "feature-editor-view-settings.png",
+    "id": "editor-view-settings",
     "module": "editor",
-    "title": "Unit grouping settings"
+    "title": "View settings"
   }
 ]

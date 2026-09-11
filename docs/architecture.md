@@ -36,11 +36,17 @@ live per View in the bounded
 writes therefore do not serialize Employees or structural documents. Open surfaces, notifications,
 search suggestions, and unfinished forms are transient.
 
-Every `OrgEditorUnit` owns a required boolean `groupByTag`, defaulting to true. Its settings switch
-commits one View-local history command. The boss is always first; remaining Employees group by their
-earliest catalog Tag rank, then use stable full-name/ID order, with untagged Employees last. Disabled
-grouping uses full-name order after the boss. The same sequence drives DOM, PNG, virtual row offsets,
-selection, reveal, and distribution anchors. No group headings or duplicate rows are introduced.
+Each View owns required `structure.settings`: `groupByTag` and `showTagCloud` default to true;
+`distributedColor` and `undistributedColor` default to green and amber and use non-null named or
+canonical six/eight-digit HEX colors. Settings participate in the existing View-local document
+history and complete state boundaries. Unit documents contain no grouping preference. Copying a
+View clones settings; Unit Paste follows target settings. The View toolbar dialog applies one
+command per switch or completed color choice, and its transient draft closes when the View changes.
+The boss is always first; remaining Employees group by their earliest catalog Tag rank, then use
+stable full-name/ID order, with untagged Employees last. Disabled grouping uses full-name order after
+the boss. DOM, PNG, virtual row offsets, selection, reveal, and distribution anchors share this
+sequence. Hidden Tag clouds contribute zero footer height to every geometry consumer and PNG;
+Employee Tags remain visible. No group headings or duplicate rows are introduced.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
@@ -126,7 +132,8 @@ loaded SQLite, imported, or live-peer state then remains authoritative. The prov
 member per script. Arabic mirrors the shell and portals while the Editor world layer remains LTR.
 
 Messages include a per-tab origin and logical stamp. Exact parsing, deterministic last-write-wins
-ordering, and origin checks prevent echo loops. Organization updates broadcast full state; UI-only
+ordering, and origin checks prevent echo loops. A delayed SQLite startup response cannot overwrite a newer
+live-peer snapshot or lower its logical stamp. Organization updates broadcast full state; UI-only
 updates broadcast the bounded projection. This provides convergence between local tabs, not users,
 history, collaborative cursors, or remote synchronization.
 
@@ -245,8 +252,7 @@ existing undoable arrangement; choosing the current direction does nothing.
 
 Each Editor store also owns a bounded list of Units with distribution mode enabled. A memoized
 active-View index maps each Employee ID to direct manual or resolved Live Unit IDs without treating
-hierarchy containment as membership. Enabled source rows derive green distributed or amber
-source-only tonal states in constant time. An exact single Employee occurrence derives a bounded
+hierarchy containment as membership. Enabled source rows derive distributed or source-only tonal states from View colors in constant time. An exact single Employee occurrence derives a bounded
 set of pointer-inert SVG paths from deterministic row rectangles; hidden rows in collapsed targets
 fall back to the nearest card edge. The overlay sits above hierarchy paths and below cards, stays
 outside history and spatial geometry, and is omitted from every Editor or Employee report output.

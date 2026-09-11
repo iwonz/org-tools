@@ -21,7 +21,7 @@ describe("OrgViewsStore shared clipboard", () => {
     const employeeId = createUuid();
     const rootId = source.addUnit({ employeeIds: [employeeId], name: "Root", x: 0, y: 0 });
     source.setUnitNoteMarkdown(rootId, "# Source note");
-    source.setUnitGroupByTag(rootId, false);
+    source.setViewSettings({ groupByTag: false });
     const childId = source.addUnit({
       liveFilter: { ...createEmptyEmployeeLiveFilterRule(), selectedUnitIds: [rootId] },
       name: "Live child",
@@ -47,7 +47,8 @@ describe("OrgViewsStore shared clipboard", () => {
     const pastedChild = target.units.find((unit) => unit.parentId !== null);
     expect(pastedRoot?.employeeIds).toEqual([employeeId]);
     expect(pastedRoot?.noteMarkdown).toBe("# Source note");
-    expect(pastedRoot?.groupByTag).toBe(false);
+    expect(target.settings.groupByTag).toBe(true);
+    expect(pastedRoot).not.toHaveProperty("groupByTag");
     expect(pastedChild?.parentId).toBe(pastedRoot?.id);
     expect(pastedChild?.liveFilter?.selectedUnitIds).toEqual([pastedRoot?.id]);
     expect(target.distributionModeUnitIds).toEqual([]);
@@ -117,7 +118,7 @@ describe("OrgViewsStore shared clipboard", () => {
     if (!source) return;
     const unitId = source.addUnit({ name: "Platform", x: 0, y: 0 });
     source.setUnitNoteMarkdown(unitId, "Initial context");
-    source.setUnitGroupByTag(unitId, false);
+    source.setViewSettings({ groupByTag: false });
     source.toggleUnitDistributionMode(unitId);
 
     const targetViewId = views.createView("Plan", {
@@ -128,13 +129,13 @@ describe("OrgViewsStore shared clipboard", () => {
     const copiedUnit = target?.units[0];
     expect(copiedUnit?.id).not.toBe(unitId);
     expect(copiedUnit?.noteMarkdown).toBe("Initial context");
-    expect(copiedUnit?.groupByTag).toBe(false);
+    expect(target?.settings.groupByTag).toBe(false);
     expect(target?.distributionModeUnitIds).toEqual(copiedUnit ? [copiedUnit.id] : []);
 
     if (!copiedUnit) return;
     target?.setUnitNoteMarkdown(copiedUnit.id, "Plan-only context");
-    target?.setUnitGroupByTag(copiedUnit.id, true);
-    expect(source.units[0]?.groupByTag).toBe(false);
+    target?.setViewSettings({ groupByTag: true });
+    expect(source.settings.groupByTag).toBe(false);
     expect(source.units[0]?.noteMarkdown).toBe("Initial context");
     expect(target?.units[0]?.noteMarkdown).toBe("Plan-only context");
   });

@@ -61,7 +61,7 @@ const units = Array.from({ length: unitCount }, (_, index) => {
   return {
     bossEmployeeId: employeeIds[0] ?? null,
     collapsed: false,
-    groupByTag: true,
+
     createdAt: timestamp,
     employeeIds,
     employeePositions: employeeIds.map((id, positionIndex) => ({
@@ -105,7 +105,16 @@ const employeeFields = [
 const state = {
   organization: {
     employees,
-    structure: { layoutMode: "topDown", units },
+    structure: {
+      layoutMode: "topDown",
+      settings: {
+        groupByTag: true,
+        showTagCloud: true,
+        distributedColor: "green",
+        undistributedColor: "amber",
+      },
+      units,
+    },
   },
   ui: {
     activeTab: "orgEditor",

@@ -17,8 +17,8 @@ import {
   syntheticStatePath,
 } from "./helpers.js";
 import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
-
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
+import { exerciseViewSettings } from "./view-settings-workflow.js";
 
 test("persists global Tag order and Unit grouping with scrollable presets", async ({ page }) => {
   await openBlankState(page);
@@ -2726,7 +2726,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     return {
       bossEmployeeId: employeeIds[0] ?? null,
       collapsed: false,
-      groupByTag: true,
+
       createdAt: timestamp,
       employeeIds,
       employeePositions: employeeIds.map((id, positionIndex) => ({
@@ -3474,4 +3474,14 @@ test("previews and commits pointer Tag sorting with cancellation and peer replac
   test.setTimeout(120_000);
   await openBlankState(page);
   await exercisePointerTagSorting(page);
+});
+
+test("persists View settings, distribution colors, and matching PNG footers", async ({ page }) => {
+  await openBlankState(page);
+  await exerciseViewSettings(page);
+  await page.reload();
+  await page.getByRole("button", { name: "View settings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Distributed", exact: true })).toContainText(
+    "#7c3aed",
+  );
 });

@@ -25,8 +25,10 @@ scope, compatibility alias, or migration reader. Exactly one View is the protect
 document; custom Views contain independent Unit documents while Employees, fields, and Tags remain
 global. Older single-structure state files are rejected without mutation. Import validates one
 detached candidate up to 25 MiB and atomically replaces the current state after confirmation.
-Every Unit requires boolean `groupByTag`; missing and non-boolean values are rejected. New Units
-default to true. The `organization.tags` array defines the global display and grouping priority;
+Every View requires `structure.settings` with boolean `groupByTag` and `showTagCloud`, plus non-null
+`distributedColor` and `undistributedColor` using named or canonical lowercase six/eight-digit HEX
+colors. Defaults are true, true, green, and amber. Missing, extra, or invalid settings are rejected,
+as is the obsolete Unit-level `groupByTag` property. The `organization.tags` array defines the global display and grouping priority;
 Employee assignment array order is not an independent preference. Existing local databases require
 offline conversion with a verified backup; runtime and state Import have no legacy reader.
 

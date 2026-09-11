@@ -561,9 +561,13 @@
     "Markdown editor": "Редактор Markdown",
     "With date: {count}": "С датой: {count}",
     "Group by tag": "Группировать по тегу",
-    "Unit settings for {name}": "Настройки команды «{name}»",
-    "Change Unit grouping": "Изменить группировку команды",
     "{name} moved to position {position}": "Тег «{name}» перемещён на позицию {position}",
-    "Drag to reorder or use the arrow keys": "Перетащите для изменения порядка или используйте клавиши со стрелками"
+    "Drag to reorder or use the arrow keys": "Перетащите для изменения порядка или используйте клавиши со стрелками",
+    "View settings": "Настройки Представления",
+    "Unit display": "Отображение Команд",
+    "Show Tag cloud": "Показывать Облако Тегов",
+    "Distributed": "Распределён",
+    "Not distributed": "Не Распределён",
+    "Change View settings": "Изменить настройки Представления"
   }
 }

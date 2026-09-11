@@ -5,6 +5,7 @@ import type {
   EmployeeId,
   OrgEditorLayoutMode,
   OrgEditorUnit,
+  OrgEditorViewSettings,
   TagId,
 } from "@org-tools/types";
 import Image from "next/image";
@@ -92,6 +93,7 @@ import type { ExportRowMode } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type OrgEditorExportDialogProps = {
+  viewSettings: OrgEditorViewSettings;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   layoutMode: OrgEditorLayoutMode;
   onOpenChange: (open: boolean) => void;
@@ -131,6 +133,7 @@ const getBackgroundButtonClassName = (isActive: boolean) =>
   );
 
 export function OrgEditorExportDialog({
+  viewSettings,
   employeeById,
   layoutMode,
   onOpenChange,
@@ -313,6 +316,7 @@ export function OrgEditorExportDialog({
     setIsPreviewLoading(true);
     setPreviewError(null);
     createOrgEditorUnitImageBlob({
+      viewSettings,
       avatarLoadLimit: ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
       employeeById,
       formatUnitSummary,
@@ -357,6 +361,7 @@ export function OrgEditorExportDialog({
     open,
     scope,
     tagOrder,
+    viewSettings,
     unit,
     units,
   ]);
@@ -388,6 +393,7 @@ export function OrgEditorExportDialog({
     if (!unit) throw new Error("No Unit is selected for export.");
 
     return createOrgEditorUnitImageBlob({
+      viewSettings,
       employeeById,
       formatUnitSummary,
       layoutMode,

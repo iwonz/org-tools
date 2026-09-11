@@ -566,7 +566,7 @@ Create SHALL accept a name and either Blank or Copy with any current View as sou
 - **THEN** the View, active selection, Download source, and documents remain unchanged
 
 ### Requirement: Expanded Unit cards summarize direct Tags
-An expanded Unit with tagged direct Employees SHALL render a compact borderless tonal footer after
+An expanded Unit with tagged direct Employees and enabled View Tag cloud visibility SHALL render a compact borderless tonal footer after
 its Employee list. The footer SHALL show every catalog-ordered Tag as a filled wrapping chip with its
 complete label and unique direct-Employee count. Short chips SHALL be content-sized with equal
 compact insets. A long chip SHALL use no more than the footer width, wrap by words and then grapheme
@@ -574,7 +574,7 @@ clusters, and keep the `middle dot + count` suffix unbroken on the last fitting 
 Ellipsis MUST NOT be used. One deterministic shared layout SHALL drive DOM rendering, PNG rendering,
 Unit height, bounds, connections, spatial indexing, snapping, and collision geometry. Descendants
 SHALL NOT contribute. Live Units SHALL use their resolved direct membership. Dates SHALL NOT split a
-Tag count. Collapsed and tagless Units SHALL have no footer.
+Tag count. Collapsed and tagless Units, and all Units in a View with Tag cloud visibility disabled, SHALL have no footer or reserved footer height.
 
 #### Scenario: Count manual Unit Tags
 - **WHEN** direct Employees in a manual Unit share one or more Tags
@@ -599,6 +599,10 @@ Tag count. Collapsed and tagless Units SHALL have no footer.
 #### Scenario: Export the footer
 - **WHEN** Editor PNG is rendered for a Unit with a Tag footer
 - **THEN** the same complete Tag labels, counts, colors, compact widths, line wrapping, and geometry appear in the image
+
+#### Scenario: Hide the View Tag cloud
+- **WHEN** Show Tag cloud is disabled
+- **THEN** every canvas and PNG Unit omits its footer and uses zero footer height while Employee Tags and counts remain unchanged
 
 ### Requirement: Unit deletion produces one valid final state
 Every keyboard, context-menu, Editor, and Units-surface deletion SHALL use one coordinator. The
@@ -664,25 +668,6 @@ behavior. Navigation SHALL reuse the Editor's exact Employee occurrence reveal a
 - **WHEN** placement navigation targets an Employee hidden by a collapsed Unit
 - **THEN** the Unit expands before the exact row is selected and centered
 
-### Requirement: Unit settings control contiguous Tag grouping
-Each Unit SHALL expose a settings gear beside its note action on hover, keyboard focus, and non-hover devices. Its Dialog SHALL contain only a Group by tag switch, enabled by default and applied immediately as one undoable View-local document command. Pointer activation MUST NOT initiate canvas selection, drag, or editing. Copy and View cloning SHALL retain the setting independently.
-
-#### Scenario: Toggle grouping
-- **WHEN** the Unit settings switch changes
-- **THEN** that Unit updates immediately and one Undo restores the previous setting
-
-#### Scenario: Group Employees
-- **WHEN** grouping is enabled for a manual or Live Unit
-- **THEN** the boss appears once first, each remaining Employee belongs only to their earliest catalog Tag, groups follow catalog order, tagless Employees follow last, and each group uses stable full-name order without headings or separators
-
-#### Scenario: Disable grouping
-- **WHEN** grouping is disabled
-- **THEN** the boss remains first followed by one stable alphabetic Employee list
-
-#### Scenario: Reorder shared Tags
-- **WHEN** the catalog order changes
-- **THEN** every View re-derives grouped rows, PNG, virtual offsets, navigation, and distribution anchors from the same Employee sequence without changing membership or counts
-
 ### Requirement: Layout directions are independently selectable
 The Editor SHALL preserve the compact two-icon layout control while providing separate accessible pressed buttons for top-down and left-to-right direction. Selecting a different direction SHALL invoke the existing undoable arrangement command once. Selecting the active direction MUST NOT change state or geometry. The separate Arrange command SHALL remain available.
 
@@ -704,3 +689,26 @@ The total for each Unit SHALL be the number of distinct Employee IDs in its own 
 #### Scenario: Count sibling overlap
 - **WHEN** the same Employee is assigned to multiple descendants or Live Units
 - **THEN** each Unit includes that Employee once in its own subtree and PNG matches the canvas calculation
+
+### Requirement: View settings control Unit presentation
+Every View SHALL expose a toolbar settings gear opening Unit display and Distribution mode sections.
+Unit display SHALL offer Group by tag and Show Tag cloud switches, both enabled by default. Unit
+cards MUST NOT retain a settings gear; their note action SHALL occupy the free upper corner.
+Each change SHALL apply immediately as one View-local undoable command. Closing the dialog SHALL
+restore focus; changing or deleting its View SHALL close it safely.
+
+#### Scenario: Configure an empty or system View
+- **WHEN** the active View is system, custom, or empty
+- **THEN** its accessible toolbar settings action remains available
+
+#### Scenario: Group all Units
+- **WHEN** View grouping is enabled
+- **THEN** every manual and Live Unit shows its boss once first, then Employees grouped once by earliest catalog Tag, with stable full-name/ID order within groups and untagged Employees last without separators
+
+#### Scenario: Disable grouping
+- **WHEN** View grouping is disabled
+- **THEN** every Unit shows its boss first followed by one stable alphabetic list and one Undo restores grouping
+
+#### Scenario: Share row order
+- **WHEN** grouping changes or the Tag catalog is reordered
+- **THEN** canvas, PNG, virtualization, navigation, and distribution anchors use the same resulting row sequence

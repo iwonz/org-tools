@@ -10,6 +10,7 @@ import {
   buildOrgEditorUnitEmployeeSummaryById,
   buildOrgEditorUnitTagSummary,
   getOrgEditorOrderedEmployeeIds,
+  getOrgEditorUnitHeight,
   getOrgEditorVisibleEmployeeIds,
 } from "@/lib/org-editor";
 import { getOrgEditorExportEmployeeTags } from "@/lib/org-editor-export";
@@ -57,6 +58,7 @@ const setup = () => {
     getOrgEditorOrderedEmployeeIds(
       required(store.mainOrgEditor.units[0]),
       required(store.units).indexes.employeesById,
+      store.mainOrgEditor.settings.groupByTag,
     );
   return { store, unitId, zulu, alpha, boss, both, later, first, untagged, ordered };
 };
@@ -78,26 +80,26 @@ describe("Catalog order and Unit grouping", () => {
             ...required(store.mainOrgEditor.units[0]),
             bossEmployeeId: null,
             employeeIds: [secondId, firstId],
-            groupByTag,
           },
           employees,
+          groupByTag,
         ),
       ).toEqual([firstId, secondId]);
     }
   });
 
   test("groups once by earliest Tag, keeps boss first, and uses one undoable setting", () => {
-    const { store, unitId, boss, both, later, first, untagged, ordered } = setup();
+    const { store, boss, both, later, first, untagged, ordered } = setup();
     const persistedAssignments = structuredClone(
       store.organizationEmployees.map((employee) => employee.tags),
     );
-    expect(store.mainOrgEditor.units[0]?.groupByTag).toBe(true);
+    expect(store.mainOrgEditor.settings.groupByTag).toBe(true);
     expect(ordered()).toEqual([boss, both, first, later, untagged]);
     const sequence = store.organizationChangeSequence;
-    store.mainOrgEditor.setUnitGroupByTag(unitId, false);
+    store.mainOrgEditor.setViewSettings({ groupByTag: false });
     expect(store.organizationChangeSequence).toBe(sequence + 1);
     expect(ordered()).toEqual([boss, untagged, later, both, first]);
-    store.mainOrgEditor.setUnitGroupByTag(unitId, false);
+    store.mainOrgEditor.setViewSettings({ groupByTag: false });
     expect(store.organizationChangeSequence).toBe(sequence + 1);
     store.mainOrgEditor.undo();
     expect(ordered()).toEqual([boss, both, first, later, untagged]);
@@ -110,6 +112,7 @@ describe("Catalog order and Unit grouping", () => {
       getOrgEditorVisibleEmployeeIds(
         { ...required(store.mainOrgEditor.units[0]), collapsed: true },
         required(store.units).indexes.employeesById,
+        store.mainOrgEditor.settings.groupByTag,
       ),
     ).toEqual([boss]);
   });
@@ -133,6 +136,7 @@ describe("Catalog order and Unit grouping", () => {
       getOrgEditorOrderedEmployeeIds(
         required(store.orgEditor.units[0]),
         required(store.editorUnits).indexes.employeesById,
+        store.orgEditor.settings.groupByTag,
       ),
     ).toEqual(ordered());
     const employee = required(required(store.units).indexes.employeesById.get(both));
@@ -175,11 +179,19 @@ describe("Catalog order and Unit grouping", () => {
       employeeIds: required(store.mainOrgEditor.resolvedLiveEmployeeIdsByUnitId.get(liveId)),
     });
     expect(
-      getOrgEditorOrderedEmployeeIds(live(), required(store.units).indexes.employeesById),
+      getOrgEditorOrderedEmployeeIds(
+        live(),
+        required(store.units).indexes.employeesById,
+        store.mainOrgEditor.settings.groupByTag,
+      ),
     ).toEqual([both, first, later, boss, untagged]);
     store.deleteTagDefinition(zulu);
     expect(
-      getOrgEditorOrderedEmployeeIds(live(), required(store.units).indexes.employeesById),
+      getOrgEditorOrderedEmployeeIds(
+        live(),
+        required(store.units).indexes.employeesById,
+        store.mainOrgEditor.settings.groupByTag,
+      ),
     ).toEqual([later, both, boss, untagged, first]);
   });
 
@@ -217,7 +229,7 @@ describe("Catalog order and Unit grouping", () => {
         boss,
       ),
     ).toEqual([unitId]);
-    editor.setUnitGroupByTag(liveId, false);
+    editor.setViewSettings({ groupByTag: false });
     editor.setUnitsCollapsed([unitId, liveId], true);
     expect(buildOrgEditorUnitEmployeeSummaryById(materialized())).toEqual(summaries);
     store.createOrgView("Empty scenario", { type: "blank" });
@@ -225,17 +237,79 @@ describe("Catalog order and Unit grouping", () => {
     expect(buildEditorEmployeeUnitIndex(materialized()).get(boss)).toEqual([unitId, liveId]);
   });
 
-  test("requires boolean grouping in every Unit and leaves invalid loads atomic", () => {
+  test("rejects missing, extra, invalid, and obsolete settings atomically", () => {
     const { store } = setup();
     const original = store.createOrgToolsState();
-    for (const invalid of [undefined, null, "true", 1]) {
+    const invalidSettings: unknown[] = [
+      undefined,
+      null,
+      {},
+      { ...original.organization.views[0]?.structure.settings, extra: true },
+    ];
+    for (const key of ["groupByTag", "showTagCloud", "distributedColor", "undistributedColor"]) {
+      const invalidValues = key.endsWith("Color")
+        ? [undefined, null, true, "#ABCDEF", "#abc", "purple", "url(example.test)"]
+        : [undefined, null, "true", 1];
+      for (const value of invalidValues)
+        invalidSettings.push({
+          ...original.organization.views[0]?.structure.settings,
+          [key]: value,
+        });
+    }
+    for (const settings of invalidSettings) {
       const candidate = structuredClone(original);
-      const unit = required(required(candidate.organization.views[0]).structure.units[0]);
-      if (invalid === undefined) Reflect.deleteProperty(unit, "groupByTag");
-      else Reflect.set(unit, "groupByTag", invalid);
+      const structure = required(candidate.organization.views[0]).structure;
+      Reflect.set(structure, "settings", settings);
       expect(() => parseOrgToolsState(candidate)).toThrow();
       expect(() => store.loadOrgToolsState(candidate, null, null)).toThrow();
       expect(store.createOrgToolsState()).toEqual(original);
     }
+    const obsolete = structuredClone(original);
+    Reflect.set(required(obsolete.organization.views[0]?.structure.units[0]), "groupByTag", true);
+    expect(() => parseOrgToolsState(obsolete)).toThrow();
+  });
+
+  test("settings are isolated, undoable, copied, and persisted with hidden footer geometry", () => {
+    const { store } = setup();
+    const system = store.mainOrgEditor;
+    const unit = required(system.units[0]);
+    const fullHeight = getOrgEditorUnitHeight(unit);
+    const sequence = store.organizationChangeSequence;
+    system.setViewSettings({ showTagCloud: false });
+    expect(store.organizationChangeSequence).toBe(sequence + 1);
+    expect(getOrgEditorUnitHeight(unit)).toBeLessThan(fullHeight);
+    system.undo();
+    expect(getOrgEditorUnitHeight(unit)).toBe(fullHeight);
+    system.redo();
+    const settings = {
+      groupByTag: false,
+      showTagCloud: false,
+      distributedColor: "#12345680" as const,
+      undistributedColor: "rose" as const,
+    };
+    system.setViewSettings(settings);
+    const copyId = store.createOrgView("Settings copy", {
+      type: "copy",
+      viewId: store.systemOrgViewId,
+    });
+    expect(store.orgEditor.settings).toEqual(settings);
+    store.orgEditor.setViewSettings({ distributedColor: "blue" });
+    expect(system.settings).toEqual(settings);
+    store.orgEditor.undo();
+    expect(store.orgEditor.settings).toEqual(settings);
+    const persisted = store.createOrgToolsState();
+    expect(parseOrgToolsState(persisted)).toEqual(persisted);
+    const restored = new OrgStore();
+    restored.loadOrgToolsState(persisted, null, null);
+    expect(restored.activeOrgViewId).toBe(copyId);
+    expect(restored.orgEditor.settings).toEqual(settings);
+    expect(restored.createOrgToolsState()).toEqual(persisted);
+    store.createOrgView("Blank settings", { type: "blank" });
+    expect(store.orgEditor.settings).toEqual({
+      groupByTag: true,
+      showTagCloud: true,
+      distributedColor: "green",
+      undistributedColor: "amber",
+    });
   });
 });

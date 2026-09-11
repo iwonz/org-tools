@@ -122,12 +122,20 @@ describe("Editor distribution membership", () => {
     });
     const collapsed = { ...expanded, collapsed: true, bossEmployeeId: null };
     expect(
-      getEditorDistributionPlacement({ employeeById: new Map(), employeeId, unit: expanded })
-        .hiddenByCollapse,
+      getEditorDistributionPlacement({
+        groupByTag: true,
+        employeeById: new Map(),
+        employeeId,
+        unit: expanded,
+      }).hiddenByCollapse,
     ).toBe(false);
     expect(
-      getEditorDistributionPlacement({ employeeById: new Map(), employeeId, unit: collapsed })
-        .hiddenByCollapse,
+      getEditorDistributionPlacement({
+        groupByTag: true,
+        employeeById: new Map(),
+        employeeId,
+        unit: collapsed,
+      }).hiddenByCollapse,
     ).toBe(true);
   });
 

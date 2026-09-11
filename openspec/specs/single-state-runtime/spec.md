@@ -8,7 +8,7 @@ The application SHALL use one strict unversioned `OrgToolsState` with exactly `o
 `ui` at the top level. Organization SHALL contain UUID Employees with custom values, exactly one
 system View, zero or more custom Views, UUID-keyed custom field definitions, and a UUID-keyed Tag
 catalog whose optional color is a supplied semantic name or canonical lowercase six- or eight-digit
-HEX value. Every View SHALL contain its own `{ layoutMode, units }` structure and timestamps without
+HEX value. Every View SHALL contain its own `{ layoutMode, settings, units }` structure and timestamps without
 Employee copies or overrides. Durable UI SHALL contain locale, theme, shell state, active section,
 system Unit navigation, complete birthday and custom filters, searches, Calendar and Download
 settings, active Editor View, and bounded viewport, selection, and distribution-mode entries for
@@ -273,18 +273,29 @@ data solely because the mode or Employee selection changed.
 - **THEN** another live tab receives the bounded UI setting without browser snapshot persistence
 
 ### Requirement: Grouping and Tag order use existing local persistence
-Tag order changes and Unit grouping commands SHALL use the existing organization write and live-tab synchronization path once per logical mutation. Every runtime boundary SHALL validate the mandatory boolean groupByTag field. No legacy reader or automatic conversion SHALL be added.
+Tag order changes and View settings commands SHALL use the existing organization write and live-tab
+synchronization path once per logical mutation. Every runtime boundary SHALL validate exact required
+View settings. No legacy reader or automatic conversion SHALL be added. A delayed SQLite startup
+response MUST NOT overwrite a newer peer snapshot or decrease its logical stamp.
 
 #### Scenario: Restore preferences
 - **WHEN** server state is reopened or a live peer receives a validated update
-- **THEN** catalog order and each Unit grouping setting match the committed state
+- **THEN** catalog order and each View's settings match the committed state
+
+#### Scenario: Race initial local state sources
+- **WHEN** SQLite loading finishes after a newer peer snapshot has been installed
+- **THEN** the newer state and stamp remain authoritative and subsequent changes synchronize
 
 ### Requirement: Current database grouping is converted once outside runtime
-The authorized current local database conversion SHALL stop its writer, retain an ignored consistent backup, set groupByTag to true in every existing Unit, validate the full result with the production parser, and commit one transaction with one revision increment. It MUST preserve Tag order and unrelated data. Failure SHALL leave the original unchanged; an already-current database SHALL be a no-op. The conversion tool MUST NOT ship in runtime.
+The authorized current local database conversion SHALL stop its writer, retain an ignored consistent
+backup, add default settings to every View, remove Unit groupByTag, validate the full result with the
+production parser, and commit one transaction with one revision increment. It MUST preserve Tag order
+and unrelated data. Failure SHALL leave the original unchanged; an already-current database SHALL be
+a validated no-op. The conversion tool MUST NOT ship in runtime.
 
 #### Scenario: Convert current database
 - **WHEN** the recognized previous state converts and validates
-- **THEN** every Unit has grouping enabled, one new revision is committed, and the backup remains available
+- **THEN** every View has default settings, Units have no grouping property, one revision is committed, and the backup remains available
 
 #### Scenario: Fail conversion
 - **WHEN** validation or writing fails

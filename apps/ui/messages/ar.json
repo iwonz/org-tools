@@ -561,9 +561,13 @@
     "Markdown editor": "محرر Markdown",
     "With date: {count}": "بتاريخ: {count}",
     "Group by tag": "التجميع حسب الوسم",
-    "Unit settings for {name}": "إعدادات الوحدة {name}",
-    "Change Unit grouping": "تغيير تجميع الوحدة",
     "{name} moved to position {position}": "تم نقل {name} إلى الموضع {position}",
-    "Drag to reorder or use the arrow keys": "اسحب لإعادة الترتيب أو استخدم مفاتيح الأسهم"
+    "Drag to reorder or use the arrow keys": "اسحب لإعادة الترتيب أو استخدم مفاتيح الأسهم",
+    "View settings": "إعدادات العرض",
+    "Unit display": "عرض الفرق",
+    "Show Tag cloud": "إظهار سحابة الوسوم",
+    "Distributed": "موزّع",
+    "Not distributed": "غير موزّع",
+    "Change View settings": "تغيير إعدادات العرض"
   }
 }

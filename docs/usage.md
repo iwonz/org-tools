@@ -87,12 +87,17 @@ control.
   Search expands inward without moving the
   other controls. Dragging one Unit in an existing multi-selection keeps the group selected;
   **Arrange selected** moves only those Units in one undoable snapped operation. Closing Search
-  clears its query. A settings gear beside each Unit note action opens a dialog with **Group by tag**, enabled by
+  clears its query. **View settings** beside the View selector applies to every Unit in the active View,
+  including Live Units. **Unit display** contains **Group by tag** and **Show Tag cloud**, both on by
   default. Each Employee appears once under their earliest catalog Tag priority; groups have no
   headings or separators and use alphabetical full-name order within them. Untagged Employees come
   last, and the boss always remains first. Turning grouping off gives one alphabetical list after
-  the boss. The setting belongs to that Unit in its View, applies immediately, supports Undo/Redo,
-  and is preserved by copying. PNG follows the same Employee sequence.
+  the boss. Turning the cloud off removes the footer and its height from both Editor and PNG while
+  retaining Employee Tags. **Distribution mode** settings choose **Distributed** and **Not
+  distributed** colors through the existing palette and exact color input. Green and amber are the
+  defaults; the distributed color also controls placement lines and endpoint markers. Settings
+  apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
+  complete View. Pasted Units follow the target View settings.
   Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
   also assigned to ancestors. Bosses count once, and collapse or distribution mode never changes
   the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.
@@ -112,8 +117,8 @@ control.
   **Save**. Clearing and saving removes the note, while closing a changed draft requires explicit
   discard confirmation. View cloning and cross-View Copy/Paste carry notes; Image, JSON, and
   Template Editor exports omit them. **Distribution mode** in a Unit context menu independently
-  marks direct members green when they also belong to another Unit in the active View and amber when
-  they exist only in the source Unit. Its tri-state context switch can update one Unit or the whole
+  highlights direct members with the View distributed color when they also belong to another Unit
+  in the active View and its undistributed color when they exist only in the source Unit. Its tri-state context switch can update one Unit or the whole
   selected Unit set in one operation. Ordinary Units expose placement links only for Employees
   assigned to at least two ordinary Units
   in that View; reference Units do not count or appear in their maps. Distribution-enabled sources

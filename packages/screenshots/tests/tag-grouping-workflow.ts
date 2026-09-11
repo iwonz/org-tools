@@ -54,7 +54,6 @@ export async function exerciseTagGrouping(page: Page) {
     unit.employeePositions = unit.employeeIds.map((employeeId) => ({ employeeId, position: null }));
     unit.bossEmployeeId = unit === product ? boss.id : null;
     unit.liveFilter = null;
-    unit.groupByTag = true;
   }
   const dialog = await openImportDialog(page, {
     buffer: Buffer.from(JSON.stringify(state)),
@@ -75,9 +74,9 @@ export async function exerciseTagGrouping(page: Page) {
   const groupedOrder = [boss.id, alphaEmployee.id, both.id, untagged.id];
   await expect.poll(rowIds).toEqual(originalOrder);
   await card.hover();
-  const gear = card.locator('[data-demo-id="unit-settings-action"]');
+  const gear = page.locator('[data-demo-id="org-editor-view-settings"]');
   await gear.click();
-  const settings = page.locator('[data-demo-id="unit-settings-dialog"]');
+  const settings = page.locator('[data-demo-id="view-settings-dialog"]');
   const grouping = settings.getByRole("switch", { name: "Group by tag", exact: true });
   await expect(grouping).toHaveAttribute("aria-checked", "true");
   await expect(settings.getByRole("combobox")).toHaveCount(0);
@@ -221,8 +220,6 @@ export async function exerciseTagGrouping(page: Page) {
   if (!path) throw new Error("Missing state export");
   const saved = JSON.parse(await readFile(path, "utf8")) as OrgToolsState;
   expect(saved.organization.tags.map((tag) => tag.id)).toEqual([alpha, zulu, hidden]);
-  expect(
-    saved.organization.views[0]?.structure.units.find((unit) => unit.id === product.id)?.groupByTag,
-  ).toBe(true);
+  expect(saved.organization.views[0]?.structure.settings.groupByTag).toBe(true);
   return { groupedOrder, alphabeticalOrder };
 }

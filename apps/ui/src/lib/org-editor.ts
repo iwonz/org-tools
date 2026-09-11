@@ -9,6 +9,7 @@ import type {
   OrgEditorState,
   OrgEditorUnit,
   OrgEditorUnitId,
+  OrgEditorViewSettings,
   TagId,
   Unit,
 } from "@org-tools/types";
@@ -548,8 +549,16 @@ export const findOrgEditorEmployeeRowIndex = (
   return low;
 };
 
+export const createDefaultOrgEditorViewSettings = (): OrgEditorViewSettings => ({
+  groupByTag: true,
+  showTagCloud: true,
+  distributedColor: "green",
+  undistributedColor: "amber",
+});
+
 export const createDefaultOrgEditorState = (): OrgEditorState => {
   return {
+    settings: createDefaultOrgEditorViewSettings(),
     distributionModeUnitIds: [],
     layoutMode: ORG_EDITOR_DEFAULT_LAYOUT_MODE,
     selectedItems: [],
@@ -956,12 +965,13 @@ export const sortOrgEditorEmployeeIds = ({
 export const getOrgEditorOrderedEmployeeIds = (
   unit: OrgEditorUnit,
   employeeById: ReadonlyMap<EmployeeId, Employee>,
+  groupByTag: boolean,
 ) =>
   sortOrgEditorEmployeeIds({
     bossEmployeeId: unit.bossEmployeeId,
     employeeById,
     employeeIds: unit.employeeIds,
-    groupByTag: unit.groupByTag,
+    groupByTag,
   });
 
 export const getOrgEditorEmployeePosition = (
@@ -974,8 +984,9 @@ export const getOrgEditorEmployeePosition = (
 export const getOrgEditorVisibleEmployeeIds = (
   unit: OrgEditorUnit,
   employeeById: ReadonlyMap<EmployeeId, Employee>,
+  groupByTag: boolean,
 ) => {
-  const orderedEmployeeIds = getOrgEditorOrderedEmployeeIds(unit, employeeById);
+  const orderedEmployeeIds = getOrgEditorOrderedEmployeeIds(unit, employeeById, groupByTag);
 
   if (!unit.collapsed) return orderedEmployeeIds;
 
@@ -985,7 +996,6 @@ export const getOrgEditorVisibleEmployeeIds = (
 export const createOrgEditorUnitFromScratch = ({
   bossEmployeeId = null,
   collapsed = false,
-  groupByTag = true,
   employeeIds = [],
   employeePositions = [],
   id = createOrgEditorUnitId(),
@@ -999,7 +1009,6 @@ export const createOrgEditorUnitFromScratch = ({
 }: {
   bossEmployeeId?: EmployeeId | null;
   collapsed?: boolean;
-  groupByTag?: boolean;
   employeeIds?: EmployeeId[];
   employeePositions?: OrgEditorEmployeePosition[];
   id?: OrgEditorUnitId;
@@ -1031,7 +1040,6 @@ export const createOrgEditorUnitFromScratch = ({
   return {
     bossEmployeeId,
     collapsed,
-    groupByTag,
     createdAt: now,
     employeeIds: uniqueEmployeeIds,
     employeePositions: [...employeePositionByEmployeeId.values()],
