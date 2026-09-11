@@ -1,8 +1,19 @@
 import { readFile } from "node:fs/promises";
 import type { OrgToolsState } from "@org-tools/types";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
 import { openImportDialog, syntheticStatePath } from "./helpers.js";
+
+export async function pointerMoveTag(page: Page, handle: Locator, target: Locator, y = 4) {
+  const source = await handle.boundingBox();
+  const destination = await target.boundingBox();
+  if (!source || !destination) throw new Error("Missing Tag bounds");
+  await page.mouse.move(source.x + 12, source.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(destination.x + 100, destination.y + y, { steps: 8 });
+  await expect(page.locator('[data-demo-id="tag-catalog-drag-preview"]')).toBeVisible();
+  await page.mouse.up();
+}
 
 export async function exerciseTagGrouping(page: Page) {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
@@ -154,7 +165,7 @@ export async function exerciseTagGrouping(page: Page) {
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect.poll(tagIds).toEqual([zulu, alpha]);
-  await handle.dragTo(tagRow(zulu), { targetPosition: { x: 100, y: 4 } });
+  await pointerMoveTag(page, handle, tagRow(zulu));
   await expect.poll(tagIds).toEqual([alpha, zulu]);
   await handle.focus();
   await handle.press("ArrowDown");
@@ -163,11 +174,13 @@ export async function exerciseTagGrouping(page: Page) {
   await expect.poll(tagIds).toEqual([alpha, zulu]);
   await catalog.getByRole("searchbox", { name: "Search tags", exact: true }).fill("");
   await expect.poll(tagIds).toEqual([alpha, zulu, hidden]);
-  await tagRow(zulu)
-    .locator('[data-demo-id="tag-catalog-drag-handle"]')
-    .dragTo(tagRow(alpha), { targetPosition: { x: 100, y: 4 } });
+  await pointerMoveTag(
+    page,
+    tagRow(zulu).locator('[data-demo-id="tag-catalog-drag-handle"]'),
+    tagRow(alpha),
+  );
   await expect.poll(tagIds).toEqual([zulu, alpha, hidden]);
-  await handle.dragTo(tagRow(zulu), { targetPosition: { x: 100, y: 4 } });
+  await pointerMoveTag(page, handle, tagRow(zulu));
   await expect.poll(tagIds).toEqual([alpha, zulu, hidden]);
   await page.keyboard.press("Escape");
 

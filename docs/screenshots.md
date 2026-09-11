@@ -587,13 +587,20 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   mixed switch states, uses green and amber tonal rows for
   direct manual or resolved Live membership, preserves status fill through selection, and draws
   paths only for one selected Employee occurrence. Collapsed targets use an endpoint marker,
-  multi-selection hides paths, and Editor output contains no overlay. Confirm every multi-Unit
-  Employee exposes the independent placement map, its viewport controls remain transient, and Unit
+  multi-selection hides paths, and Editor output contains no overlay. Confirm ordinary sources exclude
+  distribution-enabled references from their placement actions
+  and maps, while reference sources retain every direct placement; open maps react to membership
+  and mode changes. Confirm map viewport controls remain transient, and Unit
   actions navigate to an expanded, centered, selected occurrence.
 - Confirm every Employee Tag filter preserves catalog order and searches normalized labels. Select all and Deselect
   all affect only visible search results while hidden selections and Without tags remain unchanged.
   Tag catalog counts stay inline immediately after the Tag at desktop and narrow widths; zero With
-  date counts are hidden. Check native drag cancellation, filtered insertion, and keyboard moves.
+  date counts are hidden. Check full-row pointer previews, animated insertion, edge scrolling, touch, reduced motion,
+  filtered insertion, keyboard moves, and cancellation including peer catalog replacement.
+  Preview must write nothing and successful release must commit exactly once.
+- Confirm each layout direction button explicitly selects its direction, repeated activation does
+  nothing, and Undo/Redo restores both direction and geometry. Verify every hierarchy total includes
+  unique direct and descendant Employees, including repeated ancestor memberships and bosses.
 - Confirm the Unit settings gear is accessible by hover, keyboard, and touch. Its sole Group by tag
   switch defaults on, commits one undoable update, keeps the boss first, and groups each Employee
   once without separators. Canvas and PNG use the same sequence.

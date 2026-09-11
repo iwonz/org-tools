@@ -172,6 +172,18 @@ export const buildEditorEmployeeUnitIndex = (units: readonly OrgEditorUnit[]) =>
   return unitIdsByEmployeeId;
 };
 
+export const buildEditorOrdinaryEmployeeUnitIndex = (
+  completeIndex: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>,
+  distributionUnitIds: ReadonlySet<OrgEditorUnitId>,
+) => {
+  const index = new Map<EmployeeId, OrgEditorUnitId[]>();
+  for (const [employeeId, unitIds] of completeIndex) {
+    const ordinaryIds = unitIds.filter((id) => !distributionUnitIds.has(id));
+    if (ordinaryIds.length > 0) index.set(employeeId, ordinaryIds);
+  }
+  return index;
+};
+
 export const getEditorEmployeeOtherUnitIds = (
   unitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>,
   employeeId: EmployeeId,

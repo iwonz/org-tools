@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   applyEditorDistributionBulkToggle,
   buildEditorEmployeeUnitIndex,
+  buildEditorOrdinaryEmployeeUnitIndex,
   createEditorDistributionConnection,
   createEditorPlacementMapLayout,
   getEditorDistributionBulkState,
@@ -42,6 +43,45 @@ describe("Editor distribution membership", () => {
 
     expect(getEditorEmployeeOtherUnitIds(index, "employee-shared", root.id)).toEqual([child.id]);
     expect(getEditorEmployeeOtherUnitIds(index, "employee-root", root.id)).toEqual([]);
+  });
+
+  test("excludes multiple reference Units without changing full membership or inheriting parents", () => {
+    const complete = new Map([
+      ["shared", ["reference", "reference-live", "ordinary", "ordinary-live"]],
+      ["one-placement", ["reference", "ordinary"]],
+      ["reference-only", ["reference", "reference-live"]],
+    ]);
+    const ordinary = buildEditorOrdinaryEmployeeUnitIndex(
+      complete,
+      new Set(["reference", "reference-live"]),
+    );
+    expect(ordinary.get("shared")).toEqual(["ordinary", "ordinary-live"]);
+    expect(ordinary.get("one-placement")).toEqual(["ordinary"]);
+    expect(ordinary.has("reference-only")).toBe(false);
+    expect(complete.get("shared")).toHaveLength(4);
+    expect(
+      buildEditorOrdinaryEmployeeUnitIndex(complete, new Set(["reference", "ordinary"])).get(
+        "shared",
+      ),
+    ).toEqual(["reference-live", "ordinary-live"]);
+    expect(buildEditorOrdinaryEmployeeUnitIndex(new Map(), new Set()).size).toBe(0);
+  });
+
+  test("derives ordinary membership at the maintained scale", () => {
+    const units = Array.from({ length: 4_000 }, (_, index) =>
+      createOrgEditorUnitFromScratch({
+        employeeIds: Array.from({ length: 5 }, (_, offset) => `employee-${index * 5 + offset}`),
+        name: `Unit ${index}`,
+        x: 0,
+        y: 0,
+      }),
+    );
+    const complete = buildEditorEmployeeUnitIndex(units);
+    const enabled = new Set(units.filter((_, index) => index % 2 === 0).map((unit) => unit.id));
+    const ordinary = buildEditorOrdinaryEmployeeUnitIndex(complete, enabled);
+    expect(complete.size).toBe(20_000);
+    expect(ordinary.size).toBe(10_000);
+    for (const ids of ordinary.values()) expect(ids.every((id) => !enabled.has(id))).toBe(true);
   });
 
   test("routes between opposing horizontal and vertical edges", () => {

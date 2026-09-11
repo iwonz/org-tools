@@ -113,24 +113,64 @@ describe("Org Editor Employee summaries", () => {
     });
   });
 
-  test("deduplicates descendants against ancestors while retaining a Unit boss", () => {
-    const summaries = buildOrgEditorUnitEmployeeSummaryById([
-      createUnit({ employeeIds: ["employee-1"], id: "root" }),
-      createUnit({
-        bossEmployeeId: "employee-1",
-        employeeIds: ["employee-1", "employee-2"],
-        id: "child",
-        parentId: "root",
-      }),
-      createUnit({
-        employeeIds: ["employee-2", "employee-3"],
-        id: "grandchild",
-        parentId: "child",
-      }),
-    ]);
+  test.each([null, "employee-1"])(
+    "counts each subtree independently with boss %s",
+    (bossEmployeeId) => {
+      const units = [
+        createUnit({ employeeIds: ["employee-1"], id: "root" }),
+        createUnit({
+          bossEmployeeId,
+          employeeIds: ["employee-1", "employee-2"],
+          id: "child",
+          parentId: "root",
+        }),
+        createUnit({
+          employeeIds: ["employee-1", "employee-3"],
+          id: "grandchild",
+          parentId: "child",
+        }),
+        createUnit({ employeeIds: ["employee-1", "employee-1"], id: "sibling", parentId: "root" }),
+        createUnit({ id: "empty" }),
+      ];
+      for (const collapsed of [false, true]) {
+        const summaries = buildOrgEditorUnitEmployeeSummaryById(
+          units.map((unit) => ({ ...unit, collapsed })),
+        );
+        expect(summaries.get("root")).toMatchObject({ directCount: 1, totalCount: 3 });
+        expect(summaries.get("child")).toMatchObject({ directCount: 2, totalCount: 3 });
+        expect(summaries.get("grandchild")).toMatchObject({ directCount: 2, totalCount: 2 });
+        expect(summaries.get("sibling")).toMatchObject({ directCount: 1, totalCount: 1 });
+        expect(summaries.get("empty")).toMatchObject({ directCount: 0, totalCount: 0 });
+      }
+    },
+  );
 
-    expect(summaries.get("root")).toMatchObject({ directCount: 1, totalCount: 3 });
-    expect(summaries.get("child")).toMatchObject({ directCount: 2, totalCount: 3 });
+  test("matches independent descendant unions for 20,000 Employees and 4,000 Units", () => {
+    const units = Array.from({ length: 4_000 }, (_, index) =>
+      createUnit({
+        id: `unit-${index}`,
+        parentId: index < 2 ? null : `unit-${Math.floor(index / 2) - 1}`,
+        employeeIds: [
+          ...Array.from({ length: 5 }, (_, offset) => `employee-${index * 5 + offset}`),
+          "employee-0",
+        ],
+      }),
+    );
+    const summaries = buildOrgEditorUnitEmployeeSummaryById(units);
+    const expected = new Map(units.map((unit) => [unit.id, new Set(unit.employeeIds)]));
+    const byId = new Map(units.map((unit) => [unit.id, unit]));
+    // Walk ancestors from each direct assignment, independently of the production subtree traversal.
+    for (const unit of units) {
+      let parent = unit.parentId ? byId.get(unit.parentId) : undefined;
+      while (parent) {
+        for (const id of unit.employeeIds) expected.get(parent.id)?.add(id);
+        parent = parent.parentId ? byId.get(parent.parentId) : undefined;
+      }
+    }
+    for (const unit of units) {
+      expect(summaries.get(unit.id)?.totalCount).toBe(expected.get(unit.id)?.size);
+      expect(summaries.get(unit.id)?.directCount).toBe(new Set(unit.employeeIds).size);
+    }
   });
 });
 

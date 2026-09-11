@@ -63,7 +63,9 @@ control.
   Tag filters preserve the catalog order and provide normalized label search plus **Select all** and **Deselect all** for
   the visible result set while keeping hidden selections and **Without tags** unchanged. The Tag
   catalog keeps Employee usage and a nonzero **With date** count inline after each Tag. Drag a Tag
-  by its leading handle, or focus the handle and use Up/Down, to change its global order. A filtered
+  by its leading handle, or focus the handle and use Up/Down, to change its global order.
+  The whole row follows the pointer while neighboring rows make room. Hold near a list edge to
+  scroll; release inside to save the shown position. Escape or release outside cancels the move. A filtered
   move inserts the Tag relative to its target in the full catalog. All Tag chips, pickers, Calendar
   groups, and export values follow that order; searching does not promote matching chips. New Tags
   append, and renaming or recoloring retains position.
@@ -80,7 +82,9 @@ control.
   Unit identity on Paste, and keep Undo limited to the target View. A copied Live Unit whose source
   is outside the copied group is pasted as a static snapshot of its visible membership. Undo/Redo
   sit beside the View selector at the logical start, while Search, layout,
-  Arrange, and Collapse/Expand are at the logical end. Search expands inward without moving the
+  Arrange, and Collapse/Expand are at the logical end. Vertical and horizontal layout are separate
+  buttons: choosing a direction arranges once and supports Undo/Redo; choosing it again does nothing.
+  Search expands inward without moving the
   other controls. Dragging one Unit in an existing multi-selection keeps the group selected;
   **Arrange selected** moves only those Units in one undoable snapped operation. Closing Search
   clears its query. A settings gear beside each Unit note action opens a dialog with **Group by tag**, enabled by
@@ -89,6 +93,9 @@ control.
   last, and the boss always remains first. Turning grouping off gives one alphabetical list after
   the boss. The setting belongs to that Unit in its View, applies immediately, supports Undo/Redo,
   and is preserved by copying. PNG follows the same Employee sequence.
+  Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
+  also assigned to ancestors. Bosses count once, and collapse or distribution mode never changes
+  the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.
   Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights,
@@ -107,8 +114,11 @@ control.
   Template Editor exports omit them. **Distribution mode** in a Unit context menu independently
   marks direct members green when they also belong to another Unit in the active View and amber when
   they exist only in the source Unit. Its tri-state context switch can update one Unit or the whole
-  selected Unit set in one operation. Every Employee assigned to several Units also exposes a
-  placement action: its read-only local map supports pan, zoom, Fit, and exact navigation back to an
+  selected Unit set in one operation. Ordinary Units expose placement links only for Employees
+  assigned to at least two ordinary Units
+  in that View; reference Units do not count or appear in their maps. Distribution-enabled sources
+  retain all direct placements, including other references. The independent action opens a
+  read-only local map with pan, zoom, Fit, and exact navigation back to an
   expanded and selected Employee occurrence. Selecting exactly one Employee draws local placement links,
   including a card-edge marker for a collapsed target; multi-selection hides the links without
   disabling the highlights. The setting is View-local and does not alter Units, history, geometry,

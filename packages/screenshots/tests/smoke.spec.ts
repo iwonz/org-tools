@@ -1,10 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-
 import type { OrgToolsState } from "@org-tools/types";
 import type { Locator, Page, Request } from "@playwright/test";
 import sharp from "sharp";
-
 import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
@@ -18,6 +16,7 @@ import {
   resetServerState,
   syntheticStatePath,
 } from "./helpers.js";
+import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
 
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
 
@@ -3459,4 +3458,20 @@ test("adds a tag and applies one date through the bulk Org Editor menu", async (
   await page.keyboard.press("Escape");
   await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await assertLocalRequests();
+});
+
+test("refines reference placements, explicit layout, and unique hierarchy counts", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openBlankState(page);
+  await exerciseRefinedEditor(page);
+});
+
+test("previews and commits pointer Tag sorting with cancellation and peer replacement", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openBlankState(page);
+  await exercisePointerTagSorting(page);
 });

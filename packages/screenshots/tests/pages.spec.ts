@@ -1,7 +1,5 @@
 import { readFile } from "node:fs/promises";
-
 import type { OrgToolsState } from "@org-tools/types";
-
 import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import enMessages from "../../../apps/ui/messages/en.json" with { type: "json" };
 import esMessages from "../../../apps/ui/messages/es.json" with { type: "json" };
@@ -15,6 +13,7 @@ import {
   openImportDialog,
   syntheticStatePath,
 } from "./helpers.js";
+import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
 
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
 
@@ -486,4 +485,22 @@ test("crops and exports a PNG avatar when WebP canvas encoding is unavailable", 
   );
   expect(externalRequests).toEqual([]);
   expect(apiRequests).toEqual([]);
+});
+
+test("refines reference placements, explicit layout, and unique hierarchy counts", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await exerciseRefinedEditor(page);
+});
+
+test("previews and commits pointer Tag sorting with cancellation and peer replacement", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await exercisePointerTagSorting(page);
 });

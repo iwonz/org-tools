@@ -1,8 +1,13 @@
 import type { EditableEmployeeFields } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
+import {
+  buildEditorEmployeeUnitIndex,
+  buildEditorOrdinaryEmployeeUnitIndex,
+} from "@/lib/editor-distribution";
 import { getExportEmployeeFieldValue } from "@/lib/export-format";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import {
+  buildOrgEditorUnitEmployeeSummaryById,
   buildOrgEditorUnitTagSummary,
   getOrgEditorOrderedEmployeeIds,
   getOrgEditorVisibleEmployeeIds,
@@ -176,6 +181,48 @@ describe("Catalog order and Unit grouping", () => {
     expect(
       getOrgEditorOrderedEmployeeIds(live(), required(store.units).indexes.employeesById),
     ).toEqual([later, both, boss, untagged, first]);
+  });
+
+  test("shares exact Live subtree counts with hierarchy selectors and isolates View placements", () => {
+    const { store, unitId, boss } = setup();
+    const editor = store.mainOrgEditor;
+    const liveId = editor.addUnit({
+      name: "Live child",
+      parentId: unitId,
+      x: 0,
+      y: 400,
+      liveFilter: { ...createEmptyEmployeeLiveFilterRule(), selectedUnitIds: [unitId] },
+    });
+    const materialized = () =>
+      editor.units.map((unit) => ({
+        ...unit,
+        employeeIds: unit.liveFilter
+          ? (editor.resolvedLiveEmployeeIdsByUnitId.get(unit.id) ?? [])
+          : unit.employeeIds,
+      }));
+    const derived = required(store.units);
+    const summaries = buildOrgEditorUnitEmployeeSummaryById(materialized());
+    for (const unit of editor.units) {
+      expect(summaries.get(unit.id)?.totalCount).toBe(
+        derived.indexes.unitsById.get(unit.id)?.deepEmployeeIds.length,
+      );
+    }
+    expect(summaries.get(liveId)?.totalCount).toBe(5);
+    const complete = buildEditorEmployeeUnitIndex(materialized());
+    expect(complete.get(boss)).toEqual([unitId, liveId]);
+    editor.toggleUnitDistributionMode(liveId);
+    expect(store.units).toBe(derived);
+    expect(
+      buildEditorOrdinaryEmployeeUnitIndex(complete, new Set(editor.distributionModeUnitIds)).get(
+        boss,
+      ),
+    ).toEqual([unitId]);
+    editor.setUnitGroupByTag(liveId, false);
+    editor.setUnitsCollapsed([unitId, liveId], true);
+    expect(buildOrgEditorUnitEmployeeSummaryById(materialized())).toEqual(summaries);
+    store.createOrgView("Empty scenario", { type: "blank" });
+    expect(buildEditorEmployeeUnitIndex(store.orgEditor.units).size).toBe(0);
+    expect(buildEditorEmployeeUnitIndex(materialized()).get(boss)).toEqual([unitId, liveId]);
   });
 
   test("requires boolean grouping in every Unit and leaves invalid loads atomic", () => {

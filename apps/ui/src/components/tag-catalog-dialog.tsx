@@ -2,12 +2,14 @@
 
 import type { Employee, EmployeeTagDefinition, TagId } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   HiOutlineBars3,
   HiOutlineEye,
   HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
+  HiOutlineSwatch,
   HiOutlineTag,
   HiOutlineTrash,
 } from "react-icons/hi2";
@@ -27,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogBody,
@@ -38,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTagCatalogDrag } from "@/components/use-tag-catalog-drag";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
 import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
@@ -64,15 +67,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const units = store.units;
   const [editError, setEditError] = useState<UiMessageDescriptor | null>(null);
-  const dragSource = useRef<TagId | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ id: TagId; placement: "before" | "after" } | null>(
-    null,
-  );
   const [announcement, setAnnouncement] = useState("");
-  const clearDrag = () => {
-    dragSource.current = null;
-    setDropTarget(null);
-  };
   const moveTag = (sourceId: TagId, targetId: TagId, placement: "before" | "after") => {
     store.moveTag(sourceId, targetId, placement);
     const index = store.tagDefinitions.findIndex((tag) => tag.id === sourceId);
@@ -88,6 +83,13 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
       (tag) => !normalized || normalizeTagSearchValue(tag.label).includes(normalized),
     );
   }, [query, store.tagDefinitions]);
+  const drag = useTagCatalogDrag({
+    tags: store.tagDefinitions,
+    visible,
+    query,
+    open,
+    onMove: moveTag,
+  });
   const counts = useMemo(() => {
     const result = new Map<TagId, { dated: number; employees: number }>();
     for (const employee of store.organizationEmployees) {
@@ -110,11 +112,145 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
         : [],
     [units, viewingTagId],
   );
+  const renderRow = (tag: EmployeeTagDefinition, visibleIndex: number, overlay = false) => {
+    const count = counts.get(tag.id) ?? { dated: 0, employees: 0 };
+    return (
+      <fieldset
+        className={cn(
+          "relative m-0 flex min-w-0 items-center gap-2 border-0 p-0",
+          !overlay &&
+            drag.preview &&
+            "transition-transform duration-150 motion-reduce:transition-none",
+        )}
+        style={
+          overlay
+            ? undefined
+            : {
+                transform: drag.preview
+                  ? `translateY(${drag.preview.offsets.get(tag.id) ?? 0}px)`
+                  : undefined,
+                opacity: drag.preview?.id === tag.id ? 0 : undefined,
+              }
+        }
+        data-demo-id={overlay ? undefined : "tag-catalog-row"}
+        data-tag-id={overlay ? undefined : tag.id}
+        aria-label={tag.label}
+        key={tag.id}
+      >
+        <button
+          aria-label={t("Drag {name} to reorder", { name: tag.label })}
+          className="grid touch-none size-8 shrink-0 cursor-grab place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+          data-demo-id="tag-catalog-drag-handle"
+          onPointerDown={overlay ? undefined : (event) => drag.onPointerDown(event, tag.id)}
+          onPointerMove={overlay ? undefined : drag.onPointerMove}
+          onPointerUp={overlay ? undefined : drag.onPointerUp}
+          onPointerCancel={overlay ? undefined : drag.onPointerCancel}
+          onLostPointerCapture={overlay ? undefined : drag.onLostPointerCapture}
+          tabIndex={overlay ? -1 : undefined}
+          onKeyDown={(event) => {
+            if (overlay) return;
+            drag.cancel();
+            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+            event.preventDefault();
+            const target = visible[visibleIndex + (event.key === "ArrowUp" ? -1 : 1)];
+            if (target) moveTag(tag.id, target.id, event.key === "ArrowUp" ? "before" : "after");
+          }}
+          title={t("Drag to reorder or use the arrow keys")}
+          type="button"
+        >
+          <HiOutlineBars3 className="size-4" />
+        </button>
+        <div
+          className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
+          data-demo-id="tag-catalog-identity"
+        >
+          <div
+            className={cn(
+              "inline-flex min-w-0 max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
+              tagColorSurfaceClassName(tag.color),
+            )}
+            data-tag-color={tag.color ?? "none"}
+            data-tag-color-surface
+            style={customTagColorSurfaceStyle(tag.color)}
+          >
+            <HighlightedText
+              className="truncate"
+              queryTokens={[normalizeTagSearchValue(query)]}
+              text={tag.label}
+            />
+          </div>
+          <span
+            className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+            data-demo-id="tag-catalog-employee-count"
+          >
+            {countText("employees", { count: count.employees })}
+          </span>
+          {count.dated > 0 && (
+            <span
+              className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+              data-demo-id="tag-catalog-dated-count"
+            >
+              {t("With date: {count}", { count: count.dated })}
+            </span>
+          )}
+        </div>
+        <Button
+          aria-label={t("View Employees with this Tag")}
+          data-demo-id="tag-catalog-view-employees"
+          onClick={overlay ? undefined : () => setViewingTagId(tag.id)}
+          size="icon"
+          title={t("View Employees with this Tag")}
+          type="button"
+          variant="ghost"
+        >
+          <HiOutlineEye />
+        </Button>
+        {overlay ? (
+          <span className={buttonVariants({ size: "icon", variant: "ghost" })}>
+            <HiOutlineSwatch />
+          </span>
+        ) : (
+          <TagColorPicker
+            onChange={(color) => store.saveTagDefinition({ ...tag, color })}
+            value={tag.color}
+            variant="icon"
+          />
+        )}
+        <Button
+          aria-label={t("Edit tag")}
+          onClick={
+            overlay
+              ? undefined
+              : () => {
+                  setEditing({ ...tag });
+                  setEditError(null);
+                }
+          }
+          size="icon"
+          title={t("Edit tag")}
+          type="button"
+          variant="ghost"
+        >
+          <HiOutlinePencilSquare />
+        </Button>
+        <Button
+          aria-label={t("Delete tag")}
+          onClick={overlay ? undefined : () => setDeleteId(tag.id)}
+          size="icon"
+          title={t("Delete tag")}
+          type="button"
+          variant="ghost"
+        >
+          <HiOutlineTrash />
+        </Button>
+      </fieldset>
+    );
+  };
   return (
     <>
       <Dialog
         onOpenChange={(nextOpen) => {
-          clearDrag();
+          drag.cancel();
           onOpenChange(nextOpen);
         }}
         open={open}
@@ -141,157 +277,27 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                 value={query}
               />
             </div>
-            <div className="min-h-0 overflow-y-auto">
+            <div
+              className="min-h-0 overflow-y-auto overscroll-contain"
+              data-demo-id="tag-catalog-scroll"
+              ref={drag.listRef}
+              onScroll={drag.onScroll}
+            >
               {visible.length === 0 ? (
                 <div className="rounded-md bg-muted/35 p-4 text-sm text-muted-foreground">
                   {t("No tags found")}
                 </div>
               ) : (
-                <div className="grid gap-3">
-                  {visible.map((tag, visibleIndex) => {
-                    const count = counts.get(tag.id) ?? { dated: 0, employees: 0 };
-                    return (
-                      <fieldset
-                        className="relative m-0 flex min-w-0 items-center gap-2 border-0 p-0"
-                        data-demo-id="tag-catalog-row"
-                        data-tag-id={tag.id}
-                        aria-label={tag.label}
-                        key={tag.id}
-                        onDragOver={(event) => {
-                          if (!dragSource.current) return;
-                          event.preventDefault();
-                          event.dataTransfer.dropEffect = "move";
-                          const bounds = event.currentTarget.getBoundingClientRect();
-                          const placement =
-                            event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
-                          setDropTarget({ id: tag.id, placement });
-                        }}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          if (dragSource.current) {
-                            const bounds = event.currentTarget.getBoundingClientRect();
-                            moveTag(
-                              dragSource.current,
-                              tag.id,
-                              event.clientY < bounds.top + bounds.height / 2 ? "before" : "after",
-                            );
-                          }
-                          clearDrag();
-                        }}
-                      >
-                        {dropTarget?.id === tag.id && dragSource.current !== tag.id && (
-                          <span
-                            aria-hidden="true"
-                            className={cn(
-                              "pointer-events-none absolute inset-x-0 h-0.5 bg-signal",
-                              dropTarget.placement === "before" ? "-top-1.5" : "-bottom-1.5",
-                            )}
-                          />
-                        )}
-                        <button
-                          aria-label={t("Drag {name} to reorder", { name: tag.label })}
-                          className="grid size-8 shrink-0 cursor-grab place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
-                          data-demo-id="tag-catalog-drag-handle"
-                          draggable
-                          onDragStart={(event) => {
-                            dragSource.current = tag.id;
-                            event.dataTransfer.effectAllowed = "move";
-                            event.dataTransfer.setData("text/plain", tag.id);
-                          }}
-                          onDragEnd={clearDrag}
-                          onKeyDown={(event) => {
-                            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
-                            event.preventDefault();
-                            const target =
-                              visible[visibleIndex + (event.key === "ArrowUp" ? -1 : 1)];
-                            if (target)
-                              moveTag(
-                                tag.id,
-                                target.id,
-                                event.key === "ArrowUp" ? "before" : "after",
-                              );
-                          }}
-                          title={t("Drag to reorder or use the arrow keys")}
-                          type="button"
-                        >
-                          <HiOutlineBars3 className="size-4" />
-                        </button>
-                        <div
-                          className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
-                          data-demo-id="tag-catalog-identity"
-                        >
-                          <div
-                            className={cn(
-                              "inline-flex min-w-0 max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
-                              tagColorSurfaceClassName(tag.color),
-                            )}
-                            data-tag-color={tag.color ?? "none"}
-                            data-tag-color-surface
-                            style={customTagColorSurfaceStyle(tag.color)}
-                          >
-                            <HighlightedText
-                              className="truncate"
-                              queryTokens={[normalizeTagSearchValue(query)]}
-                              text={tag.label}
-                            />
-                          </div>
-                          <span
-                            className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-                            data-demo-id="tag-catalog-employee-count"
-                          >
-                            {countText("employees", { count: count.employees })}
-                          </span>
-                          {count.dated > 0 && (
-                            <span
-                              className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-                              data-demo-id="tag-catalog-dated-count"
-                            >
-                              {t("With date: {count}", { count: count.dated })}
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          aria-label={t("View Employees with this Tag")}
-                          data-demo-id="tag-catalog-view-employees"
-                          onClick={() => setViewingTagId(tag.id)}
-                          size="icon"
-                          title={t("View Employees with this Tag")}
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HiOutlineEye />
-                        </Button>
-                        <TagColorPicker
-                          onChange={(color) => store.saveTagDefinition({ ...tag, color })}
-                          value={tag.color}
-                          variant="icon"
-                        />
-                        <Button
-                          aria-label={t("Edit tag")}
-                          onClick={() => {
-                            setEditing({ ...tag });
-                            setEditError(null);
-                          }}
-                          size="icon"
-                          title={t("Edit tag")}
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HiOutlinePencilSquare />
-                        </Button>
-                        <Button
-                          aria-label={t("Delete tag")}
-                          onClick={() => setDeleteId(tag.id)}
-                          size="icon"
-                          title={t("Delete tag")}
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HiOutlineTrash />
-                        </Button>
-                      </fieldset>
-                    );
-                  })}
+                <div className="relative grid gap-3">
+                  {visible.map((tag, index) => renderRow(tag, index))}
+                  {drag.preview && (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-x-0 rounded-md border border-dashed border-signal/50 bg-signal/10"
+                      data-demo-id="tag-catalog-drop-placeholder"
+                      style={{ top: drag.preview.top, height: drag.preview.height }}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -303,6 +309,26 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {drag.preview &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            inert
+            className="pointer-events-none fixed z-[100] rounded-md bg-popover text-popover-foreground shadow-lg ring-1 ring-border"
+            data-demo-id="tag-catalog-drag-preview"
+            style={{
+              left: drag.preview.x,
+              top: drag.preview.y,
+              width: drag.preview.width,
+              height: drag.preview.height,
+            }}
+          >
+            {visible
+              .filter((tag) => tag.id === drag.preview?.id)
+              .map((tag) => renderRow(tag, -1, true))}
+          </div>,
+          document.body,
+        )}
       <Dialog
         onOpenChange={(next) => {
           if (next) return;

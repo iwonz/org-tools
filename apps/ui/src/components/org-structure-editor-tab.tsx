@@ -100,6 +100,7 @@ import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
   applyEditorDistributionBulkToggle,
   buildEditorEmployeeUnitIndex,
+  buildEditorOrdinaryEmployeeUnitIndex,
   createEditorDistributionConnection,
   editorDistributionConnectionIntersectsRect,
   getEditorDistributionBulkState,
@@ -724,48 +725,40 @@ function OrgEditorToolbarButton({
 
 const ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME = "rounded-lg bg-background/95 p-1.5 backdrop-blur-md";
 
-function OrgEditorLayoutSwitch({
+function OrgEditorLayoutDirection({
   layoutMode,
-  onToggle,
+  onSelect,
 }: {
   layoutMode: OrgEditorLayoutMode;
-  onToggle: () => void;
+  onSelect: (mode: OrgEditorLayoutMode) => void;
 }) {
   const t = useUiText();
   return (
-    <Button
-      aria-checked={layoutMode === "leftRight"}
+    <fieldset
       aria-label={t("Change layout direction")}
-      className="h-9 gap-1 rounded-md border-0 bg-transparent px-1 shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-inset"
+      className="m-0 flex h-9 min-w-0 items-center gap-1 rounded-md border-0 px-1 py-0"
       data-demo-id="org-editor-layout-switch"
-      onClick={onToggle}
-      role="switch"
-      size="sm"
-      title={
-        layoutMode === "topDown"
-          ? t("Switch to left-to-right layout")
-          : t("Switch to top-to-bottom layout")
-      }
-      type="button"
-      variant="ghost"
     >
-      <span
-        className={cn(
-          "flex size-7 items-center justify-center rounded text-muted-foreground transition-colors",
-          layoutMode === "topDown" && "bg-primary text-primary-foreground",
-        )}
-      >
-        <HiOutlineQueueList className="size-4" />
-      </span>
-      <span
-        className={cn(
-          "flex size-7 items-center justify-center rounded text-muted-foreground transition-colors",
-          layoutMode === "leftRight" && "bg-primary text-primary-foreground",
-        )}
-      >
-        <HiOutlineViewColumns className="size-4" />
-      </span>
-    </Button>
+      {(["topDown", "leftRight"] as const).map((mode) => (
+        <button
+          aria-label={t(mode === "topDown" ? "Vertical layout" : "Horizontal layout")}
+          aria-pressed={layoutMode === mode}
+          className={cn(
+            "flex size-7 cursor-pointer items-center justify-center rounded text-muted-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+            layoutMode === mode && "bg-primary text-primary-foreground hover:bg-primary",
+          )}
+          key={mode}
+          onClick={() => layoutMode !== mode && onSelect(mode)}
+          type="button"
+        >
+          {mode === "topDown" ? (
+            <HiOutlineQueueList className="size-4" />
+          ) : (
+            <HiOutlineViewColumns className="size-4" />
+          )}
+        </button>
+      ))}
+    </fieldset>
   );
 }
 
@@ -989,6 +982,7 @@ function OrgEditorEmployeeDragPreview({
 function OrgEditorNode({
   distributionEnabled,
   distributionUnitIdsByEmployeeId,
+  placementUnitIdsByEmployeeId,
   employeeById,
   isConnectionDropTarget,
   isEmployeeDropTarget,
@@ -1013,6 +1007,7 @@ function OrgEditorNode({
 }: {
   distributionEnabled: boolean;
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
+  placementUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   isConnectionDropTarget: boolean;
   isEmployeeDropTarget: boolean;
@@ -1269,8 +1264,7 @@ function OrgEditorNode({
                 }),
               );
               const isBoss = unit.bossEmployeeId === employeeId;
-              const placementUnitCount =
-                distributionUnitIdsByEmployeeId.get(employeeId)?.length ?? 0;
+              const placementUnitCount = placementUnitIdsByEmployeeId.get(employeeId)?.length ?? 0;
               const distributionOtherUnitCount = distributionEnabled
                 ? getEditorEmployeeOtherUnitCount(distributionUnitIdsByEmployeeId, employeeId)
                 : null;
@@ -2021,6 +2015,14 @@ export const OrgStructureEditorTab = observer(() => {
     () => buildEditorEmployeeUnitIndex(displayUnits),
     [displayUnits],
   );
+  const ordinaryUnitIdsByEmployeeId = useMemo(
+    () =>
+      buildEditorOrdinaryEmployeeUnitIndex(
+        distributionUnitIdsByEmployeeId,
+        distributionModeUnitIdSet,
+      ),
+    [distributionUnitIdsByEmployeeId, distributionModeUnitIdSet],
+  );
   useMemo(() => {
     for (const unit of displayUnits) {
       const availableWidth = Math.max(
@@ -2086,8 +2088,16 @@ export const OrgStructureEditorTab = observer(() => {
   const placementEmployee = placementTarget
     ? (employeeById.get(placementTarget.employeeId) ?? null)
     : null;
+  const placementIndex =
+    placementTarget && distributionModeUnitIdSet.has(placementTarget.sourceUnitId)
+      ? distributionUnitIdsByEmployeeId
+      : ordinaryUnitIdsByEmployeeId;
+  const placementSourceExists = Boolean(
+    placementTarget &&
+      placementIndex.get(placementTarget.employeeId)?.includes(placementTarget.sourceUnitId),
+  );
   const placementUnits = placementTarget
-    ? (distributionUnitIdsByEmployeeId.get(placementTarget.employeeId) ?? []).flatMap((unitId) => {
+    ? (placementIndex.get(placementTarget.employeeId) ?? []).flatMap((unitId) => {
         const unit = unitById.get(unitId);
         return unit ? [unit] : [];
       })
@@ -2100,10 +2110,13 @@ export const OrgStructureEditorTab = observer(() => {
     if (settingsUnitId && !settingsUnit) setSettingsUnitId(null);
   }, [settingsUnit, settingsUnitId]);
   useEffect(() => {
-    if (placementTarget && (!placementEmployee || placementUnits.length < 2)) {
+    if (
+      placementTarget &&
+      (!placementEmployee || !placementSourceExists || placementUnits.length < 2)
+    ) {
       setPlacementTarget(null);
     }
-  }, [placementEmployee, placementTarget, placementUnits.length]);
+  }, [placementEmployee, placementSourceExists, placementTarget, placementUnits.length]);
   const orgEditorSearchResults = useMemo<OrgEditorSearchResult[]>(() => {
     if (!units || orgEditorSearchTokens.length === 0) return [];
 
@@ -3120,10 +3133,6 @@ export const OrgStructureEditorTab = observer(() => {
     }
   };
 
-  const toggleLayoutMode = () => {
-    editor.applyLayout(editor.layoutMode === "topDown" ? "leftRight" : "topDown");
-  };
-
   const zoomAt = (screenPoint: ScreenPoint, nextScale: number) => {
     if (wheelCommitTimeoutRef.current !== null) {
       window.clearTimeout(wheelCommitTimeoutRef.current);
@@ -3632,6 +3641,11 @@ export const OrgStructureEditorTab = observer(() => {
               <OrgEditorNode
                 distributionEnabled={distributionModeUnitIdSet.has(unit.id)}
                 distributionUnitIdsByEmployeeId={distributionUnitIdsByEmployeeId}
+                placementUnitIdsByEmployeeId={
+                  distributionModeUnitIdSet.has(unit.id)
+                    ? distributionUnitIdsByEmployeeId
+                    : ordinaryUnitIdsByEmployeeId
+                }
                 employeeById={employeeById}
                 isConnectionDropTarget={connectionDropTargetUnit?.id === unit.id}
                 isEmployeeDropTarget={employeeDropTargetUnit?.id === unit.id}
@@ -4022,7 +4036,10 @@ export const OrgStructureEditorTab = observer(() => {
               queryTokens={orgEditorSearchTokens}
               results={orgEditorSearchResults}
             />
-            <OrgEditorLayoutSwitch layoutMode={editor.layoutMode} onToggle={toggleLayoutMode} />
+            <OrgEditorLayoutDirection
+              layoutMode={editor.layoutMode}
+              onSelect={(mode) => editor.applyLayout(mode)}
+            />
             <OrgEditorToolbarButton
               dataDemoId="org-editor-align-button"
               onClick={() =>

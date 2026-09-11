@@ -36,8 +36,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Cache derived structures by View document revision and global Employee/Tag/field references.
   Materialize only the system View, active Editor View, and selected Download View at once.
 - Build the active View's direct `EmployeeId → UnitId[]` distribution index only when materialized
-  manual or Live membership changes. Row status is an indexed lookup; selecting one Employee walks
-  only that Employee's assignments and derives virtualized-row or collapsed-card anchors without a
+  manual or Live membership changes. Derive ordinary-only placements from that index and enabled
+  Unit IDs, outside Employee rendering. Mode changes invalidate only the filtered index. Row status
+  is an indexed lookup; selecting one Employee walks only that Employee's assignments and derives virtualized-row or collapsed-card anchors without a
   full Unit scan. The read-only placement map consumes only that indexed assignment list, uses a
   deterministic bounded ring layout, and keeps pan/zoom outside state.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
@@ -114,3 +115,10 @@ write for each completed pan or structural drag. The shared cross-View clipboard
 copied closure and resolved membership in current-tab memory, is sanitized on catalog changes, and
 is cleared on complete state replacement. Atomic Unit deletion computes its closure and dependent
 Live materialization once before exposing the valid final state to persistence.
+
+Tag sorting measures row slots once at gesture start and coalesces pointer movement and bounded
+list scrolling with requestAnimationFrame. Transforms never feed collision measurements. Edge
+scrolling stops only at the actual boundary, not on a short frame rounded to zero pixels. Preview
+does not write the catalog or rebuild derived models; one successful release invokes moveTag.
+Subtree counts are memoized with materialized membership and hierarchy, independent of viewport,
+search, collapse, Tag grouping, and distribution mode. Each total includes its own direct members.

@@ -840,7 +840,6 @@ export const buildOrgEditorUnitEmployeeSummaryById = (units: OrgEditorUnit[]) =>
 
   const collectUnitSummary = (
     unit: OrgEditorUnit,
-    ancestorEmployeeIds: ReadonlySet<EmployeeId>,
     visitedUnitIds: ReadonlySet<OrgEditorUnitId>,
   ) => {
     if (visitedUnitIds.has(unit.id)) {
@@ -850,29 +849,18 @@ export const buildOrgEditorUnitEmployeeSummaryById = (units: OrgEditorUnit[]) =>
     const nextVisitedUnitIds = new Set(visitedUnitIds);
     nextVisitedUnitIds.add(unit.id);
 
-    const ownUniqueEmployeeIds = new Set<EmployeeId>();
-    for (const employeeId of unit.employeeIds) {
-      if (employeeId === unit.bossEmployeeId || !ancestorEmployeeIds.has(employeeId)) {
-        ownUniqueEmployeeIds.add(employeeId);
-      }
-    }
-
-    const descendantAncestorEmployeeIds = new Set([...ancestorEmployeeIds, ...unit.employeeIds]);
+    const ownUniqueEmployeeIds = new Set(unit.employeeIds);
     const totalEmployeeIds = new Set(ownUniqueEmployeeIds);
     const childUnits = childrenByParentId.get(unit.id) ?? [];
 
     for (const childUnit of childUnits) {
-      for (const employeeId of collectUnitSummary(
-        childUnit,
-        descendantAncestorEmployeeIds,
-        nextVisitedUnitIds,
-      )) {
+      for (const employeeId of collectUnitSummary(childUnit, nextVisitedUnitIds)) {
         totalEmployeeIds.add(employeeId);
       }
     }
 
     summaryByUnitId.set(unit.id, {
-      directCount: unit.employeeIds.length,
+      directCount: ownUniqueEmployeeIds.size,
       hasChildUnits: childUnits.length > 0,
       totalCount: totalEmployeeIds.size,
     });
@@ -881,15 +869,15 @@ export const buildOrgEditorUnitEmployeeSummaryById = (units: OrgEditorUnit[]) =>
   };
 
   for (const rootUnit of childrenByParentId.get(null) ?? []) {
-    collectUnitSummary(rootUnit, new Set(), new Set());
+    collectUnitSummary(rootUnit, new Set());
   }
 
   for (const unit of units) {
     if (!summaryByUnitId.has(unit.id)) {
       summaryByUnitId.set(unit.id, {
-        directCount: unit.employeeIds.length,
+        directCount: new Set(unit.employeeIds).size,
         hasChildUnits: false,
-        totalCount: unit.employeeIds.length,
+        totalCount: new Set(unit.employeeIds).size,
       });
     }
   }
