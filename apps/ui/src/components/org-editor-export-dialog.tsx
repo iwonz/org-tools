@@ -5,6 +5,7 @@ import type {
   EmployeeId,
   OrgEditorLayoutMode,
   OrgEditorUnit,
+  OrgEditorUnitId,
   OrgEditorViewSettings,
   TagId,
 } from "@org-tools/types";
@@ -93,6 +94,8 @@ import type { ExportRowMode } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type OrgEditorExportDialogProps = {
+  distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
+  distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   viewSettings: OrgEditorViewSettings;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   layoutMode: OrgEditorLayoutMode;
@@ -133,6 +136,8 @@ const getBackgroundButtonClassName = (isActive: boolean) =>
   );
 
 export function OrgEditorExportDialog({
+  distributionEnabledUnitIds,
+  distributionUnitIdsByEmployeeId,
   viewSettings,
   employeeById,
   layoutMode,
@@ -316,6 +321,8 @@ export function OrgEditorExportDialog({
     setIsPreviewLoading(true);
     setPreviewError(null);
     createOrgEditorUnitImageBlob({
+      distributionEnabledUnitIds,
+      distributionUnitIdsByEmployeeId,
       viewSettings,
       avatarLoadLimit: ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
       employeeById,
@@ -352,6 +359,8 @@ export function OrgEditorExportDialog({
     };
   }, [
     activeTab,
+    distributionEnabledUnitIds,
+    distributionUnitIdsByEmployeeId,
     employeeById,
     formatUnitSummary,
     imageSettings,
@@ -393,6 +402,8 @@ export function OrgEditorExportDialog({
     if (!unit) throw new Error("No Unit is selected for export.");
 
     return createOrgEditorUnitImageBlob({
+      distributionEnabledUnitIds,
+      distributionUnitIdsByEmployeeId,
       viewSettings,
       employeeById,
       formatUnitSummary,

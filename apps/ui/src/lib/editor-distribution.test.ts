@@ -9,6 +9,7 @@ import {
   getEditorDistributionBulkState,
   getEditorDistributionPlacement,
   getEditorDistributionSelection,
+  getEditorEmployeeDistributionPresentation,
   getEditorEmployeeOtherUnitIds,
   getEditorPlacementMapFitViewport,
 } from "@/lib/editor-distribution";
@@ -43,6 +44,41 @@ describe("Editor distribution membership", () => {
 
     expect(getEditorEmployeeOtherUnitIds(index, "employee-shared", root.id)).toEqual([child.id]);
     expect(getEditorEmployeeOtherUnitIds(index, "employee-root", root.id)).toEqual([]);
+  });
+
+  test("shares enabled, assigned, and source-only presentation for materialized membership", () => {
+    const manualUnitId = "manual-unit";
+    const liveUnitId = "resolved-live-unit";
+    const index = new Map([
+      ["employee-shared", [manualUnitId, liveUnitId]],
+      ["employee-source-only", [manualUnitId]],
+    ]);
+    const enabled = new Set([manualUnitId]);
+
+    expect(
+      getEditorEmployeeDistributionPresentation({
+        distributionEnabledUnitIds: new Set(),
+        employeeId: "employee-shared",
+        sourceUnitId: manualUnitId,
+        unitIdsByEmployeeId: index,
+      }),
+    ).toBeNull();
+    expect(
+      getEditorEmployeeDistributionPresentation({
+        distributionEnabledUnitIds: enabled,
+        employeeId: "employee-shared",
+        sourceUnitId: manualUnitId,
+        unitIdsByEmployeeId: index,
+      }),
+    ).toEqual({ otherUnitCount: 1, status: "assigned" });
+    expect(
+      getEditorEmployeeDistributionPresentation({
+        distributionEnabledUnitIds: enabled,
+        employeeId: "employee-source-only",
+        sourceUnitId: manualUnitId,
+        unitIdsByEmployeeId: index,
+      }),
+    ).toEqual({ otherUnitCount: 0, status: "sourceOnly" });
   });
 
   test("excludes multiple reference Units without changing full membership or inheriting parents", () => {

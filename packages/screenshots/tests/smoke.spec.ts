@@ -3476,7 +3476,9 @@ test("previews and commits pointer Tag sorting with cancellation and peer replac
   await exercisePointerTagSorting(page);
 });
 
-test("persists View settings, distribution colors, and matching PNG footers", async ({ page }) => {
+test("persists View settings, distribution colors, and matching PNG presentation", async ({
+  page,
+}) => {
   await openBlankState(page);
   await exerciseViewSettings(page);
   await page.reload();

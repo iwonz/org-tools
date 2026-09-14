@@ -40,7 +40,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   Unit IDs, outside Employee rendering. Mode changes invalidate only the filtered index. Row status
   is an indexed lookup; selecting one Employee walks only that Employee's assignments and derives virtualized-row or collapsed-card anchors without a
   full Unit scan. The read-only placement map consumes only that indexed assignment list, uses a
-  deterministic bounded ring layout, and keeps pan/zoom outside state.
+  deterministic bounded ring layout, and keeps pan/zoom outside state. Image export receives the
+  same complete memoized index and enabled-Unit set, so Unit-only and subtree status remains correct
+  without rebuilding or rescanning the active View for each preview.
 - Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
 - Tag-filter search preserves the catalog array order and normalizes labels for matching. Its
   virtualized visible result derives from a deferred transient query; search-scoped bulk selection
@@ -62,7 +64,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   and the cached wrapped footer heights participate in the same geometry pass without DOM
 measurement. DOM and PNG consume the same line rectangles and indivisible count suffix. Disabling the View Tag
   cloud sets every footer height to zero, including cached geometry. Distribution color drafts stay
-  local to the open picker; shared tonal styles are derived once per color change outside row loops.
+  local to the open picker; shared light/dark/canvas tonal values are derived from one color
+  calculation, and each included PNG row performs only indexed status and cached-color lookups.
 - Keep the Unit Markdown renderer out of the main Editor bundle and mount it only while a note
   Preview is open. Closed notes are opaque bounded strings: canvas layout, spatial indexing, search,
   PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save

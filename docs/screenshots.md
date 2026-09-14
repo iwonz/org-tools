@@ -283,7 +283,8 @@ footers.
 
 Use the gear beside the View selector for **Group by tag**, **Show Tag cloud**, and the two
 distribution colors. Changes apply immediately to the entire View and support Undo/Redo. PNG follows
-the same grouping and footer visibility; distribution colors remain Editor-only.
+the same grouping, footer visibility, and persistent distribution row tones through its light export
+palette.
 
 Capabilities: View settings, Grouping, Tag cloud, Distribution colors, Undo and Redo.
 
@@ -404,12 +405,13 @@ Capabilities: Single selection, Exact row anchors, Collapsed fallback, Pointer-i
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
 Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping colored
-tags, direct-membership Tag footer, localized boss marker, and connections follow the live canvas
-without printing Static/Live membership type, then choose transparent, solid, or gradient
+tags, direct-membership Tag footer, localized boss marker, persistent assigned/source-only row tones,
+and hierarchy connections follow the stable live canvas presentation without printing Static/Live
+membership type or transient placement overlays, then choose transparent, solid, or gradient
 backgrounds in the same dialog.
 
-Capabilities: Inline PNG preview, Complete colored tags, Membership-neutral cards, Hierarchy,
-Localized boss marker, Iconic scope, Background presets.
+Capabilities: Inline PNG preview, Complete colored tags, Distribution tones, Hierarchy, Localized
+boss marker, Iconic scope, Background presets.
 
 ### Editor text template export
 
@@ -577,8 +579,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   lifecycle actions stay disabled, and View controls show no hover or native tooltip.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
-  heights, content-sized direct-Employee Tag footer chips with equal insets, and connection endpoints without card overlap,
-  membership-type labels, or transient editing chrome.
+  heights, content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
+  row tones resolved from the complete active View, and connection endpoints without card overlap,
+  membership-type labels, placement overlays, or transient editing chrome.
 - Confirm Unit, Employee, connection, and marquee drags keep moving through smooth bounded edge-pan,
   retain document-anchored previews, and commit no more than one viewport and one structural update.
 - Confirm deleting nested and overlapping Unit selections produces no diagnostics after reload and
@@ -588,7 +591,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   direct manual or resolved Live membership, preserves status fill through selection, keeps Employee
   names in the normal theme text color for both statuses, and draws
   paths only for one selected Employee occurrence. Collapsed targets use an endpoint marker,
-  multi-selection hides paths, and Editor output contains no overlay. Confirm ordinary sources exclude
+  multi-selection hides paths, Editor PNG keeps persistent row tones without the overlay, and JSON,
+  Template, and Employee output remains distribution-neutral. Confirm ordinary sources exclude
   distribution-enabled references from their placement actions
   and maps, while reference sources retain every direct placement; open maps react to membership
   and mode changes. Confirm map viewport controls remain transient, and Unit

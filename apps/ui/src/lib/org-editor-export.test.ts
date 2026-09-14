@@ -1,9 +1,11 @@
 import type { Employee, OrgEditorUnit } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 import {
+  getOrgEditorEmployeeRowSurfaceBounds,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorUnitBounds,
   getOrgEditorUnitHeightForEmployeeRows,
+  ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
@@ -16,6 +18,7 @@ import {
   getEmployeeCanvasAvatarUrl,
   getOrgEditorExportConnectionPath,
   getOrgEditorExportEmployeeGeometry,
+  getOrgEditorExportEmployeeRowFillStyle,
   getOrgEditorExportEmployeeRowHeight,
   getOrgEditorExportEmployeeRowHeightForTagLayout,
   getOrgEditorExportEmployeeTagChipWidth,
@@ -25,6 +28,7 @@ import {
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_EXPORT_GRADIENTS,
 } from "@/lib/org-editor-export";
+import { getTagColorCanvasStyle } from "@/lib/tag-color";
 
 const employee: Employee = {
   avatarBase64Url: "data:image/webp;base64,aGVsbG8=",
@@ -182,6 +186,33 @@ describe("Org Editor image export", () => {
     expect(getOrgEditorUnitBounds({ ...unit, noteMarkdown: "# Private note" })).toEqual(
       getOrgEditorUnitBounds(unit),
     );
+    expect(
+      getOrgEditorEmployeeRowSurfaceBounds({
+        employeeRowHeight: 76,
+        employeeRowOffset: 0,
+        unit,
+      }),
+    ).toEqual({
+      height: 76,
+      width: getOrgEditorUnitBounds(unit).width - 18,
+      x: 9,
+      y: 81,
+    });
+    expect(ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS).toBe(6);
+  });
+
+  test("maps shared distribution presentation to View light tonal fills", () => {
+    const settings = {
+      distributedColor: "green" as const,
+      undistributedColor: "#7c3aed80" as const,
+    };
+    expect(getOrgEditorExportEmployeeRowFillStyle(null, settings)).toBeNull();
+    expect(
+      getOrgEditorExportEmployeeRowFillStyle({ otherUnitCount: 1, status: "assigned" }, settings),
+    ).toBe(getTagColorCanvasStyle(settings.distributedColor).fillStyle);
+    expect(
+      getOrgEditorExportEmployeeRowFillStyle({ otherUnitCount: 0, status: "sourceOnly" }, settings),
+    ).toBe(getTagColorCanvasStyle(settings.undistributedColor).fillStyle);
   });
 
   test("anchors hierarchy connections to rendered card heights", () => {

@@ -34,6 +34,11 @@ export type EditorDistributionConnection = {
 
 export type EditorDistributionBulkState = "checked" | "mixed" | "unchecked";
 
+export type EditorEmployeeDistributionPresentation = {
+  otherUnitCount: number;
+  status: "assigned" | "sourceOnly";
+};
+
 export type EditorPlacementMapNode = EditorDistributionRect & {
   unitId: OrgEditorUnitId;
 };
@@ -194,6 +199,30 @@ export const getEditorEmployeeOtherUnitCount = (
   unitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>,
   employeeId: EmployeeId,
 ) => Math.max(0, (unitIdsByEmployeeId.get(employeeId)?.length ?? 1) - 1);
+
+export const getEditorEmployeeDistributionPresentation = ({
+  distributionEnabledUnitIds,
+  employeeId,
+  sourceUnitId,
+  unitIdsByEmployeeId,
+}: {
+  distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
+  employeeId: EmployeeId;
+  sourceUnitId: OrgEditorUnitId;
+  unitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
+}): EditorEmployeeDistributionPresentation | null => {
+  if (!distributionEnabledUnitIds.has(sourceUnitId)) return null;
+
+  const otherUnitCount = getEditorEmployeeOtherUnitIds(
+    unitIdsByEmployeeId,
+    employeeId,
+    sourceUnitId,
+  ).length;
+  return {
+    otherUnitCount,
+    status: otherUnitCount > 0 ? "assigned" : "sourceOnly",
+  };
+};
 
 export const getEditorDistributionSelection = (
   selectedItems: readonly OrgEditorSelectedItem[],

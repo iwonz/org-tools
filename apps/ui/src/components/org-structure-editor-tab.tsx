@@ -105,7 +105,7 @@ import {
   getEditorDistributionBulkState,
   getEditorDistributionPlacement,
   getEditorDistributionSelection,
-  getEditorEmployeeOtherUnitCount,
+  getEditorEmployeeDistributionPresentation,
   getEditorEmployeeOtherUnitIds,
 } from "@/lib/editor-distribution";
 import {
@@ -140,6 +140,7 @@ import {
   getOrgEditorUnitWidth,
   getOrgEditorVisibleEmployeeIds,
   isPointInsideRect,
+  ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
@@ -985,7 +986,7 @@ function OrgEditorEmployeeDragPreview({
 function OrgEditorNode({
   viewSettings,
   distributionStyles,
-  distributionEnabled,
+  distributionEnabledUnitIds,
   distributionUnitIdsByEmployeeId,
   placementUnitIdsByEmployeeId,
   employeeById,
@@ -1014,7 +1015,7 @@ function OrgEditorNode({
     assigned: React.CSSProperties | undefined;
     sourceOnly: React.CSSProperties | undefined;
   };
-  distributionEnabled: boolean;
+  distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   placementUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
@@ -1261,15 +1262,14 @@ function OrgEditorNode({
               );
               const isBoss = unit.bossEmployeeId === employeeId;
               const placementUnitCount = placementUnitIdsByEmployeeId.get(employeeId)?.length ?? 0;
-              const distributionOtherUnitCount = distributionEnabled
-                ? getEditorEmployeeOtherUnitCount(distributionUnitIdsByEmployeeId, employeeId)
-                : null;
-              const distributionStatus =
-                distributionOtherUnitCount === null
-                  ? null
-                  : distributionOtherUnitCount > 0
-                    ? "assigned"
-                    : "sourceOnly";
+              const distributionPresentation = getEditorEmployeeDistributionPresentation({
+                distributionEnabledUnitIds,
+                employeeId,
+                sourceUnitId: unit.id,
+                unitIdsByEmployeeId: distributionUnitIdsByEmployeeId,
+              });
+              const distributionOtherUnitCount = distributionPresentation?.otherUnitCount ?? null;
+              const distributionStatus = distributionPresentation?.status ?? null;
               const employeeName = employee?.fullName ?? t("Employee unavailable");
               const distributionLabel =
                 distributionStatus === "assigned"
@@ -1295,6 +1295,7 @@ function OrgEditorNode({
                   key={`${unit.id}:${employeeId}`}
                   style={{
                     ...(distributionStatus ? distributionStyles[distributionStatus] : {}),
+                    borderRadius: ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
                     height: employeeRowLayout.heights[employeeIndex],
                     ...(shouldVirtualizeEmployees
                       ? {
@@ -3657,7 +3658,7 @@ export const OrgStructureEditorTab = observer(() => {
               <OrgEditorNode
                 viewSettings={viewSettings}
                 distributionStyles={distributionStyles}
-                distributionEnabled={distributionModeUnitIdSet.has(unit.id)}
+                distributionEnabledUnitIds={distributionModeUnitIdSet}
                 distributionUnitIdsByEmployeeId={distributionUnitIdsByEmployeeId}
                 placementUnitIdsByEmployeeId={
                   distributionModeUnitIdSet.has(unit.id)
@@ -4208,6 +4209,8 @@ export const OrgStructureEditorTab = observer(() => {
         />
       )}
       <OrgEditorExportDialog
+        distributionEnabledUnitIds={distributionModeUnitIdSet}
+        distributionUnitIdsByEmployeeId={distributionUnitIdsByEmployeeId}
         viewSettings={viewSettings}
         employeeById={employeeById}
         layoutMode={editor.layoutMode}

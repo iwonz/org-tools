@@ -116,13 +116,14 @@ async function openSyntheticTab(page: Page, tab: string) {
 
 async function replaceWithImageExportState(page: Page) {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const units = state.organization.views.find((view) => view.kind === "system")?.structure.units;
+  const systemView = state.organization.views.find((view) => view.kind === "system");
+  const units = systemView?.structure.units;
   const product = units?.find((unit) => unit.name === "Product");
   const platform = units?.find((unit) => unit.name === "Platform");
   const employee = state.organization.employees.find((candidate) =>
     product?.employeeIds.includes(candidate.id),
   );
-  if (!product || !platform || !employee) {
+  if (!systemView || !product || !platform || !employee) {
     throw new Error("Synthetic image-export state is unavailable.");
   }
   state.organization.tags.push({ color: "rose", id: LONG_EXPORT_TAG_ID, label: LONG_EXPORT_TAG });
@@ -138,9 +139,12 @@ async function replaceWithImageExportState(page: Page) {
     query: "",
     selectedGenders: [],
     selectedPositions: [],
-    selectedTags: [],
+    selectedTags: [LONG_EXPORT_TAG_ID],
     selectedUnitIds: [product.id],
   };
+  const editorUi = state.ui.editor.views.find((view) => view.viewId === systemView.id);
+  if (!editorUi) throw new Error("Synthetic image-export Editor UI is unavailable.");
+  editorUi.distributionModeUnitIds = [product.id];
   const dialog = await openImportDialog(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",

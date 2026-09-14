@@ -44,8 +44,9 @@ click and always use `noopener`, `noreferrer`, and a no-referrer policy. Editor 
 Employee outputs omit note content.
 Distribution mode derives direct membership, tonal status, and selected-placement paths solely from
 the active in-memory View. Its bounded View UI setting may use the existing local persistence or
-live-tab channel, but the visualization is absent from PNG and Employee outputs and creates no
-request or additional browser storage.
+live-tab channel. Editor PNG locally paints persistent status row tones from that View while
+excluding selection and placement overlays; JSON, Template, and Employee outputs remain
+distribution-neutral. No path creates a request or additional browser storage.
 
 ## Local files and publication
 

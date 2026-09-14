@@ -505,7 +505,7 @@ test("previews and commits pointer Tag sorting with cancellation and peer replac
   await exercisePointerTagSorting(page);
 });
 
-test("synchronizes View settings and distribution colors with matching PNG footers", async ({
+test("synchronizes View settings and distribution colors with matching PNG presentation", async ({
   page,
 }) => {
   await page.addInitScript(useEnglish, localeStorageKey);

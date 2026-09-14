@@ -193,10 +193,16 @@ headers, roster padding, centered avatars, Employee text columns, compact tag pa
 heights, and hierarchy anchors. The selected export font measures one immutable tag layout per
 Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
 drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
-Employee summary, direct-membership Tag footer, Tag tonal colors, and boss treatment while excluding Static/Live membership type, transient
-selection, hover, handles, and menus. Its bounded inline preview has no secondary full-image
-viewer. Image titles, backgrounds, fonts, icon-only alignment, scope, radius, Employee templates,
-and Editor JSON settings remain output-only session settings and do not mutate the active View.
+Employee summary, direct-membership Tag footer, Tag tonal colors, boss treatment, and persistent
+active-View distribution row tones while excluding Static/Live membership type, transient
+selection, hover, focus, handles, menus, placement paths, and endpoint markers. Distribution status
+uses the complete active-View direct-membership index even when its other placement is outside the
+selected image scope. Its bounded inline preview has no secondary full-image viewer. Image titles,
+backgrounds, fonts, icon-only alignment, scope, radius, Employee templates, and Editor JSON settings
+remain output-only session settings and do not mutate the active View. The painter deliberately uses
+the light export palette; shared semantic status, geometry, and tonal helpers keep stable DOM and PNG
+card presentation aligned. Every later persistent View or stable Unit/Employee card presentation
+change must define and test its applicable PNG behavior in the same change.
 Image template tokens exclude avatar bytes, while painted avatars remain available.
 Unit footer chips use one deterministic mixed-script glyph metric plus equal fixed insets for their
 live width, grapheme-safe multi-line wrapping, row packing, card bounds, connections, collision
@@ -256,6 +262,8 @@ hierarchy containment as membership. Enabled source rows derive distributed or s
 set of pointer-inert SVG paths from deterministic row rectangles; hidden rows in collapsed targets
 fall back to the nearest card edge. The overlay sits above hierarchy paths and below cards, stays
 outside history and spatial geometry, and is omitted from every Editor or Employee report output.
+Editor PNG alone reuses the persistent row status and light tonal fill, but never this transient
+overlay; JSON, Template, and Employee output remain distribution-neutral.
 A second memoized index filters out distribution-enabled Units. Ordinary sources use this index for
 placement action visibility, counts, and modal contents; enabled sources retain the complete index.
 An open map closes when its source disappears or loses the Employee, or fewer than two eligible

@@ -130,24 +130,115 @@ export async function exerciseViewSettings(page: Page) {
   await page.locator('[data-demo-id="theme-toggle"]').click();
   await page.locator('[data-demo-id="theme-dialog"] label:has(input[value="light"])').click();
 
-  // The PNG painter must not draw the hidden footer; row Tags remain painted.
+  const normalizeCanvasColor = (element: Element, property: string) => {
+    const context = document.createElement("canvas").getContext("2d");
+    if (!context) throw new Error("Canvas color normalization is unavailable.");
+    context.fillStyle = getComputedStyle(element).getPropertyValue(property);
+    return String(context.fillStyle);
+  };
+  const assignedFill = await assigned
+    .locator("..")
+    .evaluate(normalizeCanvasColor, "background-color");
+  const sourceOnlyFill = await sourceOnly
+    .locator("..")
+    .evaluate(normalizeCanvasColor, "background-color");
+  const distributionStroke = await page
+    .locator("[data-distribution-connection] path")
+    .evaluate(normalizeCanvasColor, "stroke");
+
+  // The PNG painter must draw persistent View tones but omit the hidden footer and transient paths.
   await page.evaluate(() => {
-    const original = CanvasRenderingContext2D.prototype.fillText;
+    const originalFill = CanvasRenderingContext2D.prototype.fill;
+    const originalFillText = CanvasRenderingContext2D.prototype.fillText;
+    const originalStroke = CanvasRenderingContext2D.prototype.stroke as (path?: Path2D) => void;
+    Reflect.set(window, "__viewPaintedFills", []);
+    Reflect.set(window, "__viewPaintedStrokes", []);
     Reflect.set(window, "__viewPaintedText", []);
+    Reflect.set(window, "__viewPaintedTextStyles", []);
+    CanvasRenderingContext2D.prototype.fill = function (...args) {
+      (Reflect.get(window, "__viewPaintedFills") as string[]).push(String(this.fillStyle));
+      return Reflect.apply(originalFill, this, args);
+    };
     CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
       (Reflect.get(window, "__viewPaintedText") as string[]).push(text);
-      if (maxWidth === undefined) original.call(this, text, x, y);
-      else original.call(this, text, x, y, maxWidth);
+      (
+        Reflect.get(window, "__viewPaintedTextStyles") as Array<{
+          fillStyle: string;
+          text: string;
+        }>
+      ).push({ fillStyle: String(this.fillStyle), text });
+      if (maxWidth === undefined) originalFillText.call(this, text, x, y);
+      else originalFillText.call(this, text, x, y, maxWidth);
+    };
+    CanvasRenderingContext2D.prototype.stroke = function (path?: Path2D) {
+      (Reflect.get(window, "__viewPaintedStrokes") as string[]).push(String(this.strokeStyle));
+      if (path) originalStroke.call(this, path);
+      else originalStroke.call(this);
     };
   });
   await card.click({ button: "right", position: { x: 50, y: 40 } });
   await page.locator('[data-demo-id="org-editor-export-action"]').click();
+  const exportDialog = page.getByRole("dialog", { name: "Export", exact: true });
   const image = page.locator('[data-demo-id="org-editor-export-image"]');
   await expect(image).toBeVisible();
+  await page.evaluate(() => {
+    Reflect.set(window, "__viewPaintedFills", []);
+    Reflect.set(window, "__viewPaintedStrokes", []);
+    Reflect.set(window, "__viewPaintedText", []);
+    Reflect.set(window, "__viewPaintedTextStyles", []);
+  });
+  await exportDialog.getByRole("tab", { name: "Unit only", exact: true }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        ({ assignedTone, sourceOnlyTone }) => {
+          const fills = Reflect.get(window, "__viewPaintedFills") as string[];
+          return {
+            assigned: fills.includes(assignedTone),
+            sourceOnly: fills.includes(sourceOnlyTone),
+          };
+        },
+        { assignedTone: assignedFill, sourceOnlyTone: sourceOnlyFill },
+      ),
+    )
+    .toEqual({ assigned: true, sourceOnly: true });
   const painted = await page.evaluate(() => Reflect.get(window, "__viewPaintedText") as string[]);
   expect(painted.some((text) => /· [0-9]+$/.test(text))).toBe(false);
   expect(painted.length).toBeGreaterThan(0);
+  const imagePaint = await page.evaluate(() => ({
+    fills: Reflect.get(window, "__viewPaintedFills") as string[],
+    strokes: Reflect.get(window, "__viewPaintedStrokes") as string[],
+    textStyles: Reflect.get(window, "__viewPaintedTextStyles") as Array<{
+      fillStyle: string;
+      text: string;
+    }>,
+  }));
+  expect(imagePaint.fills).not.toContain(distributionStroke);
+  expect(imagePaint.strokes).not.toContain(distributionStroke);
+  expect(imagePaint.textStyles.find(({ text }) => text.startsWith("Avery Stone"))?.fillStyle).toBe(
+    "#0f172a",
+  );
   await page.keyboard.press("Escape");
+
+  await card.click({ button: "right", position: { x: 50, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await page.evaluate(() => Reflect.set(window, "__viewPaintedFills", []));
+  await card.click({ button: "right", position: { x: 50, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-export-action"]').click();
+  await expect(image).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => (Reflect.get(window, "__viewPaintedFills") as string[]).length))
+    .toBeGreaterThan(0);
+  expect(
+    await page.evaluate(
+      (sourceOnlyTone) =>
+        (Reflect.get(window, "__viewPaintedFills") as string[]).includes(sourceOnlyTone),
+      sourceOnlyFill,
+    ),
+  ).toBe(false);
+  await page.keyboard.press("Escape");
+  await card.click({ button: "right", position: { x: 50, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
   const saved = await exportState(page);
   expect(saved.organization.views[0]?.structure.settings).toEqual({
     groupByTag: true,

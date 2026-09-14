@@ -8,6 +8,10 @@ import type {
   OrgEditorViewSettings,
   TagId,
 } from "@org-tools/types";
+import {
+  type EditorEmployeeDistributionPresentation,
+  getEditorEmployeeDistributionPresentation,
+} from "@/lib/editor-distribution";
 import { isSafeAvatarBase64Url } from "@/lib/employee-data";
 import { getEmployeeInitials } from "@/lib/employee-utils";
 import {
@@ -23,6 +27,7 @@ import {
   buildOrgEditorUnitTagSummary,
   createOrgEditorUnitTagFooterLayout,
   getOrgEditorEmployeePosition,
+  getOrgEditorEmployeeRowSurfaceBounds,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorEmployeeVisualGeometry,
   getOrgEditorTagChipWidth,
@@ -34,6 +39,7 @@ import {
   getOrgEditorVisibleEmployeeIds,
   ORG_EDITOR_EMPLOYEE_AVATAR_SIZE,
   ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE,
+  ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
   ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
@@ -108,6 +114,7 @@ export type OrgEditorTemplateRow = {
 };
 
 type OrgEditorImageUnitRenderData = {
+  employeeDistributionPresentations: Array<EditorEmployeeDistributionPresentation | null>;
   employeeIds: EmployeeId[];
   employeeRowHeights: number[];
   employeeRowOffsets: number[];
@@ -817,6 +824,18 @@ export const getOrgEditorExportEmployeeRowHeight = (
     ),
   );
 
+export const getOrgEditorExportEmployeeRowFillStyle = (
+  presentation: EditorEmployeeDistributionPresentation | null,
+  viewSettings: Pick<OrgEditorViewSettings, "distributedColor" | "undistributedColor">,
+) => {
+  if (!presentation) return null;
+  const color =
+    presentation.status === "assigned"
+      ? viewSettings.distributedColor
+      : viewSettings.undistributedColor;
+  return getTagColorCanvasStyle(color).fillStyle;
+};
+
 const drawOrgEditorEmployeeTags = ({
   context,
   fontFamily,
@@ -1033,6 +1052,8 @@ const renderOrgEditorTemplate = ({
   });
 
 export const createOrgEditorUnitImageBlob = async ({
+  distributionEnabledUnitIds,
+  distributionUnitIdsByEmployeeId,
   viewSettings,
   avatarLoadLimit = ORG_EDITOR_EXPORT_DEFAULT_AVATAR_LOAD_LIMIT,
   employeeById,
@@ -1046,6 +1067,8 @@ export const createOrgEditorUnitImageBlob = async ({
   tagOrder = [],
   units,
 }: {
+  distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
+  distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   viewSettings: OrgEditorViewSettings;
   avatarLoadLimit?: number;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
@@ -1078,6 +1101,14 @@ export const createOrgEditorUnitImageBlob = async ({
   const employeeSummaryByUnitId = buildOrgEditorUnitEmployeeSummaryById(units);
   const imageUnitRenderData = imageUnits.map((unit) => {
     const employeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById, viewSettings.groupByTag);
+    const employeeDistributionPresentations = employeeIds.map((employeeId) =>
+      getEditorEmployeeDistributionPresentation({
+        distributionEnabledUnitIds,
+        employeeId,
+        sourceUnitId: unit.id,
+        unitIdsByEmployeeId: distributionUnitIdsByEmployeeId,
+      }),
+    );
     const width = getOrgEditorUnitBounds(unit).width;
     const availableTagWidth = getOrgEditorEmployeeTextMaxWidth(width);
     const employeeTagLayouts = employeeIds.map((employeeId) => {
@@ -1107,6 +1138,7 @@ export const createOrgEditorUnitImageBlob = async ({
       ? 0
       : getOrgEditorUnitTagFooterHeight(tagSummaries, width - 16);
     return {
+      employeeDistributionPresentations,
       employeeIds,
       employeeRowHeights,
       employeeRowOffsets,
@@ -1238,6 +1270,7 @@ export const createOrgEditorUnitImageBlob = async ({
   }
 
   for (const {
+    employeeDistributionPresentations,
     employeeIds,
     employeeRowHeights,
     employeeRowOffsets,
@@ -1339,6 +1372,25 @@ export const createOrgEditorUnitImageBlob = async ({
             .replace(/\s+/g, " ")
             .trim()
         : "Employee unavailable";
+
+      const distributionPresentation = employeeDistributionPresentations[employeeIndex] ?? null;
+      const distributionFillStyle = getOrgEditorExportEmployeeRowFillStyle(
+        distributionPresentation,
+        viewSettings,
+      );
+      if (distributionFillStyle) {
+        drawRoundedRect(
+          context,
+          getOrgEditorEmployeeRowSurfaceBounds({
+            employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+            employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
+            unit,
+          }),
+          ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
+        );
+        context.fillStyle = distributionFillStyle;
+        context.fill();
+      }
 
       if (isBoss) {
         context.beginPath();

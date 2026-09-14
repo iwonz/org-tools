@@ -110,4 +110,13 @@ describe("tagColorSurfaceClassName", () => {
     expect(getTagColorCanvasStyle("#7c3aed")).not.toEqual(getTagColorCanvasStyle(null));
     expect(getTagColorCanvasStyle("#7c3aed80")).not.toEqual(getTagColorCanvasStyle("#7c3aed"));
   });
+
+  it("shares the light DOM and canvas tonal fill for distribution colors", () => {
+    for (const color of ["green", "#7c3aed", "#7c3aed80"] as const) {
+      const surfaceStyle = customTagColorSurfaceStyle(employeeTagColorToHex(color));
+      expect(getTagColorCanvasStyle(color).fillStyle).toBe(
+        Reflect.get(surfaceStyle ?? {}, "--tag-custom-fill"),
+      );
+    }
+  });
 });

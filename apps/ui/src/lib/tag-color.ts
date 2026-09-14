@@ -195,12 +195,9 @@ const contrast = (first: Rgb, second: Rgb) => {
   return (light + 0.05) / (dark + 0.05);
 };
 
-export const customTagColorSurfaceStyle = (
-  color: EmployeeTagColor | null | undefined,
-): CSSProperties | undefined => {
-  if (!color || !isCustomEmployeeTagColor(color)) return undefined;
-  const parsed = parseHex(color);
-  if (!parsed) return undefined;
+const getTagColorTonalPalette = (color: EmployeeTagColor) => {
+  const parsed = parseHex(employeeTagColorToHex(color));
+  if (!parsed) return null;
   const white = { blue: 255, green: 255, red: 255 };
   const nearBlack = { blue: 23, green: 23, red: 23 };
   const rgb = { blue: parsed.blue, green: parsed.green, red: parsed.red };
@@ -210,17 +207,38 @@ export const customTagColorSurfaceStyle = (
   const darkFill = mix(darkRgb, nearBlack, 0.24);
   const tintedDark = mix(lightRgb, nearBlack, 0.52);
   const tintedLight = mix(darkRgb, white, 0.68);
-  const lightText = contrast(tintedDark, lightFill) >= 4.5 ? tintedDark : nearBlack;
-  const darkText = contrast(tintedLight, darkFill) >= 4.5 ? tintedLight : white;
+
   return {
-    "--tag-custom-fill": rgbToHex(lightFill),
-    "--tag-custom-fill-active": rgbToHex(mix(rgb, white, 0.3)),
-    "--tag-custom-fill-hover": rgbToHex(mix(rgb, white, 0.24)),
-    "--tag-custom-foreground": rgbToHex(lightText),
-    "--tag-custom-fill-dark": rgbToHex(darkFill),
-    "--tag-custom-fill-active-dark": rgbToHex(mix(rgb, nearBlack, 0.36)),
-    "--tag-custom-fill-hover-dark": rgbToHex(mix(rgb, nearBlack, 0.3)),
-    "--tag-custom-foreground-dark": rgbToHex(darkText),
+    canvasText: rgbToHex(
+      contrast(mix(lightRgb, nearBlack, 0.3), lightFill) >= 4.5
+        ? mix(lightRgb, nearBlack, 0.3)
+        : nearBlack,
+    ),
+    darkFill: rgbToHex(darkFill),
+    darkText: rgbToHex(contrast(tintedLight, darkFill) >= 4.5 ? tintedLight : white),
+    lightFill: rgbToHex(lightFill),
+    lightText: rgbToHex(contrast(tintedDark, lightFill) >= 4.5 ? tintedDark : nearBlack),
+    rgb,
+  };
+};
+
+export const customTagColorSurfaceStyle = (
+  color: EmployeeTagColor | null | undefined,
+): CSSProperties | undefined => {
+  if (!color || !isCustomEmployeeTagColor(color)) return undefined;
+  const palette = getTagColorTonalPalette(color);
+  if (!palette) return undefined;
+  const white = { blue: 255, green: 255, red: 255 };
+  const nearBlack = { blue: 23, green: 23, red: 23 };
+  return {
+    "--tag-custom-fill": palette.lightFill,
+    "--tag-custom-fill-active": rgbToHex(mix(palette.rgb, white, 0.3)),
+    "--tag-custom-fill-hover": rgbToHex(mix(palette.rgb, white, 0.24)),
+    "--tag-custom-foreground": palette.lightText,
+    "--tag-custom-fill-dark": palette.darkFill,
+    "--tag-custom-fill-active-dark": rgbToHex(mix(palette.rgb, nearBlack, 0.36)),
+    "--tag-custom-fill-hover-dark": rgbToHex(mix(palette.rgb, nearBlack, 0.3)),
+    "--tag-custom-foreground-dark": palette.darkText,
   } as CSSProperties;
 };
 
@@ -236,22 +254,13 @@ export const getTagColorCanvasStyle = (
   if (!color) {
     return { fillStyle: "rgba(29, 29, 29, 0.1)", textStyle: "#1d1d1d" };
   }
-  const parsed = parseHex(employeeTagColorToHex(color));
-  if (!parsed) {
+  const palette = getTagColorTonalPalette(color);
+  if (!palette) {
     return { fillStyle: "rgba(29, 29, 29, 0.1)", textStyle: "#1d1d1d" };
   }
-  const white = { blue: 255, green: 255, red: 255 };
-  const nearBlack = { blue: 23, green: 23, red: 23 };
-  const opaqueRgb = mix(
-    { blue: parsed.blue, green: parsed.green, red: parsed.red },
-    white,
-    parsed.alpha,
-  );
-  const fill = mix(opaqueRgb, white, 0.18);
-  const tintedText = mix(opaqueRgb, nearBlack, 0.3);
   return {
-    fillStyle: rgbToHex(fill),
-    textStyle: rgbToHex(contrast(tintedText, fill) >= 4.5 ? tintedText : nearBlack),
+    fillStyle: palette.lightFill,
+    textStyle: palette.canvasText,
   };
 };
 

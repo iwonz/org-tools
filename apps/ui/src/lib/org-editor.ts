@@ -25,6 +25,7 @@ export const ORG_EDITOR_EMPLOYEE_CONTENT_GAP = 8;
 export const ORG_EDITOR_EMPLOYEE_CONTENT_RIGHT_PADDING = 4;
 export const ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE = 12;
 export const ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT = 16;
+export const ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS = 6;
 export const ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING = 8;
 export const ORG_EDITOR_EMPLOYEE_TAG_STYLE = {
   fontSize: 9,
@@ -493,6 +494,29 @@ export const getOrgEditorEmployeeVisualGeometry = ({
     textX,
   };
 };
+
+export const getOrgEditorEmployeeRowSurfaceBounds = ({
+  employeeRowHeight,
+  employeeRowOffset,
+  unit,
+}: {
+  employeeRowHeight: number;
+  employeeRowOffset: number;
+  unit: OrgEditorUnit;
+}) => ({
+  height: employeeRowHeight,
+  width:
+    getOrgEditorUnitWidth(unit) -
+    ORG_EDITOR_UNIT_BORDER_WIDTH * 2 -
+    ORG_EDITOR_UNIT_EMPLOYEE_LIST_HORIZONTAL_PADDING * 2,
+  x: unit.x + ORG_EDITOR_UNIT_BORDER_WIDTH + ORG_EDITOR_UNIT_EMPLOYEE_LIST_HORIZONTAL_PADDING,
+  y:
+    unit.y +
+    ORG_EDITOR_UNIT_BORDER_WIDTH +
+    ORG_EDITOR_UNIT_HEADER_HEIGHT +
+    ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING +
+    employeeRowOffset,
+});
 
 export const setOrgEditorUnitEmployeeRowHeights = (
   unitId: OrgEditorUnitId,

@@ -62,12 +62,30 @@ row to one other current placement without changing selection, layout, spatial i
 - **THEN** all distribution connections are hidden while enabled-Unit row highlighting remains
 
 ### Requirement: Distribution visualization is excluded from reports
-Distribution mode SHALL remain an Editor-only visualization. PNG, JSON, Template, and Employee
-outputs MUST NOT include its switch, colors, markers, lines, or state.
+Editor PNG preview, copy, and save output SHALL include the persistent distributed or source-only
+tonal Employee row fill for each exported Unit with distribution mode enabled. Status SHALL use the
+active View's configured colors and complete direct current manual or resolved Live membership,
+including other placements outside the selected Unit-only or subtree export scope. Employee names
+SHALL retain the neutral light export foreground. PNG output MUST NOT include the distribution
+switch, accessible status text, selection, placement paths, endpoint markers, placement maps, or
+other transient Editor interaction. JSON, Template, and Employee outputs MUST NOT include
+distribution-mode state, colors, markers, lines, or status.
 
-#### Scenario: Export while distribution mode is visible
-- **WHEN** the user exports Editor or Employee output with distribution mode enabled
-- **THEN** output matches the mode-disabled structural content and contains no distribution overlay
+#### Scenario: Export persistent row status to PNG
+- **WHEN** the user previews, copies, or saves Editor PNG with distribution mode enabled for an exported Unit
+- **THEN** distributed and source-only Employee rows use the active View's corresponding light tonal fills while names remain neutral
+
+#### Scenario: Resolve status outside image scope
+- **WHEN** a Unit-only or subtree PNG contains an Employee whose other direct placement is outside the selected export scope
+- **THEN** the exported source row remains distributed because status is resolved from the complete active View
+
+#### Scenario: Exclude transient distribution interaction
+- **WHEN** the user exports PNG while an Employee is selected and placement paths or endpoint markers are visible
+- **THEN** the PNG contains persistent row tones and ordinary hierarchy connections without selection, placement paths, or endpoint markers
+
+#### Scenario: Export non-image output
+- **WHEN** the user exports Editor JSON or Template output or Employee output while distribution mode is enabled
+- **THEN** output matches the mode-disabled structural content and contains no distribution visualization or state
 
 ### Requirement: Multi-Unit Employees expose a placement map
 Every rendered Employee occurrence SHALL expose a compact sibling action independent of

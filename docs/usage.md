@@ -110,8 +110,10 @@ control.
   Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
   the live Unit header, roster spacing, centered avatars, boss marker, variable row heights,
-  direct-membership Tag summary footer, and hierarchy connections while retaining configurable
-  output styling. Footer chips use equal compact insets and follow their own label/count width rather
+  direct-membership Tag summary footer, persistent distribution row tones, and hierarchy connections
+  while retaining a light export palette and configurable output styling. Unit-only and subtree
+  images determine distribution status from the complete active View, including assignments outside
+  the image scope. Footer chips use equal compact insets and follow their own label/count width rather
   than reserving trailing space. Long footer and Employee-row Tags wrap completely without an
   ellipsis, including mixed scripts and emoji; the count suffix stays together. Static/Live
   membership type is not printed. Dragging Units, Employees, connections, or a marquee near the
@@ -133,7 +135,8 @@ control.
   expanded and selected Employee occurrence. Selecting exactly one Employee draws local placement links,
   including a card-edge marker for a collapsed target; multi-selection hides the links without
   disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
-  or Editor output. Editor exports always use the active View.
+  JSON, or Template output. Editor Image exports preserve its stable row tones without selection,
+  placement lines, or endpoint markers. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
   reports known birth years and completed ages, including one-decimal averages plus deterministic
   youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`
