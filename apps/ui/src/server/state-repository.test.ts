@@ -164,6 +164,36 @@ describe("singleton state repository", () => {
     repository.close();
   });
 
+  it("rejects the prior View shape without migrating stored state", () => {
+    const repository = new StateRepository(":memory:");
+    const initial = repository.read();
+    const priorOrganization = structuredClone(initial.state.organization) as unknown as {
+      views: Array<{ structure: Record<string, unknown> }>;
+    };
+    for (const view of priorOrganization.views) delete view.structure.canvasElements;
+
+    repository
+      .unsafeStatementForTests("UPDATE application_state SET organization_json = ? WHERE id = 1")
+      .run(JSON.stringify(priorOrganization));
+
+    expect(() => repository.read()).toThrowError(
+      expect.objectContaining({ code: "corrupt_stored_state" }),
+    );
+    const stored = repository
+      .unsafeStatementForTests(
+        "SELECT organization_json, revision FROM application_state WHERE id = 1",
+      )
+      .get() as { organization_json: string; revision: number };
+    const storedOrganization = JSON.parse(stored.organization_json) as {
+      views: Array<{ structure: Record<string, unknown> }>;
+    };
+    expect(stored.revision).toBe(initial.revision);
+    expect(storedOrganization.views.every((view) => !("canvasElements" in view.structure))).toBe(
+      true,
+    );
+    repository.close();
+  });
+
   it("rejects unknown schemas", () => {
     const databasePath = temporaryDatabasePath();
     const database = new DatabaseSync(databasePath);

@@ -109,6 +109,13 @@ exactly that shape. Startup otherwise accepts only its exact table and columns; 
 unknown, and corrupt databases are blocked without mutation. There is no schema marker, migration,
 compatibility reader, or automatic reset.
 
+When delivery replaces the exact State shape, it must separately inspect the configured owned
+database before publication. An immediately previous valid snapshot is converted only while the
+owned runtime is stopped, after a timestamped ignored backup of the complete database family. A
+detached candidate and the committed singleton row must both pass the production parser, preservation
+fingerprints must remain stable, and the configured server must reopen normally. This guarded
+one-time operation never becomes part of the runtime or public Import path.
+
 The database path resolves in this order:
 
 1. `ORG_TOOLS_DB_PATH`;

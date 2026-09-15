@@ -18,6 +18,11 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
   `BroadcastChannel`. Do not persist organization snapshots in cookies, IndexedDB, Cache Storage,
   session storage, local storage, or service workers. Theme and locale are the only allowed browser
   metadata.
+- When a change replaces the exact State shape, inspect the configured owned SQLite snapshot before
+  publication. If it has the immediately previous valid shape, stop the owned runtime, retain a
+  timestamped ignored database-family backup, convert it once outside runtime, validate the detached
+  candidate and committed row with the production parser, and prove normal startup. Never commit the
+  converter or database artifacts, and never add runtime compatibility for this purpose.
 - Employee avatars are bounded embedded PNG, JPEG, or WebP data URLs. Never fetch remote avatars.
 - Employee IDs are stable UUID v4 values. Detect duplicates separately through the normalized
   first-name, last-name, and email tuple; identity edits must never change the Employee ID.
@@ -95,7 +100,8 @@ commit, or branch is still active or unmerged.
    `pnpm screenshots:generate`, `pnpm pages:build`, `pnpm pages:check`, `pnpm public:check`,
    `pnpm spec:validate`, and `git diff --check`. Inspect every generated PNG and regenerate the
    gallery a second time to compare deterministic hashes. Preserve the performance target of 20,000
-   Employees and 4,000 Units.
+   Employees and 4,000 Units. For an exact State-shape change, also record whether the configured
+   owned database is absent, already current, or safely converted and reopened before integration.
 5. Synchronize delta specs into canonical specs, archive the completed OpenSpec change according to
    the repository workflow, validate strictly again, and require `pnpm spec -- list --json` to show
    no active changes.

@@ -209,5 +209,11 @@ sidecars as one timestamped backup family, and opens a validated blank current d
 fails partway, the originals are restored. Browser tabs converge through deterministic logical stamps while server writes remain
 serialized.
 
+Repository delivery handles an owned snapshot from the immediately previous valid State shape
+before publication: the server is stopped, the database family is backed up, the additive conversion
+is validated offline and committed once, and the configured server is reopened. This is not an
+automatic product migration; unexpected, older, mixed, or corrupt shapes continue to use the
+blocking recovery workflow without silent mutation.
+
 See [State transfer format](import-formats.md), [Privacy](privacy.md), and
 [Screenshots](screenshots.md) for the exact boundaries and visual catalog.

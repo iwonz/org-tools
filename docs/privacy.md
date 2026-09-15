@@ -18,6 +18,12 @@ Only an explicit confirmed Create new action may replace it: the runtime first c
 retains the database plus any existing sidecars under timestamped backup names. A partial recovery
 restores the original file family.
 
+If repository delivery changes the exact State shape, preparation of the configured owned snapshot
+is an offline local operation: owned processes stop, an ignored timestamped database-family backup
+is retained, a detached candidate and committed row pass the production parser, and preservation
+hashes are compared before normal startup is accepted. No organization payload, backup, converter,
+or diagnostic fingerprint leaves the machine or enters Git, and runtime validation remains strict.
+
 Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
 complete state (including every View) or map an Employee array with optional nested Team assignments
 into the system View; the source, bounded
