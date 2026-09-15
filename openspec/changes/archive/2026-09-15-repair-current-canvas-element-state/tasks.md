@@ -12,4 +12,4 @@
 ## 3. Validation and delivery
 
 - [x] 3.1 Run the complete mandatory repository checks, both production browser suites, and two deterministic 59-frame gallery generations with visual and hash verification.
-- [ ] 3.2 Synchronize canonical specs, archive the change, merge and push `main`, delete the merged branch, and verify a clean synchronized repository with no active changes.
+- [x] 3.2 Synchronize canonical specs, archive the change, merge and push `main`, delete the merged branch, and verify a clean synchronized repository with no active changes.
