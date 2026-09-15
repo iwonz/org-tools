@@ -5,6 +5,7 @@ import type {
 } from "./employee.js";
 import type { EmployeeFieldId, EmployeeId, TagId, UnitId, ViewId } from "./ids.js";
 import type {
+  OrgEditorCanvasElement,
   OrgEditorCanvasViewport,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
@@ -96,6 +97,7 @@ type OrgToolsViewDocumentBase = {
   createdAt: string;
   id: ViewId;
   structure: {
+    canvasElements: OrgEditorCanvasElement[];
     settings: OrgEditorViewSettings;
     layoutMode: OrgEditorLayoutMode;
     units: OrgEditorUnit[];

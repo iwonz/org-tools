@@ -3,9 +3,15 @@ import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import {
   createDefaultOrgEditorState,
   createOrgEditorUnitFromScratch,
+  getOrgEditorUnitBounds,
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES,
 } from "@/lib/org-editor";
+import {
+  createOrgEditorStickerElement,
+  getOrgEditorCanvasElementAnchorPoint,
+  getOrgEditorRectAnchorPoint,
+} from "@/lib/org-editor-canvas";
 import { OrgEditorStore } from "@/stores/org-editor-store";
 
 const expectUnitsOnGrid = (store: OrgEditorStore) => {
@@ -116,6 +122,48 @@ describe("OrgEditorStore grid geometry", () => {
 });
 
 describe("OrgEditorStore deletion", () => {
+  test("materializes an attached element at its latest Unit anchor before deletion", () => {
+    const store = new OrgEditorStore();
+    const unitId = store.addUnit({ name: "Target", x: 0, y: 0 });
+    const sticker = {
+      ...createOrgEditorStickerElement({ x: 0, y: 0 }),
+      attachment: {
+        offset: { x: 12, y: -8 },
+        sourceAnchorId: "center" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { type: "unit" as const, unitId },
+        },
+      },
+    };
+    store.addCanvasElement(sticker);
+    store.moveUnitsFromPositions([{ unitId, x: 0, y: 0 }], { x: 240, y: 96 });
+    const target = store.units.find((unit) => unit.id === unitId);
+    expect(target).toBeDefined();
+    if (!target) return;
+    const targetPoint = getOrgEditorRectAnchorPoint(
+      { ...getOrgEditorUnitBounds(target), rotation: 0 },
+      "rightCenter",
+    );
+
+    store.setSelectedItems([{ type: "unit", unitId }]);
+    store.deleteSelected();
+
+    const remaining = store.canvasElements[0];
+    expect(remaining?.type).toBe("sticker");
+    if (remaining?.type !== "sticker") return;
+    expect(remaining.attachment).toBeNull();
+    expect(getOrgEditorCanvasElementAnchorPoint(remaining, "center")).toEqual({
+      x: targetPoint.x + 12,
+      y: targetPoint.y - 8,
+    });
+    store.undo();
+    expect(store.units.some((unit) => unit.id === unitId)).toBe(true);
+    expect(
+      store.canvasElements[0]?.type === "sticker" && store.canvasElements[0].attachment,
+    ).not.toBe(null);
+  });
+
   test("deletes overlapping ancestor selections once and materializes surviving Live dependencies", () => {
     const store = new OrgEditorStore();
     const employeeId = "employee-visible";

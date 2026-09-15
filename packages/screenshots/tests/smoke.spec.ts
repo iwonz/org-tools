@@ -6,6 +6,7 @@ import sharp from "sharp";
 import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
+import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
 import {
   createDistributionStateFile,
   expectLocalRequestsOnly,
@@ -32,6 +33,17 @@ test("persists global Tag order and Unit grouping with scrollable presets", asyn
         .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-org-editor-employee-id"))),
     )
     .toEqual(groupedOrder);
+});
+
+test("edits durable canvas tools and exports the complete View PNG", async ({ page }) => {
+  test.setTimeout(120_000);
+  await openBlankState(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await expect(page.locator('[data-demo-id="org-editor-canvas-tools"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toHaveCount(0);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await exerciseCanvasToolsAndViewExport(page);
 });
 
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
@@ -2483,7 +2495,9 @@ test("edits, safely previews, persists, and discards Unit Markdown notes", async
   await assertLocalRequests();
 });
 
-test("deletes nested and overlapping Editor selections as one valid state", async ({ page }) => {
+test("deletes nested Units and detaches surviving annotations as one valid state", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -2495,9 +2509,13 @@ test("deletes nested and overlapping Editor selections as one valid state", asyn
   await page.keyboard.press("Delete");
   await expect(product).toHaveCount(0);
   await expect(platform).toHaveCount(0);
+  await expect(page.locator('[data-canvas-element-type="sticker"]')).toBeVisible();
+  await expect(page.locator('[data-canvas-element-type="text"]')).toBeVisible();
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.locator('[data-demo-id="org-editor-empty-canvas-add"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-empty-canvas-add"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-editor-canvas-tools"]')).toBeVisible();
+  await expect(page.locator('[data-canvas-element-type="sticker"]')).toBeVisible();
   await assertLocalRequests();
 });
 
@@ -2718,6 +2736,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     username: `employee-${index + 1}`,
   }));
   if (!systemView) throw new Error("System View is unavailable.");
+  systemView.structure.canvasElements = [];
   systemView.structure.units = Array.from({ length: 4_000 }, (_, index) => {
     const firstEmployeeIndex = index * 5;
     const employeeIds = Array.from({ length: 5 }, (_, offset) =>

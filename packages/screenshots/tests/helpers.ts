@@ -130,6 +130,7 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
   const state = document.state;
   const systemView = state.organization.views.find((view) => view.kind === "system");
   if (!systemView) throw new Error("System View is unavailable.");
+  systemView.structure.canvasElements = [];
   systemView.structure.units = [];
   state.organization.employees = [];
   state.organization.employeeFieldDefinitions = [];

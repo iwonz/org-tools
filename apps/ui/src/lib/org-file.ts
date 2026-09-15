@@ -8,10 +8,16 @@ import type {
   EmployeeTagColor,
   EmployeeTagDefinition,
   OrganizationEmployee,
+  OrgEditorAnchorOwner,
+  OrgEditorAnchorRef,
+  OrgEditorArrowEndpointAttachment,
+  OrgEditorAttachment,
+  OrgEditorCanvasElement,
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
+  OrgEditorTypography,
   OrgEditorUnit,
   OrgEditorViewSettings,
   OrgToolsDownloadEmployeeFieldKey,
@@ -44,6 +50,23 @@ import { createEmployeeIdentityKey, isEmployeeId } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import { createDefaultOrgEditorState, normalizeOrgEditorUnitNoteMarkdown } from "@/lib/org-editor";
+import {
+  hasOrgEditorCanvasElementDependencyCycle,
+  isFiniteOrgEditorCanvasNumber,
+  isOrgEditorCanvasColor,
+  isOrgEditorCanvasFont,
+  normalizeOrgEditorRotation,
+  ORG_EDITOR_ARROW_ANCHOR_IDS,
+  ORG_EDITOR_CANVAS_MAX_FONT_SIZE,
+  ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
+  ORG_EDITOR_CANVAS_MAX_STROKE_WIDTH,
+  ORG_EDITOR_CANVAS_MIN_FONT_SIZE,
+  ORG_EDITOR_CANVAS_MIN_RECT_SIZE,
+  ORG_EDITOR_CANVAS_TEXT_MAX_UTF8_BYTES,
+  ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
+  ORG_EDITOR_RECT_ANCHOR_IDS,
+} from "@/lib/org-editor-canvas";
+import { parseOrgEditorCanvasImageDataUrl } from "@/lib/org-editor-canvas-image";
 
 export type LoadedOrgFile = { kind: "orgToolsState"; state: OrgToolsState };
 
@@ -549,7 +572,15 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
 };
 
 const normalizeSelectedItem = (value: unknown): OrgEditorSelectedItem | null => {
-  if (!isRecord(value) || !isUuid(value.unitId)) return null;
+  if (!isRecord(value)) return null;
+  if (
+    value.type === "element" &&
+    hasExactKeys(value, ["elementId", "type"]) &&
+    isUuid(value.elementId)
+  ) {
+    return { elementId: value.elementId, type: "element" };
+  }
+  if (!isUuid(value.unitId)) return null;
   if (value.type === "unit" && hasExactKeys(value, ["type", "unitId"])) {
     return { type: "unit", unitId: value.unitId };
   }
@@ -879,6 +910,286 @@ const normalizeViewSettings = (value: unknown): OrgEditorViewSettings | null => 
   };
 };
 
+const normalizeCanvasPoint = (value: unknown) => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["x", "y"]) ||
+    !isFiniteOrgEditorCanvasNumber(value.x) ||
+    !isFiniteOrgEditorCanvasNumber(value.y)
+  ) {
+    return null;
+  }
+  return { x: value.x, y: value.y };
+};
+
+const normalizeCanvasAnchorOwner = (value: unknown): OrgEditorAnchorOwner | null => {
+  if (!isRecord(value) || typeof value.type !== "string") return null;
+  if (value.type === "unit" && hasExactKeys(value, ["type", "unitId"]) && isUuid(value.unitId)) {
+    return { type: "unit", unitId: value.unitId };
+  }
+  if (
+    value.type === "employee" &&
+    hasExactKeys(value, ["employeeId", "type", "unitId"]) &&
+    isEmployeeId(value.employeeId) &&
+    isUuid(value.unitId)
+  ) {
+    return { employeeId: value.employeeId, type: "employee", unitId: value.unitId };
+  }
+  if (
+    value.type === "element" &&
+    hasExactKeys(value, ["elementId", "type"]) &&
+    isUuid(value.elementId)
+  ) {
+    return { elementId: value.elementId, type: "element" };
+  }
+  return null;
+};
+
+const normalizeCanvasAnchorRef = (value: unknown): OrgEditorAnchorRef | null => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["anchorId", "owner"]) ||
+    !isString(value.anchorId)
+  ) {
+    return null;
+  }
+  const owner = normalizeCanvasAnchorOwner(value.owner);
+  return owner ? { anchorId: value.anchorId as OrgEditorAnchorRef["anchorId"], owner } : null;
+};
+
+const normalizeCanvasAttachment = (value: unknown): OrgEditorAttachment | null => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["offset", "sourceAnchorId", "target"]) ||
+    !(ORG_EDITOR_RECT_ANCHOR_IDS as readonly string[]).includes(value.sourceAnchorId as string)
+  ) {
+    return null;
+  }
+  const offset = normalizeCanvasPoint(value.offset);
+  const target = normalizeCanvasAnchorRef(value.target);
+  return offset && target
+    ? {
+        offset,
+        sourceAnchorId: value.sourceAnchorId as OrgEditorAttachment["sourceAnchorId"],
+        target,
+      }
+    : null;
+};
+
+const normalizeCanvasEndpointAttachment = (
+  value: unknown,
+): OrgEditorArrowEndpointAttachment | null => {
+  if (!isRecord(value) || !hasExactKeys(value, ["offset", "target"])) return null;
+  const offset = normalizeCanvasPoint(value.offset);
+  const target = normalizeCanvasAnchorRef(value.target);
+  return offset && target ? { offset, target } : null;
+};
+
+const normalizeCanvasTypography = (value: unknown): OrgEditorTypography | null => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "color",
+      "fontFamily",
+      "fontSize",
+      "fontWeight",
+      "horizontalAlign",
+      "verticalAlign",
+    ]) ||
+    !isOrgEditorCanvasColor(value.color) ||
+    !isOrgEditorCanvasFont(value.fontFamily) ||
+    !isFiniteNumber(value.fontSize) ||
+    value.fontSize < ORG_EDITOR_CANVAS_MIN_FONT_SIZE ||
+    value.fontSize > ORG_EDITOR_CANVAS_MAX_FONT_SIZE ||
+    ![400, 500, 700].includes(value.fontWeight as number) ||
+    !["left", "center", "right"].includes(value.horizontalAlign as string) ||
+    !["top", "middle", "bottom"].includes(value.verticalAlign as string)
+  ) {
+    return null;
+  }
+  return {
+    color: value.color,
+    fontFamily: value.fontFamily,
+    fontSize: value.fontSize,
+    fontWeight: value.fontWeight as OrgEditorTypography["fontWeight"],
+    horizontalAlign: value.horizontalAlign as OrgEditorTypography["horizontalAlign"],
+    verticalAlign: value.verticalAlign as OrgEditorTypography["verticalAlign"],
+  };
+};
+
+const normalizeCanvasRectBase = (value: Record<string, unknown>) => {
+  if (
+    !isUuid(value.id) ||
+    !["aboveUnits", "behindUnits"].includes(value.layer as string) ||
+    !isFiniteOrgEditorCanvasNumber(value.x) ||
+    !isFiniteOrgEditorCanvasNumber(value.y) ||
+    !isFiniteNumber(value.width) ||
+    value.width < ORG_EDITOR_CANVAS_MIN_RECT_SIZE ||
+    value.width > ORG_EDITOR_CANVAS_MAX_RECT_SIZE ||
+    !isFiniteNumber(value.height) ||
+    value.height < ORG_EDITOR_CANVAS_MIN_RECT_SIZE ||
+    value.height > ORG_EDITOR_CANVAS_MAX_RECT_SIZE ||
+    !isFiniteNumber(value.rotation)
+  ) {
+    return null;
+  }
+  const attachment = value.attachment === null ? null : normalizeCanvasAttachment(value.attachment);
+  if (value.attachment !== null && !attachment) return null;
+  return {
+    attachment,
+    height: value.height,
+    id: value.id,
+    layer: value.layer as "aboveUnits" | "behindUnits",
+    rotation: normalizeOrgEditorRotation(value.rotation),
+    width: value.width,
+    x: value.x,
+    y: value.y,
+  };
+};
+
+const normalizeCanvasElement = (value: unknown): OrgEditorCanvasElement | null => {
+  if (!isRecord(value) || typeof value.type !== "string") return null;
+  if (value.type === "text" || value.type === "sticker") {
+    const keys = [
+      "attachment",
+      ...(value.type === "sticker" ? ["backgroundColor"] : []),
+      "height",
+      "id",
+      "layer",
+      "rotation",
+      "text",
+      "typography",
+      "type",
+      "width",
+      "x",
+      "y",
+    ];
+    if (!hasExactKeys(value, keys) || !isString(value.text)) return null;
+    if (new TextEncoder().encode(value.text).byteLength > ORG_EDITOR_CANVAS_TEXT_MAX_UTF8_BYTES) {
+      return null;
+    }
+    const base = normalizeCanvasRectBase(value);
+    const typography = normalizeCanvasTypography(value.typography);
+    if (!base || !typography) return null;
+    if (value.type === "sticker") {
+      if (!isOrgEditorCanvasColor(value.backgroundColor)) return null;
+      return {
+        ...base,
+        backgroundColor: value.backgroundColor,
+        text: value.text,
+        typography,
+        type: "sticker",
+      };
+    }
+    return { ...base, text: value.text, typography, type: "text" };
+  }
+  if (value.type === "image") {
+    if (
+      !hasExactKeys(value, [
+        "attachment",
+        "dataUrl",
+        "height",
+        "id",
+        "intrinsicHeight",
+        "intrinsicWidth",
+        "layer",
+        "lockAspectRatio",
+        "rotation",
+        "type",
+        "width",
+        "x",
+        "y",
+      ]) ||
+      !isString(value.dataUrl) ||
+      typeof value.lockAspectRatio !== "boolean" ||
+      !Number.isInteger(value.intrinsicWidth) ||
+      !Number.isInteger(value.intrinsicHeight)
+    ) {
+      return null;
+    }
+    const base = normalizeCanvasRectBase(value);
+    const source = parseOrgEditorCanvasImageDataUrl(value.dataUrl);
+    if (
+      !base ||
+      !source ||
+      source.width !== value.intrinsicWidth ||
+      source.height !== value.intrinsicHeight
+    ) {
+      return null;
+    }
+    return {
+      ...base,
+      dataUrl: source.dataUrl,
+      intrinsicHeight: source.height,
+      intrinsicWidth: source.width,
+      lockAspectRatio: value.lockAspectRatio,
+      type: "image",
+    };
+  }
+  if (value.type !== "arrow") return null;
+  if (
+    !hasExactKeys(value, [
+      "dash",
+      "end",
+      "endControl",
+      "endMarker",
+      "id",
+      "layer",
+      "start",
+      "startControl",
+      "startMarker",
+      "strokeColor",
+      "strokeWidth",
+      "type",
+    ]) ||
+    !isUuid(value.id) ||
+    !["aboveUnits", "behindUnits"].includes(value.layer as string) ||
+    !["solid", "dashed"].includes(value.dash as string) ||
+    !["arrow", "none"].includes(value.startMarker as string) ||
+    !["arrow", "none"].includes(value.endMarker as string) ||
+    !isOrgEditorCanvasColor(value.strokeColor) ||
+    !isFiniteNumber(value.strokeWidth) ||
+    value.strokeWidth < 1 ||
+    value.strokeWidth > ORG_EDITOR_CANVAS_MAX_STROKE_WIDTH
+  ) {
+    return null;
+  }
+  const normalizeEndpoint = (endpoint: unknown) => {
+    if (
+      !isRecord(endpoint) ||
+      !hasExactKeys(endpoint, ["attachment", "x", "y"]) ||
+      !isFiniteOrgEditorCanvasNumber(endpoint.x) ||
+      !isFiniteOrgEditorCanvasNumber(endpoint.y)
+    ) {
+      return null;
+    }
+    const attachment =
+      endpoint.attachment === null ? null : normalizeCanvasEndpointAttachment(endpoint.attachment);
+    return endpoint.attachment !== null && !attachment
+      ? null
+      : { attachment, x: endpoint.x, y: endpoint.y };
+  };
+  const start = normalizeEndpoint(value.start);
+  const end = normalizeEndpoint(value.end);
+  const startControl = normalizeCanvasPoint(value.startControl);
+  const endControl = normalizeCanvasPoint(value.endControl);
+  if (!start || !end || !startControl || !endControl) return null;
+  return {
+    dash: value.dash as "dashed" | "solid",
+    end,
+    endControl,
+    endMarker: value.endMarker as "arrow" | "none",
+    id: value.id,
+    layer: value.layer as "aboveUnits" | "behindUnits",
+    start,
+    startControl,
+    startMarker: value.startMarker as "arrow" | "none",
+    strokeColor: value.strokeColor,
+    strokeWidth: value.strokeWidth,
+    type: "arrow",
+  };
+};
+
 const normalizeViewDocument = (value: unknown): OrgToolsViewDocument | null => {
   if (
     !isRecord(value) ||
@@ -888,8 +1199,9 @@ const normalizeViewDocument = (value: unknown): OrgToolsViewDocument | null => {
     !isTimestamp(value.updatedAt) ||
     (value.kind !== "custom" && value.kind !== "system") ||
     !isRecord(value.structure) ||
-    !hasExactKeys(value.structure, ["layoutMode", "settings", "units"]) ||
+    !hasExactKeys(value.structure, ["canvasElements", "layoutMode", "settings", "units"]) ||
     !isLayoutMode(value.structure.layoutMode) ||
+    !Array.isArray(value.structure.canvasElements) ||
     !Array.isArray(value.structure.units)
   ) {
     return null;
@@ -901,14 +1213,16 @@ const normalizeViewDocument = (value: unknown): OrgToolsViewDocument | null => {
   }
   const settings = normalizeViewSettings(value.structure.settings);
   if (!settings) return null;
+  const canvasElements = value.structure.canvasElements.map(normalizeCanvasElement);
   const units = value.structure.units.map(normalizeEditorUnit);
-  if (units.some((unit) => !unit)) return null;
+  if (canvasElements.some((element) => !element) || units.some((unit) => !unit)) return null;
   return {
     createdAt: value.createdAt,
     id: value.id,
     kind: value.kind,
     name: value.kind === "system" ? null : (value.name as string),
     structure: {
+      canvasElements: canvasElements as OrgEditorCanvasElement[],
       layoutMode: value.structure.layoutMode,
       settings,
       units: units as OrgEditorUnit[],
@@ -968,6 +1282,7 @@ const validateStateGraph = (state: OrgToolsState): void => {
   assertUniqueIds(customNameKeys, "State has duplicate custom View names.");
   const allUnitIds: UnitId[] = [];
   const unitIdsByViewId = new Map<ViewId, Set<UnitId>>();
+  const elementIdsByViewId = new Map<ViewId, Set<string>>();
   const systemFilters = [
     state.ui.analytics.filters,
     state.ui.employees.filters,
@@ -978,8 +1293,60 @@ const validateStateGraph = (state: OrgToolsState): void => {
   for (const view of views) {
     const units = view.structure.units;
     const unitIds = new Set(units.map((unit) => unit.id));
+    const unitById = new Map(units.map((unit) => [unit.id, unit] as const));
+    const canvasElements = view.structure.canvasElements;
+    const elementById = new Map(canvasElements.map((element) => [element.id, element] as const));
+    const elementIds = new Set(elementById.keys());
     unitIdsByViewId.set(view.id, unitIds);
+    elementIdsByViewId.set(view.id, elementIds);
     allUnitIds.push(...unitIds);
+    assertUniqueIds(
+      canvasElements.map((element) => element.id),
+      "State has duplicate canvas element IDs inside a View.",
+    );
+    const validateAnchorRef = (ref: OrgEditorAnchorRef) => {
+      if (ref.owner.type === "unit") {
+        if (!unitIds.has(ref.owner.unitId))
+          throw new Error("Canvas anchor references a missing Unit.");
+        if (!(ORG_EDITOR_RECT_ANCHOR_IDS as readonly string[]).includes(ref.anchorId)) {
+          throw new Error("Canvas Unit anchor is invalid.");
+        }
+        return;
+      }
+      if (ref.owner.type === "employee") {
+        const ownerUnit = unitById.get(ref.owner.unitId);
+        if (!ownerUnit || !employeeIds.has(ref.owner.employeeId)) {
+          throw new Error("Canvas anchor references a missing Employee occurrence.");
+        }
+        if (
+          ownerUnit.liveFilter === null &&
+          !ownerUnit.employeeIds.includes(ref.owner.employeeId)
+        ) {
+          throw new Error("Canvas anchor references a missing Employee occurrence.");
+        }
+        if (!(ORG_EDITOR_EMPLOYEE_ANCHOR_IDS as readonly string[]).includes(ref.anchorId)) {
+          throw new Error("Canvas Employee anchor is invalid.");
+        }
+        return;
+      }
+      const target = elementById.get(ref.owner.elementId);
+      if (!target) throw new Error("Canvas anchor references a missing element.");
+      const validAnchors =
+        target.type === "arrow" ? ORG_EDITOR_ARROW_ANCHOR_IDS : ORG_EDITOR_RECT_ANCHOR_IDS;
+      if (!(validAnchors as readonly string[]).includes(ref.anchorId)) {
+        throw new Error("Canvas element anchor is invalid.");
+      }
+    };
+    for (const element of canvasElements) {
+      const refs =
+        element.type === "arrow"
+          ? [element.start.attachment?.target, element.end.attachment?.target]
+          : [element.attachment?.target];
+      for (const ref of refs) if (ref) validateAnchorRef(ref);
+    }
+    if (hasOrgEditorCanvasElementDependencyCycle(canvasElements)) {
+      throw new Error("State has a cyclic canvas attachment graph.");
+    }
     for (const unit of units) {
       if (unit.parentId !== null && !unitIds.has(unit.parentId)) {
         throw new Error(`Unit "${unit.name}" references a missing parent Unit.`);
@@ -1075,11 +1442,17 @@ const validateStateGraph = (state: OrgToolsState): void => {
   }
   for (const viewUi of state.ui.editor.views) {
     const viewUnitIds = unitIdsByViewId.get(viewUi.viewId) ?? new Set<UnitId>();
+    const viewElementIds = elementIdsByViewId.get(viewUi.viewId) ?? new Set<string>();
     assertUniqueIds(viewUi.distributionModeUnitIds, "Distribution mode Unit IDs must be unique.");
     if (viewUi.distributionModeUnitIds.some((unitId) => !viewUnitIds.has(unitId))) {
       throw new Error("Distribution mode references a Unit outside its View.");
     }
     for (const item of viewUi.selectedItems) {
+      if (item.type === "element") {
+        if (!viewElementIds.has(item.elementId))
+          throw new Error("Editor selects a missing element.");
+        continue;
+      }
       if (!viewUnitIds.has(item.unitId)) throw new Error("Editor selects a missing Unit.");
       if (item.type === "employee" && !employeeIds.has(item.employeeId)) {
         throw new Error("Editor selects a missing Employee.");
@@ -1368,6 +1741,7 @@ export const createBlankOrgToolsState = (
           kind: "system",
           name: null,
           structure: {
+            canvasElements: editor.canvasElements,
             layoutMode: editor.layoutMode,
             settings: editor.settings,
             units: editor.units,

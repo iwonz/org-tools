@@ -6,6 +6,11 @@ import { isEmployeeId } from "@/lib/employee-id";
 import { createEmptyEmployeeSearchFilters } from "@/lib/employee-search";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import { ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES } from "@/lib/org-editor";
+import {
+  createOrgEditorImageElement,
+  createOrgEditorStickerElement,
+  createOrgEditorTextElement,
+} from "@/lib/org-editor-canvas";
 import { createBlankOrgToolsState, parseOrgFileJson, parseOrgToolsState } from "@/lib/org-file";
 import type { OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
 import { OrgStore } from "@/stores/org-store";
@@ -69,8 +74,77 @@ describe("OrgToolsState", () => {
     expect(organization.views[0]).toMatchObject({
       kind: "system",
       name: null,
-      structure: { layoutMode: "topDown", units: [] },
+      structure: { canvasElements: [], layoutMode: "topDown", units: [] },
     });
+  });
+
+  test("round-trips exact canvas elements and rejects missing, unsafe, or cyclic shapes", () => {
+    const state = createBlankOrgToolsState();
+    const structure = state.organization.views[0]?.structure;
+    if (!structure) throw new Error("Expected a system View.");
+    const first = {
+      ...createOrgEditorStickerElement({ x: 120, y: 80 }),
+      id: uuid(91),
+    };
+    const second = {
+      ...createOrgEditorTextElement({ x: 420, y: 80 }),
+      attachment: {
+        offset: { x: 12, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { elementId: first.id, type: "element" as const },
+        },
+      },
+      id: uuid(92),
+    };
+    structure.canvasElements = [first, second];
+    expect(parseOrgToolsState(state).organization.views[0]?.structure.canvasElements).toEqual([
+      first,
+      second,
+    ]);
+
+    const missing = structuredClone(state) as unknown as {
+      organization: { views: Array<{ structure: Record<string, unknown> }> };
+    };
+    delete missing.organization.views[0]?.structure.canvasElements;
+    expect(() => parseOrgToolsState(missing)).toThrow();
+
+    const duplicate = structuredClone(state);
+    const duplicateElements = duplicate.organization.views[0]?.structure.canvasElements;
+    if (!duplicateElements) throw new Error("Expected canvas elements.");
+    duplicateElements[1] = { ...duplicateElements[1], id: duplicateElements[0]?.id ?? uuid(91) };
+    expect(() => parseOrgToolsState(duplicate)).toThrow();
+
+    const cyclic = structuredClone(state);
+    const cyclicElements = cyclic.organization.views[0]?.structure.canvasElements;
+    const cyclicFirst = cyclicElements?.[0];
+    const cyclicSecond = cyclicElements?.[1];
+    if (cyclicFirst?.type !== "sticker" || cyclicSecond?.type !== "text") {
+      throw new Error("Expected text-backed canvas elements.");
+    }
+    cyclicFirst.attachment = {
+      offset: { x: 0, y: 0 },
+      sourceAnchorId: "center",
+      target: {
+        anchorId: "center",
+        owner: { elementId: cyclicSecond.id, type: "element" },
+      },
+    };
+    expect(() => parseOrgToolsState(cyclic)).toThrow();
+
+    const unsafe = createBlankOrgToolsState();
+    const unsafeStructure = unsafe.organization.views[0]?.structure;
+    if (!unsafeStructure) throw new Error("Expected a system View.");
+    unsafeStructure.canvasElements = [
+      createOrgEditorImageElement({
+        dataUrl: "https://example.test/remote.png",
+        intrinsicHeight: 100,
+        intrinsicWidth: 100,
+        point: { x: 0, y: 0 },
+      }),
+    ];
+    expect(() => parseOrgToolsState(unsafe)).toThrow();
   });
 
   test("round-trips Employees, assignments, structure, and Editor UI", () => {

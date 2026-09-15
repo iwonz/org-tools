@@ -32,6 +32,7 @@ export async function exerciseRefinedEditor(page: Page) {
   const child = required(view.structure.units[1]);
   const [first, second, third] = state.organization.employees;
   if (!first || !second || !third) throw new Error("Missing synthetic Employees");
+  view.structure.canvasElements = [];
   root.employeeIds = [first.id];
   root.employeePositions = [];
   root.bossEmployeeId = first.id;

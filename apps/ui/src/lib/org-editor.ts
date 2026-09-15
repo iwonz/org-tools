@@ -582,6 +582,7 @@ export const createDefaultOrgEditorViewSettings = (): OrgEditorViewSettings => (
 
 export const createDefaultOrgEditorState = (): OrgEditorState => {
   return {
+    canvasElements: [],
     settings: createDefaultOrgEditorViewSettings(),
     distributionModeUnitIds: [],
     layoutMode: ORG_EDITOR_DEFAULT_LAYOUT_MODE,
@@ -592,7 +593,11 @@ export const createDefaultOrgEditorState = (): OrgEditorState => {
 };
 
 export const createOrgEditorSelectedItemKey = (item: OrgEditorSelectedItem) =>
-  item.type === "unit" ? `unit:${item.unitId}` : `employee:${item.unitId}:${item.employeeId}`;
+  item.type === "unit"
+    ? `unit:${item.unitId}`
+    : item.type === "employee"
+      ? `employee:${item.unitId}:${item.employeeId}`
+      : `element:${item.elementId}`;
 
 export const getOrgEditorUnitWidth = (unit: Pick<OrgEditorUnit, "name">) =>
   Math.max(ORG_EDITOR_UNIT_MIN_WIDTH, 124 + getOrgEditorUnitDisplayName(unit).length * 9);

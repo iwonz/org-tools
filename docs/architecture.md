@@ -48,6 +48,14 @@ the boss. DOM, PNG, virtual row offsets, selection, reveal, and distribution anc
 sequence. Hidden Tag clouds contribute zero footer height to every geometry consumer and PNG;
 Employee Tags remain visible. No group headings or duplicate rows are introduced.
 
+Each View also owns a required ordered `structure.canvasElements` discriminated union for Text,
+Sticker, embedded Image, and cubic Arrow content. Rectangular tools share bounds, rotation, layer,
+typography, and optional attachment state; Arrow endpoints use the same anchor references. One
+anchor registry resolves Unit corners/sides/center, Employee row sides, rectangular tool anchors,
+and Arrow start/middle/end. References are same-View, acyclic, and preserve fallback world geometry.
+The array order is z-order inside `behindUnits` and `aboveUnits`; canvas elements participate in
+View-local history, cloning, persistence, live-tab synchronization, and complete State transfer.
+
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
 Copy/Paste preserve their source content while later edits remain independent. A note Save is one
@@ -158,12 +166,12 @@ history, collaborative cursors, or remote synchronization.
   commits on Enter or blur, and cancel or invalid input does not mutate the Tag. Edit is a separate
   rename-only modal. Eye resolves the current `tagId` into a virtualized full Employee-card list.
 - `OrgViewsStore` owns View lifecycle, normalized names, document revisions, per-View editor state,
-  and one transient tab-local clipboard shared by every View. Copy captures resolved membership;
-  cross-View Paste regenerates Unit IDs, remaps internal hierarchy and Live references, and
-  materializes a Live Unit when its source dependency is outside the copied closure. Each View has
-  one `OrgEditorStore` with isolated structure, history, selection, and viewport. Complete state
-  replacement clears the clipboard, which is never persisted, broadcast, or written to the system
-  clipboard.
+  and one transient tab-local clipboard shared by every View. Copy captures resolved membership and
+  related canvas annotations; cross-View Paste regenerates Unit and canvas-element IDs, remaps
+  internal hierarchy, Live, and anchor references, and materializes unavailable external references
+  at their fallback geometry. Each View has one `OrgEditorStore` with isolated structure, history,
+  selection, and viewport. Complete state replacement clears the clipboard, which is never
+  persisted, broadcast, or written to the system clipboard.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - Unit note drafts stay outside every store until Save. The lazily imported Markdown renderer uses
   GitHub Flavored Markdown without raw HTML or image elements; safe links require an explicit click
@@ -188,7 +196,16 @@ history, collaborative cursors, or remote synchronization.
   syntax. A small help affordance and the placeholder disclose the shortcut; tooltip, query, and
   suggestion state are transient.
 
-Org Editor PNG output uses the same pure card geometry as the live canvas for Unit widths, 72 px
+Org Editor DOM and PNG output share a pure scene layer for persistent canvas-element geometry,
+attachment resolution, text wrapping, rotated bounds, cubic extrema, and two-plane ordering. Full
+View export includes all Units, hierarchy connections, and durable elements regardless of viewport;
+Unit/subtree export includes only the structural closure and transitively related annotations, with
+Arrows requiring two included endpoint owners. One render plan reports logical bounds, requested
+and effective 1x/2x/3x density, final dimensions, and 8/32-megapixel plus canvas-side clamping before
+rasterization. Text, Sticker, Image, and Arrow painters omit every transient selection, anchor,
+resize, rotation, Bezier, marquee, and placement affordance.
+
+Org Editor PNG output also uses the same pure card geometry as the live canvas for Unit widths, 72 px
 headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row
 heights, and hierarchy anchors. The selected export font measures one immutable tag layout per
 Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
@@ -201,8 +218,9 @@ selected image scope. Its bounded inline preview has no secondary full-image vie
 backgrounds, fonts, icon-only alignment, scope, radius, Employee templates, and Editor JSON settings
 remain output-only session settings and do not mutate the active View. The painter deliberately uses
 the light export palette; shared semantic status, geometry, and tonal helpers keep stable DOM and PNG
-card presentation aligned. Every later persistent View or stable Unit/Employee card presentation
-change must define and test its applicable PNG behavior in the same change.
+card presentation aligned. Every later persistent canvas element, anchor behavior, View setting, or
+stable Unit/Employee card presentation change must define and test its applicable DOM and PNG
+behavior in the same change.
 Image template tokens exclude avatar bytes, while painted avatars remain available.
 Unit footer chips use one deterministic mixed-script glyph metric plus equal fixed insets for their
 live width, grapheme-safe multi-line wrapping, row packing, card bounds, connections, collision

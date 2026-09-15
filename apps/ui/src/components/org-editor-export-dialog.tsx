@@ -3,6 +3,7 @@
 import type {
   Employee,
   EmployeeId,
+  OrgEditorCanvasElement,
   OrgEditorLayoutMode,
   OrgEditorUnit,
   OrgEditorUnitId,
@@ -72,10 +73,13 @@ import {
   buildOrgEditorExportRows,
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorExportFileBaseName,
+  createOrgEditorImageExportResult,
+  createOrgEditorImageRenderPlan,
   createOrgEditorUnitImageBlob,
   getOrgEditorExportUnits,
   ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
+  ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
   orgEditorTemplateContainsBossToken,
@@ -94,6 +98,7 @@ import type { ExportRowMode } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type OrgEditorExportDialogProps = {
+  canvasElements: readonly OrgEditorCanvasElement[];
   distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   viewSettings: OrgEditorViewSettings;
@@ -136,6 +141,7 @@ const getBackgroundButtonClassName = (isActive: boolean) =>
   );
 
 export function OrgEditorExportDialog({
+  canvasElements,
   distributionEnabledUnitIds,
   distributionUnitIdsByEmployeeId,
   viewSettings,
@@ -186,6 +192,9 @@ export function OrgEditorExportDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<UiTextKey | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [imagePlan, setImagePlan] = useState<ReturnType<
+    typeof createOrgEditorImageRenderPlan
+  > | null>(null);
   useEffect(() => {
     const previousLocalizedManagerLabel = previousLocalizedManagerLabelRef.current;
     if (previousLocalizedManagerLabel === localizedManagerLabel) return;
@@ -320,7 +329,8 @@ export function OrgEditorExportDialog({
 
     setIsPreviewLoading(true);
     setPreviewError(null);
-    createOrgEditorUnitImageBlob({
+    createOrgEditorImageExportResult({
+      canvasElements,
       distributionEnabledUnitIds,
       distributionUnitIdsByEmployeeId,
       viewSettings,
@@ -336,7 +346,7 @@ export function OrgEditorExportDialog({
       tagOrder,
       units,
     })
-      .then((blob) => {
+      .then(({ blob, plan }) => {
         if (isCancelled) return;
 
         const nextUrl = URL.createObjectURL(blob);
@@ -344,6 +354,14 @@ export function OrgEditorExportDialog({
           if (currentUrl) URL.revokeObjectURL(currentUrl);
           return nextUrl;
         });
+        setImagePlan(
+          createOrgEditorImageRenderPlan({
+            logicalHeight: plan.logicalHeight,
+            logicalWidth: plan.logicalWidth,
+            maxCanvasPixels: ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
+            requestedDensity: imageSettings.density,
+          }),
+        );
       })
       .catch(() => {
         if (isCancelled) return;
@@ -359,6 +377,7 @@ export function OrgEditorExportDialog({
     };
   }, [
     activeTab,
+    canvasElements,
     distributionEnabledUnitIds,
     distributionUnitIdsByEmployeeId,
     employeeById,
@@ -379,6 +398,7 @@ export function OrgEditorExportDialog({
     if (open) return;
 
     setStatus(null);
+    setImagePlan(null);
     setPreviewUrl((currentUrl) => {
       if (currentUrl) URL.revokeObjectURL(currentUrl);
       return null;
@@ -402,6 +422,7 @@ export function OrgEditorExportDialog({
     if (!unit) throw new Error("No Unit is selected for export.");
 
     return createOrgEditorUnitImageBlob({
+      canvasElements,
       distributionEnabledUnitIds,
       distributionUnitIdsByEmployeeId,
       viewSettings,
@@ -577,6 +598,29 @@ export function OrgEditorExportDialog({
                     </div>
                   )}
                 </div>
+                {imagePlan && (
+                  <div
+                    className="mt-3 rounded-lg border bg-muted/30 p-3 text-sm"
+                    data-demo-id="org-editor-image-dimensions"
+                  >
+                    <p>
+                      {t("Final image: {width} × {height} px", {
+                        height: imagePlan.pixelHeight,
+                        width: imagePlan.pixelWidth,
+                      })}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {t("Effective density: {density}×", {
+                        density: imagePlan.effectiveDensity.toFixed(2),
+                      })}
+                    </p>
+                    {imagePlan.clamped && (
+                      <p className="text-amber-700">
+                        {t("Density was reduced to fit safe PNG limits.")}
+                      </p>
+                    )}
+                  </div>
+                )}
               </section>
 
               <section className="grid gap-4 py-2">
@@ -639,7 +683,7 @@ export function OrgEditorExportDialog({
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-4">
                   <div className="grid gap-2">
                     <Label htmlFor="org-editor-export-padding">{t("Padding")}</Label>
                     <Input
@@ -654,6 +698,24 @@ export function OrgEditorExportDialog({
                       type="number"
                       value={imageSettings.padding}
                     />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="org-editor-export-density">{t("Density")}</Label>
+                    <Select
+                      onValueChange={(value) =>
+                        updateImageSettings({ density: Number(value) as 1 | 2 | 3 })
+                      }
+                      value={String(imageSettings.density)}
+                    >
+                      <SelectTrigger id="org-editor-export-density">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1×</SelectItem>
+                        <SelectItem value="2">2×</SelectItem>
+                        <SelectItem value="3">3×</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="org-editor-export-unit-radius">{t("Corner radius")}</Label>

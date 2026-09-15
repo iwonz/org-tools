@@ -1,9 +1,14 @@
 import type {
   EmployeeId,
   EmployeeLiveFilterRule,
+  OrgEditorAnchorRef,
+  OrgEditorCanvasElement,
+  OrgEditorCanvasElementId,
+  OrgEditorCanvasPoint,
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
+  OrgEditorRectAnchorId,
   OrgEditorSelectedItem,
   OrgEditorState,
   OrgEditorUnit,
@@ -13,6 +18,7 @@ import type {
 } from "@org-tools/types";
 import { makeAutoObservable, observable } from "mobx";
 
+import { createUuid } from "@/lib/employee-data";
 import {
   cloneEmployeeLiveFilterRule,
   validateEmployeeLiveFilterRule,
@@ -23,6 +29,7 @@ import {
   createDefaultOrgEditorViewSettings,
   createOrgEditorSelectedItemKey,
   createOrgEditorUnitFromScratch,
+  getOrgEditorEmployeeBounds,
   getOrgEditorUnitBounds,
   getOrgEditorUnitDescendantIds,
   getOrgEditorUnitHeight,
@@ -34,10 +41,29 @@ import {
   snapOrgEditorPoint,
   snapOrgEditorUnits,
 } from "@/lib/org-editor";
+import {
+  cloneOrgEditorCanvasElement,
+  createOrgEditorArrowElement,
+  createOrgEditorImageElement,
+  createOrgEditorStickerElement,
+  createOrgEditorTextElement,
+  detachOrgEditorCanvasElementTargets,
+  getOrgEditorCanvasElementBounds,
+  getOrgEditorRectAnchorPoint,
+  getOrgEditorScopedCanvasElementIds,
+  hasOrgEditorCanvasElementDependencyCycle,
+  moveOrgEditorCanvasElement,
+  ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
+  ORG_EDITOR_RECT_ANCHOR_IDS,
+  remapOrgEditorAnchorRef,
+  resolveOrgEditorCanvasElements,
+  transformOrgEditorCanvasElements,
+} from "@/lib/org-editor-canvas";
 
 type SelectionMode = "add" | "replace" | "toggle";
 
 export type OrgEditorClipboard = {
+  canvasElements: OrgEditorCanvasElement[];
   employeeIds: EmployeeId[];
   resolvedEmployeeIdsByUnitId: Map<OrgEditorUnitId, EmployeeId[]>;
   sourceViewId: ViewId | null;
@@ -50,6 +76,7 @@ export type OrgEditorClipboardController = {
 };
 
 export type OrgEditorHistorySnapshot = {
+  canvasElements: OrgEditorCanvasElement[];
   settings: OrgEditorViewSettings;
   layoutMode: OrgEditorLayoutMode;
   units: OrgEditorUnit[];
@@ -169,11 +196,55 @@ const cloneUnit = (unit: OrgEditorUnit): OrgEditorUnit => ({
 
 const cloneSelectedItem = (item: OrgEditorSelectedItem): OrgEditorSelectedItem => ({ ...item });
 
+const remapCanvasElementForPaste = (
+  source: OrgEditorCanvasElement,
+  unitIdMap: ReadonlyMap<string, string>,
+  elementIdMap: ReadonlyMap<string, string>,
+  preserveExternal: boolean,
+  offset: OrgEditorCanvasPoint,
+): OrgEditorCanvasElement => {
+  const moved = moveOrgEditorCanvasElement(source, offset, (target) =>
+    target.owner.type === "element"
+      ? !elementIdMap.has(target.owner.elementId)
+      : !unitIdMap.has(target.owner.unitId),
+  );
+  const id = elementIdMap.get(source.id) ?? createUuid();
+  if (moved.type === "arrow") {
+    const remapEndpoint = (endpoint: typeof moved.start) => {
+      if (!endpoint.attachment) return endpoint;
+      const target = remapOrgEditorAnchorRef(
+        endpoint.attachment.target,
+        unitIdMap,
+        elementIdMap,
+        preserveExternal,
+      );
+      return {
+        ...endpoint,
+        attachment: target ? { ...endpoint.attachment, target } : null,
+      };
+    };
+    return { ...moved, end: remapEndpoint(moved.end), id, start: remapEndpoint(moved.start) };
+  }
+  if (!moved.attachment) return { ...moved, id };
+  const target = remapOrgEditorAnchorRef(
+    moved.attachment.target,
+    unitIdMap,
+    elementIdMap,
+    preserveExternal,
+  );
+  return {
+    ...moved,
+    attachment: target ? { ...moved.attachment, target } : null,
+    id,
+  };
+};
+
 const cloneViewport = (viewport: OrgEditorCanvasViewport): OrgEditorCanvasViewport => ({
   ...viewport,
 });
 
 const cloneHistorySnapshot = (snapshot: OrgEditorHistorySnapshot): OrgEditorHistorySnapshot => ({
+  canvasElements: snapshot.canvasElements.map(cloneOrgEditorCanvasElement),
   settings: { ...snapshot.settings },
   layoutMode: snapshot.layoutMode,
   units: snapshot.units.map(cloneUnit),
@@ -183,6 +254,9 @@ const ensureStateHasCanvasShape = (state: OrgEditorState): OrgEditorState => {
   const fallbackState = createDefaultOrgEditorState();
 
   return {
+    canvasElements: Array.isArray(state.canvasElements)
+      ? state.canvasElements.map(cloneOrgEditorCanvasElement)
+      : fallbackState.canvasElements,
     distributionModeUnitIds: Array.isArray(state.distributionModeUnitIds)
       ? [...new Set(state.distributionModeUnitIds)]
       : fallbackState.distributionModeUnitIds,
@@ -239,10 +313,13 @@ const getRootUnitIdsForUnitIds = (units: OrgEditorUnit[], unitIds: Iterable<OrgE
 const filterSelectedItemsForUnits = (
   selectedItems: OrgEditorSelectedItem[],
   units: OrgEditorUnit[],
+  canvasElements: OrgEditorCanvasElement[],
 ) => {
   const unitById = new Map(units.map((unit) => [unit.id, unit]));
+  const elementIds = new Set(canvasElements.map((element) => element.id));
 
   return selectedItems.filter((item) => {
+    if (item.type === "element") return elementIds.has(item.elementId);
     const unit = unitById.get(item.unitId);
     if (!unit) return false;
     if (item.type === "unit") return true;
@@ -259,6 +336,45 @@ const getSelectionUnitIds = (selectedItems: OrgEditorSelectedItem[]) =>
       return [];
     }),
   );
+
+const rekeyCanvasElementEmployee = (
+  source: OrgEditorCanvasElement,
+  previousEmployeeId: EmployeeId,
+  nextEmployeeId: EmployeeId,
+) => {
+  const element = cloneOrgEditorCanvasElement(source);
+  const rekeyAttachment = <Attachment extends { target: { owner: unknown } } | null>(
+    attachment: Attachment,
+  ): Attachment => {
+    if (!attachment) return attachment;
+    const owner = attachment.target.owner;
+    if (
+      typeof owner !== "object" ||
+      owner === null ||
+      !("type" in owner) ||
+      owner.type !== "employee" ||
+      !("employeeId" in owner) ||
+      owner.employeeId !== previousEmployeeId
+    ) {
+      return attachment;
+    }
+    return {
+      ...attachment,
+      target: {
+        ...attachment.target,
+        owner: { ...owner, employeeId: nextEmployeeId },
+      },
+    } as Attachment;
+  };
+  if (element.type === "arrow") {
+    return {
+      ...element,
+      end: { ...element.end, attachment: rekeyAttachment(element.end.attachment) },
+      start: { ...element.start, attachment: rekeyAttachment(element.start.attachment) },
+    };
+  }
+  return { ...element, attachment: rekeyAttachment(element.attachment) };
+};
 
 const getBoundsForUnit = (unit: OrgEditorUnit): UnitBounds => {
   const bounds = getOrgEditorUnitBounds(unit);
@@ -438,6 +554,7 @@ const areHistorySnapshotsEqual = (
   firstSnapshot: OrgEditorHistorySnapshot,
   secondSnapshot: OrgEditorHistorySnapshot,
 ) =>
+  JSON.stringify(firstSnapshot.canvasElements) === JSON.stringify(secondSnapshot.canvasElements) &&
   areViewSettingsEqual(firstSnapshot.settings, secondSnapshot.settings) &&
   firstSnapshot.layoutMode === secondSnapshot.layoutMode &&
   areUnitsEqual(firstSnapshot.units, secondSnapshot.units);
@@ -450,6 +567,7 @@ const areViewSettingsEqual = (a: OrgEditorViewSettings, b: OrgEditorViewSettings
 
 export class OrgEditorStore {
   settings = createDefaultOrgEditorViewSettings();
+  canvasElements: OrgEditorCanvasElement[] = [];
   units: OrgEditorUnit[] = [];
   distributionModeUnitIds: OrgEditorUnitId[] = [];
   selectedItems: OrgEditorSelectedItem[] = [];
@@ -476,6 +594,7 @@ export class OrgEditorStore {
     makeAutoObservable(
       this,
       {
+        canvasElements: observable.shallow,
         clipboardController: false,
         commandDepth: false,
         distributionModeUnitIds: observable.shallow,
@@ -496,6 +615,12 @@ export class OrgEditorStore {
 
   get selectedUnitIds() {
     return getSelectionUnitIds(this.selectedItems);
+  }
+
+  get selectedElementIds() {
+    return new Set(
+      this.selectedItems.flatMap((item) => (item.type === "element" ? [item.elementId] : [])),
+    );
   }
 
   get clipboard() {
@@ -520,7 +645,10 @@ export class OrgEditorStore {
 
   get canPaste() {
     return Boolean(
-      this.clipboard && (this.clipboard.units.length > 0 || this.clipboard.employeeIds.length > 0),
+      this.clipboard &&
+        (this.clipboard.units.length > 0 ||
+          this.clipboard.employeeIds.length > 0 ||
+          this.clipboard.canvasElements.length > 0),
     );
   }
 
@@ -549,6 +677,35 @@ export class OrgEditorStore {
       : (this.resolvedLiveEmployeeIdsByUnitId.get(unitId) ?? []);
   }
 
+  private resolveExternalCanvasAnchor(ref: OrgEditorAnchorRef) {
+    const owner = ref.owner;
+    if (owner.type === "element") return null;
+    const unit = this.units.find((candidate) => candidate.id === owner.unitId);
+    if (!unit) return null;
+    const unitBounds = getOrgEditorUnitBounds(unit);
+    if (owner.type === "unit") {
+      if (!ORG_EDITOR_RECT_ANCHOR_IDS.includes(ref.anchorId as never)) return null;
+      return getOrgEditorRectAnchorPoint(
+        { ...unitBounds, rotation: 0 },
+        ref.anchorId as OrgEditorRectAnchorId,
+      );
+    }
+    if (!ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.includes(ref.anchorId as never)) return null;
+    const employeeIndex = this.getUnitEmployeeIds(unit.id).indexOf(owner.employeeId);
+    if (employeeIndex < 0) return null;
+    if (unit.collapsed) {
+      return {
+        x: ref.anchorId === "leftCenter" ? unitBounds.x : unitBounds.x + unitBounds.width,
+        y: unitBounds.y + unitBounds.height / 2,
+      };
+    }
+    const employeeBounds = getOrgEditorEmployeeBounds(unit, employeeIndex);
+    return {
+      x: ref.anchorId === "leftCenter" ? employeeBounds.x : employeeBounds.x + employeeBounds.width,
+      y: employeeBounds.y + employeeBounds.height / 2,
+    };
+  }
+
   synchronizeLiveResolution(employeeIdsByUnitId: ReadonlyMap<OrgEditorUnitId, EmployeeId[]>): void {
     this.resolvedLiveEmployeeIdsByUnitId = new Map(
       [...employeeIdsByUnitId].map(([unitId, employeeIds]) => [unitId, [...employeeIds]]),
@@ -569,6 +726,7 @@ export class OrgEditorStore {
 
   createState(): OrgEditorState {
     return {
+      canvasElements: this.canvasElements.map(cloneOrgEditorCanvasElement),
       distributionModeUnitIds: [...this.distributionModeUnitIds],
       selectedItems: this.selectedItems.map(cloneSelectedItem),
       units: this.units.map(cloneUnit),
@@ -582,13 +740,18 @@ export class OrgEditorStore {
     const nextState = ensureStateHasCanvasShape(state);
 
     this.units = nextState.units;
+    this.canvasElements = nextState.canvasElements;
     this.distributionModeUnitIds = nextState.distributionModeUnitIds.filter((unitId) =>
       nextState.units.some((unit) => unit.id === unitId),
     );
     this.viewport = nextState.viewport;
     this.layoutMode = nextState.layoutMode;
     this.settings = nextState.settings;
-    this.selectedItems = filterSelectedItemsForUnits(nextState.selectedItems, nextState.units);
+    this.selectedItems = filterSelectedItemsForUnits(
+      nextState.selectedItems,
+      nextState.units,
+      nextState.canvasElements,
+    );
     this.resolvedLiveEmployeeIdsByUnitId = new Map();
     this.clearHistory();
     this.onDocumentChange?.();
@@ -601,6 +764,7 @@ export class OrgEditorStore {
 
   createCommandSnapshot(): OrgEditorHistorySnapshot {
     return {
+      canvasElements: this.canvasElements.map(cloneOrgEditorCanvasElement),
       layoutMode: this.layoutMode,
       settings: { ...this.settings },
       units: this.units.map(cloneUnit),
@@ -696,9 +860,14 @@ export class OrgEditorStore {
 
   private applyHistorySnapshot(snapshot: OrgEditorHistorySnapshot): void {
     this.units = snapshot.units.map(cloneUnit);
+    this.canvasElements = snapshot.canvasElements.map(cloneOrgEditorCanvasElement);
     this.layoutMode = snapshot.layoutMode;
     this.settings = { ...snapshot.settings };
-    this.selectedItems = filterSelectedItemsForUnits(this.selectedItems, this.units);
+    this.selectedItems = filterSelectedItemsForUnits(
+      this.selectedItems,
+      this.units,
+      this.canvasElements,
+    );
     this.pruneDistributionModeUnitIds();
   }
 
@@ -859,6 +1028,15 @@ export class OrgEditorStore {
     this.selectedItems = this.units.map((unit) => ({ type: "unit", unitId: unit.id }));
   }
 
+  selectAllCanvasItems(): void {
+    this.selectedItems = [
+      ...this.units.map((unit) => ({ type: "unit", unitId: unit.id }) as const),
+      ...this.canvasElements.map(
+        (element) => ({ elementId: element.id, type: "element" }) as const,
+      ),
+    ];
+  }
+
   selectItem(item: OrgEditorSelectedItem, mode: SelectionMode = "replace"): void {
     const itemKey = createOrgEditorSelectedItemKey(item);
 
@@ -878,6 +1056,209 @@ export class OrgEditorStore {
     }
 
     this.selectedItems = [...existingItems, cloneSelectedItem(item)];
+  }
+
+  addCanvasElement(element: OrgEditorCanvasElement): OrgEditorCanvasElementId {
+    this.runCommand(`Add ${element.type}`, () => {
+      this.canvasElements = [...this.canvasElements, cloneOrgEditorCanvasElement(element)];
+      this.selectedItems = [{ elementId: element.id, type: "element" }];
+    });
+    return element.id;
+  }
+
+  addTextElement(point: OrgEditorCanvasPoint): OrgEditorCanvasElementId {
+    return this.addCanvasElement(createOrgEditorTextElement(point));
+  }
+
+  addStickerElement(point: OrgEditorCanvasPoint): OrgEditorCanvasElementId {
+    return this.addCanvasElement(createOrgEditorStickerElement(point));
+  }
+
+  addImageElement(
+    point: OrgEditorCanvasPoint,
+    image: { dataUrl: string; height: number; width: number },
+  ): OrgEditorCanvasElementId {
+    return this.addCanvasElement(
+      createOrgEditorImageElement({
+        dataUrl: image.dataUrl,
+        intrinsicHeight: image.height,
+        intrinsicWidth: image.width,
+        point,
+      }),
+    );
+  }
+
+  addArrowElement(
+    start: OrgEditorCanvasPoint,
+    end: OrgEditorCanvasPoint,
+  ): OrgEditorCanvasElementId {
+    return this.addCanvasElement(createOrgEditorArrowElement(start, end));
+  }
+
+  updateCanvasElements(
+    elementIds: Iterable<OrgEditorCanvasElementId>,
+    update: (element: OrgEditorCanvasElement) => OrgEditorCanvasElement,
+    label = "Edit canvas elements",
+  ): void {
+    const selectedIds = new Set(elementIds);
+    if (selectedIds.size === 0) return;
+    this.runCommand(label, () => {
+      const nextElements = this.canvasElements.map((element) =>
+        selectedIds.has(element.id) ? cloneOrgEditorCanvasElement(update(element)) : element,
+      );
+      if (
+        nextElements.some((element, index) => element.id !== this.canvasElements[index]?.id) ||
+        hasOrgEditorCanvasElementDependencyCycle(nextElements)
+      ) {
+        throw new LocalizedError(uiMessage("Canvas attachments cannot form a cycle."));
+      }
+      this.canvasElements = nextElements;
+    });
+  }
+
+  moveCanvasElements(
+    elementIds: Iterable<OrgEditorCanvasElementId>,
+    delta: OrgEditorCanvasPoint,
+  ): void {
+    const selectedIds = new Set(elementIds);
+    this.updateCanvasElements(
+      selectedIds,
+      (element) =>
+        moveOrgEditorCanvasElement(
+          element,
+          delta,
+          (target) => target.owner.type !== "element" || !selectedIds.has(target.owner.elementId),
+        ),
+      "Move canvas elements",
+    );
+  }
+
+  moveUnitsAndCanvasElementsFromPositions({
+    delta,
+    elementIds,
+    unitPositions,
+  }: {
+    delta: OrgEditorCanvasPoint;
+    elementIds: Iterable<OrgEditorCanvasElementId>;
+    unitPositions: OrgEditorUnitPosition[];
+  }): void {
+    const selectedElementIds = new Set(elementIds);
+    const selectedUnitIds = new Set(unitPositions.map((position) => position.unitId));
+    this.runCommand("Move canvas selection", () => {
+      this.moveUnitsFromPositions(unitPositions, delta);
+      this.canvasElements = this.canvasElements.map((element) =>
+        selectedElementIds.has(element.id)
+          ? moveOrgEditorCanvasElement(element, delta, (target) =>
+              target.owner.type === "element"
+                ? !selectedElementIds.has(target.owner.elementId)
+                : !selectedUnitIds.has(target.owner.unitId),
+            )
+          : element,
+      );
+    });
+  }
+
+  transformCanvasElements({
+    elementIds,
+    rotation = 0,
+    sourceBounds,
+    targetBounds,
+  }: {
+    elementIds: Iterable<OrgEditorCanvasElementId>;
+    rotation?: number;
+    sourceBounds: { height: number; width: number; x: number; y: number };
+    targetBounds: { height: number; width: number; x: number; y: number };
+  }): void {
+    const selectedIds = new Set(elementIds);
+    const transformed = transformOrgEditorCanvasElements({
+      elements: this.canvasElements.filter((element) => selectedIds.has(element.id)),
+      rotation,
+      sourceBounds,
+      targetBounds,
+    });
+    const transformedById = new Map(transformed.map((element) => [element.id, element] as const));
+    this.updateCanvasElements(
+      selectedIds,
+      (element) => transformedById.get(element.id) ?? element,
+      rotation === 0 ? "Resize canvas elements" : "Rotate canvas elements",
+    );
+  }
+
+  setCanvasElementLayer(
+    elementIds: Iterable<OrgEditorCanvasElementId>,
+    layer: OrgEditorCanvasElement["layer"],
+  ): void {
+    this.updateCanvasElements(
+      elementIds,
+      (element) => ({ ...element, layer }),
+      "Change canvas element layer",
+    );
+  }
+
+  reorderCanvasElements(
+    elementIds: Iterable<OrgEditorCanvasElementId>,
+    direction: "back" | "backward" | "forward" | "front",
+  ): void {
+    const selectedIds = new Set(elementIds);
+    if (selectedIds.size === 0) return;
+    this.runCommand("Reorder canvas elements", () => {
+      const reorderPlane = (plane: OrgEditorCanvasElement[]) => {
+        if (direction === "front") {
+          return [
+            ...plane.filter((element) => !selectedIds.has(element.id)),
+            ...plane.filter((element) => selectedIds.has(element.id)),
+          ];
+        }
+        if (direction === "back") {
+          return [
+            ...plane.filter((element) => selectedIds.has(element.id)),
+            ...plane.filter((element) => !selectedIds.has(element.id)),
+          ];
+        }
+        const next = [...plane];
+        const indexes = direction === "forward" ? [...next.keys()].reverse() : [...next.keys()];
+        for (const index of indexes) {
+          const neighbor = direction === "forward" ? index + 1 : index - 1;
+          if (
+            neighbor < 0 ||
+            neighbor >= next.length ||
+            !selectedIds.has(next[index]?.id ?? "") ||
+            selectedIds.has(next[neighbor]?.id ?? "")
+          ) {
+            continue;
+          }
+          [next[index], next[neighbor]] = [
+            next[neighbor] as OrgEditorCanvasElement,
+            next[index] as OrgEditorCanvasElement,
+          ];
+        }
+        return next;
+      };
+      const behind = reorderPlane(
+        this.canvasElements.filter((element) => element.layer === "behindUnits"),
+      );
+      const above = reorderPlane(
+        this.canvasElements.filter((element) => element.layer === "aboveUnits"),
+      );
+      this.canvasElements = [...behind, ...above];
+    });
+  }
+
+  duplicateSelectedCanvasElements(offset: OrgEditorCanvasPoint = { x: 24, y: 24 }): void {
+    const selectedIds = this.selectedElementIds;
+    if (selectedIds.size === 0) return;
+    this.runCommand("Duplicate canvas elements", () => {
+      const source = this.canvasElements.filter((element) => selectedIds.has(element.id));
+      const idMap = new Map(source.map((element) => [element.id, createUuid()] as const));
+      const duplicates = source.map((element) =>
+        remapCanvasElementForPaste(element, new Map(), idMap, true, offset),
+      );
+      this.canvasElements = [...this.canvasElements, ...duplicates];
+      this.selectedItems = duplicates.map((element) => ({
+        elementId: element.id,
+        type: "element",
+      }));
+    });
   }
 
   addUnit({
@@ -1270,6 +1651,10 @@ export class OrgEditorStore {
 
   purgeEmployeeReferences(employeeId: EmployeeId): void {
     this.runCommand("Remove Employee assignments", () => {
+      const resolvedCanvasElements = resolveOrgEditorCanvasElements({
+        elements: this.canvasElements,
+        resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
+      });
       const affectedUnitIds: OrgEditorUnitId[] = [];
       const now = new Date().toISOString();
 
@@ -1295,6 +1680,12 @@ export class OrgEditorStore {
       });
       this.selectedItems = this.selectedItems.filter(
         (item) => item.type !== "employee" || item.employeeId !== employeeId,
+      );
+      this.canvasElements = this.canvasElements.map((element) =>
+        detachOrgEditorCanvasElementTargets(
+          resolvedCanvasElements.get(element.id)?.element ?? element,
+          (target) => target.owner.type === "employee" && target.owner.employeeId === employeeId,
+        ),
       );
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, affectedUnitIds));
     });
@@ -1323,9 +1714,15 @@ export class OrgEditorStore {
         ? { ...item, employeeId: nextEmployeeId }
         : item,
     );
+    this.canvasElements = this.canvasElements.map((element) =>
+      rekeyCanvasElementEmployee(element, previousEmployeeId, nextEmployeeId),
+    );
     if (this.clipboard) {
       this.setClipboard({
         ...this.clipboard,
+        canvasElements: this.clipboard.canvasElements.map((element) =>
+          rekeyCanvasElementEmployee(element, previousEmployeeId, nextEmployeeId),
+        ),
         employeeIds: this.clipboard.employeeIds.map(replace),
         resolvedEmployeeIdsByUnitId: new Map(
           [...this.clipboard.resolvedEmployeeIdsByUnitId].map(([unitId, employeeIds]) => [
@@ -1566,10 +1963,20 @@ export class OrgEditorStore {
   deleteSelected(): void {
     this.runCommand("Delete selection", () => {
       const selectedUnitIds = this.selectedUnitIds;
+      const selectedElementIds = this.selectedElementIds;
       const deletedUnitIds = new Set<OrgEditorUnitId>();
+      const deletedEmployeeOccurrences = new Set(
+        this.selectedItems.flatMap((item) =>
+          item.type === "employee" ? [`${item.unitId}:${item.employeeId}`] : [],
+        ),
+      );
       const resolvedEmployeeIdsByUnitId = new Map(
         this.units.map((unit) => [unit.id, [...this.getUnitEmployeeIds(unit.id)]] as const),
       );
+      const resolvedCanvasElements = resolveOrgEditorCanvasElements({
+        elements: this.canvasElements,
+        resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
+      });
 
       for (const unitId of selectedUnitIds) {
         for (const deletedUnitId of getOrgEditorUnitDescendantIds(this.units, unitId)) {
@@ -1633,6 +2040,23 @@ export class OrgEditorStore {
             updatedAt: now,
           };
         });
+      this.canvasElements = this.canvasElements
+        .filter((element) => !selectedElementIds.has(element.id))
+        .map((element) =>
+          detachOrgEditorCanvasElementTargets(
+            resolvedCanvasElements.get(element.id)?.element ?? element,
+            (target) => {
+              if (target.owner.type === "element") {
+                return selectedElementIds.has(target.owner.elementId);
+              }
+              if (target.owner.type === "unit") return deletedUnitIds.has(target.owner.unitId);
+              return (
+                deletedUnitIds.has(target.owner.unitId) ||
+                deletedEmployeeOccurrences.has(`${target.owner.unitId}:${target.owner.employeeId}`)
+              );
+            },
+          ),
+        );
       this.realignRootSubtrees(affectedRootUnitIds);
       this.selectedItems = [];
       this.pruneDistributionModeUnitIds();
@@ -1661,7 +2085,31 @@ export class OrgEditorStore {
       }
     }
 
+    const scopedOwnerKeys = new Set<string>();
+    for (const unitId of copiedUnitIds) {
+      scopedOwnerKeys.add(`unit:${unitId}`);
+      for (const employeeId of this.getUnitEmployeeIds(unitId)) {
+        scopedOwnerKeys.add(`employee:${unitId}:${employeeId}`);
+      }
+    }
+    const copiedElementIds = getOrgEditorScopedCanvasElementIds({
+      elements: this.canvasElements,
+      ownerKeys: scopedOwnerKeys,
+    });
+    for (const item of this.selectedItems) {
+      if (item.type === "element") copiedElementIds.add(item.elementId);
+    }
+    const resolvedCanvasElements = resolveOrgEditorCanvasElements({
+      elements: this.canvasElements,
+      resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
+    });
+
     this.setClipboard({
+      canvasElements: this.canvasElements
+        .filter((element) => copiedElementIds.has(element.id))
+        .map((element) =>
+          cloneOrgEditorCanvasElement(resolvedCanvasElements.get(element.id)?.element ?? element),
+        ),
       employeeIds: [...selectedEmployeeIds],
       resolvedEmployeeIdsByUnitId: new Map(
         [...copiedUnitIds].map((unitId) => [unitId, [...this.getUnitEmployeeIds(unitId)]]),
@@ -1685,13 +2133,15 @@ export class OrgEditorStore {
       const isCrossViewPaste =
         this.clipboard.sourceViewId !== null && this.clipboard.sourceViewId !== this.viewId;
       const unitBounds = this.clipboard.units.map(getOrgEditorUnitBounds);
+      const elementBounds = this.clipboard.canvasElements.map(getOrgEditorCanvasElementBounds);
+      const clipboardBounds = [...unitBounds, ...elementBounds];
       const copiedBounds =
-        unitBounds.length > 0
+        clipboardBounds.length > 0
           ? {
-              maxX: Math.max(...unitBounds.map((bounds) => bounds.x + bounds.width)),
-              maxY: Math.max(...unitBounds.map((bounds) => bounds.y + bounds.height)),
-              minX: Math.min(...unitBounds.map((bounds) => bounds.x)),
-              minY: Math.min(...unitBounds.map((bounds) => bounds.y)),
+              maxX: Math.max(...clipboardBounds.map((bounds) => bounds.x + bounds.width)),
+              maxY: Math.max(...clipboardBounds.map((bounds) => bounds.y + bounds.height)),
+              minX: Math.min(...clipboardBounds.map((bounds) => bounds.x)),
+              minY: Math.min(...clipboardBounds.map((bounds) => bounds.y)),
             }
           : null;
       const offset = copiedBounds
@@ -1704,6 +2154,9 @@ export class OrgEditorStore {
       for (const unit of this.clipboard.units) {
         unitIdMap.set(unit.id, createOrgEditorUnitFromScratch({ name: unit.name, x: 0, y: 0 }).id);
       }
+      const elementIdMap = new Map(
+        this.clipboard.canvasElements.map((element) => [element.id, createUuid()] as const),
+      );
 
       for (const unit of this.clipboard.units) {
         const nextUnitId = unitIdMap.get(unit.id);
@@ -1782,8 +2235,16 @@ export class OrgEditorStore {
         staticUnits: this.units,
       });
 
+      const pastedElements = this.clipboard.canvasElements.map((element) =>
+        remapCanvasElementForPaste(element, unitIdMap, elementIdMap, !isCrossViewPaste, offset),
+      );
+
       this.units = [...this.units, ...positionedPastedUnits];
-      this.selectedItems = positionedPastedUnits.map((unit) => ({ type: "unit", unitId: unit.id }));
+      this.canvasElements = [...this.canvasElements, ...pastedElements];
+      this.selectedItems = [
+        ...positionedPastedUnits.map((unit) => ({ type: "unit", unitId: unit.id }) as const),
+        ...pastedElements.map((element) => ({ elementId: element.id, type: "element" }) as const),
+      ];
     });
   }
 }

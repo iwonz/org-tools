@@ -271,11 +271,12 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 [![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png)
 
-Arrange opaque Unit cards with complete wrapping Tag footers on the adaptive snap grid, including
-bounded edge-pan, hierarchy lines, zoom, history, and normal-weight layout controls.
+Arrange opaque Unit cards and representative Text, Sticker, embedded Image, and curved Arrow tools
+on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
+the upper-right canvas toolbar.
 
-Capabilities: Canvas layout, Adaptive snap grid, Hierarchy, Zoom, Arrange and collapse, Complete Tag
-footers.
+Capabilities: Canvas layout, Text, Sticker, Image, Arrow, Anchors, Layers, Adaptive snap grid,
+Hierarchy, Zoom.
 
 ### View settings
 
@@ -404,14 +405,13 @@ Capabilities: Single selection, Exact row anchors, Collapsed fallback, Pointer-i
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping colored
-tags, direct-membership Tag footer, localized boss marker, persistent assigned/source-only row tones,
-and hierarchy connections follow the stable live canvas presentation without printing Static/Live
-membership type or transient placement overlays, then choose transparent, solid, or gradient
-backgrounds in the same dialog.
+Preview a full-View local PNG whose Unit cards, hierarchy, Text, Sticker, embedded Image, curved
+Arrow, Tags, boss marker, and assigned/source-only row tones follow the durable canvas presentation
+without printing transient editing chrome. The dialog also shows actual output dimensions and
+effective density.
 
-Capabilities: Inline PNG preview, Complete colored tags, Distribution tones, Hierarchy, Localized
-boss marker, Iconic scope, Background presets.
+Capabilities: Full-View PNG, Canvas elements, Distribution tones, Hierarchy, Density, Actual
+dimensions, Local Copy and Save.
 
 ### Editor text template export
 
@@ -434,10 +434,11 @@ Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, U
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Configure PNG title, font, spacing, icon-only alignment, localized boss label, and Employee card
-content below the aligned hierarchy preview without avatar-data template tokens.
+Configure 1x/2x/3x density, final dimensions, background presets, title, font, spacing, localized
+boss label, and Employee card content beside the complete View preview.
 
-Capabilities: Title and font, Spacing and alignment, Boss label, Employee card content.
+Capabilities: Density and clamping, Final dimensions, Background, Title and font, Spacing and
+alignment, Boss label, Employee card content.
 
 ## Analytics
 

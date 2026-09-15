@@ -58,6 +58,11 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   viewport without a durable write.
 - Query visible Unit and connection candidates through a geometry-keyed spatial index that is not
   rebuilt for pointer samples.
+- Index committed canvas-element bounds and forward/reverse anchor dependencies beside Unit bounds.
+  Snap gestures query only nearby Unit/element cells, derive Employee candidates from cached row
+  offsets, and update only the affected dependency closure. Move, resize, rotation, endpoint,
+  Bezier, anchor, and text drafts use the latest-value frame scheduler; only pointer release or edit
+  completion mutates the View document once.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
   View; a deterministic glyph-aware width packs intrinsic short chips and grapheme-safe long lines,
@@ -104,6 +109,10 @@ Canvas PNG generation uses current layout, shared live-card geometry, bounded em
 complete locally measured tag text, resolved Tag colors, and local vector primitives without network work. Oversized tags
 increase only their Employee row and containing Unit height; the existing maximum canvas-pixel bound
 remains authoritative.
+The shared image scene computes rotated rectangle and cubic Bezier bounds once, then paints hierarchy
+connections, `behindUnits`, cards, and `aboveUnits` in stable order. Preview and final output reuse the
+same plan; only effective raster density changes under the 8- and 32-megapixel plus maximum-side
+limits. Embedded canvas Images retain source bytes and decode with bounded concurrency.
 
 Avatar input is bounded to 25 MiB compressed and 40 megapixels decoded. The crop preview is capped at
 4096 pixels on its longest side; confirmation creates one 512 by 512 image, preferring WebP and

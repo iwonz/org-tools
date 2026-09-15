@@ -15,6 +15,7 @@ import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorExportEmployeeTagLayout,
   createOrgEditorExportFileBaseName,
+  createOrgEditorImageRenderPlan,
   getEmployeeCanvasAvatarUrl,
   getOrgEditorExportConnectionPath,
   getOrgEditorExportEmployeeGeometry,
@@ -235,6 +236,41 @@ describe("Org Editor image export", () => {
         unitHeight: 136,
       }),
     ).toBe("M 188 212 C 188 256, 540 256, 540 300");
+  });
+
+  test("reports exact density and clamps by both pixel area and canvas side", () => {
+    expect(
+      ([1, 2, 3] as const).map((requestedDensity) =>
+        createOrgEditorImageRenderPlan({
+          logicalHeight: 500,
+          logicalWidth: 1_000,
+          requestedDensity,
+        }),
+      ),
+    ).toEqual([
+      expect.objectContaining({ effectiveDensity: 1, pixelHeight: 500, pixelWidth: 1_000 }),
+      expect.objectContaining({ effectiveDensity: 2, pixelHeight: 1_000, pixelWidth: 2_000 }),
+      expect.objectContaining({ effectiveDensity: 3, pixelHeight: 1_500, pixelWidth: 3_000 }),
+    ]);
+
+    const areaClamped = createOrgEditorImageRenderPlan({
+      logicalHeight: 2_000,
+      logicalWidth: 4_000,
+      maxCanvasPixels: 8_000_000,
+      requestedDensity: 3,
+    });
+    expect(areaClamped.clamped).toBe(true);
+    expect(areaClamped.pixelHeight * areaClamped.pixelWidth).toBeLessThanOrEqual(8_000_000);
+
+    const sideClamped = createOrgEditorImageRenderPlan({
+      logicalHeight: 100,
+      logicalWidth: 20_000,
+      maxCanvasPixels: 100_000_000,
+      maxCanvasSide: 16_384,
+      requestedDensity: 1,
+    });
+    expect(sideClamped.clamped).toBe(true);
+    expect(sideClamped.pixelWidth).toBe(16_384);
   });
 });
 

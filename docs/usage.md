@@ -104,6 +104,14 @@ control.
   keep the normal theme text color for both distribution statuses, including selected rows. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
+  The tools row directly below the upper-right actions provides Select, Text, Arrow, Sticker,
+  embedded Image, and full-View Image export, including in an empty View. Text and Sticker support
+  bundled fonts, size, weight, color, horizontal/vertical alignment, resize, rotation, and
+  non-clipping wrapping; Sticker also has a background color. Images accept only local PNG, JPEG, or
+  WebP file/clipboard bytes and support aspect-locked resize and rotation. Cubic Arrows expose two
+  endpoints, Bezier controls, line style, independent markers, and shared anchors. Modifier and
+  marquee selection, group move/resize/rotation, layer-plane/order actions, Delete, Copy/Paste,
+  Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture.
   Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
   also assigned to ancestors. Bosses count once, and collapse or distribution mode never changes
   the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.
@@ -136,7 +144,11 @@ control.
   including a card-edge marker for a collapsed target; multi-selection hides the links without
   disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
   JSON, or Template output. Editor Image exports preserve its stable row tones without selection,
-  placement lines, or endpoint markers. Editor exports always use the active View.
+  placement lines, or endpoint markers. The dedicated View Image dialog previews the entire durable
+  scene, shows actual output dimensions and effective density for 1x/2x/3x, and offers the same
+  background, padding, title, font, Unit radius, Employee format, boss label, Copy, and Save controls.
+  Unit/subtree Image export includes transitively attached annotations but excludes free or external
+  ones. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
   reports known birth years and completed ages, including one-decimal averages plus deterministic
   youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`

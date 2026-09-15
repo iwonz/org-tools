@@ -37,6 +37,14 @@ remote avatars are never fetched. Crop encoding prefers WebP and falls back only
 local PNG canvas encoder; neither path uploads the source or result. Profile and email navigation
 require direct user actions and referrer protection.
 
+Editor canvas Images are accepted only from an explicit local file choice or an image clipboard
+paste. PNG, JPEG, and WebP headers, bytes, and intrinsic dimensions are validated before commit;
+each source is limited to 25 MiB and 40 megapixels, and the complete resulting State must still fit
+the 25 MiB transfer bound. Original bytes remain an embedded data URL without upload, remote URL,
+object-URL persistence, or quality-reducing re-encoding. Decode failure produces the same inert
+local placeholder in the Editor and PNG. Full-View and scoped preview/copy/save rasterization loads
+only validated embedded data URLs with bounded concurrency and never creates a network request.
+
 Unit notes are bounded local Markdown embedded only in complete state transfer and the configured
 SQLite state. Preview never executes raw HTML and replaces Markdown images with inert local text,
 so opening a note cannot fetch an asset. Supported external links navigate only after a direct

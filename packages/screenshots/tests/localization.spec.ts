@@ -331,7 +331,10 @@ for (const [locale, messages] of [
         0,
       );
       expect((historyBox?.x ?? 0) + (historyBox?.width ?? 0)).toBeLessThan(viewBox?.x ?? 0);
-      expect(actionBox?.x ?? 0).toBeCloseTo((canvasBox?.x ?? 0) + 12, 0);
+      expect((actionBox?.x ?? 0) + (actionBox?.width ?? 0)).toBeCloseTo(
+        (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) - 12,
+        0,
+      );
     }
     await productUnit.click({ button: "right", position: { x: 20, y: 20 } });
     await page.locator('[data-demo-id="org-editor-export-action"]').click();

@@ -189,6 +189,118 @@
         "kind": "system",
         "name": null,
         "structure": {
+          "canvasElements": [
+            {
+              "dash": "solid",
+              "end": {
+                "attachment": {
+                  "offset": { "x": 0, "y": 0 },
+                  "target": {
+                    "anchorId": "leftCenter",
+                    "owner": {
+                      "elementId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                      "type": "element"
+                    }
+                  }
+                },
+                "x": 576,
+                "y": 164
+              },
+              "endControl": { "x": -56, "y": 88 },
+              "endMarker": "arrow",
+              "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+              "layer": "behindUnits",
+              "start": {
+                "attachment": {
+                  "offset": { "x": 0, "y": 0 },
+                  "target": {
+                    "anchorId": "rightCenter",
+                    "owner": { "type": "unit", "unitId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }
+                  }
+                },
+                "x": 496,
+                "y": 164
+              },
+              "startControl": { "x": 56, "y": -88 },
+              "startMarker": "none",
+              "strokeColor": "blue",
+              "strokeWidth": 3,
+              "type": "arrow"
+            },
+            {
+              "attachment": {
+                "offset": { "x": 80, "y": 0 },
+                "sourceAnchorId": "leftCenter",
+                "target": {
+                  "anchorId": "rightCenter",
+                  "owner": { "type": "unit", "unitId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }
+                }
+              },
+              "backgroundColor": "amber",
+              "height": 168,
+              "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+              "layer": "aboveUnits",
+              "rotation": -3,
+              "text": "Launch note\nKeep the customer loop visible",
+              "typography": {
+                "color": "#334155",
+                "fontFamily": "Inter",
+                "fontSize": 20,
+                "fontWeight": 500,
+                "horizontalAlign": "center",
+                "verticalAlign": "middle"
+              },
+              "type": "sticker",
+              "width": 220,
+              "x": 576,
+              "y": 80
+            },
+            {
+              "attachment": {
+                "offset": { "x": 0, "y": 28 },
+                "sourceAnchorId": "topCenter",
+                "target": {
+                  "anchorId": "bottomCenter",
+                  "owner": {
+                    "elementId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                    "type": "element"
+                  }
+                }
+              },
+              "height": 96,
+              "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+              "layer": "aboveUnits",
+              "rotation": 0,
+              "text": "Product direction · Q4",
+              "typography": {
+                "color": "#334155",
+                "fontFamily": "Manrope",
+                "fontSize": 22,
+                "fontWeight": 700,
+                "horizontalAlign": "center",
+                "verticalAlign": "top"
+              },
+              "type": "text",
+              "width": 240,
+              "x": 566,
+              "y": 276
+            },
+            {
+              "attachment": null,
+              "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
+              "height": 128,
+              "id": "abababab-abab-4bab-8bab-abababababab",
+              "intrinsicHeight": 1,
+              "intrinsicWidth": 1,
+              "layer": "aboveUnits",
+              "lockAspectRatio": true,
+              "rotation": 5,
+              "type": "image",
+              "width": 128,
+              "x": 860,
+              "y": 300
+            }
+          ],
           "layoutMode": "topDown",
           "settings": {
             "groupByTag": true,

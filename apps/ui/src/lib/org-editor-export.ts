@@ -2,6 +2,8 @@ import type {
   Employee,
   EmployeeId,
   EmployeeTagColor,
+  OrgEditorAnchorRef,
+  OrgEditorCanvasElement,
   OrgEditorLayoutMode,
   OrgEditorUnit,
   OrgEditorUnitId,
@@ -54,7 +56,18 @@ import {
   type OrgEditorUnitTagSummary,
   sortOrgEditorEmployeeIds,
 } from "@/lib/org-editor";
-import { getTagColorCanvasStyle } from "@/lib/tag-color";
+import {
+  getOrgEditorArrowControlPoints,
+  getOrgEditorCanvasElementsBounds,
+  getOrgEditorCanvasImagePlaceholderPoints,
+  getOrgEditorRectAnchorPoint,
+  getOrgEditorScopedCanvasElementIds,
+  layoutOrgEditorCanvasText,
+  ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
+  ORG_EDITOR_RECT_ANCHOR_IDS,
+  resolveOrgEditorCanvasElements,
+} from "@/lib/org-editor-canvas";
+import { employeeTagColorToHex, getTagColorCanvasStyle } from "@/lib/tag-color";
 import {
   renderTemplateFormat,
   type TemplateFieldValue,
@@ -65,6 +78,7 @@ import type { ExportEmployeeFieldKey, ExportRowMode } from "@/stores/org-store";
 export type OrgEditorExportScope = "subtree" | "unit";
 export type OrgEditorExportTab = "image" | "json" | "template";
 export type OrgEditorExportTitleAlign = "center" | "left" | "right";
+export type OrgEditorImageDensity = 1 | 2 | 3;
 export type OrgEditorImageBackground =
   | { type: "transparent" }
   | { color: string; type: "solid" }
@@ -82,6 +96,7 @@ const getEffectiveEmployeePosition = (employee: Employee, unit: OrgEditorUnit) =
 
 export type OrgEditorImageExportSettings = {
   background: OrgEditorImageBackground;
+  density: OrgEditorImageDensity;
   employeeFormat: string;
   fontFamily: string;
   imageBossLabel: string;
@@ -142,7 +157,8 @@ export const ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE = {
 const DEFAULT_TITLE_FONT_SIZE = 20;
 const ORG_EDITOR_EXPORT_AVATAR_LOAD_CONCURRENCY = 8;
 const ORG_EDITOR_EXPORT_DEFAULT_AVATAR_LOAD_LIMIT = 700;
-const ORG_EDITOR_EXPORT_DEFAULT_MAX_CANVAS_PIXELS = 32_000_000;
+export const ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS = 32_000_000;
+export const ORG_EDITOR_EXPORT_MAX_CANVAS_SIDE = 16_384;
 export const ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT = 160;
 export const ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS = 8_000_000;
 export const ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT = "{fullName} {isBoss ? '· {isBoss}' : ''}";
@@ -443,6 +459,7 @@ export const createDefaultOrgEditorImageExportSettings = (
   imageBossLabel = ORG_EDITOR_DEFAULT_BOSS_LABEL,
 ): OrgEditorImageExportSettings => ({
   background: { type: "transparent" },
+  density: 2,
   employeeFormat: ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT,
   fontFamily: ORG_EDITOR_EXPORT_FONTS[0]?.family ?? "Inter",
   imageBossLabel,
@@ -452,6 +469,48 @@ export const createDefaultOrgEditorImageExportSettings = (
   titleFontSize: DEFAULT_TITLE_FONT_SIZE,
   unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
 });
+
+export type OrgEditorImageRenderPlan = {
+  clamped: boolean;
+  effectiveDensity: number;
+  logicalHeight: number;
+  logicalWidth: number;
+  pixelHeight: number;
+  pixelWidth: number;
+  requestedDensity: OrgEditorImageDensity;
+};
+
+export const createOrgEditorImageRenderPlan = ({
+  logicalHeight,
+  logicalWidth,
+  maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
+  maxCanvasSide = ORG_EDITOR_EXPORT_MAX_CANVAS_SIDE,
+  requestedDensity,
+}: {
+  logicalHeight: number;
+  logicalWidth: number;
+  maxCanvasPixels?: number;
+  maxCanvasSide?: number;
+  requestedDensity: OrgEditorImageDensity;
+}): OrgEditorImageRenderPlan => {
+  const safeWidth = Math.max(1, Math.ceil(logicalWidth));
+  const safeHeight = Math.max(1, Math.ceil(logicalHeight));
+  const pixelScale = Math.sqrt(Math.max(1, maxCanvasPixels) / Math.max(1, safeWidth * safeHeight));
+  const sideScale = Math.min(
+    Math.max(1, maxCanvasSide) / safeWidth,
+    Math.max(1, maxCanvasSide) / safeHeight,
+  );
+  const effectiveDensity = Math.max(0.05, Math.min(requestedDensity, pixelScale, sideScale));
+  return {
+    clamped: effectiveDensity + 1e-9 < requestedDensity,
+    effectiveDensity,
+    logicalHeight: safeHeight,
+    logicalWidth: safeWidth,
+    pixelHeight: Math.max(1, Math.floor(safeHeight * effectiveDensity)),
+    pixelWidth: Math.max(1, Math.floor(safeWidth * effectiveDensity)),
+    requestedDensity,
+  };
+};
 
 export const createOrgEditorExportFileBaseName = (unit: OrgEditorUnit) => {
   const normalizedName = getOrgEditorUnitDisplayName(unit)
@@ -540,6 +599,126 @@ const drawRoundedRect = (
   context.lineTo(rect.x, rect.y + safeRadius);
   context.quadraticCurveTo(rect.x, rect.y, rect.x + safeRadius, rect.y);
   context.closePath();
+};
+
+const drawOrgEditorArrowMarker = (
+  context: CanvasRenderingContext2D,
+  point: { x: number; y: number },
+  toward: { x: number; y: number },
+  color: string,
+  strokeWidth: number,
+) => {
+  const angle = Math.atan2(point.y - toward.y, point.x - toward.x);
+  const size = Math.max(8, strokeWidth * 4);
+  context.save();
+  context.translate(point.x, point.y);
+  context.rotate(angle);
+  context.beginPath();
+  context.moveTo(0, 0);
+  context.lineTo(-size, size * 0.45);
+  context.lineTo(-size, -size * 0.45);
+  context.closePath();
+  context.fillStyle = color;
+  context.fill();
+  context.restore();
+};
+
+const paintOrgEditorCanvasElement = ({
+  context,
+  element,
+  imageByUrl,
+}: {
+  context: CanvasRenderingContext2D;
+  element: OrgEditorCanvasElement;
+  imageByUrl: ReadonlyMap<string, HTMLImageElement | null>;
+}) => {
+  if (element.type === "arrow") {
+    const { control1, control2 } = getOrgEditorArrowControlPoints(element);
+    const color = employeeTagColorToHex(element.strokeColor);
+    context.save();
+    context.beginPath();
+    context.moveTo(element.start.x, element.start.y);
+    context.bezierCurveTo(
+      control1.x,
+      control1.y,
+      control2.x,
+      control2.y,
+      element.end.x,
+      element.end.y,
+    );
+    context.strokeStyle = color;
+    context.lineWidth = element.strokeWidth;
+    context.setLineDash(element.dash === "dashed" ? [8, 6] : []);
+    context.stroke();
+    context.setLineDash([]);
+    if (element.startMarker === "arrow") {
+      drawOrgEditorArrowMarker(context, element.start, control1, color, element.strokeWidth);
+    }
+    if (element.endMarker === "arrow") {
+      drawOrgEditorArrowMarker(context, element.end, control2, color, element.strokeWidth);
+    }
+    context.restore();
+    return;
+  }
+
+  context.save();
+  context.translate(element.x + element.width / 2, element.y + element.height / 2);
+  context.rotate((element.rotation * Math.PI) / 180);
+  context.translate(-element.width / 2, -element.height / 2);
+  if (element.type === "sticker") {
+    drawRoundedRect(context, { height: element.height, width: element.width, x: 0, y: 0 }, 12);
+    context.fillStyle = employeeTagColorToHex(element.backgroundColor);
+    context.fill();
+  }
+  if (element.type === "image") {
+    const image = imageByUrl.get(element.dataUrl) ?? null;
+    if (image) {
+      const scale = Math.min(element.width / image.width, element.height / image.height);
+      const width = image.width * scale;
+      const height = image.height * scale;
+      context.drawImage(
+        image,
+        (element.width - width) / 2,
+        (element.height - height) / 2,
+        width,
+        height,
+      );
+    } else {
+      context.fillStyle = "#e2e8f0";
+      context.fillRect(0, 0, element.width, element.height);
+      context.strokeStyle = "#94a3b8";
+      context.lineWidth = 2;
+      const [firstPoint, ...remainingPoints] = getOrgEditorCanvasImagePlaceholderPoints(
+        element.width,
+        element.height,
+      );
+      context.beginPath();
+      if (firstPoint) context.moveTo(firstPoint.x, firstPoint.y);
+      for (const point of remainingPoints) context.lineTo(point.x, point.y);
+      context.stroke();
+    }
+    context.restore();
+    return;
+  }
+
+  context.font = getCanvasFont(
+    element.typography.fontFamily,
+    element.typography.fontWeight,
+    element.typography.fontSize,
+  );
+  const lines = layoutOrgEditorCanvasText({
+    height: element.height,
+    measure: (value) => context.measureText(value).width,
+    padding: element.type === "sticker" ? 16 : 4,
+    text: element.text,
+    typography: element.typography,
+    width: element.width,
+  });
+  context.fillStyle = employeeTagColorToHex(element.typography.color);
+  context.textAlign = "start";
+  context.textBaseline = "top";
+  for (const line of lines) context.fillText(line.text, line.x, line.y);
+  context.restore();
 };
 
 const drawTrimmedText = (
@@ -888,9 +1067,11 @@ const drawOrgEditorEmployeeTags = ({
 };
 
 const waitForCanvasFont = async ({
+  canvasElements = [],
   fontFamily,
   titleFontSize,
 }: {
+  canvasElements?: readonly OrgEditorCanvasElement[];
   fontFamily: string;
   titleFontSize: number;
 }) => {
@@ -903,6 +1084,16 @@ const waitForCanvasFont = async ({
     getCanvasFont(fontFamily, 700, 8),
     getCanvasFont(fontFamily, 700, titleFontSize),
   ]);
+  for (const element of canvasElements) {
+    if (element.type === "image" || element.type === "arrow") continue;
+    fontRequests.add(
+      getCanvasFont(
+        element.typography.fontFamily,
+        element.typography.fontWeight,
+        element.typography.fontSize,
+      ),
+    );
+  }
 
   await Promise.all([...fontRequests].map((fontRequest) => document.fonts.load(fontRequest)));
 };
@@ -1051,7 +1242,8 @@ const renderOrgEditorTemplate = ({
     template: format,
   });
 
-export const createOrgEditorUnitImageBlob = async ({
+export const createOrgEditorImageExportResult = async ({
+  canvasElements = [],
   distributionEnabledUnitIds,
   distributionUnitIdsByEmployeeId,
   viewSettings,
@@ -1060,13 +1252,14 @@ export const createOrgEditorUnitImageBlob = async ({
   formatUnitSummary,
   layoutMode,
   locale,
-  maxCanvasPixels = ORG_EDITOR_EXPORT_DEFAULT_MAX_CANVAS_PIXELS,
+  maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
   rootUnit,
   scope,
   settings,
   tagOrder = [],
   units,
 }: {
+  canvasElements?: readonly OrgEditorCanvasElement[];
   distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   viewSettings: OrgEditorViewSettings;
@@ -1076,8 +1269,8 @@ export const createOrgEditorUnitImageBlob = async ({
   layoutMode: OrgEditorLayoutMode;
   locale: string;
   maxCanvasPixels?: number;
-  rootUnit: OrgEditorUnit;
-  scope: OrgEditorExportScope;
+  rootUnit: OrgEditorUnit | null;
+  scope: OrgEditorExportScope | "view";
   settings: OrgEditorImageExportSettings;
   tagOrder?: readonly TagId[];
   units: OrgEditorUnit[];
@@ -1085,7 +1278,7 @@ export const createOrgEditorUnitImageBlob = async ({
   const titleFontSize = Math.min(Math.max(settings.titleFontSize, 12), 48);
   const titleLineHeight = Math.ceil(titleFontSize * 1.45);
 
-  await waitForCanvasFont({ fontFamily: settings.fontFamily, titleFontSize });
+  await waitForCanvasFont({ canvasElements, fontFamily: settings.fontFamily, titleFontSize });
 
   const measureCanvas = document.createElement("canvas");
   const measureContext = measureCanvas.getContext("2d");
@@ -1097,7 +1290,8 @@ export const createOrgEditorUnitImageBlob = async ({
     400,
     ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize,
   );
-  const imageUnits = getOrgEditorExportUnits({ rootUnit, scope, units });
+  const imageUnits =
+    scope === "view" ? units : rootUnit ? getOrgEditorExportUnits({ rootUnit, scope, units }) : [];
   const employeeSummaryByUnitId = buildOrgEditorUnitEmployeeSummaryById(units);
   const imageUnitRenderData = imageUnits.map((unit) => {
     const employeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById, viewSettings.groupByTag);
@@ -1157,6 +1351,61 @@ export const createOrgEditorUnitImageBlob = async ({
   const imageUnitRenderDataById = new Map(
     imageUnitRenderData.map((data) => [data.unit.id, data] as const),
   );
+  const scopedElementIds =
+    scope === "view"
+      ? new Set(canvasElements.map((element) => element.id))
+      : getOrgEditorScopedCanvasElementIds({
+          elements: canvasElements,
+          ownerKeys: new Set(
+            imageUnitRenderData.flatMap(({ employeeIds, unit }) => [
+              `unit:${unit.id}`,
+              ...employeeIds.map((employeeId) => `employee:${unit.id}:${employeeId}`),
+            ]),
+          ),
+        });
+  const sceneCanvasElements = canvasElements.filter((element) => scopedElementIds.has(element.id));
+  const resolvedCanvasElementById = resolveOrgEditorCanvasElements({
+    elements: sceneCanvasElements,
+    resolveExternalAnchor: (ref: OrgEditorAnchorRef) => {
+      if (ref.owner.type === "element") return null;
+      const unitData = imageUnitRenderDataById.get(ref.owner.unitId);
+      if (!unitData) return null;
+      const bounds = {
+        height: unitData.height,
+        rotation: 0,
+        width: unitData.width,
+        x: unitData.unit.x,
+        y: unitData.unit.y,
+      };
+      if (ref.owner.type === "unit") {
+        if (!ORG_EDITOR_RECT_ANCHOR_IDS.includes(ref.anchorId as never)) return null;
+        return getOrgEditorRectAnchorPoint(bounds, ref.anchorId as never);
+      }
+      if (!ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.includes(ref.anchorId as never)) return null;
+      const employeeIndex = unitData.employeeIds.indexOf(ref.owner.employeeId);
+      if (employeeIndex < 0) return null;
+      if (unitData.unit.collapsed) {
+        return {
+          x: ref.anchorId === "leftCenter" ? bounds.x : bounds.x + bounds.width,
+          y: bounds.y + bounds.height / 2,
+        };
+      }
+      const rowBounds = getOrgEditorEmployeeRowSurfaceBounds({
+        employeeRowHeight:
+          unitData.employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+        employeeRowOffset: unitData.employeeRowOffsets[employeeIndex] ?? 0,
+        unit: unitData.unit,
+      });
+      return {
+        x: ref.anchorId === "leftCenter" ? rowBounds.x : rowBounds.x + rowBounds.width,
+        y: rowBounds.y + rowBounds.height / 2,
+      };
+    },
+  });
+  const resolvedCanvasElements = sceneCanvasElements.flatMap((element) => {
+    const resolved = resolvedCanvasElementById.get(element.id);
+    return resolved ? [resolved.element] : [];
+  });
   const unitBounds = imageUnitRenderData.map(({ height, unit, width }) => ({
     height,
     width,
@@ -1164,17 +1413,17 @@ export const createOrgEditorUnitImageBlob = async ({
     y: unit.y,
   }));
 
-  if (unitBounds.length === 0) {
-    throw new Error("The selected Unit has no structure to export as an image.");
-  }
+  const elementBounds = getOrgEditorCanvasElementsBounds(resolvedCanvasElements);
+  const contentBounds = [...unitBounds, ...(elementBounds ? [elementBounds] : [])];
+  if (contentBounds.length === 0) throw new Error("The View has no content to export as an image.");
 
   const padding = Math.min(Math.max(settings.padding, 0), 100);
   const unitBorderRadius = Math.min(Math.max(settings.unitBorderRadius, 0), 100);
   const title = settings.title.trim();
-  const minX = Math.min(...unitBounds.map((bounds) => bounds.x));
-  const minY = Math.min(...unitBounds.map((bounds) => bounds.y));
-  const maxX = Math.max(...unitBounds.map((bounds) => bounds.x + bounds.width));
-  const maxY = Math.max(...unitBounds.map((bounds) => bounds.y + bounds.height));
+  const minX = Math.min(...contentBounds.map((bounds) => bounds.x));
+  const minY = Math.min(...contentBounds.map((bounds) => bounds.y));
+  const maxX = Math.max(...contentBounds.map((bounds) => bounds.x + bounds.width));
+  const maxY = Math.max(...contentBounds.map((bounds) => bounds.y + bounds.height));
   const contentWidth = maxX - minX;
   const contentHeight = maxY - minY;
   const titleHeight = title ? titleLineHeight : 0;
@@ -1188,11 +1437,12 @@ export const createOrgEditorUnitImageBlob = async ({
 
   const imageWidth = Math.ceil(Math.max(contentWidth, titleWidth) + padding * 2);
   const imageHeight = Math.ceil(contentHeight + padding * 2 + titleHeight + titleGap);
-  const requestedScale = Math.min(window.devicePixelRatio || 1, 2);
-  const maxPixelRatioScale = Math.sqrt(
-    Math.max(1, maxCanvasPixels) / Math.max(1, imageWidth * imageHeight),
-  );
-  const scale = Math.max(0.05, Math.min(requestedScale, maxPixelRatioScale));
+  const plan = createOrgEditorImageRenderPlan({
+    logicalHeight: imageHeight,
+    logicalWidth: imageWidth,
+    maxCanvasPixels,
+    requestedDensity: settings.density,
+  });
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
   const avatarUrls = new Set<string>();
@@ -1220,10 +1470,16 @@ export const createOrgEditorUnitImageBlob = async ({
     [...avatarUrls],
     ORG_EDITOR_EXPORT_AVATAR_LOAD_CONCURRENCY,
   );
+  const canvasImageByUrl = await loadCanvasImages(
+    resolvedCanvasElements.flatMap((element) =>
+      element.type === "image" ? [element.dataUrl] : [],
+    ),
+    ORG_EDITOR_EXPORT_AVATAR_LOAD_CONCURRENCY,
+  );
 
-  canvas.width = Math.max(1, Math.ceil(imageWidth * scale));
-  canvas.height = Math.max(1, Math.ceil(imageHeight * scale));
-  context.scale(scale, scale);
+  canvas.width = plan.pixelWidth;
+  canvas.height = plan.pixelHeight;
+  context.scale(plan.effectiveDensity, plan.effectiveDensity);
   context.lineCap = "round";
   context.lineJoin = "round";
 
@@ -1267,6 +1523,11 @@ export const createOrgEditorUnitImageBlob = async ({
     context.strokeStyle = "#cbd5e1";
     context.lineWidth = 2;
     context.stroke(connectionPath);
+  }
+
+  for (const element of resolvedCanvasElements) {
+    if (element.layer !== "behindUnits") continue;
+    paintOrgEditorCanvasElement({ context, element, imageByUrl: canvasImageByUrl });
   }
 
   for (const {
@@ -1502,10 +1763,33 @@ export const createOrgEditorUnitImageBlob = async ({
     }
   }
 
+  for (const element of resolvedCanvasElements) {
+    if (element.layer !== "aboveUnits") continue;
+    paintOrgEditorCanvasElement({ context, element, imageByUrl: canvasImageByUrl });
+  }
+
   context.restore();
 
-  return createPngBlobFromCanvas(canvas);
+  return { blob: await createPngBlobFromCanvas(canvas), plan };
 };
+
+export const createOrgEditorUnitImageBlob = async (
+  options: Omit<Parameters<typeof createOrgEditorImageExportResult>[0], "rootUnit" | "scope"> & {
+    rootUnit: OrgEditorUnit;
+    scope: OrgEditorExportScope;
+  },
+) => (await createOrgEditorImageExportResult(options)).blob;
+
+export const createOrgEditorViewImageBlob = async (
+  options: Omit<Parameters<typeof createOrgEditorImageExportResult>[0], "rootUnit" | "scope">,
+) =>
+  (
+    await createOrgEditorImageExportResult({
+      ...options,
+      rootUnit: null,
+      scope: "view",
+    })
+  ).blob;
 
 const getOrgEditorTemplateUnits = ({
   rootUnit,

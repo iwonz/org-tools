@@ -1,6 +1,7 @@
 import type {
   EmployeeId,
   EmployeeLiveFilterRule,
+  OrgEditorCanvasElement,
   OrgEditorState,
   OrgToolsViewDocument,
   OrgToolsViewUiState,
@@ -13,6 +14,11 @@ import { LocalizedError, uiMessage } from "@/i18n/messages";
 import { createUuid } from "@/lib/employee-data";
 import { cloneEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import { createDefaultOrgEditorState, createOrgEditorUnitId } from "@/lib/org-editor";
+import {
+  cloneOrgEditorCanvasElement,
+  detachOrgEditorCanvasElementTargets,
+  remapOrgEditorAnchorRef,
+} from "@/lib/org-editor-canvas";
 import { normalizeSearchValue } from "@/lib/search-index";
 import {
   type OrgEditorClipboard,
@@ -30,8 +36,42 @@ const cloneStateWithRemappedUnits = (state: OrgEditorState): OrgEditorState => {
   const unitIdMap = new Map<UnitId, UnitId>(
     state.units.map((unit) => [unit.id, createOrgEditorUnitId()]),
   );
+  const elementIdMap = new Map(
+    state.canvasElements.map((element) => [element.id, createUuid()] as const),
+  );
+  const remapElement = (source: OrgEditorCanvasElement): OrgEditorCanvasElement => {
+    const element = cloneOrgEditorCanvasElement(source);
+    const id = elementIdMap.get(source.id) ?? source.id;
+    if (element.type === "arrow") {
+      const remapEndpoint = (endpoint: typeof element.start) => {
+        if (!endpoint.attachment) return endpoint;
+        const target = remapOrgEditorAnchorRef(
+          endpoint.attachment.target,
+          unitIdMap,
+          elementIdMap,
+          false,
+        );
+        return { ...endpoint, attachment: target ? { ...endpoint.attachment, target } : null };
+      };
+      return {
+        ...element,
+        end: remapEndpoint(element.end),
+        id,
+        start: remapEndpoint(element.start),
+      };
+    }
+    if (!element.attachment) return { ...element, id };
+    const target = remapOrgEditorAnchorRef(
+      element.attachment.target,
+      unitIdMap,
+      elementIdMap,
+      false,
+    );
+    return { ...element, attachment: target ? { ...element.attachment, target } : null, id };
+  };
 
   return {
+    canvasElements: state.canvasElements.map(remapElement),
     distributionModeUnitIds: state.distributionModeUnitIds.flatMap((unitId) => {
       const nextUnitId = unitIdMap.get(unitId);
       return nextUnitId ? [nextUnitId] : [];
@@ -134,6 +174,7 @@ export class OrgViewsStore {
         );
         const viewUi = uiByViewId.get(view.id);
         editor.loadState({
+          canvasElements: view.structure.canvasElements,
           distributionModeUnitIds: viewUi?.distributionModeUnitIds ?? [],
           layoutMode: view.structure.layoutMode,
           settings: view.structure.settings,
@@ -216,6 +257,7 @@ export class OrgViewsStore {
     return this.viewRecords.map((view) => ({
       ...view,
       structure: {
+        canvasElements: this.editorByViewId.get(view.id)?.createState().canvasElements ?? [],
         settings: {
           ...(this.editorByViewId.get(view.id)?.settings ?? createDefaultOrgEditorState().settings),
         },
@@ -261,6 +303,12 @@ export class OrgViewsStore {
       employeeIds.filter((currentEmployeeId) => currentEmployeeId !== employeeId);
     this.clipboard = {
       ...this.clipboard,
+      canvasElements: this.clipboard.canvasElements.map((element) =>
+        detachOrgEditorCanvasElementTargets(
+          element,
+          (target) => target.owner.type === "employee" && target.owner.employeeId === employeeId,
+        ),
+      ),
       employeeIds: removeEmployee(this.clipboard.employeeIds),
       resolvedEmployeeIdsByUnitId: new Map(
         [...this.clipboard.resolvedEmployeeIdsByUnitId].map(([unitId, employeeIds]) => [

@@ -1,5 +1,5 @@
 import type { EmployeeTagColor } from "./employee.js";
-import type { EmployeeId, UnitId } from "./ids.js";
+import type { EmployeeId, OrgEditorCanvasElementId, UnitId } from "./ids.js";
 import type { EmployeeLiveFilterRule } from "./organization.js";
 
 export type OrgEditorUnitId = UnitId;
@@ -21,7 +21,120 @@ export type OrgEditorSelectedItem =
       type: "employee";
       unitId: OrgEditorUnitId;
       employeeId: EmployeeId;
+    }
+  | {
+      elementId: OrgEditorCanvasElementId;
+      type: "element";
     };
+
+export type OrgEditorCanvasElementLayer = "aboveUnits" | "behindUnits";
+export type OrgEditorHorizontalAlign = "center" | "left" | "right";
+export type OrgEditorVerticalAlign = "bottom" | "middle" | "top";
+export type OrgEditorFontWeight = 400 | 500 | 700;
+
+export type OrgEditorRectAnchorId =
+  | "bottomCenter"
+  | "bottomLeft"
+  | "bottomRight"
+  | "center"
+  | "leftCenter"
+  | "rightCenter"
+  | "topCenter"
+  | "topLeft"
+  | "topRight";
+export type OrgEditorEmployeeAnchorId = "leftCenter" | "rightCenter";
+export type OrgEditorArrowAnchorId = "end" | "middle" | "start";
+
+export type OrgEditorAnchorOwner =
+  | { type: "unit"; unitId: OrgEditorUnitId }
+  | { employeeId: EmployeeId; type: "employee"; unitId: OrgEditorUnitId }
+  | { elementId: OrgEditorCanvasElementId; type: "element" };
+
+export type OrgEditorAnchorRef = {
+  anchorId: OrgEditorRectAnchorId | OrgEditorEmployeeAnchorId | OrgEditorArrowAnchorId;
+  owner: OrgEditorAnchorOwner;
+};
+
+export type OrgEditorCanvasPoint = { x: number; y: number };
+
+export type OrgEditorAttachment = {
+  offset: OrgEditorCanvasPoint;
+  sourceAnchorId: OrgEditorRectAnchorId;
+  target: OrgEditorAnchorRef;
+};
+
+export type OrgEditorArrowEndpointAttachment = {
+  offset: OrgEditorCanvasPoint;
+  target: OrgEditorAnchorRef;
+};
+
+export type OrgEditorTypography = {
+  color: EmployeeTagColor;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: OrgEditorFontWeight;
+  horizontalAlign: OrgEditorHorizontalAlign;
+  verticalAlign: OrgEditorVerticalAlign;
+};
+
+type OrgEditorRectElementBase = {
+  attachment: OrgEditorAttachment | null;
+  height: number;
+  id: OrgEditorCanvasElementId;
+  layer: OrgEditorCanvasElementLayer;
+  rotation: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+export type OrgEditorTextElement = OrgEditorRectElementBase & {
+  text: string;
+  typography: OrgEditorTypography;
+  type: "text";
+};
+
+export type OrgEditorStickerElement = OrgEditorRectElementBase & {
+  backgroundColor: EmployeeTagColor;
+  text: string;
+  typography: OrgEditorTypography;
+  type: "sticker";
+};
+
+export type OrgEditorImageElement = OrgEditorRectElementBase & {
+  dataUrl: string;
+  intrinsicHeight: number;
+  intrinsicWidth: number;
+  lockAspectRatio: boolean;
+  type: "image";
+};
+
+export type OrgEditorArrowEndpoint = {
+  attachment: OrgEditorArrowEndpointAttachment | null;
+  x: number;
+  y: number;
+};
+
+export type OrgEditorArrowElement = {
+  dash: "dashed" | "solid";
+  end: OrgEditorArrowEndpoint;
+  endControl: OrgEditorCanvasPoint;
+  endMarker: "arrow" | "none";
+  id: OrgEditorCanvasElementId;
+  layer: OrgEditorCanvasElementLayer;
+  start: OrgEditorArrowEndpoint;
+  startControl: OrgEditorCanvasPoint;
+  startMarker: "arrow" | "none";
+  strokeColor: EmployeeTagColor;
+  strokeWidth: number;
+  type: "arrow";
+};
+
+export type OrgEditorCanvasElement =
+  | OrgEditorArrowElement
+  | OrgEditorImageElement
+  | OrgEditorStickerElement
+  | OrgEditorTextElement;
 
 export type OrgEditorEmployeePosition = {
   employeeId: EmployeeId;
@@ -58,6 +171,7 @@ export type OrgEditorViewSettings = {
 };
 
 export type StructureDocument = {
+  canvasElements: OrgEditorCanvasElement[];
   settings: OrgEditorViewSettings;
   distributionModeUnitIds: OrgEditorUnitId[];
   units: OrgEditorUnit[];

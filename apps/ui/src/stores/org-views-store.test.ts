@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { createUuid } from "@/lib/employee-data";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
+import { createOrgEditorStickerElement, createOrgEditorTextElement } from "@/lib/org-editor-canvas";
 import { createBlankOrgToolsState } from "@/lib/org-file";
 import { OrgViewsStore } from "@/stores/org-views-store";
 
@@ -30,6 +31,30 @@ describe("OrgViewsStore shared clipboard", () => {
       y: 240,
     });
     source.synchronizeLiveResolution(new Map([[childId, [employeeId]]]));
+    const sticker = {
+      ...createOrgEditorStickerElement({ x: 420, y: 0 }),
+      attachment: {
+        offset: { x: 24, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { type: "unit" as const, unitId: rootId },
+        },
+      },
+    };
+    const text = {
+      ...createOrgEditorTextElement({ x: 700, y: 0 }),
+      attachment: {
+        offset: { x: 24, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { elementId: sticker.id, type: "element" as const },
+        },
+      },
+    };
+    source.addCanvasElement(sticker);
+    source.addCanvasElement(text);
     source.toggleUnitDistributionMode(rootId);
     source.setSelectedItems([{ type: "unit", unitId: rootId }]);
     source.copySelected();
@@ -41,6 +66,7 @@ describe("OrgViewsStore shared clipboard", () => {
     target.pasteAt({ x: 480, y: 360 });
 
     expect(target.units).toHaveLength(2);
+    expect(target.canvasElements).toHaveLength(2);
     expect(target.units.map((unit) => unit.id)).not.toContain(rootId);
     expect(target.units.map((unit) => unit.id)).not.toContain(childId);
     const pastedRoot = target.units.find((unit) => unit.parentId === null);
@@ -51,11 +77,24 @@ describe("OrgViewsStore shared clipboard", () => {
     expect(pastedRoot).not.toHaveProperty("groupByTag");
     expect(pastedChild?.parentId).toBe(pastedRoot?.id);
     expect(pastedChild?.liveFilter?.selectedUnitIds).toEqual([pastedRoot?.id]);
+    const pastedSticker = target.canvasElements.find((element) => element.type === "sticker");
+    const pastedText = target.canvasElements.find((element) => element.type === "text");
+    expect(pastedSticker?.id).not.toBe(sticker.id);
+    expect(pastedSticker?.type === "sticker" && pastedSticker.attachment?.target.owner).toEqual({
+      type: "unit",
+      unitId: pastedRoot?.id,
+    });
+    expect(pastedText?.id).not.toBe(text.id);
+    expect(pastedText?.type === "text" && pastedText.attachment?.target.owner).toEqual({
+      elementId: pastedSticker?.id,
+      type: "element",
+    });
     expect(target.distributionModeUnitIds).toEqual([]);
     expect(target.canUndo).toBe(true);
 
     target.undo();
     expect(target.units).toEqual([]);
+    expect(target.canvasElements).toEqual([]);
     expect(source.units).toHaveLength(2);
   });
 

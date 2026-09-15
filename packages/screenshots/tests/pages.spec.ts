@@ -7,6 +7,7 @@ import frMessages from "../../../apps/ui/messages/fr.json" with { type: "json" }
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import zhMessages from "../../../apps/ui/messages/zh.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
+import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
 import {
   createDistributionStateFile,
   localeStorageKey,
@@ -46,6 +47,19 @@ test("synchronizes global Tag order and Unit grouping with scrollable presets", 
     )
     .toEqual(alphabeticalOrder);
   await peer.close();
+});
+
+test("edits durable canvas tools and exports the complete View PNG", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await expect(page.locator('[data-demo-id="org-editor-canvas-tools"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toHaveCount(0);
+  const dialog = await openImportDialog(page, syntheticStatePath);
+  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await exerciseCanvasToolsAndViewExport(page);
 });
 
 const useEnglish = (key: string) => window.localStorage.setItem(key, "en");

@@ -24,10 +24,10 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
 - The system View is the canonical Unit structure used by Units, Employee Import, and Analytics.
   Custom Editor Views may own isolated Unit documents, assignments, rules, history, and geometry,
   while Employees, custom fields, and Tags remain one global catalog shared by every View.
-- Every persistent Editor View presentation setting and stable Unit or Employee card presentation
-  change must define, implement, and test its corresponding Editor PNG behavior in the same change.
-  Explicit Image settings may override matching output attributes; transient interaction chrome,
-  selection, and placement overlays remain excluded.
+- Every persistent Editor canvas element, anchor behavior, View presentation setting, and stable Unit
+  or Employee card presentation change must define, implement, and test matching DOM and Editor PNG
+  behavior in the same change. Explicit Image settings may override matching output attributes;
+  transient interaction chrome, selection, and placement overlays remain excluded.
 - Profile and email navigation must require an explicit user action and use referrer protections.
 - Source comments, fixtures, tests, specifications, and documentation are English. Non-English
   product copy is allowed only in its matching catalog under `apps/ui/messages/{locale}.json` for

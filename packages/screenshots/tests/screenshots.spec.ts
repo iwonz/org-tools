@@ -594,13 +594,22 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor-distribution-connections");
 
   await replaceWithImageExportState(page);
-  const dialog = await openEditorExport(page);
-  await expect(dialog.locator('[data-demo-id="org-editor-export-image"]')).toBeVisible();
+  await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
+  const viewImageDialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
+  await expect(viewImageDialog).toBeVisible();
+  await expect(viewImageDialog.getByAltText("View export preview", { exact: true })).toBeVisible();
+  await expect(
+    viewImageDialog.locator('[data-demo-id="org-editor-view-image-dimensions"]'),
+  ).toBeVisible();
   await capture(page, "editor-image-export");
-  await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
+  await viewImageDialog.locator('[data-demo-id="org-editor-view-image-density"]').click();
+  await page.getByRole("option", { name: "3×", exact: true }).click();
+  await viewImageDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
   await capture(page, "editor-image-settings");
+  await page.keyboard.press("Escape");
+  const dialog = await openEditorExport(page);
   await dialog.getByRole("tab", { name: "Template", exact: true }).click();
   await capture(page, "editor-template-export");
   await dialog.getByRole("tab", { name: "JSON", exact: true }).click();
