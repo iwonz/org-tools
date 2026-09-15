@@ -111,9 +111,10 @@ control.
   Forward/Backward/Front/Back, Duplicate, and Delete actions instead of Unit or layer-plane
   commands. Text
   and Sticker support
-  bundled fonts, size, weight, color, horizontal/vertical alignment, resize, rotation, and
-  non-clipping wrapping; Sticker also has a background color. Images accept only local PNG, JPEG, or
-  WebP file/clipboard bytes and support aspect-locked resize and rotation. Cubic Arrows expose two
+  locally bundled fonts that match PNG, size, weight, color, horizontal/vertical alignment, resize,
+  rotation, and non-clipping wrapping; Sticker also has a background color and a folded-paper
+  surface mirrored in PNG. Images accept only local PNG, JPEG, or WebP file/clipboard bytes and
+  resize independently by default; hold Shift during a resize to preserve proportions. Cubic Arrows expose two
   endpoints, Bezier controls, line style, independent markers, and shared anchors. Modifier and
   marquee selection, group move/resize/rotation, within-plane order actions, Delete, Copy/Paste,
   Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture. Selected
@@ -121,9 +122,11 @@ control.
   transparent side targets resize one dimension and transparent zones directly outside the corners
   rotate around the exact center. Their screen size stays constant while zooming, every changed
   rectangle receives whole-pixel Width and Height values, one attached element keeps the center of
-  its current bounds fixed, and groups use their shared bounds center. Connector handles appear only
-  while a selected frame is hovered or focused, then an attachment gesture reveals only its nearest
-  valid target. There is no detached rotation handle or permanent anchor field. Clicking outside an
+  its current bounds fixed, and groups use their shared bounds center. Resting selections have no
+  connector markers. With the Arrow tool armed, or while an endpoint is being attached, hovering an
+  eligible Unit, Employee row, element, or Arrow outlines that one owner and reveals all of its
+  anchors; the nearest in-range anchor is emphasized and an exact point can start the Arrow. There
+  is no detached rotation handle, persistent aspect lock, or permanent anchor field. Clicking outside an
   active Text or Sticker editor saves once before normal selection routing; the first Escape saves
   and leaves the element selected, while the next Escape clears that resting selection. Contextual
   settings wrap into compact readable groups.
@@ -164,7 +167,8 @@ control.
   background, padding, title, font, Unit radius, Employee format, boss label, Copy, and Save controls.
   Employee format uses the shared `@` suggestion input and its information help documents
   `{condition ? 'value' : 'fallback'}`; Copy and Save retain the standard clipboard and download
-  icons.
+  icons. Scoped Template export also offers **Remove empty lines**; its preview, Copy, Save, row-mode
+  counts, and preview totals all describe the filtered output.
   Unit/subtree Image export includes transitively attached annotations but excludes free or external
   ones. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
@@ -193,7 +197,9 @@ control.
   its placeholder explains that typing `@` opens a localized caret menu and inserts the stable
   `{token}` syntax. The information help also shows the supported
   `{condition ? 'value' : 'fallback'}` form. Unit paths use the fixed ` / ` separator. **Continue**
-  stays disabled in the shared header until at least one Employee is selected.
+  stays disabled in the shared header until at least one Employee is selected. **Remove empty
+  lines** deletes whitespace-only Template lines from preview, Copy, and Download and updates every
+  displayed row count from that same processed output; closing the settings resets the option.
 
 ## Import and Export
 

@@ -52,6 +52,9 @@ export const ORG_EDITOR_CANVAS_FONTS = [
   "PT Sans",
 ] as const;
 
+export const getOrgEditorCanvasFont = (fontFamily: string, weight: number, size: number) =>
+  `${weight} ${size}px "${fontFamily.replaceAll('"', "")}", Arial, sans-serif`;
+
 export const normalizeOrgEditorCanvasDimension = (value: number) =>
   Math.min(
     ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
@@ -455,6 +458,7 @@ export const resizeOrgEditorCanvasRectElement = <
   element: Element,
   handle: OrgEditorCanvasResizeHandle,
   pointer: OrgEditorCanvasPoint,
+  preserveAspectRatio = false,
 ): Element => {
   const sourceCenter = { x: element.x + element.width / 2, y: element.y + element.height / 2 };
   const localPointerDelta = rotateVector(
@@ -463,7 +467,7 @@ export const resizeOrgEditorCanvasRectElement = <
   );
   const targetBounds = getOrgEditorCanvasResizeBounds({
     handle,
-    lockAspectRatio: element.type === "image" && element.lockAspectRatio,
+    lockAspectRatio: element.type === "image" && preserveAspectRatio,
     pointer: {
       x: sourceCenter.x + localPointerDelta.x,
       y: sourceCenter.y + localPointerDelta.y,
@@ -1029,10 +1033,8 @@ export const transformOrgEditorCanvasElements = ({
     );
     const scaleX = targetBounds.width / Math.max(1e-6, sourceBounds.width);
     const scaleY = targetBounds.height / Math.max(1e-6, sourceBounds.height);
-    const lockedScale =
-      source.type === "image" && source.lockAspectRatio ? Math.min(scaleX, scaleY) : null;
-    const idealWidth = source.width * (lockedScale ?? scaleX);
-    const idealHeight = source.height * (lockedScale ?? scaleY);
+    const idealWidth = source.width * scaleX;
+    const idealHeight = source.height * scaleY;
     const { height, width } = normalizeOrgEditorCanvasDimensions({
       height: idealHeight,
       width: idealWidth,

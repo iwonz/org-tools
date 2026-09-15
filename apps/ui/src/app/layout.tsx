@@ -1,28 +1,37 @@
 import type { Metadata } from "next";
 
 import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
 import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
 import "@fontsource/inter/700.css";
 import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/700.css";
 import "@fontsource/montserrat/400.css";
+import "@fontsource/montserrat/500.css";
 import "@fontsource/montserrat/700.css";
 import "@fontsource/noto-sans/400.css";
+import "@fontsource/noto-sans/500.css";
 import "@fontsource/noto-sans/700.css";
 import "@fontsource/noto-sans-arabic/400.css";
 import "@fontsource/noto-sans-arabic/700.css";
 import "@fontsource/noto-sans-sc/400.css";
 import "@fontsource/noto-sans-sc/700.css";
 import "@fontsource/nunito-sans/400.css";
+import "@fontsource/nunito-sans/500.css";
 import "@fontsource/nunito-sans/700.css";
 import "@fontsource/open-sans/400.css";
+import "@fontsource/open-sans/500.css";
 import "@fontsource/open-sans/700.css";
 import "@fontsource/pt-sans/400.css";
 import "@fontsource/pt-sans/700.css";
 import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 import "@fontsource/source-sans-3/400.css";
+import "@fontsource/source-sans-3/500.css";
 import "@fontsource/source-sans-3/700.css";
 
 import { LocaleProvider } from "@/components/locale-provider";

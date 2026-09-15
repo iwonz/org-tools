@@ -413,57 +413,128 @@ export const createStructuredJsonRecords = (
   });
 };
 
+const createTemplateRowText = (
+  row: ExportRow,
+  templateFormat: string,
+  customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[],
+) => {
+  const customValues = evaluateCustomEmployeeFields(row.employee, customEmployeeFieldDefinitions);
+  const customDefinitionByKey = new Map(
+    customEmployeeFieldDefinitions.map((definition) => [definition.key, definition]),
+  );
+  return renderTemplateFormat({
+    formatValue: asExportText,
+    resolveField: (fieldName): TemplateFieldValue => {
+      const customDefinition = customDefinitionByKey.get(fieldName);
+      if (customDefinition) {
+        return { known: true, value: customValues.get(customDefinition.id) ?? null };
+      }
+      if (!exportFieldByKey.has(fieldName as ExportFieldKey)) return { known: false };
+      if (exportEmployeeFieldByKey.has(fieldName as ExportEmployeeFieldKey)) {
+        return {
+          known: true,
+          value: getExportEmployeeFieldValue(row.employee, fieldName as ExportEmployeeFieldKey),
+        };
+      }
+      return {
+        known: true,
+        value: getUnitFieldValue(row, fieldName as ExportUnitFieldKey, false),
+      };
+    },
+    template: templateFormat,
+  });
+};
+
+export const filterTemplateEmptyLines = (text: string, removeEmptyLines: boolean) => {
+  if (!removeEmptyLines) return text;
+  return text
+    .split(/\r\n?|\n/u)
+    .filter((line) => line.trim().length > 0)
+    .join("\n");
+};
+
+const countTemplateLineFragments = (fragments: Iterable<string>, removeEmptyLines: boolean) => {
+  let count = 0;
+  let hasCharacters = false;
+  let hasNonWhitespace = false;
+  let previousWasCarriageReturn = false;
+  const finishLine = () => {
+    if (!removeEmptyLines || hasNonWhitespace) count += 1;
+    hasCharacters = false;
+    hasNonWhitespace = false;
+  };
+
+  for (const fragment of fragments) {
+    for (const character of fragment) {
+      if (previousWasCarriageReturn) {
+        previousWasCarriageReturn = false;
+        if (character === "\n") continue;
+      }
+      if (character === "\r") {
+        finishLine();
+        previousWasCarriageReturn = true;
+        continue;
+      }
+      if (character === "\n") {
+        finishLine();
+        continue;
+      }
+      hasCharacters = true;
+      if (!/\s/u.test(character)) hasNonWhitespace = true;
+    }
+  }
+  if (hasCharacters) finishLine();
+  return count;
+};
+
+export const countTemplateOutputLines = (
+  rows: Iterable<ExportRow>,
+  templateFormat: string,
+  customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
+  removeEmptyLines = false,
+) =>
+  countTemplateLineFragments(
+    (function* renderRows() {
+      for (const row of rows) {
+        yield createTemplateRowText(row, templateFormat, customEmployeeFieldDefinitions);
+      }
+    })(),
+    removeEmptyLines,
+  );
+
 export const createTemplateText = (
   rows: ExportRow[],
   templateFormat: string,
   customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
+  removeEmptyLines = false,
 ) =>
-  rows
-    .map((row) => {
-      const customValues = evaluateCustomEmployeeFields(
-        row.employee,
-        customEmployeeFieldDefinitions,
-      );
-      const customDefinitionByKey = new Map(
-        customEmployeeFieldDefinitions.map((definition) => [definition.key, definition]),
-      );
-      return renderTemplateFormat({
-        formatValue: asExportText,
-        resolveField: (fieldName): TemplateFieldValue => {
-          const customDefinition = customDefinitionByKey.get(fieldName);
-          if (customDefinition) {
-            return { known: true, value: customValues.get(customDefinition.id) ?? null };
-          }
-          if (!exportFieldByKey.has(fieldName as ExportFieldKey)) return { known: false };
-          if (exportEmployeeFieldByKey.has(fieldName as ExportEmployeeFieldKey)) {
-            return {
-              known: true,
-              value: getExportEmployeeFieldValue(row.employee, fieldName as ExportEmployeeFieldKey),
-            };
-          }
-          return {
-            known: true,
-            value: getUnitFieldValue(row, fieldName as ExportUnitFieldKey, false),
-          };
-        },
-        template: templateFormat,
-      });
-    })
-    .join("");
+  filterTemplateEmptyLines(
+    rows
+      .map((row) => createTemplateRowText(row, templateFormat, customEmployeeFieldDefinitions))
+      .join(""),
+    removeEmptyLines,
+  );
 
 export const createExportText = ({
   rows,
   tabMode,
   templateFormat,
+  removeEmptyLines = false,
   ...jsonOptions
 }: StructuredJsonExportOptions & {
   rows: ExportRow[];
   tabMode: ExportTabMode;
   templateFormat: string;
+  removeEmptyLines?: boolean;
 }) =>
   tabMode === "json"
     ? JSON.stringify(createStructuredJsonRecords(rows, jsonOptions), null, 2)
-    : createTemplateText(rows, templateFormat, jsonOptions.customEmployeeFieldDefinitions);
+    : createTemplateText(
+        rows,
+        templateFormat,
+        jsonOptions.customEmployeeFieldDefinitions,
+        removeEmptyLines,
+      );
 
 const yieldForExportWork = () =>
   new Promise<void>((resolve) => {
@@ -478,11 +549,13 @@ export const createExportTextAsync = async ({
   rows,
   tabMode,
   templateFormat,
+  removeEmptyLines = false,
   ...jsonOptions
 }: StructuredJsonExportOptions & {
   rows: ExportRow[];
   tabMode: ExportTabMode;
   templateFormat: string;
+  removeEmptyLines?: boolean;
 }) => {
   const batchSize = 500;
   if (tabMode === "json") {
@@ -504,11 +577,12 @@ export const createExportTextAsync = async ({
         rows.slice(index, index + batchSize),
         templateFormat,
         jsonOptions.customEmployeeFieldDefinitions,
+        false,
       ),
     );
     if (index + batchSize < rows.length) await yieldForExportWork();
   }
-  return parts.join("");
+  return filterTemplateEmptyLines(parts.join(""), removeEmptyLines);
 };
 
 const truncateUtf8 = (text: string, maxBytes: number) => {
@@ -527,23 +601,48 @@ export const createExportPreview = ({
   rows,
   tabMode,
   templateFormat,
+  removeEmptyLines = false,
   ...jsonOptions
 }: StructuredJsonExportOptions & {
   rows: ExportRow[];
   tabMode: ExportTabMode;
   templateFormat: string;
+  removeEmptyLines?: boolean;
 }) => {
   const groupedRows = tabMode === "json" ? rowsByEmployee(rows) : null;
   const limitedRows = groupedRows
     ? groupedRows.slice(0, EXPORT_PREVIEW_MAX_RECORDS).flat()
     : rows.slice(0, EXPORT_PREVIEW_MAX_RECORDS);
-  const fullCount = groupedRows?.length ?? rows.length;
-  const text = createExportText({ ...jsonOptions, rows: limitedRows, tabMode, templateFormat });
+  const fullCount = groupedRows
+    ? groupedRows.length
+    : countTemplateOutputLines(
+        rows,
+        templateFormat,
+        jsonOptions.customEmployeeFieldDefinitions,
+        removeEmptyLines,
+      );
+  const shownCount = groupedRows
+    ? rowsByEmployee(limitedRows).length
+    : countTemplateOutputLines(
+        limitedRows,
+        templateFormat,
+        jsonOptions.customEmployeeFieldDefinitions,
+        removeEmptyLines,
+      );
+  const text = createExportText({
+    ...jsonOptions,
+    removeEmptyLines,
+    rows: limitedRows,
+    tabMode,
+    templateFormat,
+  });
   const bounded = truncateUtf8(text, EXPORT_PREVIEW_MAX_BYTES);
   return {
     fullCount,
-    shownCount: groupedRows ? rowsByEmployee(limitedRows).length : limitedRows.length,
+    shownCount,
     text: bounded.text,
-    truncated: bounded.truncated || fullCount > EXPORT_PREVIEW_MAX_RECORDS,
+    truncated:
+      bounded.truncated ||
+      (groupedRows ? groupedRows.length : rows.length) > EXPORT_PREVIEW_MAX_RECORDS,
   };
 };

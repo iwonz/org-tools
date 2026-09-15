@@ -178,6 +178,7 @@ import {
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasElementBounds,
   getOrgEditorCanvasElementsBounds,
+  getOrgEditorCanvasFont,
   getOrgEditorCanvasResizeBounds,
   getOrgEditorCanvasRotationDelta,
   getOrgEditorRectAnchorPoint,
@@ -308,6 +309,7 @@ type DragState =
       currentScreenPoint: ScreenPoint;
       elementIds: OrgEditorCanvasElementId[];
       handle: OrgEditorCanvasElementHandle | { type: "move" };
+      preserveAspectRatio: boolean;
       selectOnClick: OrgEditorSelectedItem | null;
       sourceBounds: CanvasRect;
       sourceElements: OrgEditorCanvasElement[];
@@ -321,6 +323,14 @@ type DragState =
 type OrgEditorAnchorCandidate = {
   point: CanvasPoint;
   ref: OrgEditorAnchorRef;
+};
+
+type OrgEditorAnchorTarget = {
+  anchors: OrgEditorAnchorCandidate[];
+  bounds: CanvasRect;
+  nearest: OrgEditorAnchorCandidate | null;
+  ownerKey: string;
+  rotation: number;
 };
 
 type OrgEditorSearchResult =
@@ -350,6 +360,9 @@ const INITIAL_CANVAS_SIZE = { height: 720, width: 1280 };
 const ORG_EDITOR_SEARCH_RESULT_LIMIT = 36;
 const ORG_EDITOR_SEARCH_VIEWPORT_MARGIN = 96;
 
+const canvasUiMetric = (name: string, fallback: number) =>
+  `var(--org-editor-canvas-ui-${name}, ${fallback}px)`;
+
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 const areViewportsEqual = (first: OrgEditorCanvasViewport, second: OrgEditorCanvasViewport) =>
@@ -365,7 +378,11 @@ const fitCanvasTextElementHeight = (element: OrgEditorCanvasElement): OrgEditorC
   const context = document.createElement("canvas").getContext("2d");
   return fitOrgEditorCanvasTextElementHeight(element, (value, typography) => {
     if (!context) return [...value].length * typography.fontSize * 0.55;
-    context.font = `${typography.fontWeight} ${typography.fontSize}px "${typography.fontFamily.replaceAll('"', "")}", Arial, sans-serif`;
+    context.font = getOrgEditorCanvasFont(
+      typography.fontFamily,
+      typography.fontWeight,
+      typography.fontSize,
+    );
     return context.measureText(value).width;
   });
 };
@@ -382,6 +399,26 @@ const canvasRectsIntersect = (first: CanvasRect, second: CanvasRect) =>
   first.x + first.width >= second.x &&
   first.y <= second.y + second.height &&
   first.y + first.height >= second.y;
+
+const isPointInsideCanvasElement = (point: CanvasPoint, element: OrgEditorCanvasElement) => {
+  if (element.type === "arrow") {
+    return isPointInsideRect(point, getOrgEditorCanvasElementBounds(element));
+  }
+  const center = { x: element.x + element.width / 2, y: element.y + element.height / 2 };
+  const radians = (-element.rotation * Math.PI) / 180;
+  const deltaX = point.x - center.x;
+  const deltaY = point.y - center.y;
+  const localPoint = {
+    x: center.x + deltaX * Math.cos(radians) - deltaY * Math.sin(radians),
+    y: center.y + deltaX * Math.sin(radians) + deltaY * Math.cos(radians),
+  };
+  return isPointInsideRect(localPoint, {
+    height: element.height,
+    width: element.width,
+    x: element.x,
+    y: element.y,
+  });
+};
 
 const getCanvasElementDragPreview = (
   drag: Extract<DragState, { type: "canvasElement" }>,
@@ -450,7 +487,14 @@ const getCanvasElementDragPreview = (
   const anchorId = drag.handle.anchorId;
   const [singleElement] = drag.sourceElements;
   if (drag.sourceElements.length === 1 && singleElement && singleElement.type !== "arrow") {
-    return [resizeOrgEditorCanvasRectElement(singleElement, anchorId, currentPoint)];
+    return [
+      resizeOrgEditorCanvasRectElement(
+        singleElement,
+        anchorId,
+        currentPoint,
+        drag.preserveAspectRatio,
+      ),
+    ];
   }
   const targetBounds = getOrgEditorCanvasResizeBounds({
     handle: anchorId,
@@ -1160,6 +1204,7 @@ function OrgEditorNode({
   placementUnitIdsByEmployeeId,
   employeeById,
   isConnectionDropTarget,
+  isCanvasArrowToolActive,
   isEmployeeDropTarget,
   layoutMode,
   onAddChild,
@@ -1189,6 +1234,7 @@ function OrgEditorNode({
   placementUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
   isConnectionDropTarget: boolean;
+  isCanvasArrowToolActive: boolean;
   isEmployeeDropTarget: boolean;
   layoutMode: OrgEditorLayoutMode;
   onAddChild: (unitId: OrgEditorUnitId) => void;
@@ -1308,6 +1354,7 @@ function OrgEditorNode({
           layoutMode === "leftRight"
             ? "-left-2.5 top-1/2 -translate-y-1/2"
             : "-top-2.5 left-1/2 -translate-x-1/2",
+          isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
         )}
         onPointerDown={(event) => {
           event.preventDefault();
@@ -1328,6 +1375,7 @@ function OrgEditorNode({
           layoutMode === "leftRight"
             ? "-right-4 top-1/2 -translate-y-1/2"
             : "-bottom-4 left-1/2 -translate-x-1/2",
+          isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
         )}
         onClick={(event) => {
           event.stopPropagation();
@@ -1348,6 +1396,7 @@ function OrgEditorNode({
           unit.noteMarkdown.trim()
             ? "bg-signal/10 text-signal opacity-100 hover:bg-signal/15 hover:text-signal"
             : "pointer-events-none bg-transparent text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100",
+          isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
         )}
         data-demo-id="unit-note-action"
         data-note-active={unit.noteMarkdown.trim() ? "true" : "false"}
@@ -1547,7 +1596,11 @@ function OrgEditorNode({
                         count: placementUnitCount,
                         name: employee.fullName,
                       })}
-                      className="me-1 size-7 shrink-0 border-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-background/55 hover:text-foreground"
+                      className={cn(
+                        "me-1 size-7 shrink-0 border-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-background/55 hover:text-foreground",
+                        isCanvasArrowToolActive && "pointer-events-none opacity-0",
+                      )}
+                      disabled={isCanvasArrowToolActive}
                       data-demo-id="org-editor-employee-placements-action"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -1996,6 +2049,8 @@ export const OrgStructureEditorTab = observer(() => {
   const [exportUnitId, setExportUnitId] = useState<OrgEditorUnitId | null>(null);
   const [viewImageExportOpen, setViewImageExportOpen] = useState(false);
   const [activeCanvasTool, setActiveCanvasTool] = useState<OrgEditorCanvasTool>("select");
+  const [canvasAnchorHoverScreenPoint, setCanvasAnchorHoverScreenPoint] =
+    useState<ScreenPoint | null>(null);
   const [editingCanvasElementId, setEditingCanvasElementId] =
     useState<OrgEditorCanvasElementId | null>(null);
   const [editingCanvasText, setEditingCanvasText] = useState<string | null>(null);
@@ -2882,7 +2937,7 @@ export const OrgStructureEditorTab = observer(() => {
     [resolvedCanvasElementById, selectedCanvasElementIds],
   );
 
-  const getNearestCanvasAnchor = useCallback(
+  const getCanvasAnchorTarget = useCallback(
     (point: CanvasPoint, sourceElementId?: OrgEditorCanvasElementId) => {
       const radius = 16 / Math.max(MIN_CANVAS_SCALE, renderViewportRef.current.scale);
       const queryRect = {
@@ -2891,16 +2946,33 @@ export const OrgStructureEditorTab = observer(() => {
         x: point.x - radius,
         y: point.y - radius,
       };
-      const candidates: OrgEditorAnchorCandidate[] = [];
+      const targets: Array<
+        Omit<OrgEditorAnchorTarget, "nearest"> & {
+          containsPointer: boolean;
+          distance: number;
+          priority: number;
+        }
+      > = [];
       for (const unit of unitSpatialIndex.query(queryRect).items) {
         const positionedUnit = withUnitPreviewPosition(unit);
         const bounds = getOrgEditorUnitBounds(positionedUnit);
-        for (const anchorId of ORG_EDITOR_RECT_ANCHOR_IDS) {
-          candidates.push({
-            point: getOrgEditorRectAnchorPoint({ ...bounds, rotation: 0 }, anchorId),
-            ref: { anchorId, owner: { type: "unit", unitId: unit.id } },
-          });
-        }
+        const unitAnchors = ORG_EDITOR_RECT_ANCHOR_IDS.map((anchorId) => ({
+          point: getOrgEditorRectAnchorPoint({ ...bounds, rotation: 0 }, anchorId),
+          ref: { anchorId, owner: { type: "unit" as const, unitId: unit.id } },
+        }));
+        targets.push({
+          anchors: unitAnchors,
+          bounds,
+          containsPointer: isPointInsideRect(point, bounds),
+          distance: Math.min(
+            ...unitAnchors.map((candidate) =>
+              Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y),
+            ),
+          ),
+          ownerKey: `unit:${unit.id}`,
+          priority: 200,
+          rotation: 0,
+        });
         if (!positionedUnit.collapsed) {
           const rowLayout = getOrgEditorEmployeeRowLayout(positionedUnit);
           const rowIndex = findOrgEditorEmployeeRowIndex(
@@ -2918,21 +2990,32 @@ export const OrgStructureEditorTab = observer(() => {
           const employeeId = employeeIds[rowIndex];
           if (employeeId) {
             const employeeBounds = getOrgEditorEmployeeBounds(positionedUnit, rowIndex);
-            for (const anchorId of ORG_EDITOR_EMPLOYEE_ANCHOR_IDS) {
-              candidates.push({
-                point: {
-                  x:
-                    anchorId === "leftCenter"
-                      ? employeeBounds.x
-                      : employeeBounds.x + employeeBounds.width,
-                  y: employeeBounds.y + employeeBounds.height / 2,
-                },
-                ref: {
-                  anchorId,
-                  owner: { employeeId, type: "employee", unitId: unit.id },
-                },
-              });
-            }
+            const employeeAnchors = ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.map((anchorId) => ({
+              point: {
+                x:
+                  anchorId === "leftCenter"
+                    ? employeeBounds.x
+                    : employeeBounds.x + employeeBounds.width,
+                y: employeeBounds.y + employeeBounds.height / 2,
+              },
+              ref: {
+                anchorId,
+                owner: { employeeId, type: "employee" as const, unitId: unit.id },
+              },
+            }));
+            targets.push({
+              anchors: employeeAnchors,
+              bounds: employeeBounds,
+              containsPointer: isPointInsideRect(point, employeeBounds),
+              distance: Math.min(
+                ...employeeAnchors.map((candidate) =>
+                  Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y),
+                ),
+              ),
+              ownerKey: `employee:${unit.id}:${employeeId}`,
+              priority: 300,
+              rotation: 0,
+            });
           }
         }
       }
@@ -2940,32 +3023,83 @@ export const OrgStructureEditorTab = observer(() => {
         if (element.id === sourceElementId) continue;
         const anchorIds =
           element.type === "arrow" ? ORG_EDITOR_ARROW_ANCHOR_IDS : ORG_EDITOR_RECT_ANCHOR_IDS;
-        for (const anchorId of anchorIds) {
+        const anchors = anchorIds.flatMap((anchorId) => {
           const anchorPoint = getOrgEditorCanvasElementAnchorPoint(element, anchorId);
-          if (!anchorPoint) continue;
-          candidates.push({
-            point: anchorPoint,
-            ref: { anchorId, owner: { elementId: element.id, type: "element" } },
-          });
-        }
+          return anchorPoint
+            ? [
+                {
+                  point: anchorPoint,
+                  ref: {
+                    anchorId,
+                    owner: { elementId: element.id, type: "element" as const },
+                  },
+                },
+              ]
+            : [];
+        });
+        if (anchors.length === 0) continue;
+        const elementOrder = canvasElementOrderById.get(element.id) ?? 0;
+        targets.push({
+          anchors,
+          bounds:
+            element.type === "arrow"
+              ? getOrgEditorCanvasElementBounds(element)
+              : {
+                  height: element.height,
+                  width: element.width,
+                  x: element.x,
+                  y: element.y,
+                },
+          containsPointer: isPointInsideCanvasElement(point, element),
+          distance: Math.min(
+            ...anchors.map((candidate) =>
+              Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y),
+            ),
+          ),
+          ownerKey: `element:${element.id}`,
+          priority: (element.layer === "aboveUnits" ? 400 : 100) + elementOrder / 10_000,
+          rotation: element.type === "arrow" ? 0 : element.rotation,
+        });
       }
-      return (
-        candidates
+      const target =
+        targets
+          .filter((candidate) => candidate.containsPointer)
+          .sort((first, second) => second.priority - first.priority)[0] ??
+        targets
+          .filter((candidate) => candidate.distance <= radius)
+          .sort(
+            (first, second) => first.distance - second.distance || second.priority - first.priority,
+          )[0];
+      if (!target) return null;
+      const nearest =
+        target.anchors
           .map((candidate) => ({
             ...candidate,
             distance: Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y),
           }))
           .filter((candidate) => candidate.distance <= radius)
-          .sort((first, second) => first.distance - second.distance)[0] ?? null
-      );
+          .sort((first, second) => first.distance - second.distance)[0] ?? null;
+      return {
+        anchors: target.anchors,
+        bounds: target.bounds,
+        nearest,
+        ownerKey: target.ownerKey,
+        rotation: target.rotation,
+      } satisfies OrgEditorAnchorTarget;
     },
     [
+      canvasElementOrderById,
       canvasElementSpatialIndex,
       employeeById,
       unitSpatialIndex,
       viewSettings.groupByTag,
       withUnitPreviewPosition,
     ],
+  );
+  const getNearestCanvasAnchor = useCallback(
+    (point: CanvasPoint, sourceElementId?: OrgEditorCanvasElementId) =>
+      getCanvasAnchorTarget(point, sourceElementId)?.nearest ?? null,
+    [getCanvasAnchorTarget],
   );
 
   const visibleUnits = useMemo(() => {
@@ -3198,19 +3332,22 @@ export const OrgStructureEditorTab = observer(() => {
 
     return `M ${startPoint.x} ${startPoint.y} C ${startPoint.x} ${middleY}, ${currentPoint.x} ${middleY}, ${currentPoint.x} ${currentPoint.y}`;
   })();
-  const activeCanvasAnchorCandidate =
+  const activeCanvasAnchorTarget =
     dragState?.type === "canvasElement" &&
     (dragState.handle.type === "attach" || dragState.handle.type === "arrowEndpoint")
-      ? getNearestCanvasAnchor(
+      ? getCanvasAnchorTarget(
           screenToCanvasPoint(dragState.currentScreenPoint),
           dragState.sourceElements[0]?.id,
         )
       : dragState?.type === "canvasArrowCreate"
-        ? getNearestCanvasAnchor(
+        ? getCanvasAnchorTarget(
             screenToCanvasPoint(dragState.currentScreenPoint),
             dragState.draft.id,
           )
-        : null;
+        : activeCanvasTool === "arrow" && canvasAnchorHoverScreenPoint
+          ? getCanvasAnchorTarget(screenToCanvasPoint(canvasAnchorHoverScreenPoint))
+          : null;
+  const activeCanvasAnchorCandidate = activeCanvasAnchorTarget?.nearest ?? null;
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -3377,7 +3514,10 @@ export const OrgStructureEditorTab = observer(() => {
         return;
       }
 
-      const nextDragState = { ...currentDragState, currentScreenPoint };
+      const nextDragState =
+        currentDragState.type === "canvasElement"
+          ? { ...currentDragState, currentScreenPoint, preserveAspectRatio: event.shiftKey }
+          : { ...currentDragState, currentScreenPoint };
       scheduleActiveDragState(nextDragState);
       updateDragPreview(nextDragState);
       ensureEdgePan();
@@ -3480,7 +3620,14 @@ export const OrgStructureEditorTab = observer(() => {
               );
             }
           } else {
-            let preview = getCanvasElementDragPreview(currentDragState, currentCanvasPoint);
+            const currentCanvasElementDragState = {
+              ...currentDragState,
+              preserveAspectRatio: event.shiftKey,
+            };
+            let preview = getCanvasElementDragPreview(
+              currentCanvasElementDragState,
+              currentCanvasPoint,
+            );
             if (currentDragState.handle.type === "arrowEndpoint") {
               const handle = currentDragState.handle;
               const candidate = getNearestCanvasAnchor(
@@ -3878,6 +4025,36 @@ export const OrgStructureEditorTab = observer(() => {
     commitViewport(pendingViewportRef.current ?? renderViewportRef.current);
   };
 
+  const startCanvasArrowGesture = (event: React.PointerEvent<Element>) => {
+    if (activeCanvasTool !== "arrow" || event.button !== 0) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    const screenPoint = getPointerScreenPoint(event.nativeEvent);
+    const canvasPoint = screenToCanvasPoint(screenPoint);
+    const candidate = getNearestCanvasAnchor(canvasPoint);
+    const startPoint = candidate?.point ?? canvasPoint;
+    const draft = createOrgEditorArrowElement(startPoint, startPoint);
+    draft.start.attachment = candidate ? { offset: { x: 0, y: 0 }, target: candidate.ref } : null;
+    setCanvasAnchorHoverScreenPoint(null);
+    setActiveDragState({
+      currentScreenPoint: screenPoint,
+      draft,
+      startCanvasPoint: startPoint,
+      startScreenPoint: screenPoint,
+      startViewport: { ...renderViewportRef.current },
+      type: "canvasArrowCreate",
+    });
+    return true;
+  };
+
+  const handleCanvasPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (activeCanvasTool !== "arrow" || dragStateRef.current) {
+      if (canvasAnchorHoverScreenPoint) setCanvasAnchorHoverScreenPoint(null);
+      return;
+    }
+    setCanvasAnchorHoverScreenPoint(getPointerScreenPoint(event.nativeEvent));
+  };
+
   const handleCanvasPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     setContextMenu(null);
     finishWheelPreview();
@@ -3910,22 +4087,7 @@ export const OrgStructureEditorTab = observer(() => {
       setActiveCanvasTool("select");
       return;
     }
-    if (activeCanvasTool === "arrow") {
-      event.preventDefault();
-      const candidate = getNearestCanvasAnchor(canvasPoint);
-      const startPoint = candidate?.point ?? canvasPoint;
-      const draft = createOrgEditorArrowElement(startPoint, startPoint);
-      draft.start.attachment = candidate ? { offset: { x: 0, y: 0 }, target: candidate.ref } : null;
-      setActiveDragState({
-        currentScreenPoint: screenPoint,
-        draft,
-        startCanvasPoint: startPoint,
-        startScreenPoint: screenPoint,
-        startViewport: { ...renderViewportRef.current },
-        type: "canvasArrowCreate",
-      });
-      return;
-    }
+    if (startCanvasArrowGesture(event)) return;
 
     if (event.metaKey || event.ctrlKey) {
       event.preventDefault();
@@ -4013,6 +4175,7 @@ export const OrgStructureEditorTab = observer(() => {
     element: OrgEditorCanvasElement,
   ) => {
     if (event.button !== 0) return;
+    if (startCanvasArrowGesture(event)) return;
     event.preventDefault();
     event.stopPropagation();
     setContextMenu(null);
@@ -4039,6 +4202,7 @@ export const OrgStructureEditorTab = observer(() => {
       currentScreenPoint: screenPoint,
       elementIds,
       handle: { type: "move" },
+      preserveAspectRatio: event.shiftKey,
       selectOnClick: preserveForPotentialGroupDrag ? item : null,
       sourceBounds,
       sourceElements,
@@ -4099,6 +4263,7 @@ export const OrgStructureEditorTab = observer(() => {
       currentScreenPoint: screenPoint,
       elementIds,
       handle,
+      preserveAspectRatio: event.shiftKey,
       selectOnClick: null,
       sourceBounds,
       sourceElements,
@@ -4124,6 +4289,7 @@ export const OrgStructureEditorTab = observer(() => {
     unit: OrgEditorUnit,
   ) => {
     if (event.button !== 0) return;
+    if (startCanvasArrowGesture(event)) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -4150,6 +4316,7 @@ export const OrgStructureEditorTab = observer(() => {
           currentScreenPoint: screenPoint,
           elementIds: mixedElementIds,
           handle: { type: "move" },
+          preserveAspectRatio: event.shiftKey,
           selectOnClick: selectionIntent.preserveForPotentialGroupDrag ? item : null,
           sourceBounds,
           sourceElements,
@@ -4212,6 +4379,7 @@ export const OrgStructureEditorTab = observer(() => {
     unit: OrgEditorUnit,
   ) => {
     if (event.button !== 0) return;
+    if (startCanvasArrowGesture(event)) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -4326,6 +4494,7 @@ export const OrgStructureEditorTab = observer(() => {
     employeeId: EmployeeId,
   ) => {
     if (event.button !== 0) return;
+    if (startCanvasArrowGesture(event)) return;
     event.preventDefault();
     event.stopPropagation();
     if (unit.liveFilter !== null) {
@@ -4517,6 +4686,8 @@ export const OrgStructureEditorTab = observer(() => {
           data-viewport-y={renderViewport.y}
           onAuxClick={(event) => event.preventDefault()}
           onContextMenu={handleCanvasContextMenu}
+          onPointerLeave={() => setCanvasAnchorHoverScreenPoint(null)}
+          onPointerMove={handleCanvasPointerMove}
           onPointerDown={handleCanvasPointerDown}
           onPointerDownCapture={handleCanvasPointerDownCapture}
           ref={canvasRef}
@@ -4622,6 +4793,7 @@ export const OrgStructureEditorTab = observer(() => {
                 }
                 employeeById={employeeById}
                 isConnectionDropTarget={connectionDropTargetUnit?.id === unit.id}
+                isCanvasArrowToolActive={activeCanvasTool === "arrow"}
                 isEmployeeDropTarget={employeeDropTargetUnit?.id === unit.id}
                 key={unit.id}
                 layoutMode={editor.layoutMode}
@@ -4661,16 +4833,47 @@ export const OrgStructureEditorTab = observer(() => {
                 }}
               />
             )}
-            {activeCanvasAnchorCandidate && (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute z-50 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-signal shadow"
-                data-canvas-snap-anchor
-                style={{
-                  left: activeCanvasAnchorCandidate.point.x,
-                  top: activeCanvasAnchorCandidate.point.y,
-                }}
-              />
+            {activeCanvasAnchorTarget && (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute z-50 rounded-sm border border-signal bg-signal/5"
+                  data-canvas-anchor-target-outline={activeCanvasAnchorTarget.ownerKey}
+                  style={{
+                    borderWidth: canvasUiMetric("outline-width", 1),
+                    height: activeCanvasAnchorTarget.bounds.height,
+                    left: activeCanvasAnchorTarget.bounds.x,
+                    top: activeCanvasAnchorTarget.bounds.y,
+                    transform: `rotate(${activeCanvasAnchorTarget.rotation}deg)`,
+                    transformOrigin: "center",
+                    width: activeCanvasAnchorTarget.bounds.width,
+                  }}
+                />
+                {activeCanvasAnchorTarget.anchors.map((candidate) => {
+                  const isNearest =
+                    activeCanvasAnchorCandidate?.ref.anchorId === candidate.ref.anchorId;
+                  return (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "pointer-events-none absolute z-[51] -translate-x-1/2 -translate-y-1/2 rounded-full border border-signal shadow-sm",
+                        isNearest ? "bg-signal" : "bg-background",
+                      )}
+                      data-canvas-anchor-id={candidate.ref.anchorId}
+                      data-canvas-snap-anchor={isNearest ? "true" : undefined}
+                      data-canvas-target-anchor={activeCanvasAnchorTarget.ownerKey}
+                      key={`${activeCanvasAnchorTarget.ownerKey}:${candidate.ref.anchorId}`}
+                      style={{
+                        borderWidth: canvasUiMetric("outline-width", 1),
+                        height: canvasUiMetric("connector-size", 7),
+                        left: candidate.point.x,
+                        top: candidate.point.y,
+                        width: canvasUiMetric("connector-size", 7),
+                      }}
+                    />
+                  );
+                })}
+              </>
             )}
           </div>
           {editor.units.length === 0 &&
@@ -5142,6 +5345,7 @@ export const OrgStructureEditorTab = observer(() => {
             onToolChange={(tool) => {
               if (editingCanvasElementIdRef.current) finishCanvasTextEditing();
               if (tool !== "select") editor.clearSelection();
+              setCanvasAnchorHoverScreenPoint(null);
               setContextMenu(null);
               setActiveCanvasTool(tool);
               setCanvasToolError(null);

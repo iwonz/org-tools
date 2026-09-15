@@ -9,6 +9,7 @@ import {
   getOrgEditorCanvasDependentClosure,
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasElementBounds,
+  getOrgEditorCanvasFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorCanvasResizeBounds,
   getOrgEditorCanvasRotationDelta,
@@ -30,6 +31,15 @@ import { createSpatialIndex } from "@/lib/org-editor-interaction";
 const uuid = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 
 describe("Org Editor canvas geometry", () => {
+  test("creates one canonical quoted font string for DOM measurement and PNG painting", () => {
+    expect(getOrgEditorCanvasFont("Montserrat", 500, 18)).toBe(
+      '500 18px "Montserrat", Arial, sans-serif',
+    );
+    expect(getOrgEditorCanvasFont('Unsafe "family"', 700, 24)).toBe(
+      '700 24px "Unsafe family", Arial, sans-serif',
+    );
+  });
+
   test("rotates rectangular anchors and indexes exact bounds", () => {
     const element = {
       ...createOrgEditorTextElement({ x: 100, y: 100 }),
@@ -191,7 +201,7 @@ describe("Org Editor canvas geometry", () => {
     expect(lines[0]?.y).toBeGreaterThan(8);
   });
 
-  test("grows wrapped text without clipping and preserves locked Image proportions", () => {
+  test("grows wrapped text without clipping and ignores persisted Image aspect locks", () => {
     const text = {
       ...createOrgEditorTextElement({ x: 0, y: 0 }),
       height: 24,
@@ -226,9 +236,8 @@ describe("Org Editor canvas geometry", () => {
     });
     expect(transformed?.type).toBe("image");
     if (transformed?.type !== "image") return;
-    expect(transformed.width / transformed.height).toBeCloseTo(2);
     expect(transformed.width).toBe(300);
-    expect(transformed.height).toBe(150);
+    expect(transformed.height).toBe(300);
   });
 
   test("normalizes rectangle dimensions to bounded whole logical pixels", () => {
@@ -302,7 +311,7 @@ describe("Org Editor canvas geometry", () => {
     expect(topLeft.y).toBeCloseTo(59.4);
   });
 
-  test("resizes locked and rotated rectangles around their local geometry", () => {
+  test("preserves Image proportions only for a modified resize sample", () => {
     const lockedImage = {
       attachment: null,
       dataUrl:
@@ -323,7 +332,14 @@ describe("Org Editor canvas geometry", () => {
       x: 500.6,
       y: 150,
     });
-    expect(resizedImage).toMatchObject({ height: 200, width: 401, x: 100, y: 50 });
+    expect(resizedImage).toMatchObject({ height: 100, width: 401, x: 100, y: 100 });
+    const proportionalImage = resizeOrgEditorCanvasRectElement(
+      lockedImage,
+      "rightCenter",
+      { x: 500.6, y: 150 },
+      true,
+    );
+    expect(proportionalImage).toMatchObject({ height: 200, width: 401, x: 100, y: 50 });
     expect(Number.isInteger(resizedImage.width)).toBe(true);
     expect(Number.isInteger(resizedImage.height)).toBe(true);
 

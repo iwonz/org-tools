@@ -275,13 +275,13 @@
     "featured": true,
     "title": "Visual organization Editor",
     "file": "demo-editor.png",
-    "description": "Arrange Unit cards and durable annotations with an exclusive selection, compact grouped properties, all-edge resize, centered corner rotation, and element context actions on the adaptive snap grid.",
+    "description": "Arrange Unit cards and durable Text, folded-paper Sticker, Image, and Arrow annotations with compact properties and Miro-like transforms on the adaptive snap grid.",
     "capabilities": [
       "Canvas layout",
       "Adaptive snap grid",
       "Hierarchy",
       "Zoom",
-      "Canvas tools",
+      "Canvas tools and folded Sticker",
       "Perimeter transforms",
       "Element context actions"
     ]
@@ -475,8 +475,15 @@
     "featured": false,
     "title": "Editor text template export",
     "file": "feature-editor-template-export.png",
-    "description": "Build a text representation from Employee and Unit tokens with a live preview.",
-    "capabilities": ["Text template", "Field tokens", "Scope", "Live preview"]
+    "description": "Build a text representation from Employee and Unit tokens while removing whitespace-only lines consistently from preview and counts.",
+    "capabilities": [
+      "Text template",
+      "Field tokens",
+      "Empty-line removal",
+      "Filtered counts",
+      "Scope",
+      "Live preview"
+    ]
   },
   {
     "id": "editor-json-export",
@@ -586,8 +593,16 @@
     "featured": true,
     "title": "Template Data Download",
     "file": "demo-download.png",
-    "description": "Configure a separator-based template, row mode, inline token syntax, live preview, copy, and local download.",
-    "capabilities": ["Template format", "Row mode", "Field tokens", "Preview", "Copy and download"]
+    "description": "Configure a separator-based template, row mode, inline token syntax, whitespace-only line removal, live preview, copy, and local download.",
+    "capabilities": [
+      "Template format",
+      "Row mode",
+      "Field tokens",
+      "Empty-line removal",
+      "Filtered counts",
+      "Preview",
+      "Copy and download"
+    ]
   },
   {
     "id": "download-template-tokens",

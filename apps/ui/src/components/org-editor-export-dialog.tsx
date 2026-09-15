@@ -55,6 +55,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
+  countTemplateOutputLines,
   createExportPreview,
   createExportTextAsync,
   exportEmployeeFields,
@@ -166,6 +167,7 @@ export function OrgEditorExportDialog({
   );
   const previousLocalizedManagerLabelRef = useRef(localizedManagerLabel);
   const [templateFormat, setTemplateFormat] = useState(DEFAULT_TEMPLATE_FORMAT);
+  const [removeEmptyTemplateLines, setRemoveEmptyTemplateLines] = useState(false);
   const [rowMode, setRowMode] = useState<ExportRowMode>("allUnits");
   const [jsonSettings, setJsonSettings] = useState<StructuredJsonSettingsValue>(() => ({
     excludedJsonTagKeys: [],
@@ -248,29 +250,35 @@ export function OrgEditorExportDialog({
     () => (unit ? getOrgEditorExportUnits({ rootUnit: unit, scope, units }) : []),
     [scope, unit, units],
   );
-  const rowCountByMode = useMemo(
-    () => ({
-      allUnits: unit
-        ? buildOrgEditorExportRows({
-            rootUnit: unit,
-            rowMode: "allUnits",
-            scope,
-            sourceIndex,
-            units,
-          }).length
-        : 0,
-      firstUnit: unit
-        ? buildOrgEditorExportRows({
-            rootUnit: unit,
-            rowMode: "firstUnit",
-            scope,
-            sourceIndex,
-            units,
-          }).length
-        : 0,
-    }),
-    [scope, sourceIndex, unit, units],
-  );
+  const rowCountByMode = useMemo(() => {
+    const countRows = (mode: ExportRowMode) =>
+      unit
+        ? countTemplateOutputLines(
+            buildOrgEditorExportRows({
+              rootUnit: unit,
+              rowMode: mode,
+              scope,
+              sourceIndex,
+              units,
+            }),
+            templateFormat,
+            store.employeeFieldDefinitions,
+            removeEmptyTemplateLines,
+          )
+        : 0;
+    return {
+      allUnits: countRows("allUnits"),
+      firstUnit: countRows("firstUnit"),
+    };
+  }, [
+    removeEmptyTemplateLines,
+    scope,
+    sourceIndex,
+    store.employeeFieldDefinitions,
+    templateFormat,
+    unit,
+    units,
+  ]);
   const tagOptions = useMemo(() => {
     const tagIds = new Set<string>();
     for (const row of exportRows) {
@@ -304,10 +312,18 @@ export function OrgEditorExportDialog({
         ...jsonSettings,
         customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
         rows: exportRows,
+        removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
         tabMode: activeTab === "json" ? "json" : "template",
         templateFormat,
       }),
-    [activeTab, exportRows, jsonSettings, store.employeeFieldDefinitions, templateFormat],
+    [
+      activeTab,
+      exportRows,
+      jsonSettings,
+      removeEmptyTemplateLines,
+      store.employeeFieldDefinitions,
+      templateFormat,
+    ],
   );
   const canExportText = exportRows.length > 0 && (activeTab !== "json" || jsonValidation.isValid);
   const canExportImage = Boolean(unit) && isImageBossLabelValid;
@@ -443,6 +459,7 @@ export function OrgEditorExportDialog({
       ...jsonSettings,
       customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
       rows: exportRows,
+      removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
       tabMode: activeTab === "json" ? "json" : "template",
       templateFormat,
     });
@@ -505,7 +522,13 @@ export function OrgEditorExportDialog({
     imageSettings.background.type === "solid" ? imageSettings.background.color : "#ffffff";
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
+    <Dialog
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setRemoveEmptyTemplateLines(false);
+        onOpenChange(nextOpen);
+      }}
+      open={open}
+    >
       <DialogContent
         className="flex h-[min(820px,calc(100dvh-32px))] max-w-5xl flex-col overflow-hidden p-0"
         data-demo-id="org-editor-export-dialog"
@@ -927,6 +950,10 @@ export function OrgEditorExportDialog({
                   setTemplateFormat(value);
                   setStatus(null);
                 }}
+                onRemoveEmptyLinesChange={(value) => {
+                  setRemoveEmptyTemplateLines(value);
+                  setStatus(null);
+                }}
                 previewMeta={
                   textPreview.truncated
                     ? t("Showing {shown} of {total}", {
@@ -940,6 +967,7 @@ export function OrgEditorExportDialog({
                     ? textPreview.text
                     : t("The selected Unit has no Employees to export.")
                 }
+                removeEmptyLines={removeEmptyTemplateLines}
                 showPreviewLabel={false}
                 unitFields={exportUnitFields}
               >

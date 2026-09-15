@@ -123,8 +123,12 @@ describe("OrgToolsState", () => {
 
     const duplicate = structuredClone(state);
     const duplicateElements = duplicate.organization.views[0]?.structure.canvasElements;
-    if (!duplicateElements) throw new Error("Expected canvas elements.");
-    duplicateElements[1] = { ...duplicateElements[1], id: duplicateElements[0]?.id ?? uuid(91) };
+    const duplicateFirst = duplicateElements?.[0];
+    const duplicateSecond = duplicateElements?.[1];
+    if (!duplicateElements || !duplicateFirst || !duplicateSecond) {
+      throw new Error("Expected canvas elements.");
+    }
+    duplicateElements[1] = { ...duplicateSecond, id: duplicateFirst.id };
     expect(() => parseOrgToolsState(duplicate)).toThrow();
 
     const cyclic = structuredClone(state);

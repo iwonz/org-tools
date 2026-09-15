@@ -64,11 +64,18 @@ axes, retains the opposite edge or corner, and normalizes rectangular width and 
 logical pixels without tightening validation of older fractional State. One rectangular element
 rotates around its live center from current position and dimensions, compensating an attachment
 offset so target resolution cannot move that pivot; groups retain the exact selected-bounds center.
-Side connector handles appear only while the selected frame is hovered or focused, and an
-attachment drag paints only its nearest valid target. Escape clears a resting element selection
-after higher-priority editing, menu, and transform interactions have handled the key. Text
-completion is idempotent across capture, blur, Escape, and tool changes, and textarea focus cannot
-create an internal canvas scroll offset.
+Connector markers remain hidden for resting selection, hover, and focus. While the Arrow tool is
+armed or an endpoint attachment is dragged, the existing spatial indexes resolve one topmost
+eligible owner under the pointer, outline that owner, reveal its complete registry anchor set, and
+emphasize only the nearest in-range anchor. Exact-anchor pointer-down creates an attached Arrow;
+free-canvas pointer-down keeps a free endpoint. Image resize reads Shift from each pointer sample,
+preserving proportions only while the modifier is held; the compatibility `lockAspectRatio` State
+field no longer controls interaction. Escape clears a resting element selection after
+higher-priority editing, menu, and transform interactions have handled the key. Text completion is
+idempotent across capture, blur, Escape, and tool changes, and textarea focus cannot create an
+internal canvas scroll offset. Text and Sticker use the same canonical locally bundled font string
+for DOM measurement and PNG painting. Sticker paper, sheen, and folded-corner colors come from one
+shared tonal helper without changing bounds or anchors.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
@@ -213,10 +220,12 @@ history, collaborative cursors, or remote synchronization.
   and optional Unit and Tag arrays. Unit and Tag rows use the same geometry as scalar fields, retain
   independently sortable nested fields, and support naming plus exact exclusions. Template retains
   All Units and First Unit row modes through one control shared with Editor export. Both Template
+  surfaces expose one transient Remove empty lines option; preview, Copy, Download, and all visible
+  counts consume the same whitespace-only line policy while JSON remains unchanged. Both Template
   surfaces and full-View Image Employee format use one multiline Format input whose caret menu
   converts `@query` into existing `{token}` syntax. A small help affordance and the placeholder
   disclose the shortcut; help also documents the existing `{condition ? 'value' : 'fallback'}`
-  expression. Tooltip, query, and suggestion state are transient.
+  expression. Tooltip, query, suggestion, and empty-line option state are transient.
 
 Org Editor DOM and PNG output share a pure scene layer for persistent canvas-element geometry,
 attachment resolution, text wrapping, rotated bounds, cubic extrema, and two-plane ordering. Full
@@ -224,8 +233,10 @@ View export includes all Units, hierarchy connections, and durable elements rega
 Unit/subtree export includes only the structural closure and transitively related annotations, with
 Arrows requiring two included endpoint owners. One render plan reports logical bounds, requested
 and effective 1x/2x/3x density, final dimensions, and 8/32-megapixel plus canvas-side clamping before
-rasterization. Text, Sticker, Image, and Arrow painters omit every transient selection, anchor,
-resize, rotation, Bezier, marquee, and placement affordance.
+rasterization. Text and Sticker wait for their canonical locally bundled family and weight before
+measurement; Sticker uses the live paper and folded-corner tonal treatment. Text, Sticker, Image,
+and Arrow painters omit every transient selection, target outline, anchor, resize, rotation,
+Bezier, marquee, and placement affordance.
 
 Org Editor PNG output also uses the same pure card geometry as the live canvas for Unit widths, 72 px
 headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row

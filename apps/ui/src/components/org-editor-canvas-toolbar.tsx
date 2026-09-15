@@ -14,8 +14,6 @@ import {
   HiOutlineChatBubbleBottomCenterText,
   HiOutlineCursorArrowRays,
   HiOutlineDocumentDuplicate,
-  HiOutlineLockClosed,
-  HiOutlineLockOpen,
   HiOutlinePhoto,
   HiOutlineQueueList,
   HiOutlineTrash,
@@ -116,6 +114,7 @@ export function OrgEditorCanvasToolbar({
           );
         })}
         <Button
+          className="font-normal"
           data-demo-id="org-editor-view-image-export-action"
           onClick={onExport}
           size="sm"
@@ -385,25 +384,6 @@ export function OrgEditorCanvasToolbar({
             </div>
           )}
 
-          {selected?.type === "image" && (
-            <Button
-              aria-label={t("Lock aspect ratio")}
-              className="size-8 p-0"
-              onClick={() =>
-                onUpdate((element) =>
-                  element.type === "image"
-                    ? { ...element, lockAspectRatio: !element.lockAspectRatio }
-                    : element,
-                )
-              }
-              title={t("Lock aspect ratio")}
-              type="button"
-              variant="ghost"
-            >
-              {selected.lockAspectRatio ? <HiOutlineLockClosed /> : <HiOutlineLockOpen />}
-            </Button>
-          )}
-
           {selected && selected.type !== "arrow" && (
             <div
               className="flex items-center gap-1 rounded-md bg-muted/45 p-1"
@@ -421,10 +401,7 @@ export function OrgEditorCanvasToolbar({
                     if (element.type === "arrow") return element;
                     const normalizedWidth = normalizeOrgEditorCanvasDimension(width);
                     const dimensions = normalizeOrgEditorCanvasDimensions({
-                      height:
-                        element.type === "image" && element.lockAspectRatio
-                          ? (normalizedWidth / element.width) * element.height
-                          : element.height,
+                      height: element.height,
                       width: normalizedWidth,
                     });
                     return { ...element, ...dimensions };
@@ -447,10 +424,7 @@ export function OrgEditorCanvasToolbar({
                     const normalizedHeight = normalizeOrgEditorCanvasDimension(height);
                     const dimensions = normalizeOrgEditorCanvasDimensions({
                       height: normalizedHeight,
-                      width:
-                        element.type === "image" && element.lockAspectRatio
-                          ? (normalizedHeight / element.height) * element.width
-                          : element.width,
+                      width: element.width,
                     });
                     return { ...element, ...dimensions };
                   });

@@ -59,6 +59,7 @@ import {
 import {
   getOrgEditorArrowControlPoints,
   getOrgEditorCanvasElementsBounds,
+  getOrgEditorCanvasFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorRectAnchorPoint,
   getOrgEditorScopedCanvasElementIds,
@@ -67,7 +68,11 @@ import {
   ORG_EDITOR_RECT_ANCHOR_IDS,
   resolveOrgEditorCanvasElements,
 } from "@/lib/org-editor-canvas";
-import { employeeTagColorToHex, getTagColorCanvasStyle } from "@/lib/tag-color";
+import {
+  employeeTagColorToHex,
+  getStickerColorStyle,
+  getTagColorCanvasStyle,
+} from "@/lib/tag-color";
 import {
   renderTemplateFormat,
   type TemplateFieldValue,
@@ -666,8 +671,23 @@ const paintOrgEditorCanvasElement = ({
   context.rotate((element.rotation * Math.PI) / 180);
   context.translate(-element.width / 2, -element.height / 2);
   if (element.type === "sticker") {
+    const stickerColors = getStickerColorStyle(element.backgroundColor);
     drawRoundedRect(context, { height: element.height, width: element.width, x: 0, y: 0 }, 12);
-    context.fillStyle = employeeTagColorToHex(element.backgroundColor);
+    context.fillStyle = stickerColors.fillStyle;
+    context.fill();
+    const sheen = context.createLinearGradient(0, 0, element.width, element.height);
+    sheen.addColorStop(0, stickerColors.sheenStyle);
+    sheen.addColorStop(0.44, "rgba(255, 255, 255, 0)");
+    context.fillStyle = sheen;
+    drawRoundedRect(context, { height: element.height, width: element.width, x: 0, y: 0 }, 12);
+    context.fill();
+    const foldSize = Math.min(24, element.width / 3, element.height / 3);
+    context.beginPath();
+    context.moveTo(element.width - foldSize, 0);
+    context.lineTo(element.width, foldSize);
+    context.lineTo(element.width - foldSize, foldSize);
+    context.closePath();
+    context.fillStyle = stickerColors.foldFillStyle;
     context.fill();
   }
   if (element.type === "image") {
@@ -780,10 +800,7 @@ const createPngBlobFromCanvas = (canvas: HTMLCanvasElement) =>
     }, "image/png");
   });
 
-const quoteFontFamily = (fontFamily: string) => `"${fontFamily.replaceAll('"', "")}"`;
-
-const getCanvasFont = (fontFamily: string, weight: 400 | 500 | 700, size: number) =>
-  `${weight} ${size}px ${quoteFontFamily(fontFamily)}, Arial, sans-serif`;
+const getCanvasFont = getOrgEditorCanvasFont;
 
 const drawOrgEditorUnitIcon = (
   context: CanvasRenderingContext2D,

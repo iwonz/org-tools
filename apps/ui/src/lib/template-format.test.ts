@@ -1,7 +1,13 @@
 import type { Employee } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
-import { createExportText, type ExportRow } from "@/lib/export-format";
+import {
+  countTemplateOutputLines,
+  createExportPreview,
+  createExportText,
+  type ExportRow,
+  filterTemplateEmptyLines,
+} from "@/lib/export-format";
 import {
   renderTemplateFormat,
   type TemplateFieldValue,
@@ -156,6 +162,68 @@ describe("createExportText template mode", () => {
       { date: "2026-09-01", label: "Backend" },
     ]);
     expect(template).toBe("Mentor; Backend|Backend=2026-09-01");
+  });
+
+  test("removes whitespace-only lines and counts the processed output", () => {
+    const createEmployee = (id: string, fullName: string, email: string | null): Employee => ({
+      avatarBase64Url: null,
+      birthday: null,
+      customFieldValues: {},
+      email,
+      firstName: fullName,
+      fullName,
+      gender: "female",
+      id,
+      lastName: "",
+      phone: null,
+      profileUrl: null,
+      tags: [],
+      tagPriority: null,
+      unitIds: [],
+      unitPositions: [],
+      username: null,
+    });
+    const rows: ExportRow[] = [
+      {
+        context: "employeeFallback",
+        employee: createEmployee("00000000-0000-4000-8000-000000000011", "Ada", "a@example.test"),
+        unitContext: null,
+      },
+      {
+        context: "employeeFallback",
+        employee: createEmployee("00000000-0000-4000-8000-000000000012", "Grace", null),
+        unitContext: null,
+      },
+    ];
+    const templateFormat = "{email ? '{fullName}' : ' \t '}\n\n";
+    const options = {
+      excludedJsonTagKeys: [],
+      excludedJsonUnitIds: [],
+      jsonFieldNames: createDefaultExportJsonFieldNames(),
+      jsonTopLevelFieldOrder: defaultExportJsonTopLevelFieldOrder,
+      rows,
+      selectedEmployeeFieldKeys: [],
+      selectedJsonTagFieldKeys: [],
+      selectedJsonUnitFieldKeys: [],
+      tabMode: "template" as const,
+      templateFormat,
+    };
+
+    expect(filterTemplateEmptyLines("Ada\r\n \t\nGrace\r\n", true)).toBe("Ada\nGrace");
+    expect(countTemplateOutputLines(rows, templateFormat, [], false)).toBe(4);
+    expect(countTemplateOutputLines(rows, templateFormat, [], true)).toBe(1);
+    expect(createExportText(options)).toBe("Ada\n\n \t \n\n");
+    expect(createExportText({ ...options, removeEmptyLines: true })).toBe("Ada");
+    expect(createExportPreview({ ...options, removeEmptyLines: true })).toMatchObject({
+      fullCount: 1,
+      shownCount: 1,
+      text: "Ada",
+    });
+
+    function* largeRows() {
+      for (let index = 0; index < 20_000; index += 1) yield rows[index % rows.length] as ExportRow;
+    }
+    expect(countTemplateOutputLines(largeRows(), "{fullName}\n", [], true)).toBe(20_000);
   });
 });
 

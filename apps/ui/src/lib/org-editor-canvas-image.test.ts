@@ -65,14 +65,15 @@ describe("Org Editor embedded canvas images", () => {
     const parsed = parseOrgEditorCanvasImageDataUrl(ONE_PIXEL_PNG);
     expect(parsed).not.toBeNull();
     if (!parsed) return;
-    const blob = new Blob([parsed.bytes], { type: "image/png" });
+    const bytes = Uint8Array.from(parsed.bytes);
+    const blob = new Blob([bytes.buffer], { type: "image/png" });
     await expect(loadOrgEditorCanvasImageFile(blob)).resolves.toMatchObject({
       height: 1,
       mimeType: "image/png",
       width: 1,
     });
     await expect(
-      loadOrgEditorCanvasImageFile(new Blob([parsed.bytes], { type: "image/svg+xml" })),
+      loadOrgEditorCanvasImageFile(new Blob([bytes.buffer], { type: "image/svg+xml" })),
     ).resolves.toBeNull();
   });
 });

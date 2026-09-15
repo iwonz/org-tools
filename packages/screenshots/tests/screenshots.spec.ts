@@ -495,6 +495,12 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(
     textAnnotation.locator('[data-canvas-transform-handle="corner-resize"]'),
   ).toHaveCount(4);
+  await expect(page.locator("[data-canvas-sticker-paper]")).toBeVisible();
+  await expect(page.locator("[data-canvas-sticker-fold]")).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toHaveCSS(
+    "font-weight",
+    "400",
+  );
   await page.mouse.move(1000, 760);
   await capture(page, "editor");
   await page.keyboard.press("Escape");
@@ -644,6 +650,8 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await page.keyboard.press("Escape");
   const dialog = await openEditorExport(page);
   await dialog.getByRole("tab", { name: "Template", exact: true }).click();
+  await dialog.getByLabel("Format", { exact: true }).fill("{fullName}\n\n");
+  await dialog.getByRole("checkbox", { name: "Remove empty lines", exact: true }).click();
   await capture(page, "editor-template-export");
   await dialog.getByRole("tab", { name: "JSON", exact: true }).click();
   await capture(page, "editor-json-export");
@@ -733,7 +741,8 @@ test("captures source selection and every data Download format", async ({ page }
   await expect(settings.getByRole("tooltip")).toBeVisible();
   await expect(settings.getByRole("tooltip")).toContainText("Type @ to open token suggestions.");
   await capture(page, "download-template-tokens");
-  await formatInput.press("Enter");
+  await formatInput.fill("{fullName}\n\n");
+  await settings.getByRole("checkbox", { name: "Remove empty lines", exact: true }).click();
   await settingsBody.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });

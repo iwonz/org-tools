@@ -1454,9 +1454,20 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   await expect(suggestions).toContainText("{fullName}");
   await formatInput.press("Enter");
   await expect(formatInput).toHaveValue("{fullName}");
+  await formatInput.fill("{fullName}\n\n");
+  const removeEmptyLines = settings.getByRole("checkbox", {
+    name: "Remove empty lines",
+    exact: true,
+  });
+  await expect(removeEmptyLines).not.toBeChecked();
+  await removeEmptyLines.click();
+  await expect(removeEmptyLines).toBeChecked();
   const templatePromise = page.waitForEvent("download");
   await settings.getByRole("button", { name: "Download", exact: true }).click();
-  expect((await templatePromise).suggestedFilename()).toBe("org-tools-export.txt");
+  const templateDownload = await templatePromise;
+  expect(templateDownload.suggestedFilename()).toBe("org-tools-export.txt");
+  const templatePath = await templateDownload.path();
+  expect(await readFile(templatePath ?? "", "utf8")).not.toContain("\n\n");
   await expect(settings.locator('[data-demo-id="export-actions"] > div')).toHaveCount(0);
 
   await settings.getByRole("button", { name: "Close", exact: true }).click();

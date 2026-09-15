@@ -4,6 +4,7 @@ import {
   customTagColorSurfaceStyle,
   employeeTagColorToHex,
   formatTagColorInput,
+  getStickerColorStyle,
   getTagColorCanvasStyle,
   hexToHsv,
   hsvToHex,
@@ -109,6 +110,18 @@ describe("tagColorSurfaceClassName", () => {
     expect(getTagColorCanvasStyle("blue").fillStyle).toMatch(/^#[0-9a-f]{6}$/u);
     expect(getTagColorCanvasStyle("#7c3aed")).not.toEqual(getTagColorCanvasStyle(null));
     expect(getTagColorCanvasStyle("#7c3aed80")).not.toEqual(getTagColorCanvasStyle("#7c3aed"));
+  });
+
+  it("derives deterministic shared Sticker paper colors", () => {
+    const named = getStickerColorStyle("amber");
+    const custom = getStickerColorStyle("#7c3aed80");
+
+    expect(named.fillStyle).toBe(employeeTagColorToHex("amber"));
+    expect(named.foldFillStyle).toMatch(/^#[0-9a-f]{6}$/u);
+    expect(named.foldFillStyle).not.toBe(named.fillStyle);
+    expect(custom.fillStyle).toBe("#7c3aed80");
+    expect(custom.foldFillStyle).toMatch(/^#[0-9a-f]{8}$/u);
+    expect(custom.sheenStyle).toMatch(/^#[0-9a-f]{8}$/u);
   });
 
   it("shares the light DOM and canvas tonal fill for distribution colors", () => {

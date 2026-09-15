@@ -74,6 +74,8 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await editor.press("Escape");
   await expect(stickerElements).toHaveCount(initialStickerCount + 1);
   await expect(properties).toBeVisible();
+  await expect(stickerElements.last().locator("[data-canvas-sticker-paper]")).toHaveCount(1);
+  await expect(stickerElements.last().locator("[data-canvas-sticker-fold]")).toHaveCount(1);
 
   await toolbar.locator('[data-canvas-tool="arrow"]').click();
   const arrowStart = point(Math.max(620, canvasBox.width * 0.48), canvasBox.height - 70);
@@ -100,6 +102,10 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     throw new Error("Created canvas identity is unavailable.");
   const createdText = canvas.locator(`[data-canvas-element-id="${createdTextId}"]`);
   const createdSticker = canvas.locator(`[data-canvas-element-id="${createdStickerId}"]`);
+  await expect(toolbar.locator('[data-demo-id="org-editor-view-image-export-action"]')).toHaveCSS(
+    "font-weight",
+    "400",
+  );
 
   const initialCommittedText = await createdText.getAttribute("data-canvas-element-text");
   await createdText.dblclick();
@@ -205,7 +211,8 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     4,
   );
   await expect(createdText.locator('[data-canvas-transform-handle="side-resize"]')).toHaveCount(4);
-  await expect(createdText.locator("[data-canvas-connector-handle]")).toHaveCount(4);
+  await expect(createdText.locator("[data-canvas-connector-handle]")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Lock aspect ratio", exact: true })).toHaveCount(0);
   await expect(properties.getByLabel("Layer", { exact: true })).toHaveCount(0);
   expect(
     await properties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
@@ -217,15 +224,15 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
   expect(Number.isInteger(Number(await heightInput.inputValue()))).toBe(true);
 
-  await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height - 16);
-  await expect(createdText.locator("[data-canvas-connector-handle]").first()).toHaveCSS(
-    "opacity",
-    "0",
-  );
   await createdText.hover();
-  await expect(createdText.locator("[data-canvas-connector-handle]").first()).toHaveCSS(
-    "opacity",
-    "1",
+  await expect(canvas.locator("[data-canvas-target-anchor]")).toHaveCount(0);
+
+  await properties.getByLabel("Font", { exact: true }).click();
+  await page.getByRole("option", { name: "Montserrat", exact: true }).click();
+  await expect(createdText).toHaveAttribute("data-canvas-font-family", "Montserrat");
+  await expect(createdText.locator('span[style*="font-family"]').first()).toHaveCSS(
+    "font-family",
+    /Montserrat/,
   );
 
   const cornerHandle = createdText.locator('[data-canvas-resize-handle="topRight"]');
@@ -315,6 +322,51 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(
     imageElements.last().locator('[data-canvas-rotate-handle="topRight"]'),
   ).toBeVisible();
+  const image = imageElements.last();
+  const imageBeforeResize = await image.boundingBox();
+  const imageRightResize = await image
+    .locator('[data-canvas-resize-handle="rightCenter"]')
+    .boundingBox();
+  if (!imageBeforeResize || !imageRightResize)
+    throw new Error("Image resize geometry is unavailable.");
+  await page.mouse.move(
+    imageRightResize.x + imageRightResize.width / 2,
+    imageRightResize.y + imageRightResize.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(imageRightResize.x + imageRightResize.width / 2 + 64, imageRightResize.y, {
+    steps: 4,
+  });
+  await page.mouse.up();
+  const independentlyResizedImage = await image.boundingBox();
+  expect(
+    Math.abs((independentlyResizedImage?.height ?? 0) - imageBeforeResize.height),
+  ).toBeLessThan(1);
+  await page.keyboard.press("Control+z");
+  const proportionalHandle = await image
+    .locator('[data-canvas-resize-handle="rightCenter"]')
+    .boundingBox();
+  if (!proportionalHandle) throw new Error("Proportional Image resize geometry is unavailable.");
+  await page.mouse.move(
+    proportionalHandle.x + proportionalHandle.width / 2,
+    proportionalHandle.y + proportionalHandle.height / 2,
+  );
+  await page.mouse.down();
+  await page.keyboard.down("Shift");
+  await page.mouse.move(
+    proportionalHandle.x + proportionalHandle.width / 2 + 64,
+    proportionalHandle.y,
+    {
+      steps: 4,
+    },
+  );
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+  const proportionallyResizedImage = await image.boundingBox();
+  expect(
+    Math.abs((proportionallyResizedImage?.height ?? 0) - imageBeforeResize.height),
+  ).toBeGreaterThan(20);
+  await page.keyboard.press("Control+z");
 
   await createdText.click();
   await createdSticker.click({ modifiers: [additiveSelectionModifier] });
@@ -387,34 +439,49 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     .toBeLessThan(0.01);
   await page.keyboard.press("Control+z");
 
-  await createdText.click();
+  await toolbar.locator('[data-canvas-tool="arrow"]').click();
   await createdText.hover();
-  const connector = createdText.locator('[data-canvas-anchor-id="rightCenter"]');
-  await expect(connector).toHaveCSS("opacity", "1");
+  await expect(canvas.locator("[data-canvas-anchor-target-outline]")).toHaveAttribute(
+    "data-canvas-anchor-target-outline",
+    `element:${createdTextId}`,
+  );
+  await expect(canvas.locator("[data-canvas-target-anchor]")).toHaveCount(9);
+  const connector = canvas.locator(
+    `[data-canvas-target-anchor="element:${createdTextId}"][data-canvas-anchor-id="rightCenter"]`,
+  );
   const connectorBox = await connector.boundingBox();
-  const attachmentTargetBox = await createdSticker.boundingBox();
-  if (!connectorBox || !attachmentTargetBox) {
-    throw new Error("Canvas attachment geometry is unavailable.");
-  }
+  if (!connectorBox) throw new Error("Canvas attachment source geometry is unavailable.");
   await page.mouse.move(
     connectorBox.x + connectorBox.width / 2,
     connectorBox.y + connectorBox.height / 2,
   );
   await page.mouse.down();
-  await expect(canvas).toHaveAttribute("data-active-drag-type", "canvasElement");
-  await expect(canvas).toHaveAttribute("data-active-canvas-handle", "attach");
+  await expect(canvas).toHaveAttribute("data-active-drag-type", "canvasArrowCreate");
   await expect(elementMenu).toBeHidden();
+  const attachmentTarget = canvas.locator(`[data-canvas-element-id="${createdStickerId}"]`);
+  const attachmentTargetBox = await attachmentTarget.boundingBox();
+  if (!attachmentTargetBox) throw new Error("Canvas attachment target geometry is unavailable.");
   await page.mouse.move(
-    attachmentTargetBox.x + attachmentTargetBox.width / 2,
+    attachmentTargetBox.x,
     attachmentTargetBox.y + attachmentTargetBox.height / 2,
     { steps: 4 },
   );
   expect(await canvas.evaluate((element) => [element.scrollLeft, element.scrollTop])).toEqual([
     0, 0,
   ]);
+  await expect(canvas.locator("[data-canvas-anchor-target-outline]")).toHaveAttribute(
+    "data-canvas-anchor-target-outline",
+    `element:${createdStickerId}`,
+  );
+  await expect(canvas.locator("[data-canvas-target-anchor]")).toHaveCount(9);
   await expect(canvas.locator("[data-canvas-snap-anchor]")).toHaveCount(1);
   await page.mouse.up();
   await expect(canvas.locator("[data-canvas-snap-anchor]")).toHaveCount(0);
+  await expect(arrowElements).toHaveCount(initialArrowCount + 2);
+  await page.keyboard.press("Control+z");
+  await expect(arrowElements).toHaveCount(initialArrowCount + 1);
+  await page.keyboard.press("Control+Shift+z");
+  await expect(arrowElements).toHaveCount(initialArrowCount + 2);
 
   await createdText.click();
   await createdSticker.click({ modifiers: [additiveSelectionModifier] });
@@ -488,6 +555,34 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   expect(scopedImage.hasArrow).toBe(true);
   expect(scopedImage.hasSticker).toBe(true);
   expect(scopedImage.width / 2).toBeLessThan(fullViewLogicalWidth);
+  await unitDialog.getByRole("tab", { name: "Template", exact: true }).click();
+  const unitTemplateFormat = unitDialog.getByLabel("Format", { exact: true });
+  await unitTemplateFormat.fill("{fullName}\n\n");
+  const unitTemplatePreview = unitDialog.locator(
+    '[data-demo-id="org-editor-export-template-preview"] pre',
+  );
+  await expect.poll(() => unitTemplatePreview.textContent()).toContain("\n\n");
+  const rowModeCounts = unitDialog.locator('[data-demo-id="export-row-mode"] .tabular-nums');
+  const countsBeforeFiltering = await rowModeCounts.allTextContents();
+  await unitDialog.getByRole("checkbox", { name: "Remove empty lines", exact: true }).click();
+  await expect.poll(() => unitTemplatePreview.textContent()).not.toContain("\n\n");
+  await expect
+    .poll(async () => {
+      const countsAfterFiltering = (await rowModeCounts.allTextContents()).map((value) =>
+        Number.parseInt(value, 10),
+      );
+      const previousCounts = countsBeforeFiltering.map((value) => Number.parseInt(value, 10));
+      return (
+        countsAfterFiltering.every((count, index) => count <= (previousCounts[index] ?? 0)) &&
+        countsAfterFiltering.some((count, index) => count < (previousCounts[index] ?? 0))
+      );
+    })
+    .toBe(true);
+  const templateDownloadPromise = page.waitForEvent("download");
+  await unitDialog.getByRole("button", { name: "Save", exact: true }).click();
+  const templateDownload = await templateDownloadPromise;
+  const templatePath = await templateDownload.path();
+  expect(await readFile(templatePath ?? "", "utf8")).not.toContain("\n\n");
   await page.keyboard.press("Escape");
 
   page.off("request", onRequest);

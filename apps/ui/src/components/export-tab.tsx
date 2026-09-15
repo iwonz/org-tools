@@ -48,7 +48,7 @@ import {
 } from "@/lib/employee-unit-contexts";
 import {
   buildEmployeeExportRows,
-  countEmployeeExportRows,
+  countTemplateOutputLines,
   createExportPreview,
   createExportTextAsync,
   type ExportRow,
@@ -121,6 +121,7 @@ export const ExportTab = observer(() => {
   const units: UiOrgStructure | null = store.downloadUnits;
   const [status, setStatus] = useState<UiTextKey | null>(null);
   const [isExportSettingsDialogOpen, setIsExportSettingsDialogOpen] = useState(false);
+  const [removeEmptyTemplateLines, setRemoveEmptyTemplateLines] = useState(false);
   const [sourceSection, setSourceSection] = useState<ExportSourceSection>("units");
   const { employeeFilters, employeeQuery, selectedFilters, selectedQuery, unitQuery } =
     store.downloadUi;
@@ -282,19 +283,27 @@ export const ExportTab = observer(() => {
   );
   const rowCountByMode = useMemo(() => {
     if (!isExportSettingsDialogOpen || !unitOrderById) return emptyRowCountByMode;
+    const activeUnitOrderById = unitOrderById;
 
-    const countRows = (mode: ExportRowMode) =>
-      selectedEmployees.reduce((totalCount, employee) => {
-        return (
-          totalCount +
-          countEmployeeExportRows({
+    const countRows = (mode: ExportRowMode) => {
+      function* modeRows() {
+        for (const employee of selectedEmployees) {
+          yield* buildEmployeeExportRows({
+            employee,
             isDirectlySelected: selectedDirectEmployeeIdSet.has(employee.id),
             mode,
             unitContexts: employeeUnitContextsByEmployeeId.get(employee.id) ?? [],
-            unitOrderById,
-          })
-        );
-      }, 0);
+            unitOrderById: activeUnitOrderById,
+          });
+        }
+      }
+      return countTemplateOutputLines(
+        modeRows(),
+        templateFormat,
+        store.employeeFieldDefinitions,
+        removeEmptyTemplateLines,
+      );
+    };
 
     return {
       allUnits: countRows("allUnits"),
@@ -305,6 +314,9 @@ export const ExportTab = observer(() => {
     isExportSettingsDialogOpen,
     selectedDirectEmployeeIdSet,
     selectedEmployees,
+    templateFormat,
+    removeEmptyTemplateLines,
+    store.employeeFieldDefinitions,
     unitOrderById,
   ]);
   const rows = useMemo(() => {
@@ -361,6 +373,7 @@ export const ExportTab = observer(() => {
         excludedJsonUnitIds,
         jsonFieldNames,
         jsonTopLevelFieldOrder,
+        removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
         rows,
         selectedEmployeeFieldKeys,
         selectedCustomEmployeeFieldIds,
@@ -375,6 +388,7 @@ export const ExportTab = observer(() => {
       excludedJsonUnitIds,
       jsonFieldNames,
       jsonTopLevelFieldOrder,
+      removeEmptyTemplateLines,
       rows,
       selectedCustomEmployeeFieldIds,
       selectedEmployeeFieldKeys,
@@ -393,6 +407,7 @@ export const ExportTab = observer(() => {
             excludedJsonUnitIds,
             jsonFieldNames,
             jsonTopLevelFieldOrder,
+            removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
             rows,
             selectedEmployeeFieldKeys,
             selectedCustomEmployeeFieldIds,
@@ -411,6 +426,7 @@ export const ExportTab = observer(() => {
       isExportSettingsDialogOpen,
       jsonFieldNames,
       jsonTopLevelFieldOrder,
+      removeEmptyTemplateLines,
       rows,
       selectedCustomEmployeeFieldIds,
       selectedEmployeeFieldKeys,
@@ -785,6 +801,7 @@ export const ExportTab = observer(() => {
       <Dialog
         onOpenChange={(open) => {
           setIsExportSettingsDialogOpen(open);
+          if (!open) setRemoveEmptyTemplateLines(false);
           setStatus(null);
         }}
         open={isExportSettingsDialogOpen}
@@ -802,8 +819,13 @@ export const ExportTab = observer(() => {
             previewShownCount={exportPreview.shownCount}
             previewText={exportPreview.text}
             previewTruncated={exportPreview.truncated}
+            removeEmptyLines={removeEmptyTemplateLines}
             rowCountByMode={rowCountByMode}
             selectedEmployeeCount={selectedEmployees.length}
+            onRemoveEmptyLinesChange={(value) => {
+              setRemoveEmptyTemplateLines(value);
+              setStatus(null);
+            }}
             status={status ? t(status) : null}
             tagOptions={employeeTagOptions.map((label) => ({
               label,

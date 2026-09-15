@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { TemplateFormatInput } from "@/components/template-format-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { UiTextKey } from "@/i18n/messages";
 import { useUiText } from "@/i18n/use-ui-text";
@@ -18,9 +19,11 @@ type ExportTemplateSettingsProps = {
   employeeFields: ExportTemplateToken[];
   format: string;
   onFormatChange: (value: string) => void;
+  onRemoveEmptyLinesChange: (value: boolean) => void;
   previewDataDemoId?: string;
   previewMeta: string;
   previewText: string;
+  removeEmptyLines: boolean;
   showPreviewLabel?: boolean;
   unitFields: ExportTemplateToken[];
 };
@@ -52,9 +55,11 @@ export function ExportTemplateSettings({
   employeeFields,
   format,
   onFormatChange,
+  onRemoveEmptyLinesChange,
   previewDataDemoId,
   previewMeta,
   previewText,
+  removeEmptyLines,
   showPreviewLabel = true,
   unitFields,
 }: ExportTemplateSettingsProps) {
@@ -76,6 +81,22 @@ export function ExportTemplateSettings({
         value={format}
       />
       {children}
+      <div
+        className="flex w-fit cursor-pointer items-center gap-2 text-sm"
+        data-demo-id={`${dataDemoId ?? "export"}-remove-empty-lines`}
+      >
+        <Checkbox
+          checked={removeEmptyLines}
+          id={`${dataDemoId ?? "export"}-remove-empty-lines-checkbox`}
+          onCheckedChange={(checked) => onRemoveEmptyLinesChange(checked === true)}
+        />
+        <Label
+          className="cursor-pointer font-normal"
+          htmlFor={`${dataDemoId ?? "export"}-remove-empty-lines-checkbox`}
+        >
+          {t("Remove empty lines")}
+        </Label>
+      </div>
       <div
         className="grid gap-2"
         data-demo-id={previewDataDemoId ?? `${dataDemoId ?? "export"}-preview`}

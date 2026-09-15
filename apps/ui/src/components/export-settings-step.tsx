@@ -38,10 +38,12 @@ type ExportSettingsStepProps = {
   fieldNameErrors: ExportFieldNameError[];
   onCopy: () => void;
   onDownload: () => void;
+  onRemoveEmptyLinesChange: (value: boolean) => void;
   previewFullCount: number;
   previewShownCount: number;
   previewText: string;
   previewTruncated: boolean;
+  removeEmptyLines: boolean;
   rowCountByMode: Record<ExportRowMode, number>;
   selectedEmployeeCount: number;
   status: string | null;
@@ -54,10 +56,12 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
   fieldNameErrors,
   onCopy,
   onDownload,
+  onRemoveEmptyLinesChange,
   previewFullCount,
   previewShownCount,
   previewText,
   previewTruncated,
+  removeEmptyLines,
   rowCountByMode,
   selectedEmployeeCount,
   status,
@@ -156,6 +160,7 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
               ]}
               format={templateFormat}
               onFormatChange={(value) => store.setExportTemplateFormat(value)}
+              onRemoveEmptyLinesChange={onRemoveEmptyLinesChange}
               previewMeta={
                 previewTruncated
                   ? t("Showing {shown} of {total}", {
@@ -165,6 +170,7 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
                   : formatCount(previewFullCount)
               }
               previewText={canExport ? previewText : emptyPreview}
+              removeEmptyLines={removeEmptyLines}
               unitFields={exportUnitFields}
             >
               <ExportRowModeControl

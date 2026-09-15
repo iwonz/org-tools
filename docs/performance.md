@@ -66,9 +66,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   strips, and four transparent corner-rotation targets are constant per selected frame and use
   inverse-zoom CSS metrics without rebuilding geometry. Rectangle resize resolves one local-axis
   bounds calculation plus bounded integer-dimension normalization; rotation reads one cached
-  selected-bounds center per pointer sample without scanning Units or canvas elements. Connector
-  handles stay hidden until hover/focus, and an attachment drag paints only the nearest indexed
-  candidate.
+  selected-bounds center per pointer sample without scanning Units or canvas elements. Resting
+  connector markers stay hidden. Arrow-tool hover and attachment drag query only nearby indexed
+  owners plus cached Employee-row offsets, then paint one owner outline and its bounded complete
+  anchor set while emphasizing the nearest candidate.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
   View; a deterministic glyph-aware width packs intrinsic short chips and grapheme-safe long lines,
@@ -100,7 +101,8 @@ canonical complete birthdays in the same pass, keeps per-row overrides sparse, a
 three review columns. Pending custom Value definitions remain bounded metadata and are committed only
 with a successful atomic Apply. Global Export computes only the complete state after the explicit
 action. Data Download derives only the selected View/source, caps preview work at 50 records or rows and
-128 KiB, and builds complete JSON or Template output in yielding batches only for Copy or Download.
+128 KiB, counts filtered Template lines from rendered row fragments without assembling complete
+output, and builds complete JSON or Template output in yielding batches only for Copy or Download.
 The source and selected panes retain equal width on desktop and equal height on narrow screens; their
 geometry does not depend on the current source tab. Template token filtering uses the bounded
 built-in plus custom-field catalog and never serializes organization data.

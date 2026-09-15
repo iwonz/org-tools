@@ -271,7 +271,7 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 [![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png)
 
-Arrange opaque Unit cards and representative Text, Sticker, embedded Image, and curved Arrow tools
+Arrange opaque Unit cards and representative Text, folded-paper Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
 the upper-right canvas toolbar. The selected annotation demonstrates compact grouped properties, a
 thin Miro-like frame with four corner markers, all-edge resize, outside-corner rotation, and
@@ -419,9 +419,10 @@ dimensions, Local Copy and Save.
 
 [![Editor text template export](screenshots/feature-editor-template-export.png)](screenshots/feature-editor-template-export.png)
 
-Build a text representation from Employee and Unit tokens with a live preview.
+Build a text representation from Employee and Unit tokens, remove whitespace-only lines, and keep
+the live preview and every row count aligned with the processed output.
 
-Capabilities: Text template, Field tokens, Scope, Live preview.
+Capabilities: Text template, Field tokens, Empty-line removal, Filtered counts, Scope, Live preview.
 
 ### Editor structured JSON export
 
@@ -504,9 +505,11 @@ Capabilities: Tag rail, Conditional history, Complete Employee cards, Employee a
 
 [![Template Data Download](screenshots/demo-download.png)](screenshots/demo-download.png)
 
-Configure a separator-based template, row mode, field tokens, live preview, copy, and local download.
+Configure a separator-based template, row mode, field tokens, whitespace-only line removal, live
+preview, copy, and local download.
 
-Capabilities: Template format, Row mode, Field tokens, Preview, Copy and download.
+Capabilities: Template format, Row mode, Field tokens, Empty-line removal, Filtered counts, Preview,
+Copy and download.
 
 ### Template token suggestions
 
@@ -625,8 +628,13 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   within-plane order, Duplicate, and Delete actions. Verify four visible corner markers, transparent
   side resize targets, four outside-corner rotation targets, stable screen sizing across zoom, whole
   Width/Height values, a stable live center for free and attached single-element rotation,
-  contextual connector/nearest-target feedback, two-step text Escape behavior, canvas scroll
-  isolation, resting selection clearing, and readable non-overlapping property groups.
+  hidden resting connectors, one outlined hovered owner with its complete anchor set during Arrow
+  creation or attachment, exact-anchor starts and nearest-target emphasis, Shift-only Image aspect
+  resize, folded Sticker parity, bundled font application, two-step text Escape behavior, canvas
+  scroll isolation, resting selection clearing, and readable non-overlapping property groups.
+- Confirm both Template surfaces remove whitespace-only lines only while their transient checkbox is
+  enabled, and that bounded preview, Copy/Save or Copy/Download, row-mode counts, and preview totals
+  all describe the same processed text while JSON remains unchanged.
 - Confirm Employee Import shows a bounded richest-record preview beside virtualized fixed-source →
   target-Select rows, transfers occupied targets, imports Teams only through mapping, and keeps
   duplicate review virtualized.

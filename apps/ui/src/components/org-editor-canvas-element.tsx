@@ -6,11 +6,12 @@ import type {
   OrgEditorRectAnchorId,
 } from "@org-tools/types";
 import Image from "next/image";
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { useUiText } from "@/i18n/use-ui-text";
 import {
   getOrgEditorArrowControlPoints,
+  getOrgEditorCanvasFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   isOrgEditorRectElement,
   layoutOrgEditorCanvasText,
@@ -18,7 +19,7 @@ import {
   type OrgEditorCanvasRect,
   type OrgEditorCanvasResizeHandle,
 } from "@/lib/org-editor-canvas";
-import { employeeTagColorToHex } from "@/lib/tag-color";
+import { employeeTagColorToHex, getStickerColorStyle } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 
 export type OrgEditorCanvasElementHandle =
@@ -40,7 +41,6 @@ const CANVAS_SIDE_RESIZE_HANDLE_IDS = [
   "bottomCenter",
   "leftCenter",
 ] as const satisfies readonly OrgEditorCanvasResizeHandle[];
-const CANVAS_CONNECTOR_ANCHOR_IDS = CANVAS_SIDE_RESIZE_HANDLE_IDS;
 
 const getCornerInsetStyle = (
   cornerId: (typeof ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS)[number],
@@ -77,38 +77,6 @@ const getSideHandleStyle = (
     left: cornerClearance,
     right: cornerClearance,
     width: "auto",
-  };
-};
-
-const getConnectorStyle = (
-  anchorId: (typeof CANVAS_CONNECTOR_ANCHOR_IDS)[number],
-): CSSProperties => {
-  const offset = canvasUiMetric("connector-offset", -10);
-  if (anchorId === "leftCenter") {
-    return {
-      left: offset,
-      top: "50%",
-      transform: "translate(-50%, -50%)",
-    };
-  }
-  if (anchorId === "rightCenter") {
-    return {
-      right: offset,
-      top: "50%",
-      transform: "translate(50%, -50%)",
-    };
-  }
-  if (anchorId === "bottomCenter") {
-    return {
-      bottom: offset,
-      left: "50%",
-      transform: "translate(-50%, 50%)",
-    };
-  }
-  return {
-    top: offset,
-    left: "50%",
-    transform: "translate(-50%, -50%)",
   };
 };
 
@@ -213,22 +181,40 @@ export function OrgEditorCanvasGroupFrame({
   );
 }
 
-const getCanvasFont = (fontFamily: string, weight: number, size: number) =>
-  `${weight} ${size}px "${fontFamily.replaceAll('"', "")}", Arial, sans-serif`;
-
 const CanvasText = ({
   element,
 }: {
   element: Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>;
 }) => {
-  const lines = useMemo(() => {
+  const [, setFontRevision] = useState(0);
+
+  useEffect(() => {
+    if (!document.fonts) return;
+    let cancelled = false;
+    void document.fonts
+      .load(
+        getOrgEditorCanvasFont(
+          element.typography.fontFamily,
+          element.typography.fontWeight,
+          element.typography.fontSize,
+        ),
+      )
+      .then(() => {
+        if (!cancelled) setFontRevision((revision) => revision + 1);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [element.typography.fontFamily, element.typography.fontSize, element.typography.fontWeight]);
+
+  const lines = (() => {
     const canvas = typeof document === "undefined" ? null : document.createElement("canvas");
     const context = canvas?.getContext("2d");
     return layoutOrgEditorCanvasText({
       height: element.height,
       measure: (value, typography) => {
         if (!context) return [...value].length * typography.fontSize * 0.55;
-        context.font = getCanvasFont(
+        context.font = getOrgEditorCanvasFont(
           typography.fontFamily,
           typography.fontWeight,
           typography.fontSize,
@@ -240,7 +226,7 @@ const CanvasText = ({
       typography: element.typography,
       width: element.width,
     });
-  }, [element]);
+  })();
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -273,35 +259,7 @@ const RectHandles = ({
     handle: OrgEditorCanvasElementHandle,
   ) => void;
 }) => {
-  const t = useUiText();
-
-  return (
-    <>
-      <CanvasPerimeterTransformHandles onHandlePointerDown={onHandlePointerDown} />
-      {CANVAS_CONNECTOR_ANCHOR_IDS.map((anchorId) => (
-        <button
-          aria-label={t("Attach canvas element")}
-          className="pointer-events-none absolute z-40 rounded-full border border-background bg-signal p-0 opacity-0 shadow-sm transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 focus:pointer-events-auto focus:opacity-100"
-          data-canvas-anchor-id={anchorId}
-          data-canvas-connector-handle
-          key={anchorId}
-          onPointerDown={(event) =>
-            onHandlePointerDown(event, {
-              anchorId: anchorId as OrgEditorRectAnchorId,
-              type: "attach",
-            })
-          }
-          style={{
-            ...getConnectorStyle(anchorId),
-            borderWidth: canvasUiMetric("outline-width", 1),
-            height: canvasUiMetric("connector-size", 7),
-            width: canvasUiMetric("connector-size", 7),
-          }}
-          type="button"
-        />
-      ))}
-    </>
-  );
+  return <CanvasPerimeterTransformHandles onHandlePointerDown={onHandlePointerDown} />;
 };
 
 export function OrgEditorCanvasElementNode({
@@ -337,6 +295,8 @@ export function OrgEditorCanvasElementNode({
   const [imageFailed, setImageFailed] = useState(false);
   const textEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const imageDataUrl = element.type === "image" ? element.dataUrl : null;
+  const stickerColors =
+    element.type === "sticker" ? getStickerColorStyle(element.backgroundColor) : null;
 
   useEffect(() => {
     if (editingText !== null && editingText !== undefined) {
@@ -482,12 +442,15 @@ export function OrgEditorCanvasElementNode({
         element.type === "text" || element.type === "sticker" ? element.text : undefined
       }
       data-canvas-element-type={element.type}
+      data-canvas-font-family={
+        element.type === "text" || element.type === "sticker"
+          ? element.typography.fontFamily
+          : undefined
+      }
       onContextMenu={(event) => onContextMenu(event, element)}
       onDoubleClick={() => onDoubleClick(element.id)}
       onPointerDown={(event) => onPointerDown(event, element)}
       style={{
-        backgroundColor:
-          element.type === "sticker" ? employeeTagColorToHex(element.backgroundColor) : undefined,
         height: element.height,
         left: element.x,
         outline: isSelected
@@ -500,6 +463,25 @@ export function OrgEditorCanvasElementNode({
         width: element.width,
       }}
     >
+      {element.type === "sticker" && stickerColors && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl shadow-[0_8px_18px_-12px_rgb(15_23_42/0.55)]"
+          data-canvas-sticker-paper
+          style={{
+            background: `linear-gradient(145deg, ${stickerColors.sheenStyle}, transparent 44%), ${stickerColors.fillStyle}`,
+          }}
+        >
+          <span
+            className="absolute right-0 top-0 size-6"
+            data-canvas-sticker-fold
+            style={{
+              backgroundColor: stickerColors.foldFillStyle,
+              clipPath: "polygon(0 0, 100% 100%, 0 100%)",
+            }}
+          />
+        </div>
+      )}
       {element.type === "image" ? (
         <div className="size-full overflow-hidden rounded-lg bg-muted">
           {imageFailed ? (
@@ -544,7 +526,7 @@ export function OrgEditorCanvasElementNode({
       ) : editingText !== null && editingText !== undefined ? (
         <textarea
           aria-label={t("Canvas element text")}
-          className="absolute inset-0 z-10 size-full resize-none border-0 bg-transparent p-2 outline-none"
+          className="absolute inset-0 z-10 size-full resize-none border-0 bg-transparent outline-none"
           data-canvas-text-editor={element.id}
           onBlur={onFinishEditing}
           onChange={(event) => onEditingTextChange?.(event.currentTarget.value)}
@@ -562,6 +544,8 @@ export function OrgEditorCanvasElementNode({
             fontFamily: element.typography.fontFamily,
             fontSize: element.typography.fontSize,
             fontWeight: element.typography.fontWeight,
+            lineHeight: `${Math.ceil(element.typography.fontSize * 1.25)}px`,
+            padding: element.type === "sticker" ? 16 : 4,
             textAlign: element.typography.horizontalAlign,
           }}
           value={editingText}
