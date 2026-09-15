@@ -94,13 +94,17 @@ export function OrgEditorCanvasToolbar({
           return (
             <Button
               aria-label={label}
+              aria-pressed={activeTool === tool}
               className={cn(
                 "size-8 p-0",
                 activeTool === tool && "bg-accent-strong text-foreground",
               )}
               data-canvas-tool={tool}
               key={tool}
-              onClick={() => (tool === "image" ? onImage() : onToolChange(tool))}
+              onClick={() => {
+                onToolChange(tool);
+                if (tool === "image") onImage();
+              }}
               title={label}
               type="button"
               variant="ghost"
@@ -109,7 +113,6 @@ export function OrgEditorCanvasToolbar({
             </Button>
           );
         })}
-        <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
         <Button
           data-demo-id="org-editor-view-image-export-action"
           onClick={onExport}
@@ -125,11 +128,14 @@ export function OrgEditorCanvasToolbar({
 
       {selectedElements.length > 0 && (
         <div
-          className="flex max-w-full flex-wrap items-center justify-end gap-1 rounded-lg border border-border/80 bg-background/95 p-1.5 shadow-sm backdrop-blur"
+          className="flex w-[min(46rem,calc(100vw-1.5rem))] max-w-full flex-wrap items-center justify-end gap-1 rounded-lg border border-border/80 bg-background/95 p-1 shadow-sm backdrop-blur"
           data-demo-id="org-editor-canvas-properties"
         >
           {textElement && (
-            <>
+            <div
+              className="flex min-w-0 basis-full flex-wrap items-center justify-end gap-1 rounded-md bg-muted/45 p-1"
+              data-canvas-property-group="typography"
+            >
               <Select
                 onValueChange={(fontFamily) =>
                   onUpdate((element) =>
@@ -140,7 +146,7 @@ export function OrgEditorCanvasToolbar({
                 }
                 value={textElement.typography.fontFamily}
               >
-                <SelectTrigger aria-label={t("Font")} className="h-8 w-32 text-xs">
+                <SelectTrigger aria-label={t("Font")} className="h-8 w-28 min-w-0 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,7 +191,7 @@ export function OrgEditorCanvasToolbar({
                 }}
                 value={String(textElement.typography.fontWeight)}
               >
-                <SelectTrigger aria-label={t("Font weight")} className="h-8 w-24 text-xs">
+                <SelectTrigger aria-label={t("Font weight")} className="h-8 w-24 min-w-0 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,6 +250,7 @@ export function OrgEditorCanvasToolbar({
                   );
                 }}
                 value={textElement.typography.color}
+                variant="icon"
               />
               {textElement.type === "sticker" && (
                 <TagColorPicker
@@ -256,6 +263,7 @@ export function OrgEditorCanvasToolbar({
                     );
                   }}
                   value={textElement.backgroundColor}
+                  variant="icon"
                 />
               )}
               <Select
@@ -269,7 +277,10 @@ export function OrgEditorCanvasToolbar({
                 }}
                 value={textElement.typography.verticalAlign}
               >
-                <SelectTrigger aria-label={t("Vertical alignment")} className="h-8 w-28 text-xs">
+                <SelectTrigger
+                  aria-label={t("Vertical alignment")}
+                  className="h-8 w-28 min-w-0 text-xs"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -278,11 +289,14 @@ export function OrgEditorCanvasToolbar({
                   <SelectItem value="bottom">{t("Align bottom")}</SelectItem>
                 </SelectContent>
               </Select>
-            </>
+            </div>
           )}
 
           {selected?.type === "arrow" && (
-            <>
+            <div
+              className="flex min-w-0 basis-full flex-wrap items-center justify-end gap-1 rounded-md bg-muted/45 p-1"
+              data-canvas-property-group="arrow"
+            >
               <TagColorPicker
                 allowNoColor={false}
                 label={t("Arrow color")}
@@ -293,6 +307,7 @@ export function OrgEditorCanvasToolbar({
                   );
                 }}
                 value={selected.strokeColor}
+                variant="icon"
               />
               <Input
                 aria-label={t("Line width")}
@@ -334,7 +349,10 @@ export function OrgEditorCanvasToolbar({
                 }}
                 value={selected.startMarker}
               >
-                <SelectTrigger aria-label={t("Arrow start marker")} className="h-8 w-28 text-xs">
+                <SelectTrigger
+                  aria-label={t("Arrow start marker")}
+                  className="h-8 w-28 min-w-0 text-xs"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -351,7 +369,10 @@ export function OrgEditorCanvasToolbar({
                 }}
                 value={selected.endMarker}
               >
-                <SelectTrigger aria-label={t("Arrow end marker")} className="h-8 w-28 text-xs">
+                <SelectTrigger
+                  aria-label={t("Arrow end marker")}
+                  className="h-8 w-28 min-w-0 text-xs"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -359,7 +380,7 @@ export function OrgEditorCanvasToolbar({
                   <SelectItem value="arrow">{t("Arrow marker")}</SelectItem>
                 </SelectContent>
               </Select>
-            </>
+            </div>
           )}
 
           {selected?.type === "image" && (
@@ -382,7 +403,10 @@ export function OrgEditorCanvasToolbar({
           )}
 
           {selected && selected.type !== "arrow" && (
-            <>
+            <div
+              className="flex items-center gap-1 rounded-md bg-muted/45 p-1"
+              data-canvas-property-group="geometry"
+            >
               <Input
                 aria-label={t("Element width")}
                 className="h-8 w-20 text-xs"
@@ -460,81 +484,86 @@ export function OrgEditorCanvasToolbar({
                 type="number"
                 value={selected.rotation}
               />
-            </>
+            </div>
           )}
 
-          <Select
-            onValueChange={(value) => onLayer(value as OrgEditorCanvasElement["layer"])}
-            value={selected?.layer ?? selectedElements[0]?.layer ?? "aboveUnits"}
+          <div
+            className="flex items-center gap-1 rounded-md bg-muted/45 p-1"
+            data-canvas-property-group="arrangement"
           >
-            <SelectTrigger aria-label={t("Layer")} className="h-8 w-32 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="behindUnits">{t("Behind Units")}</SelectItem>
-              <SelectItem value="aboveUnits">{t("Above Units")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            aria-label={t("Send to back")}
-            className="size-8 p-0"
-            onClick={() => onOrder("back")}
-            title={t("Send to back")}
-            type="button"
-            variant="ghost"
-          >
-            <HiOutlineQueueList />
-          </Button>
-          <Button
-            aria-label={t("Send backward")}
-            className="size-8 p-0"
-            onClick={() => onOrder("backward")}
-            title={t("Send backward")}
-            type="button"
-            variant="ghost"
-          >
-            <HiOutlineQueueList />
-          </Button>
-          <Button
-            aria-label={t("Bring forward")}
-            className="size-8 p-0"
-            onClick={() => onOrder("forward")}
-            title={t("Bring forward")}
-            type="button"
-            variant="ghost"
-          >
-            <HiOutlineQueueList className="rotate-180" />
-          </Button>
-          <Button
-            aria-label={t("Bring to front")}
-            className="size-8 p-0"
-            onClick={() => onOrder("front")}
-            title={t("Bring to front")}
-            type="button"
-            variant="ghost"
-          >
-            <HiOutlineQueueList className="rotate-180" />
-          </Button>
-          <Button
-            aria-label={t("Duplicate")}
-            className="size-8 p-0"
-            onClick={onDuplicate}
-            title={t("Duplicate")}
-            type="button"
-            variant="ghost"
-          >
-            <HiOutlineDocumentDuplicate />
-          </Button>
-          <Button
-            aria-label={t("Delete")}
-            className="size-8 p-0 text-destructive"
-            onClick={onDelete}
-            title={t("Delete")}
-            type="button"
-            variant="ghost"
-          >
-            <HiOutlineTrash />
-          </Button>
+            <Select
+              onValueChange={(value) => onLayer(value as OrgEditorCanvasElement["layer"])}
+              value={selected?.layer ?? selectedElements[0]?.layer ?? "aboveUnits"}
+            >
+              <SelectTrigger aria-label={t("Layer")} className="h-8 w-28 min-w-0 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="behindUnits">{t("Behind Units")}</SelectItem>
+                <SelectItem value="aboveUnits">{t("Above Units")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              aria-label={t("Send to back")}
+              className="size-8 p-0"
+              onClick={() => onOrder("back")}
+              title={t("Send to back")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineQueueList />
+            </Button>
+            <Button
+              aria-label={t("Send backward")}
+              className="size-8 p-0"
+              onClick={() => onOrder("backward")}
+              title={t("Send backward")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineQueueList />
+            </Button>
+            <Button
+              aria-label={t("Bring forward")}
+              className="size-8 p-0"
+              onClick={() => onOrder("forward")}
+              title={t("Bring forward")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineQueueList className="rotate-180" />
+            </Button>
+            <Button
+              aria-label={t("Bring to front")}
+              className="size-8 p-0"
+              onClick={() => onOrder("front")}
+              title={t("Bring to front")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineQueueList className="rotate-180" />
+            </Button>
+            <Button
+              aria-label={t("Duplicate")}
+              className="size-8 p-0"
+              onClick={onDuplicate}
+              title={t("Duplicate")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineDocumentDuplicate />
+            </Button>
+            <Button
+              aria-label={t("Delete")}
+              className="size-8 p-0 text-destructive"
+              onClick={onDelete}
+              title={t("Delete")}
+              type="button"
+              variant="ghost"
+            >
+              <HiOutlineTrash />
+            </Button>
+          </div>
         </div>
       )}
     </div>

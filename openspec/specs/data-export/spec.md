@@ -84,19 +84,21 @@ same packing model as the live Editor.
 - **THEN** no downloaded-file success label appears and any prior copy confirmation is cleared
 
 ### Requirement: Template formats use one token-aware input
-Data Download, Editor Template export, and custom Employee Template definitions SHALL use one shared
-multiline Format input and SHALL NOT render separate token-button catalogs. Every such input SHALL
-place a compact focusable help icon immediately after its Format label. Hovering or focusing the
-icon SHALL explain that typing `@` opens token suggestions, and the input placeholder SHALL provide
-the same concise discovery cue. Typing `@` immediately before the caret SHALL open a caret-positioned
-bordered suggestion menu containing the matching `{token}` and a localized short description.
-Matching MUST be case-insensitive by substring across token keys and descriptions. Choosing a token
-SHALL replace only the active `@query` with the existing `{token}` syntax and place the caret after
-it. Manual `{token}` values and conditional expressions SHALL retain their existing formatter behavior.
+Data Download, Editor Template export, full-View Editor Image Employee format, and custom Employee Template definitions SHALL
+use one shared multiline Format input and SHALL NOT render separate
+token-button catalogs. Every such input SHALL place a compact focusable help icon immediately after
+its Format label. Hovering or focusing the icon SHALL explain that typing `@` opens token suggestions
+and that `{condition ? 'value' : 'fallback'}` resolves a conditional expression; the input
+placeholder SHALL provide the same concise `@` discovery cue. Typing `@` immediately before the
+caret SHALL open a caret-positioned bordered suggestion menu containing the matching `{token}` and a
+localized short description. Matching MUST be case-insensitive by substring across token keys and
+descriptions. Choosing a token SHALL replace only the active `@query` with the existing `{token}`
+syntax and place the caret after it. Manual `{token}` values and `?` conditional expressions SHALL
+retain their existing formatter behavior.
 
-#### Scenario: Discover token suggestions
+#### Scenario: Discover token suggestions and conditions
 - **WHEN** a user hovers or focuses the help icon beside any token-aware Format label
-- **THEN** localized guidance explains that typing `@` opens token suggestions without changing the field value
+- **THEN** localized guidance explains that typing `@` opens token suggestions and shows the supported `?` conditional form without changing the field value
 
 #### Scenario: See the token placeholder
 - **WHEN** a token-aware Format field is empty
@@ -121,6 +123,10 @@ it. Manual `{token}` values and conditional expressions SHALL retain their exist
 #### Scenario: Dismiss before deleting
 - **WHEN** the menu is open and the user presses Backspace
 - **THEN** the first press only closes the menu and a subsequent Backspace edits the Format value normally
+
+#### Scenario: Preserve a conditional format
+- **WHEN** full-View Employee Format contains a valid `?` conditional expression
+- **THEN** preview, copied PNG, and saved PNG resolve it with the same formatter behavior as other Template surfaces
 
 ### Requirement: Birthday output retains complete canonical data
 Data Download and Editor JSON or Template export SHALL emit an Employee birthday directly as its

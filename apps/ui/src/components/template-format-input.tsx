@@ -149,7 +149,9 @@ export function TemplateFormatInput({
             id={`${id}-token-help`}
             role="tooltip"
           >
-            {t("Type @ to open token suggestions.")}
+            {t("Type @ to open token suggestions. Use {example} for conditional text.", {
+              example: "{condition ? 'value' : 'fallback'}",
+            })}
           </span>
         </span>
       </div>

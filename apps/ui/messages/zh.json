@@ -204,7 +204,7 @@
     "Format": "格式",
     "Token suggestions help": "令牌建议帮助",
     "Type @ to add tokens": "输入 @ 添加令牌",
-    "Type @ to open token suggestions.": "输入 @ 打开令牌建议。",
+    "Type @ to open token suggestions. Use {example} for conditional text.": "输入 @ 打开令牌建议。使用 {example} 编写条件文本。",
     "Full names": "完整姓名",
     "Collection field name for {name}": "{name}集合的字段名",
     "Go back": "回来",

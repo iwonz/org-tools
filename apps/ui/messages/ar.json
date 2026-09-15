@@ -204,7 +204,7 @@
     "Format": "الشكل",
     "Token suggestions help": "مساعدة اقتراحات الرموز",
     "Type @ to add tokens": "اكتب @ لإضافة رموز",
-    "Type @ to open token suggestions.": "اكتب @ لفتح اقتراحات الرموز.",
+    "Type @ to open token suggestions. Use {example} for conditional text.": "اكتب @ لفتح اقتراحات الرموز. استخدم {example} للنص الشرطي.",
     "Full names": "الأسماء الكاملة",
     "Collection field name for {name}": "اسم حقل المجموعة لـ {name}",
     "Go back": "العودة",

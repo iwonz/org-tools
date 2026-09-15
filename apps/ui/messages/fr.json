@@ -204,7 +204,7 @@
     "Format": "Format",
     "Token suggestions help": "Aide sur les suggestions de jetons",
     "Type @ to add tokens": "Saisissez @ pour ajouter des jetons",
-    "Type @ to open token suggestions.": "Saisissez @ pour ouvrir les suggestions de jetons.",
+    "Type @ to open token suggestions. Use {example} for conditional text.": "Saisissez @ pour ouvrir les suggestions de jetons. Utilisez {example} pour le texte conditionnel.",
     "Full names": "Noms complets",
     "Collection field name for {name}": "Nom du champ de collecte pour · {name}",
     "Go back": "Retourne",

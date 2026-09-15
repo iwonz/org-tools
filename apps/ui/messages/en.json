@@ -204,7 +204,7 @@
     "Format": "Format",
     "Token suggestions help": "Token suggestions help",
     "Type @ to add tokens": "Type @ to add tokens",
-    "Type @ to open token suggestions.": "Type @ to open token suggestions.",
+    "Type @ to open token suggestions. Use {example} for conditional text.": "Type @ to open token suggestions. Use {example} for conditional text.",
     "Full names": "Full names",
     "Collection field name for {name}": "Collection field name for {name}",
     "Go back": "Go back",

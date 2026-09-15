@@ -273,10 +273,11 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 Arrange opaque Unit cards and representative Text, Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
-the upper-right canvas toolbar.
+the upper-right canvas toolbar. The selected annotation demonstrates the compact grouped properties,
+all-edge resize, corner rotation, and element-specific context actions.
 
 Capabilities: Canvas layout, Text, Sticker, Image, Arrow, Anchors, Layers, Adaptive snap grid,
-Hierarchy, Zoom.
+Hierarchy, Zoom, Element transforms and context actions.
 
 ### View settings
 
@@ -408,7 +409,7 @@ Capabilities: Single selection, Exact row anchors, Collapsed fallback, Pointer-i
 Preview a full-View local PNG whose Unit cards, hierarchy, Text, Sticker, embedded Image, curved
 Arrow, Tags, boss marker, and assigned/source-only row tones follow the durable canvas presentation
 without printing transient editing chrome. The dialog also shows actual output dimensions and
-effective density.
+effective density, token-aware Employee format, and icon-labelled Copy and Save actions.
 
 Capabilities: Full-View PNG, Canvas elements, Distribution tones, Hierarchy, Density, Actual
 dimensions, Local Copy and Save.
@@ -435,7 +436,7 @@ Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, U
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
 Configure 1x/2x/3x density, final dimensions, background presets, title, font, spacing, localized
-boss label, and Employee card content beside the complete View preview.
+boss label, and `@`-assisted conditional Employee card content beside the complete View preview.
 
 Capabilities: Density and clamping, Final dimensions, Background, Title and font, Spacing and
 alignment, Boss label, Employee card content.
@@ -615,7 +616,13 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
-  whose help icon and placeholder disclose the `@` menu that inserts the existing `{token}` syntax.
+  whose help icon and placeholder disclose the `@` menu that inserts the existing `{token}` syntax;
+  help must also explain `?` conditionals. Full-View Image uses the same input and the same
+  clipboard/download action icons as scoped Image export.
+- Confirm a plain canvas-element click selects only that element, Ctrl/Cmd creates an explicit
+  group, choosing a creation tool clears prior selection, and element right-click exposes only
+  element layer/order, Duplicate, and Delete actions. Verify eight resize directions, four corner
+  rotation targets, a stable center during rotation, and readable non-overlapping property groups.
 - Confirm Employee Import shows a bounded richest-record preview beside virtualized fixed-source →
   target-Select rows, transfers occupied targets, imports Teams only through mapping, and keeps
   duplicate review virtualized.

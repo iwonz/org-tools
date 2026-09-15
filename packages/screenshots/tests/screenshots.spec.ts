@@ -468,7 +468,18 @@ test("captures the complete Employee workflow", async ({ page }) => {
 test("captures Editor navigation, commands, and export tooling", async ({ page }) => {
   await openSyntheticState(page);
   await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
+  const selectedAnnotation = page.locator(
+    '[data-canvas-element-id="dddddddd-dddd-4ddd-8ddd-dddddddddddd"]',
+  );
+  await selectedAnnotation.click({ button: "right" });
+  await expect(page.locator('[data-demo-id="org-editor-canvas-properties"]')).toBeVisible();
+  await expect(
+    page
+      .locator("[data-org-editor-context-menu]")
+      .getByRole("menuitem", { name: "Behind Units", exact: true }),
+  ).toBeVisible();
   await capture(page, "editor");
+  await page.keyboard.press("Escape");
 
   const productNoteUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   await productNoteUnit.hover();
@@ -607,6 +618,10 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await viewImageDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
+  await viewImageDialog
+    .getByRole("button", { name: "Token suggestions help", exact: true })
+    .hover();
+  await expect(viewImageDialog.getByRole("tooltip")).toContainText("condition ?");
   await capture(page, "editor-image-settings");
   await page.keyboard.press("Escape");
   const dialog = await openEditorExport(page);

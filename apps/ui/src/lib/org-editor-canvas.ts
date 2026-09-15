@@ -23,6 +23,8 @@ export type OrgEditorCanvasRect = {
   y: number;
 };
 
+export type OrgEditorCanvasResizeHandle = Exclude<OrgEditorRectAnchorId, "center">;
+
 export type ResolvedOrgEditorCanvasElement = {
   bounds: OrgEditorCanvasRect;
   element: OrgEditorCanvasElement;
@@ -61,6 +63,22 @@ export const ORG_EDITOR_RECT_ANCHOR_IDS: readonly OrgEditorRectAnchorId[] = [
   "leftCenter",
   "center",
 ];
+export const ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS: readonly OrgEditorCanvasResizeHandle[] = [
+  "topLeft",
+  "topCenter",
+  "topRight",
+  "rightCenter",
+  "bottomRight",
+  "bottomCenter",
+  "bottomLeft",
+  "leftCenter",
+];
+export const ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS = [
+  "topLeft",
+  "topRight",
+  "bottomRight",
+  "bottomLeft",
+] as const;
 export const ORG_EDITOR_EMPLOYEE_ANCHOR_IDS = ["leftCenter", "rightCenter"] as const;
 export const ORG_EDITOR_ARROW_ANCHOR_IDS = ["start", "middle", "end"] as const;
 
@@ -334,6 +352,160 @@ const placeRectAnchorAtPoint = <
     x: point.x - element.width / 2 - rotated.x,
     y: point.y - element.height / 2 - rotated.y,
   };
+};
+
+const canvasResizeHandleEdges = (handle: OrgEditorCanvasResizeHandle) => ({
+  bottom: handle === "bottomLeft" || handle === "bottomCenter" || handle === "bottomRight",
+  left: handle === "topLeft" || handle === "leftCenter" || handle === "bottomLeft",
+  right: handle === "topRight" || handle === "rightCenter" || handle === "bottomRight",
+  top: handle === "topLeft" || handle === "topCenter" || handle === "topRight",
+});
+
+/** Resolves an axis-aligned resize while keeping the opposite edge or corner stationary. */
+export const getOrgEditorCanvasResizeBounds = ({
+  handle,
+  lockAspectRatio = false,
+  pointer,
+  sourceBounds,
+}: {
+  handle: OrgEditorCanvasResizeHandle;
+  lockAspectRatio?: boolean;
+  pointer: OrgEditorCanvasPoint;
+  sourceBounds: OrgEditorCanvasRect;
+}): OrgEditorCanvasRect => {
+  const edges = canvasResizeHandleEdges(handle);
+  const sourceRight = sourceBounds.x + sourceBounds.width;
+  const sourceBottom = sourceBounds.y + sourceBounds.height;
+  let left = edges.left
+    ? Math.min(pointer.x, sourceRight - ORG_EDITOR_CANVAS_MIN_RECT_SIZE)
+    : sourceBounds.x;
+  let right = edges.right
+    ? Math.max(pointer.x, sourceBounds.x + ORG_EDITOR_CANVAS_MIN_RECT_SIZE)
+    : sourceRight;
+  let top = edges.top
+    ? Math.min(pointer.y, sourceBottom - ORG_EDITOR_CANVAS_MIN_RECT_SIZE)
+    : sourceBounds.y;
+  let bottom = edges.bottom
+    ? Math.max(pointer.y, sourceBounds.y + ORG_EDITOR_CANVAS_MIN_RECT_SIZE)
+    : sourceBottom;
+
+  let width = Math.min(ORG_EDITOR_CANVAS_MAX_RECT_SIZE, right - left);
+  let height = Math.min(ORG_EDITOR_CANVAS_MAX_RECT_SIZE, bottom - top);
+  if (lockAspectRatio) {
+    const scaleX = width / Math.max(1e-6, sourceBounds.width);
+    const scaleY = height / Math.max(1e-6, sourceBounds.height);
+    const changesX = edges.left || edges.right;
+    const changesY = edges.top || edges.bottom;
+    const requestedScale =
+      changesX && !changesY
+        ? scaleX
+        : changesY && !changesX
+          ? scaleY
+          : Math.abs(scaleX - 1) >= Math.abs(scaleY - 1)
+            ? scaleX
+            : scaleY;
+    const minimumScale = Math.max(
+      ORG_EDITOR_CANVAS_MIN_RECT_SIZE / Math.max(1e-6, sourceBounds.width),
+      ORG_EDITOR_CANVAS_MIN_RECT_SIZE / Math.max(1e-6, sourceBounds.height),
+    );
+    const maximumScale = Math.min(
+      ORG_EDITOR_CANVAS_MAX_RECT_SIZE / Math.max(1e-6, sourceBounds.width),
+      ORG_EDITOR_CANVAS_MAX_RECT_SIZE / Math.max(1e-6, sourceBounds.height),
+    );
+    const scale = Math.min(maximumScale, Math.max(minimumScale, requestedScale));
+    width = sourceBounds.width * scale;
+    height = sourceBounds.height * scale;
+
+    if (edges.left) left = sourceRight - width;
+    else if (edges.right) right = sourceBounds.x + width;
+    else {
+      left = sourceBounds.x + (sourceBounds.width - width) / 2;
+      right = left + width;
+    }
+    if (edges.top) top = sourceBottom - height;
+    else if (edges.bottom) bottom = sourceBounds.y + height;
+    else {
+      top = sourceBounds.y + (sourceBounds.height - height) / 2;
+      bottom = top + height;
+    }
+  } else {
+    if (edges.left) left = sourceRight - width;
+    if (edges.right) right = sourceBounds.x + width;
+    if (edges.top) top = sourceBottom - height;
+    if (edges.bottom) bottom = sourceBounds.y + height;
+  }
+
+  return { height: bottom - top, width: right - left, x: left, y: top };
+};
+
+/** Resizes one rotated rectangular element in its local axes. */
+export const resizeOrgEditorCanvasRectElement = <
+  Element extends OrgEditorImageElement | OrgEditorStickerElement | OrgEditorTextElement,
+>(
+  element: Element,
+  handle: OrgEditorCanvasResizeHandle,
+  pointer: OrgEditorCanvasPoint,
+): Element => {
+  const sourceCenter = { x: element.x + element.width / 2, y: element.y + element.height / 2 };
+  const localPointerDelta = rotateVector(
+    { x: pointer.x - sourceCenter.x, y: pointer.y - sourceCenter.y },
+    -element.rotation,
+  );
+  const targetBounds = getOrgEditorCanvasResizeBounds({
+    handle,
+    lockAspectRatio: element.type === "image" && element.lockAspectRatio,
+    pointer: {
+      x: sourceCenter.x + localPointerDelta.x,
+      y: sourceCenter.y + localPointerDelta.y,
+    },
+    sourceBounds: {
+      height: element.height,
+      width: element.width,
+      x: sourceCenter.x - element.width / 2,
+      y: sourceCenter.y - element.height / 2,
+    },
+  });
+  const targetLocalCenter = {
+    x: targetBounds.x + targetBounds.width / 2,
+    y: targetBounds.y + targetBounds.height / 2,
+  };
+  const centerDelta = rotateVector(
+    { x: targetLocalCenter.x - sourceCenter.x, y: targetLocalCenter.y - sourceCenter.y },
+    element.rotation,
+  );
+  const targetCenter = { x: sourceCenter.x + centerDelta.x, y: sourceCenter.y + centerDelta.y };
+  const resized = {
+    ...cloneOrgEditorCanvasElement(element),
+    height: targetBounds.height,
+    width: targetBounds.width,
+    x: targetCenter.x - targetBounds.width / 2,
+    y: targetCenter.y - targetBounds.height / 2,
+  } as Element;
+
+  if (!element.attachment) return resized;
+  const previousAnchor = getOrgEditorRectAnchorPoint(element, element.attachment.sourceAnchorId);
+  const nextAnchor = getOrgEditorRectAnchorPoint(resized, element.attachment.sourceAnchorId);
+  return {
+    ...resized,
+    attachment: {
+      ...element.attachment,
+      offset: {
+        x: element.attachment.offset.x + nextAnchor.x - previousAnchor.x,
+        y: element.attachment.offset.y + nextAnchor.y - previousAnchor.y,
+      },
+    },
+  };
+};
+
+export const getOrgEditorCanvasRotationDelta = (
+  bounds: OrgEditorCanvasRect,
+  start: OrgEditorCanvasPoint,
+  current: OrgEditorCanvasPoint,
+) => {
+  const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+  const startAngle = Math.atan2(start.y - center.y, start.x - center.x);
+  const currentAngle = Math.atan2(current.y - center.y, current.x - center.x);
+  return ((currentAngle - startAngle) * 180) / Math.PI;
 };
 
 const getCubicPoint = (

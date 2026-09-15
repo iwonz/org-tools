@@ -50,6 +50,9 @@ the 25 MiB transfer bound. Original bytes remain an embedded data URL without up
 object-URL persistence, or quality-reducing re-encoding. Decode failure produces the same inert
 local placeholder in the Editor and PNG. Full-View and scoped preview/copy/save rasterization loads
 only validated embedded data URLs with bounded concurrency and never creates a network request.
+Canvas selection, tool activation, perimeter resize/rotation previews, context menus, Format token
+suggestions, and Format help remain transient browser UI. Only a completed element command updates
+the active View; none of these interactions adds storage, logging, telemetry, or network access.
 
 Unit notes are bounded local Markdown embedded only in complete state transfer and the configured
 SQLite state. Preview never executes raw HTML and replaces Markdown images with inert local text,

@@ -204,7 +204,7 @@
     "Format": "Формат",
     "Token suggestions help": "Подсказка по токенам",
     "Type @ to add tokens": "Введите @, чтобы добавить токены",
-    "Type @ to open token suggestions.": "Начните ввод с @, чтобы открыть список токенов.",
+    "Type @ to open token suggestions. Use {example} for conditional text.": "Начните ввод с @, чтобы открыть список токенов. Для условного текста используйте {example}.",
     "Full names": "Полные имена",
     "Collection field name for {name}": "Имя поля коллекции {name}",
     "Go back": "Назад",

@@ -13,6 +13,12 @@ const centerOf = async (locator: ReturnType<Page["locator"]>) => {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 };
 
+const documentCenterOf = (locator: ReturnType<Page["locator"]>) =>
+  locator.evaluate((element: HTMLElement) => ({
+    x: Number.parseFloat(element.style.left) + Number.parseFloat(element.style.width) / 2,
+    y: Number.parseFloat(element.style.top) + Number.parseFloat(element.style.height) / 2,
+  }));
+
 export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void> {
   const externalRequests: string[] = [];
   const onRequest = (request: { url(): string }) => {
@@ -78,20 +84,147 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   }, ONE_PIXEL_PNG.toString("base64"));
   await expect(imageElements).toHaveCount(initialImageCount + 1);
 
-  const createdText = textElements.last();
-  const createdSticker = stickerElements.last();
+  const createdTextId = await textElements.last().getAttribute("data-canvas-element-id");
+  const createdStickerId = await stickerElements.last().getAttribute("data-canvas-element-id");
+  if (!createdTextId || !createdStickerId)
+    throw new Error("Created canvas identity is unavailable.");
+  const createdText = canvas.locator(`[data-canvas-element-id="${createdTextId}"]`);
+  const createdSticker = canvas.locator(`[data-canvas-element-id="${createdStickerId}"]`);
+  const properties = page.locator('[data-demo-id="org-editor-canvas-properties"]');
   await createdText.click();
   await createdSticker.click({ modifiers: ["Control"] });
   const groupFrame = canvas.locator("[data-canvas-group-frame]");
   await expect(groupFrame).toBeVisible();
-  const textBefore = await centerOf(createdText);
-  const stickerBefore = await centerOf(createdSticker);
-  await page.mouse.move(stickerBefore.x, stickerBefore.y);
+  await createdText.click();
+  await expect(groupFrame).toBeHidden();
+  await expect(createdText).toHaveClass(/outline-signal/);
+  await expect(createdSticker).not.toHaveClass(/outline-signal/);
+  await toolbar.locator('[data-canvas-tool="arrow"]').click();
+  await expect(toolbar.locator('[data-canvas-tool="arrow"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(toolbar.locator('[data-canvas-tool="select"]')).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(properties).toBeHidden();
+  await expect(createdText).not.toHaveClass(/outline-signal/);
+  await toolbar.locator('[data-canvas-tool="select"]').click();
+
+  await createdText.click({ button: "right" });
+  const elementMenu = page.locator("[data-org-editor-context-menu]");
+  await expect(
+    elementMenu.getByRole("menuitem", { name: "Behind Units", exact: true }),
+  ).toBeVisible();
+  for (const action of [
+    "Above Units",
+    "Send to back",
+    "Send backward",
+    "Bring forward",
+    "Bring to front",
+    "Duplicate",
+    "Delete",
+  ]) {
+    await expect(elementMenu.getByRole("menuitem", { name: action, exact: true })).toBeVisible();
+  }
+  await expect(elementMenu.getByRole("menuitem", { name: "Add Unit", exact: true })).toHaveCount(0);
+  await elementMenu.getByRole("menuitem", { name: "Behind Units", exact: true }).click();
+  await expect(createdText).toHaveAttribute("data-canvas-element-layer", "behindUnits");
+  await createdText.click({ button: "right" });
+  await elementMenu.getByRole("menuitem", { name: "Above Units", exact: true }).click();
+  await expect(createdText).toHaveAttribute("data-canvas-element-layer", "aboveUnits");
+  await expect(elementMenu).toBeHidden();
+
+  await createdText.click();
+  const resizeHandles = createdText.locator("[data-canvas-resize-handle]");
+  const rotateHandles = createdText.locator("[data-canvas-rotate-handle]");
+  await expect(resizeHandles).toHaveCount(8);
+  await expect(rotateHandles).toHaveCount(4);
+  expect(
+    await properties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+  ).toBe(true);
+  const textBeforeResize = await createdText.boundingBox();
+  const rightResize = await createdText
+    .locator('[data-canvas-resize-handle="rightCenter"]')
+    .boundingBox();
+  if (!textBeforeResize || !rightResize) throw new Error("Text resize geometry is unavailable.");
+  await page.mouse.move(
+    rightResize.x + rightResize.width / 2,
+    rightResize.y + rightResize.height / 2,
+  );
   await page.mouse.down();
-  await page.mouse.move(stickerBefore.x + 48, stickerBefore.y + 48, { steps: 4 });
+  await page.mouse.move(
+    rightResize.x + rightResize.width / 2 + 72,
+    rightResize.y + rightResize.height / 2,
+    { steps: 4 },
+  );
   await page.mouse.up();
-  const textAfter = await centerOf(createdText);
-  const stickerAfter = await centerOf(createdSticker);
+  const textAfterResize = await createdText.boundingBox();
+  expect((textAfterResize?.width ?? 0) - textBeforeResize.width).toBeGreaterThan(40);
+
+  const textBeforeRotate = await centerOf(createdText);
+  const textDocumentCenterBeforeRotate = await documentCenterOf(createdText);
+  const rotateHandleLocator = createdText.locator('[data-canvas-rotate-handle="topRight"]');
+  const rotateHandle = await rotateHandleLocator.boundingBox();
+  if (!rotateHandle) throw new Error("Text rotation geometry is unavailable.");
+  const rotateStart = {
+    x: rotateHandle.x + rotateHandle.width / 2,
+    y: rotateHandle.y + rotateHandle.height / 2,
+  };
+  const rotateVector = {
+    x: rotateStart.x - textBeforeRotate.x,
+    y: rotateStart.y - textBeforeRotate.y,
+  };
+  await rotateHandleLocator.hover();
+  await page.mouse.down();
+  await expect(canvas).toHaveAttribute("data-active-drag-type", "canvasElement");
+  await page.mouse.move(textBeforeRotate.x - rotateVector.y, textBeforeRotate.y + rotateVector.x, {
+    steps: 5,
+  });
+  await page.mouse.up();
+  const textDocumentCenterAfterRotate = await documentCenterOf(createdText);
+  expect(Math.abs(textDocumentCenterAfterRotate.x - textDocumentCenterBeforeRotate.x)).toBeLessThan(
+    0.01,
+  );
+  expect(Math.abs(textDocumentCenterAfterRotate.y - textDocumentCenterBeforeRotate.y)).toBeLessThan(
+    0.01,
+  );
+  expect(
+    Math.abs(
+      await createdText.evaluate((element) =>
+        Number.parseFloat(element.style.transform.match(/-?\d+(?:\.\d+)?/)?.[0] ?? "0"),
+      ),
+    ),
+  ).toBeGreaterThan(45);
+  await page.keyboard.press("Control+z");
+
+  await imageElements.last().click();
+  await expect(
+    imageElements.last().locator('[data-canvas-resize-handle="rightCenter"]'),
+  ).toBeVisible();
+  await expect(
+    imageElements.last().locator('[data-canvas-rotate-handle="topRight"]'),
+  ).toBeVisible();
+
+  await createdText.click();
+  await createdSticker.click({ modifiers: ["Control"] });
+  await expect(groupFrame).toBeVisible();
+  await expect(createdText).toHaveClass(/outline-signal/);
+  await expect(createdSticker).toHaveClass(/outline-signal/);
+  await expect(groupFrame.locator("[data-canvas-group-resize-handle]")).toHaveCount(8);
+  await expect(groupFrame.locator("[data-canvas-group-rotate-handle]")).toHaveCount(4);
+  const textBefore = await documentCenterOf(createdText);
+  const stickerBefore = await documentCenterOf(createdSticker);
+  const stickerScreenCenter = await centerOf(createdSticker);
+  await page.mouse.move(stickerScreenCenter.x, stickerScreenCenter.y);
+  await page.mouse.down();
+  await expect(canvas).toHaveAttribute("data-active-drag-type", "canvasElement");
+  await expect(groupFrame).toBeVisible();
+  await page.mouse.move(stickerScreenCenter.x + 48, stickerScreenCenter.y + 48, { steps: 4 });
+  await page.mouse.up();
+  const textAfter = await documentCenterOf(createdText);
+  const stickerAfter = await documentCenterOf(createdSticker);
   expect(textAfter.x - textBefore.x).toBeGreaterThan(24);
   expect(stickerAfter.x - stickerBefore.x).toBeGreaterThan(24);
   await page.keyboard.press("Control+z");
@@ -126,8 +259,23 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(dialog.locator('[data-demo-id="org-editor-view-image-dimensions"]')).toContainText(
     "3.00×",
   );
+  const employeeFormat = dialog.locator("#org-editor-view-image-employee-format");
+  await employeeFormat.fill("@full");
+  const suggestions = dialog.locator('[data-demo-id="template-token-suggestions"]');
+  await expect(suggestions).toBeVisible();
+  await suggestions.getByRole("option").filter({ hasText: "{fullName}" }).click();
+  await expect(employeeFormat).toHaveValue("{fullName}");
+  const formatHelp = dialog.getByRole("button", { name: "Token suggestions help", exact: true });
+  await formatHelp.focus();
+  await expect(dialog.getByRole("tooltip")).toContainText("{condition ? 'value' : 'fallback'}");
+  await employeeFormat.fill("{isBoss ? 'Lead' : '{fullName}'}");
+  await expect(preview).toBeVisible();
+  const copyButton = dialog.getByRole("button", { name: "Copy", exact: true });
+  const saveButton = dialog.getByRole("button", { name: "Save", exact: true });
+  await expect(copyButton.locator("svg")).toHaveCount(1);
+  await expect(saveButton.locator("svg")).toHaveCount(1);
   const downloadPromise = page.waitForEvent("download");
-  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await saveButton.click();
   const download = await downloadPromise;
   const path = await download.path();
   if (!path) throw new Error("View PNG download is unavailable.");

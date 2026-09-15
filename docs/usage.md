@@ -105,13 +105,20 @@ control.
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
   The tools row directly below the upper-right actions provides Select, Text, Arrow, Sticker,
-  embedded Image, and full-View Image export, including in an empty View. Text and Sticker support
+  embedded Image, and full-View Image export without a separating divider, including in an empty
+  View. Choosing a creation tool clears the current canvas selection; a plain element click selects
+  only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens its
+  layer, Forward/Backward/Front/Back, Duplicate, and Delete actions instead of Unit commands. Text
+  and Sticker support
   bundled fonts, size, weight, color, horizontal/vertical alignment, resize, rotation, and
   non-clipping wrapping; Sticker also has a background color. Images accept only local PNG, JPEG, or
   WebP file/clipboard bytes and support aspect-locked resize and rotation. Cubic Arrows expose two
   endpoints, Bezier controls, line style, independent markers, and shared anchors. Modifier and
   marquee selection, group move/resize/rotation, layer-plane/order actions, Delete, Copy/Paste,
-  Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture.
+  Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture. Selected
+  rectangular and group frames resize from every side or corner and rotate from any corner around
+  the exact center; there is no detached rotation handle. Contextual settings wrap into compact
+  readable groups.
   Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
   also assigned to ancestors. Bosses count once, and collapse or distribution mode never changes
   the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.
@@ -147,6 +154,9 @@ control.
   placement lines, or endpoint markers. The dedicated View Image dialog previews the entire durable
   scene, shows actual output dimensions and effective density for 1x/2x/3x, and offers the same
   background, padding, title, font, Unit radius, Employee format, boss label, Copy, and Save controls.
+  Employee format uses the shared `@` suggestion input and its information help documents
+  `{condition ? 'value' : 'fallback'}`; Copy and Save retain the standard clipboard and download
+  icons.
   Unit/subtree Image export includes transitively attached annotations but excludes free or external
   ones. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
@@ -173,7 +183,8 @@ control.
   names, and searchable exclusion menus. Template retains All Units and First Unit row modes through
   the same control used by Editor export. Every token-aware Format label includes a help icon, and
   its placeholder explains that typing `@` opens a localized caret menu and inserts the stable
-  `{token}` syntax. Unit paths use the fixed ` / ` separator. **Continue**
+  `{token}` syntax. The information help also shows the supported
+  `{condition ? 'value' : 'fallback'}` form. Unit paths use the fixed ` / ` separator. **Continue**
   stays disabled in the shared header until at least one Employee is selected.
 
 ## Import and Export

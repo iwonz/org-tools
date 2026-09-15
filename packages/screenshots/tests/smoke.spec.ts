@@ -2850,13 +2850,31 @@ test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page })
   if (!canvasBox) throw new Error("Editor canvas is unavailable.");
   const rightEdgeX = canvasBox.x + canvasBox.width - 2;
   const viewportX = async () => Number(await canvas.getAttribute("data-viewport-x"));
+  const waitForEdgePanFrame = () =>
+    page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+  const expectEdgePan = async (before: number, pointerY: number) => {
+    let inset = 0;
+    await expect
+      .poll(async () => {
+        inset = inset === 0 ? 1 : 0;
+        await page.mouse.move(rightEdgeX - inset, pointerY);
+        await waitForEdgePanFrame();
+        return viewportX();
+      })
+      .toBeLessThan(before - 1);
+  };
   const panDragToRightEdge = async (start: { x: number; y: number }) => {
     const before = await viewportX();
     await page.mouse.move(start.x, start.y);
     await page.mouse.down();
     await expect(canvas).not.toHaveAttribute("data-active-drag-type", "none");
     await page.mouse.move(rightEdgeX, start.y, { steps: 6 });
-    await expect.poll(viewportX).toBeLessThan(before - 1);
+    await expectEdgePan(before, start.y);
     await page.mouse.up();
   };
   const focusPrimary = async () => {
@@ -2890,7 +2908,7 @@ test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page })
   await page.mouse.move(marqueeStart.x, marqueeStart.y);
   await page.mouse.down();
   await page.mouse.move(rightEdgeX, marqueeStart.y, { steps: 6 });
-  await expect.poll(viewportX).toBeLessThan(beforeMarquee - 1);
+  await expectEdgePan(beforeMarquee, marqueeStart.y);
   await expect(page.locator("[data-org-editor-selection-rect]")).toBeVisible();
   await page.mouse.up();
   await page.keyboard.up("Control");

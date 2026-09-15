@@ -204,7 +204,7 @@
     "Format": "Formato",
     "Token suggestions help": "Ayuda para sugerencias de tokens",
     "Type @ to add tokens": "Escribe @ para añadir tokens",
-    "Type @ to open token suggestions.": "Escribe @ para abrir las sugerencias de tokens.",
+    "Type @ to open token suggestions. Use {example} for conditional text.": "Escribe @ para abrir las sugerencias de tokens. Usa {example} para el texto condicional.",
     "Full names": "nombres completos",
     "Collection field name for {name}": "Nombre de campo de colección para · {name}",
     "Go back": "Vuelve.",

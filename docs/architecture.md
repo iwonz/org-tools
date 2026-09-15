@@ -55,6 +55,12 @@ anchor registry resolves Unit corners/sides/center, Employee row sides, rectangu
 and Arrow start/middle/end. References are same-View, acyclic, and preserve fallback world geometry.
 The array order is z-order inside `behindUnits` and `aboveUnits`; canvas elements participate in
 View-local history, cloning, persistence, live-tab synchronization, and complete State transfer.
+Plain element pointer selection replaces the previous selection while Ctrl/Cmd explicitly toggles
+group membership. Creation-tool activation clears the previous item selection, and right-click is
+routed through a discriminated element menu whose commands affect canvas elements only. Rectangle
+and group frames share eight perimeter resize directions plus four corner rotation targets; resize
+uses local axes and a fixed opposite edge, while rotation derives one angle around the exact selected
+bounds center.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
@@ -199,9 +205,10 @@ history, collaborative cursors, or remote synchronization.
   and optional Unit and Tag arrays. Unit and Tag rows use the same geometry as scalar fields, retain
   independently sortable nested fields, and support naming plus exact exclusions. Template retains
   All Units and First Unit row modes through one control shared with Editor export. Both Template
-  surfaces use one multiline Format input whose caret menu converts `@query` into existing `{token}`
-  syntax. A small help affordance and the placeholder disclose the shortcut; tooltip, query, and
-  suggestion state are transient.
+  surfaces and full-View Image Employee format use one multiline Format input whose caret menu
+  converts `@query` into existing `{token}` syntax. A small help affordance and the placeholder
+  disclose the shortcut; help also documents the existing `{condition ? 'value' : 'fallback'}`
+  expression. Tooltip, query, and suggestion state are transient.
 
 Org Editor DOM and PNG output share a pure scene layer for persistent canvas-element geometry,
 attachment resolution, text wrapping, rotated bounds, cubic extrema, and two-plane ordering. Full

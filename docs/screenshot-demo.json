@@ -275,14 +275,15 @@
     "featured": true,
     "title": "Visual organization Editor",
     "file": "demo-editor.png",
-    "description": "Arrange opaque Unit cards with complete wrapping Tag footers on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, and normal-weight layout controls.",
+    "description": "Arrange Unit cards and durable annotations with an exclusive selection, compact grouped properties, all-edge resize, centered corner rotation, and element context actions on the adaptive snap grid.",
     "capabilities": [
       "Canvas layout",
       "Adaptive snap grid",
       "Hierarchy",
       "Zoom",
-      "Arrange and collapse",
-      "Complete Tag footers"
+      "Canvas tools",
+      "Perimeter transforms",
+      "Element context actions"
     ]
   },
   {
@@ -458,16 +459,14 @@
     "featured": false,
     "title": "Editor image export",
     "file": "feature-editor-image-export.png",
-    "description": "Prepare a local hierarchy PNG whose Unit cards, centered Employee rows, complete wrapping colored tags, localized boss marker, and connections follow the live canvas without membership-type labels or a secondary viewer.",
+    "description": "Preview the complete View PNG with Unit cards, durable annotations, distribution tones, actual dimensions, token-aware Employee format, and icon-labelled Copy and Save actions.",
     "capabilities": [
-      "Inline PNG preview",
-      "Complete tags",
-      "Tag colors",
-      "Membership-neutral cards",
-      "Hierarchy",
-      "Localized boss marker",
-      "Iconic scope",
-      "Background presets"
+      "Full-View PNG",
+      "Canvas elements",
+      "Distribution tones",
+      "Actual dimensions",
+      "Token-aware format",
+      "Copy and Save"
     ]
   },
   {
@@ -500,12 +499,13 @@
     "featured": false,
     "title": "Editor image detail settings",
     "file": "feature-editor-image-settings.png",
-    "description": "Configure PNG title, font, spacing, icon-only alignment, localized boss label, and Employee card content without avatar-data template tokens.",
+    "description": "Configure density, dimensions, background, title, spacing, and @-assisted conditional Employee content with focused format help.",
     "capabilities": [
-      "Title and font",
-      "Icon-only alignment",
+      "Density and dimensions",
+      "Title and background",
       "Localized boss label",
-      "Employee card content"
+      "Token suggestions",
+      "Conditional Employee format"
     ]
   },
   {

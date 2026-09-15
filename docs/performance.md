@@ -62,7 +62,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   Snap gestures query only nearby Unit/element cells, derive Employee candidates from cached row
   offsets, and update only the affected dependency closure. Move, resize, rotation, endpoint,
   Bezier, anchor, and text drafts use the latest-value frame scheduler; only pointer release or edit
-  completion mutates the View document once.
+  completion mutates the View document once. Eight resize and four corner-rotation hit targets are
+  constant per selected frame. Resize resolves one local-axis bounds calculation and rotation reads
+  one cached selected-bounds center per pointer sample without scanning Units or canvas elements.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
   View; a deterministic glyph-aware width packs intrinsic short chips and grapheme-safe long lines,

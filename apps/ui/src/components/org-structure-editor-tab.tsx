@@ -177,11 +177,14 @@ import {
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasElementBounds,
   getOrgEditorCanvasElementsBounds,
+  getOrgEditorCanvasResizeBounds,
+  getOrgEditorCanvasRotationDelta,
   getOrgEditorRectAnchorPoint,
   moveOrgEditorCanvasElement,
   ORG_EDITOR_ARROW_ANCHOR_IDS,
   ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
   ORG_EDITOR_RECT_ANCHOR_IDS,
+  resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElementSubset,
   resolveOrgEditorCanvasElements,
   transformOrgEditorCanvasElements,
@@ -238,6 +241,11 @@ type OrgEditorContextMenu =
       screenPoint: ScreenPoint;
       type: "employees";
       unitId: OrgEditorUnitId;
+    }
+  | {
+      elementIds: OrgEditorCanvasElementId[];
+      screenPoint: ScreenPoint;
+      type: "elements";
     }
   | {
       anchorUnitId: OrgEditorUnitId;
@@ -298,6 +306,7 @@ type DragState =
       currentScreenPoint: ScreenPoint;
       elementIds: OrgEditorCanvasElementId[];
       handle: OrgEditorCanvasElementHandle | { type: "move" };
+      selectOnClick: OrgEditorSelectedItem | null;
       sourceBounds: CanvasRect;
       sourceElements: OrgEditorCanvasElement[];
       startCanvasPoint: CanvasPoint;
@@ -419,38 +428,28 @@ const getCanvasElementDragPreview = (
     });
   }
   if (drag.handle.type === "rotate") {
-    const center = {
-      x: drag.sourceBounds.x + drag.sourceBounds.width / 2,
-      y: drag.sourceBounds.y + drag.sourceBounds.height / 2,
-    };
-    const startAngle = Math.atan2(
-      drag.startCanvasPoint.y - center.y,
-      drag.startCanvasPoint.x - center.x,
-    );
-    const currentAngle = Math.atan2(currentPoint.y - center.y, currentPoint.x - center.x);
     return transformOrgEditorCanvasElements({
       elements: drag.sourceElements,
-      rotation: ((currentAngle - startAngle) * 180) / Math.PI,
+      rotation: getOrgEditorCanvasRotationDelta(
+        drag.sourceBounds,
+        drag.startCanvasPoint,
+        currentPoint,
+      ),
       sourceBounds: drag.sourceBounds,
       targetBounds: drag.sourceBounds,
     });
   }
 
   const anchorId = drag.handle.anchorId;
-  const fromLeft = anchorId === "topLeft" || anchorId === "bottomLeft";
-  const fromTop = anchorId === "topLeft" || anchorId === "topRight";
-  const fixedX = fromLeft ? drag.sourceBounds.x + drag.sourceBounds.width : drag.sourceBounds.x;
-  const fixedY = fromTop ? drag.sourceBounds.y + drag.sourceBounds.height : drag.sourceBounds.y;
-  const nextX = fromLeft ? currentPoint.x : fixedX;
-  const nextY = fromTop ? currentPoint.y : fixedY;
-  const nextRight = fromLeft ? fixedX : currentPoint.x;
-  const nextBottom = fromTop ? fixedY : currentPoint.y;
-  const targetBounds = {
-    height: Math.max(24, nextBottom - nextY),
-    width: Math.max(24, nextRight - nextX),
-    x: Math.min(nextX, nextRight - 24),
-    y: Math.min(nextY, nextBottom - 24),
-  };
+  const [singleElement] = drag.sourceElements;
+  if (drag.sourceElements.length === 1 && singleElement && singleElement.type !== "arrow") {
+    return [resizeOrgEditorCanvasRectElement(singleElement, anchorId, currentPoint)];
+  }
+  const targetBounds = getOrgEditorCanvasResizeBounds({
+    handle: anchorId,
+    pointer: currentPoint,
+    sourceBounds: drag.sourceBounds,
+  });
   return transformOrgEditorCanvasElements({
     elements: drag.sourceElements,
     sourceBounds: drag.sourceBounds,
@@ -3445,6 +3444,8 @@ export const OrgStructureEditorTab = observer(() => {
                 elementIds: currentDragState.elementIds,
                 unitPositions: currentDragState.startUnitPositions,
               });
+            } else if (currentDragState.selectOnClick) {
+              editor.selectItem(currentDragState.selectOnClick, "replace");
             }
           } else if (currentDragState.handle.type === "attach") {
             const handle = currentDragState.handle;
@@ -3976,8 +3977,14 @@ export const OrgStructureEditorTab = observer(() => {
     event.stopPropagation();
     const item = { elementId: element.id, type: "element" } as const;
     const mode = selectionModeFromEvent(event);
-    const isSelected = selectedCanvasElementIds.has(element.id);
-    if (!isSelected || mode !== "replace") editor.selectItem(item, mode);
+    const preserveForPotentialGroupDrag =
+      mode === "replace" &&
+      selectedCanvasElementIds.has(element.id) &&
+      editor.selectedItems.length > 1;
+    if (!preserveForPotentialGroupDrag) {
+      if (mode === "replace") editor.setSelectedItems([item]);
+      else editor.selectItem(item, mode);
+    }
     const elementIds = [...editor.selectedElementIds];
     if (!editor.selectedElementIds.has(element.id)) return;
     const sourceElements = elementIds.flatMap((elementId) => {
@@ -3991,6 +3998,7 @@ export const OrgStructureEditorTab = observer(() => {
       currentScreenPoint: screenPoint,
       elementIds,
       handle: { type: "move" },
+      selectOnClick: preserveForPotentialGroupDrag ? item : null,
       sourceBounds,
       sourceElements,
       startCanvasPoint: screenToCanvasPoint(screenPoint),
@@ -4000,6 +4008,26 @@ export const OrgStructureEditorTab = observer(() => {
         .map((unit) => ({ unitId: unit.id, x: unit.x, y: unit.y })),
       startViewport: { ...renderViewportRef.current },
       type: "canvasElement",
+    });
+  };
+
+  const handleCanvasElementContextMenu = (
+    event: React.MouseEvent<Element>,
+    element: OrgEditorCanvasElement,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    finishWheelPreview();
+    const elementIds = selectedCanvasElementIds.has(element.id)
+      ? [...selectedCanvasElementIds]
+      : [element.id];
+    editor.setSelectedItems(
+      elementIds.map((elementId) => ({ elementId, type: "element" as const })),
+    );
+    setContextMenu({
+      elementIds,
+      screenPoint: { x: event.clientX, y: event.clientY },
+      type: "elements",
     });
   };
 
@@ -4029,6 +4057,7 @@ export const OrgStructureEditorTab = observer(() => {
       currentScreenPoint: screenPoint,
       elementIds,
       handle,
+      selectOnClick: null,
       sourceBounds,
       sourceElements,
       startCanvasPoint: screenToCanvasPoint(screenPoint),
@@ -4077,6 +4106,7 @@ export const OrgStructureEditorTab = observer(() => {
           currentScreenPoint: screenPoint,
           elementIds: mixedElementIds,
           handle: { type: "move" },
+          selectOnClick: selectionIntent.preserveForPotentialGroupDrag ? item : null,
           sourceBounds,
           sourceElements,
           startCanvasPoint: screenToCanvasPoint(screenPoint),
@@ -4407,6 +4437,7 @@ export const OrgStructureEditorTab = observer(() => {
           isSelected={selectedCanvasElementIds.has(element.id)}
           key={element.id}
           onDoubleClick={startCanvasTextEditing}
+          onContextMenu={handleCanvasElementContextMenu}
           onEditingTextChange={setEditingCanvasText}
           onFinishEditing={finishCanvasTextEditing}
           onHandlePointerDown={handleCanvasElementHandlePointerDown}
@@ -4670,6 +4701,84 @@ export const OrgStructureEditorTab = observer(() => {
                   </OrgEditorMenuButton>
                 </>
               )}
+            </OrgEditorFloatingMenu>
+          )}
+          {contextMenu?.type === "elements" && (
+            <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
+              <OrgEditorMenuButton
+                onClick={() => {
+                  editor.setCanvasElementLayer(contextMenu.elementIds, "behindUnits");
+                  setContextMenu(null);
+                }}
+              >
+                <HiOutlineQueueList />
+                {t("Behind Units")}
+              </OrgEditorMenuButton>
+              <OrgEditorMenuButton
+                onClick={() => {
+                  editor.setCanvasElementLayer(contextMenu.elementIds, "aboveUnits");
+                  setContextMenu(null);
+                }}
+              >
+                <HiOutlineQueueList className="rotate-180" />
+                {t("Above Units")}
+              </OrgEditorMenuButton>
+              <span className="my-1 h-px bg-border" />
+              {(
+                [
+                  ["back", "Send to back"],
+                  ["backward", "Send backward"],
+                  ["forward", "Bring forward"],
+                  ["front", "Bring to front"],
+                ] as const
+              ).map(([direction, label]) => (
+                <OrgEditorMenuButton
+                  key={direction}
+                  onClick={() => {
+                    editor.reorderCanvasElements(contextMenu.elementIds, direction);
+                    setContextMenu(null);
+                  }}
+                >
+                  <HiOutlineQueueList
+                    className={
+                      direction === "forward" || direction === "front" ? "rotate-180" : undefined
+                    }
+                  />
+                  {t(label)}
+                </OrgEditorMenuButton>
+              ))}
+              <span className="my-1 h-px bg-border" />
+              <OrgEditorMenuButton
+                onClick={() => {
+                  editor.setSelectedItems(
+                    contextMenu.elementIds.map((elementId) => ({
+                      elementId,
+                      type: "element" as const,
+                    })),
+                  );
+                  editor.duplicateSelectedCanvasElements();
+                  setContextMenu(null);
+                }}
+              >
+                <HiOutlineDocumentDuplicate />
+                {t("Duplicate")}
+              </OrgEditorMenuButton>
+              <OrgEditorMenuButton
+                onClick={() => {
+                  editor.setSelectedItems(
+                    contextMenu.elementIds.map((elementId) => ({
+                      elementId,
+                      type: "element" as const,
+                    })),
+                  );
+                  store.deleteEditorSelection();
+                  setContextMenu(null);
+                }}
+                variant="destructive"
+              >
+                <HiOutlineTrash />
+                {t("Delete")}
+              </OrgEditorMenuButton>
             </OrgEditorFloatingMenu>
           )}
           {contextMenu?.type === "employees" && (
@@ -4982,12 +5091,18 @@ export const OrgStructureEditorTab = observer(() => {
             onDelete={() => store.deleteEditorSelection()}
             onDuplicate={() => editor.duplicateSelectedCanvasElements()}
             onExport={() => setViewImageExportOpen(true)}
-            onImage={() => imageInputRef.current?.click()}
+            onImage={() => {
+              imageInputRef.current?.click();
+              setActiveCanvasTool("select");
+            }}
             onLayer={(layer) => editor.setCanvasElementLayer(selectedCanvasElementIds, layer)}
             onOrder={(direction) =>
               editor.reorderCanvasElements(selectedCanvasElementIds, direction)
             }
             onToolChange={(tool) => {
+              if (editingCanvasElementId) finishCanvasTextEditing();
+              if (tool !== "select") editor.clearSelection();
+              setContextMenu(null);
               setActiveCanvasTool(tool);
               setCanvasToolError(null);
             }}
@@ -5006,6 +5121,7 @@ export const OrgStructureEditorTab = observer(() => {
               const file = event.currentTarget.files?.[0];
               event.currentTarget.value = "";
               if (file) void insertCanvasImageFile(file);
+              else setActiveCanvasTool("select");
             }}
             ref={imageInputRef}
             type="file"

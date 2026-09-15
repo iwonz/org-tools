@@ -12,13 +12,17 @@ import type {
 } from "@org-tools/types";
 import Image from "next/image";
 import { useLocale } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  HiOutlineArrowDownTray,
   HiOutlineBars3,
   HiOutlineBars3BottomLeft,
   HiOutlineBars3BottomRight,
+  HiOutlineClipboardDocument,
 } from "react-icons/hi2";
 
+import { templateFormatTokenDescriptionKeys } from "@/components/export-template-settings";
+import { TemplateFormatInput } from "@/components/template-format-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,6 +45,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { UiTextKey } from "@/i18n/messages";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
+import { exportEmployeeFields } from "@/lib/export-format";
 import type { OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
 import {
   createDefaultOrgEditorImageExportSettings,
@@ -53,6 +58,7 @@ import {
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
   type OrgEditorExportTitleAlign,
   orgEditorTemplateContainsBossToken,
+  orgEditorTemplateUnitFields,
 } from "@/lib/org-editor-export";
 import { downloadBlob } from "@/lib/org-file";
 
@@ -102,6 +108,18 @@ export function OrgEditorViewImageExportDialog({
   const [previewError, setPreviewError] = useState(false);
   const [plan, setPlan] = useState<ReturnType<typeof createOrgEditorImageRenderPlan> | null>(null);
   const [status, setStatus] = useState<"copied" | "error" | "saved" | null>(null);
+  const employeeFormatTokens = useMemo(
+    () =>
+      [...exportEmployeeFields, ...orgEditorTemplateUnitFields]
+        .filter((field) => field.key !== "avatarBase64Url" && field.key !== "tags")
+        .map((field) => ({
+          description: templateFormatTokenDescriptionKeys[field.key]
+            ? t(templateFormatTokenDescriptionKeys[field.key] as UiTextKey)
+            : field.label,
+          key: field.key,
+        })),
+    [t],
+  );
 
   useEffect(() => {
     if (previousManagerLabel.current === managerLabel) return;
@@ -467,13 +485,14 @@ export function OrgEditorViewImageExportDialog({
                 </Tabs>
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label>{t("Employee format")}</Label>
-              <Input
-                onChange={(event) => update({ employeeFormat: event.currentTarget.value })}
-                value={settings.employeeFormat}
-              />
-            </div>
+            <TemplateFormatInput
+              dataDemoId="org-editor-view-image-employee-format"
+              id="org-editor-view-image-employee-format"
+              label={t("Employee format")}
+              onChange={(employeeFormat) => update({ employeeFormat })}
+              tokens={employeeFormatTokens}
+              value={settings.employeeFormat}
+            />
             {orgEditorTemplateContainsBossToken(settings.employeeFormat) && (
               <div className="grid gap-2">
                 <Label>{t("isBoss value")}</Label>
@@ -507,6 +526,7 @@ export function OrgEditorViewImageExportDialog({
               type="button"
               variant="outline"
             >
+              <HiOutlineClipboardDocument />
               {t("Copy")}
             </Button>
             <Button
@@ -514,6 +534,7 @@ export function OrgEditorViewImageExportDialog({
               onClick={() => void save()}
               type="button"
             >
+              <HiOutlineArrowDownTray />
               {t("Save")}
             </Button>
           </div>

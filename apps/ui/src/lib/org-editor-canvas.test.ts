@@ -10,10 +10,15 @@ import {
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasElementBounds,
   getOrgEditorCanvasImagePlaceholderPoints,
+  getOrgEditorCanvasResizeBounds,
+  getOrgEditorCanvasRotationDelta,
+  getOrgEditorRectAnchorPoint,
   getOrgEditorScopedCanvasElementIds,
   hasOrgEditorCanvasElementDependencyCycle,
   layoutOrgEditorCanvasText,
   moveOrgEditorCanvasElement,
+  ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS,
+  resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElements,
   transformOrgEditorCanvasElements,
 } from "@/lib/org-editor-canvas";
@@ -219,6 +224,103 @@ describe("Org Editor canvas geometry", () => {
     expect(transformed.width / transformed.height).toBeCloseTo(2);
     expect(transformed.width).toBe(300);
     expect(transformed.height).toBe(150);
+  });
+
+  test("resizes from every perimeter handle while retaining opposite edges", () => {
+    const sourceBounds = { height: 100, width: 200, x: 100, y: 100 };
+    const pointers = {
+      bottomCenter: { x: 999, y: 260 },
+      bottomLeft: { x: 50, y: 260 },
+      bottomRight: { x: 350, y: 260 },
+      leftCenter: { x: 50, y: 999 },
+      rightCenter: { x: 350, y: 999 },
+      topCenter: { x: 999, y: 60 },
+      topLeft: { x: 50, y: 60 },
+      topRight: { x: 350, y: 60 },
+    } as const;
+    const expected = {
+      bottomCenter: { height: 160, width: 200, x: 100, y: 100 },
+      bottomLeft: { height: 160, width: 250, x: 50, y: 100 },
+      bottomRight: { height: 160, width: 250, x: 100, y: 100 },
+      leftCenter: { height: 100, width: 250, x: 50, y: 100 },
+      rightCenter: { height: 100, width: 250, x: 100, y: 100 },
+      topCenter: { height: 140, width: 200, x: 100, y: 60 },
+      topLeft: { height: 140, width: 250, x: 50, y: 60 },
+      topRight: { height: 140, width: 250, x: 100, y: 60 },
+    } as const;
+
+    expect(new Set(ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS)).toEqual(new Set(Object.keys(expected)));
+    for (const handle of ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS) {
+      expect(
+        getOrgEditorCanvasResizeBounds({ handle, pointer: pointers[handle], sourceBounds }),
+      ).toEqual(expected[handle]);
+    }
+  });
+
+  test("resizes locked and rotated rectangles around their local geometry", () => {
+    const lockedImage = {
+      attachment: null,
+      dataUrl:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADUlEQVR42mNk+M/wHwAF/gL+3q1HAAAAAElFTkSuQmCC",
+      height: 100,
+      id: uuid(31),
+      intrinsicHeight: 100,
+      intrinsicWidth: 200,
+      layer: "aboveUnits" as const,
+      lockAspectRatio: true,
+      rotation: 0,
+      type: "image" as const,
+      width: 200,
+      x: 100,
+      y: 100,
+    };
+    const resizedImage = resizeOrgEditorCanvasRectElement(lockedImage, "rightCenter", {
+      x: 500,
+      y: 150,
+    });
+    expect(resizedImage).toMatchObject({ height: 200, width: 400, x: 100, y: 50 });
+
+    const rotated = {
+      ...createOrgEditorTextElement({ x: 200, y: 150 }),
+      height: 100,
+      rotation: 90,
+      width: 200,
+      x: 100,
+      y: 100,
+    };
+    const previousLeft = getOrgEditorRectAnchorPoint(rotated, "leftCenter");
+    const resizedRotated = resizeOrgEditorCanvasRectElement(rotated, "rightCenter", {
+      x: 200,
+      y: 350,
+    });
+    expect(resizedRotated.width).toBeCloseTo(300);
+    expect(getOrgEditorRectAnchorPoint(resizedRotated, "leftCenter")).toEqual(previousLeft);
+  });
+
+  test("derives rotation from the exact selected-bounds center", () => {
+    const bounds = { height: 100, width: 200, x: 20, y: 40 };
+    expect(
+      getOrgEditorCanvasRotationDelta(bounds, { x: 220, y: 90 }, { x: 120, y: 190 }),
+    ).toBeCloseTo(90);
+    const source = {
+      ...createOrgEditorStickerElement({ x: 120, y: 90 }),
+      height: 60,
+      rotation: 12,
+      width: 80,
+      x: 80,
+      y: 60,
+    };
+    const [rotated] = transformOrgEditorCanvasElements({
+      elements: [source],
+      rotation: 90,
+      sourceBounds: bounds,
+      targetBounds: bounds,
+    });
+    expect(rotated?.type).toBe("sticker");
+    if (rotated?.type !== "sticker") return;
+    expect(rotated.rotation).toBe(102);
+    expect(rotated.x + rotated.width / 2).toBeCloseTo(120);
+    expect(rotated.y + rotated.height / 2).toBeCloseTo(90);
   });
 
   test("keeps attachment offsets stable when a target moves with its dependent", () => {
