@@ -13,6 +13,7 @@ import {
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorCanvasResizeBounds,
   getOrgEditorCanvasRotationDelta,
+  getOrgEditorCanvasTextLayout,
   getOrgEditorRectAnchorPoint,
   getOrgEditorScopedCanvasElementIds,
   hasOrgEditorCanvasElementDependencyCycle,
@@ -199,6 +200,41 @@ describe("Org Editor canvas geometry", () => {
     expect(lines.length).toBeGreaterThan(1);
     expect(lines.every((line) => line.x >= 0 && line.width <= 74)).toBe(true);
     expect(lines[0]?.y).toBeGreaterThan(8);
+  });
+
+  test("uses one text-block geometry for all nine saved alignments and overflow", () => {
+    const element = createOrgEditorTextElement({ x: 0, y: 0 });
+    const expectedX = { center: 40, left: 10, right: 70 } as const;
+    const expectedY = { bottom: 67, middle: 38.5, top: 10 } as const;
+    for (const horizontalAlign of ["left", "center", "right"] as const) {
+      for (const verticalAlign of ["top", "middle", "bottom"] as const) {
+        const layout = getOrgEditorCanvasTextLayout({
+          height: 100,
+          measure: () => 20,
+          padding: 10,
+          text: "xx",
+          typography: { ...element.typography, horizontalAlign, verticalAlign },
+          width: 100,
+        });
+        expect(layout.lines).toEqual([
+          { text: "xx", width: 20, x: expectedX[horizontalAlign], y: expectedY[verticalAlign] },
+        ]);
+        expect(layout.contentHeight).toBe(23);
+        expect(layout.minimumHeight).toBe(43);
+      }
+    }
+
+    const overflow = getOrgEditorCanvasTextLayout({
+      height: 24,
+      measure: (value) => value.length * 10,
+      padding: 4,
+      text: "one two three four",
+      typography: { ...element.typography, verticalAlign: "bottom" },
+      width: 50,
+    });
+    expect(overflow.lines.length).toBeGreaterThan(1);
+    expect(overflow.firstY).toBe(4);
+    expect(overflow.minimumHeight).toBe(8 + overflow.contentHeight);
   });
 
   test("grows wrapped text without clipping and ignores persisted Image aspect locks", () => {

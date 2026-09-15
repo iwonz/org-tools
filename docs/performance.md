@@ -120,7 +120,10 @@ remains authoritative.
 The shared image scene computes rotated rectangle and cubic Bezier bounds once, then paints hierarchy
 connections, `behindUnits`, cards, and `aboveUnits` in stable order. Preview and final output reuse the
 same plan; only effective raster density changes under the 8- and 32-megapixel plus maximum-side
-limits. Embedded canvas Images retain source bytes and decode with bounded concurrency.
+limits. Each dialog transforms one preview image inside a ResizeObserver-bounded viewport; wheel,
+pointer, button, and keyboard navigation update only constant-size transient geometry, while preview
+regeneration preserves one normalized focal point without repainting organization data. Embedded
+canvas Images retain source bytes and decode with bounded concurrency.
 
 Avatar input is bounded to 25 MiB compressed and 40 megapixels decoded. The crop preview is capped at
 4096 pixels on its longest side; confirmation creates one 512 by 512 image, preferring WebP and

@@ -10,7 +10,6 @@ import type {
   OrgEditorViewSettings,
   TagId,
 } from "@org-tools/types";
-import Image from "next/image";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -22,6 +21,7 @@ import {
 } from "react-icons/hi2";
 
 import { templateFormatTokenDescriptionKeys } from "@/components/export-template-settings";
+import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
 import { TemplateFormatInput } from "@/components/template-format-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +50,6 @@ import type { OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
 import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorImageExportResult,
-  createOrgEditorImageRenderPlan,
   ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
   ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
@@ -106,7 +105,7 @@ export function OrgEditorViewImageExportDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
-  const [plan, setPlan] = useState<ReturnType<typeof createOrgEditorImageRenderPlan> | null>(null);
+  const [previewSize, setPreviewSize] = useState({ height: 0, width: 0 });
   const [status, setStatus] = useState<"copied" | "error" | "saved" | null>(null);
   const employeeFormatTokens = useMemo(
     () =>
@@ -185,7 +184,7 @@ export function OrgEditorViewImageExportDialog({
     if (!hasContent) {
       setPreviewLoading(false);
       setPreviewError(false);
-      setPlan(null);
+      setPreviewSize({ height: 0, width: 0 });
       setPreviewUrl((current) => {
         if (current) URL.revokeObjectURL(current);
         return null;
@@ -203,13 +202,7 @@ export function OrgEditorViewImageExportDialog({
           if (current) URL.revokeObjectURL(current);
           return url;
         });
-        setPlan(
-          createOrgEditorImageRenderPlan({
-            logicalHeight: result.plan.logicalHeight,
-            logicalWidth: result.plan.logicalWidth,
-            requestedDensity: settings.density,
-          }),
-        );
+        setPreviewSize({ height: result.plan.pixelHeight, width: result.plan.pixelWidth });
       })
       .catch(() => {
         if (!cancelled) setPreviewError(true);
@@ -220,12 +213,12 @@ export function OrgEditorViewImageExportDialog({
     return () => {
       cancelled = true;
     };
-  }, [hasContent, open, render, settings.density, validBossLabel]);
+  }, [hasContent, open, render, validBossLabel]);
 
   useEffect(() => {
     if (open) return;
     setStatus(null);
-    setPlan(null);
+    setPreviewSize({ height: 0, width: 0 });
     setPreviewUrl((current) => {
       if (current) URL.revokeObjectURL(current);
       return null;
@@ -270,29 +263,20 @@ export function OrgEditorViewImageExportDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="grid min-h-0 flex-1 gap-5 overflow-y-auto lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
-          <section className="flex min-h-72 items-center justify-center overflow-hidden rounded-xl border bg-muted/30 p-4">
-            {previewUrl && !previewError && (
-              <Image
-                alt={t("View export preview")}
-                className="max-h-[640px] max-w-full object-contain"
-                height={900}
-                src={previewUrl}
-                unoptimized
-                width={1400}
-              />
-            )}
-            {previewLoading && (
-              <p className="text-sm text-muted-foreground">{t("Preparing preview...")}</p>
-            )}
-            {previewError && (
-              <p className="text-sm text-destructive">{t("Could not prepare the preview.")}</p>
-            )}
-            {!hasContent && (
-              <p className="text-sm text-muted-foreground">
-                {t("The View has no content to export as an image.")}
-              </p>
-            )}
-          </section>
+          <OrgEditorImagePreview
+            alt={t("View export preview")}
+            className="min-h-72 lg:min-h-0"
+            dataDemoId="org-editor-view-image-preview"
+            {...(hasContent
+              ? {}
+              : { emptyLabel: t("The View has no content to export as an image.") })}
+            errorLabel={previewError ? t("Could not prepare the preview.") : null}
+            height={previewSize.height}
+            loading={previewLoading}
+            loadingLabel={t("Preparing preview...")}
+            src={previewError ? null : previewUrl}
+            width={previewSize.width}
+          />
           <section className="grid content-start gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
@@ -325,29 +309,6 @@ export function OrgEditorViewImageExportDialog({
                 />
               </div>
             </div>
-            {plan && (
-              <div
-                className="rounded-lg border bg-muted/30 p-3 text-sm"
-                data-demo-id="org-editor-view-image-dimensions"
-              >
-                <p>
-                  {t("Final image: {width} × {height} px", {
-                    height: plan.pixelHeight,
-                    width: plan.pixelWidth,
-                  })}
-                </p>
-                <p className="text-muted-foreground">
-                  {t("Effective density: {density}×", {
-                    density: plan.effectiveDensity.toFixed(2),
-                  })}
-                </p>
-                {plan.clamped && (
-                  <p className="text-amber-700">
-                    {t("Density was reduced to fit safe PNG limits.")}
-                  </p>
-                )}
-              </div>
-            )}
             <div className="grid gap-2">
               <Label>{t("Background")}</Label>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">

@@ -107,16 +107,16 @@ control.
   The tools row directly below the upper-right actions provides Select, Text, Arrow, Sticker,
   embedded Image, and full-View Image export without a separating divider, including in an empty
   View. Choosing a creation tool clears the current canvas selection; a plain element click selects
-  only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens its
-  Forward/Backward/Front/Back, Duplicate, and Delete actions instead of Unit or layer-plane
-  commands. Text
-  and Sticker support
-  locally bundled fonts that match PNG, size, weight, color, horizontal/vertical alignment, resize,
-  rotation, and non-clipping wrapping; Sticker also has a background color and a folded-paper
-  surface mirrored in PNG. Images accept only local PNG, JPEG, or WebP file/clipboard bytes and
+  only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens Back,
+  Front, Duplicate, and Delete instead of Unit or layer-plane commands. Text and Sticker support
+  locally bundled fonts that match PNG, size, weight, color, resize, rotation, and non-clipping
+  wrapping. One compact alignment control exposes all nine horizontal/vertical combinations, and
+  editing retains the same wrapping and placement before and after focus. Sticker also has a
+  background color and a flat four-pixel-radius bordered surface mirrored in PNG. Images accept only
+  local PNG, JPEG, or WebP file/clipboard bytes and
   resize independently by default; hold Shift during a resize to preserve proportions. Cubic Arrows expose two
   endpoints, Bezier controls, line style, independent markers, and shared anchors. Modifier and
-  marquee selection, group move/resize/rotation, within-plane order actions, Delete, Copy/Paste,
+  marquee selection, group move/resize/rotation, global Back/Front, Delete, Copy/Paste,
   Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture. Selected
   rectangular and group frames use a thin solid outline with four visible corner resize markers;
   transparent side targets resize one dimension and transparent zones directly outside the corners
@@ -129,7 +129,9 @@ control.
   is no detached rotation handle, persistent aspect lock, or permanent anchor field. Clicking outside an
   active Text or Sticker editor saves once before normal selection routing; the first Escape saves
   and leaves the element selected, while the next Escape clears that resting selection. Contextual
-  settings wrap into compact readable groups.
+  settings stay in one compact auto-width row; alignment, geometry, and common actions open only
+  when requested. Back places only the selected ordered block below complete Unit cards, while Front
+  places it above complete Unit cards without changing attachments.
   Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
   also assigned to ancestors. Bosses count once, and collapse or distribution mode never changes
   the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.
@@ -163,8 +165,12 @@ control.
   disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
   JSON, or Template output. Editor Image exports preserve its stable row tones without selection,
   placement lines, or endpoint markers. The dedicated View Image dialog previews the entire durable
-  scene, shows actual output dimensions and effective density for 1x/2x/3x, and offers the same
+  scene and offers the same
   background, padding, title, font, Unit radius, Employee format, boss label, Copy, and Save controls.
+  Full-View and Unit/subtree previews begin fitted and support pointer-centered wheel zoom,
+  10%-to-400% controls, 100%, Fit, drag pan, and keyboard pan. Manual zoom and the relative center
+  survive preview regeneration; these inspection controls never affect the PNG or View state.
+  Density and canvas safety limits continue to apply silently.
   Employee format uses the shared `@` suggestion input and its information help documents
   `{condition ? 'value' : 'fallback'}`; Copy and Save retain the standard clipboard and download
   icons. Scoped Template export also offers **Remove empty lines**; its preview, Copy, Save, row-mode

@@ -74,8 +74,10 @@ field no longer controls interaction. Escape clears a resting element selection 
 higher-priority editing, menu, and transform interactions have handled the key. Text completion is
 idempotent across capture, blur, Escape, and tool changes, and textarea focus cannot create an
 internal canvas scroll offset. Text and Sticker use the same canonical locally bundled font string
-for DOM measurement and PNG painting. Sticker paper, sheen, and folded-corner colors come from one
-shared tonal helper without changing bounds or anchors.
+and text-block layout for DOM measurement, editing drafts, and PNG painting. Sticker fill and its
+one tonal border come from one shared flat-style helper without changing bounds or anchors. The
+contextual surface keeps appearance controls in one row and moves alignment, geometry, and common
+actions into bounded popovers.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
@@ -231,11 +233,16 @@ Org Editor DOM and PNG output share a pure scene layer for persistent canvas-ele
 attachment resolution, text wrapping, rotated bounds, cubic extrema, and two-plane ordering. Full
 View export includes all Units, hierarchy connections, and durable elements regardless of viewport;
 Unit/subtree export includes only the structural closure and transitively related annotations, with
-Arrows requiring two included endpoint owners. One render plan reports logical bounds, requested
+Arrows requiring two included endpoint owners. One render plan retains logical bounds, requested
 and effective 1x/2x/3x density, final dimensions, and 8/32-megapixel plus canvas-side clamping before
-rasterization. Text and Sticker wait for their canonical locally bundled family and weight before
-measurement; Sticker uses the live paper and folded-corner tonal treatment. Text, Sticker, Image,
-and Arrow painters omit every transient selection, target outline, anchor, resize, rotation,
+rasterization. Both dialogs place their local object URL in one transient Fit-first viewport with
+bounded pointer/keyboard pan and 10%-to-400% zoom. Manual inspection preserves its normalized focal
+point across preview regeneration; viewport state and render-plan diagnostics are not persisted or
+painted. Text and Sticker wait for their canonical locally bundled family and weight before
+measurement; Sticker uses the same live flat fill and tonal border. Global Back and Front move only
+the selected ordered block to the extreme of `behindUnits` or `aboveUnits`, preserving every
+attachment while crossing the indivisible Unit-card plane. Text, Sticker, Image, and Arrow painters
+omit every transient selection, target outline, anchor, resize, rotation,
 Bezier, marquee, and placement affordance.
 
 Org Editor PNG output also uses the same pure card geometry as the live canvas for Unit widths, 72 px

@@ -52,7 +52,9 @@ local placeholder in the Editor and PNG. Full-View and scoped preview/copy/save 
 only validated embedded data URLs with bounded concurrency and never creates a network request.
 Canvas selection, tool activation, contextual target outlines and anchors, perimeter
 resize/rotation previews, context menus, Format token suggestions, Format help, and the Remove empty
-lines choice remain transient browser UI. Only a completed element command updates the active View;
+lines choice remain transient browser UI. PNG preview Fit/manual mode, zoom, pan, pointer capture,
+keyboard position, normalized focal point, and local object URL also remain in dialog memory only.
+Only a completed element command updates the active View;
 Template line filtering derives local output without writing State. None of these interactions adds
 storage, logging, telemetry, or network access.
 

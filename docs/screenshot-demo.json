@@ -275,13 +275,13 @@
     "featured": true,
     "title": "Visual organization Editor",
     "file": "demo-editor.png",
-    "description": "Arrange Unit cards and durable Text, folded-paper Sticker, Image, and Arrow annotations with compact properties and Miro-like transforms on the adaptive snap grid.",
+    "description": "Arrange Unit cards and durable Text, flat bordered Sticker, Image, and Arrow annotations with compact properties and Miro-like transforms on the adaptive snap grid.",
     "capabilities": [
       "Canvas layout",
       "Adaptive snap grid",
       "Hierarchy",
       "Zoom",
-      "Canvas tools and folded Sticker",
+      "Canvas tools and flat Sticker",
       "Perimeter transforms",
       "Element context actions"
     ]
@@ -459,12 +459,12 @@
     "featured": false,
     "title": "Editor image export",
     "file": "feature-editor-image-export.png",
-    "description": "Preview the complete View PNG with Unit cards, durable annotations, distribution tones, actual dimensions, token-aware Employee format, and icon-labelled Copy and Save actions.",
+    "description": "Preview and navigate the complete View PNG with Unit cards, durable annotations, distribution tones, token-aware Employee format, and icon-labelled Copy and Save actions.",
     "capabilities": [
       "Full-View PNG",
       "Canvas elements",
       "Distribution tones",
-      "Actual dimensions",
+      "Fit, zoom, and pan",
       "Token-aware format",
       "Copy and Save"
     ]
@@ -506,9 +506,9 @@
     "featured": false,
     "title": "Editor image detail settings",
     "file": "feature-editor-image-settings.png",
-    "description": "Configure density, dimensions, background, title, spacing, and @-assisted conditional Employee content with focused format help.",
+    "description": "Configure density, background, title, spacing, and @-assisted conditional Employee content beside a navigable preview with focused format help.",
     "capabilities": [
-      "Density and dimensions",
+      "Density and silent clamping",
       "Title and background",
       "Localized boss label",
       "Token suggestions",

@@ -112,16 +112,17 @@ describe("tagColorSurfaceClassName", () => {
     expect(getTagColorCanvasStyle("#7c3aed80")).not.toEqual(getTagColorCanvasStyle("#7c3aed"));
   });
 
-  it("derives deterministic shared Sticker paper colors", () => {
+  it("derives deterministic shared flat Sticker colors", () => {
     const named = getStickerColorStyle("amber");
+    const hex = getStickerColorStyle("#7c3aed");
     const custom = getStickerColorStyle("#7c3aed80");
 
     expect(named.fillStyle).toBe(employeeTagColorToHex("amber"));
-    expect(named.foldFillStyle).toMatch(/^#[0-9a-f]{6}$/u);
-    expect(named.foldFillStyle).not.toBe(named.fillStyle);
+    expect(named.borderStyle).toMatch(/^#[0-9a-f]{6}$/u);
+    expect(named.borderStyle).not.toBe(named.fillStyle);
+    expect(hex).toEqual({ borderStyle: "#7036d3", fillStyle: "#7c3aed" });
     expect(custom.fillStyle).toBe("#7c3aed80");
-    expect(custom.foldFillStyle).toMatch(/^#[0-9a-f]{8}$/u);
-    expect(custom.sheenStyle).toMatch(/^#[0-9a-f]{8}$/u);
+    expect(custom.borderStyle).toBe("#7036d380");
   });
 
   it("shares the light DOM and canvas tonal fill for distribution colors", () => {

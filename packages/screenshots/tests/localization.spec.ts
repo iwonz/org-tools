@@ -315,6 +315,18 @@ for (const [locale, messages] of [
     ).toBeVisible();
     await expect(noteDialog.getByText(messages.Ui["No note yet."], { exact: true })).toBeVisible();
     await noteDialog.getByRole("button", { name: messages.Ui.Close, exact: true }).click();
+    await page.setViewportSize({ height: 800, width: 900 });
+    await page.locator('[data-canvas-element-id="ffffffff-ffff-4fff-8fff-ffffffffffff"]').click();
+    const canvasProperties = page.locator('[data-demo-id="org-editor-canvas-properties"]');
+    await expect(canvasProperties).toBeVisible();
+    expect(
+      await canvasProperties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+    ).toBe(true);
+    await expect(
+      canvasProperties.getByRole("button", { name: messages.Ui.More, exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.setViewportSize({ height: 1_000, width: 1_440 });
     if (locale === "ar") {
       const [canvasBox, viewBox, historyBox, actionBox] = await Promise.all([
         editorCanvas.boundingBox(),

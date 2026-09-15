@@ -271,7 +271,7 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 [![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png)
 
-Arrange opaque Unit cards and representative Text, folded-paper Sticker, embedded Image, and curved Arrow tools
+Arrange opaque Unit cards and representative Text, flat bordered Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
 the upper-right canvas toolbar. The selected annotation demonstrates compact grouped properties, a
 thin Miro-like frame with four corner markers, all-edge resize, outside-corner rotation, and
@@ -407,13 +407,14 @@ Capabilities: Single selection, Exact row anchors, Collapsed fallback, Pointer-i
 
 [![Editor image export](screenshots/feature-editor-image-export.png)](screenshots/feature-editor-image-export.png)
 
-Preview a full-View local PNG whose Unit cards, hierarchy, Text, Sticker, embedded Image, curved
-Arrow, Tags, boss marker, and assigned/source-only row tones follow the durable canvas presentation
-without printing transient editing chrome. The dialog also shows actual output dimensions and
-effective density, token-aware Employee format, and icon-labelled Copy and Save actions.
+Preview and inspect a full-View local PNG with Fit, zoom, and pan. Unit cards, hierarchy, Text,
+Sticker, embedded Image, curved Arrow, Tags, boss marker, and assigned/source-only row tones follow
+the durable canvas presentation without printing transient editing chrome. The dialog retains
+token-aware Employee format and icon-labelled Copy and Save actions while applying density safety
+limits silently.
 
-Capabilities: Full-View PNG, Canvas elements, Distribution tones, Hierarchy, Density, Actual
-dimensions, Local Copy and Save.
+Capabilities: Full-View PNG, Canvas elements, Distribution tones, Hierarchy, Zoom and pan, Density,
+Local Copy and Save.
 
 ### Editor text template export
 
@@ -437,11 +438,11 @@ Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, U
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Configure 1x/2x/3x density, final dimensions, background presets, title, font, spacing, localized
+Configure 1x/2x/3x density, background presets, title, font, spacing, localized
 boss label, and `@`-assisted conditional Employee card content beside the complete View preview.
 
-Capabilities: Density and clamping, Final dimensions, Background, Title and font, Spacing and
-alignment, Boss label, Employee card content.
+Capabilities: Density and silent clamping, Fit/manual preview, Background, Title and font, Spacing
+and alignment, Boss label, Employee card content.
 
 ## Analytics
 
@@ -625,13 +626,17 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   clipboard/download action icons as scoped Image export.
 - Confirm a plain canvas-element click selects only that element, Ctrl/Cmd creates an explicit
   group, choosing a creation tool clears prior selection, and element right-click exposes only
-  within-plane order, Duplicate, and Delete actions. Verify four visible corner markers, transparent
+  global Back/Front, Duplicate, and Delete actions. Verify four visible corner markers, transparent
   side resize targets, four outside-corner rotation targets, stable screen sizing across zoom, whole
   Width/Height values, a stable live center for free and attached single-element rotation,
   hidden resting connectors, one outlined hovered owner with its complete anchor set during Arrow
   creation or attachment, exact-anchor starts and nearest-target emphasis, Shift-only Image aspect
-  resize, folded Sticker parity, bundled font application, two-step text Escape behavior, canvas
-  scroll isolation, resting selection clearing, and readable non-overlapping property groups.
+  resize, flat Sticker parity, bundled font application, stable nine-way draft alignment, two-step
+  text Escape behavior, canvas scroll isolation, resting selection clearing, global Front/Back, and
+  one compact non-overlapping property row.
+- Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
+  image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,
+  effective density, and clamping copy while Copy/Save remain unchanged.
 - Confirm both Template surfaces remove whitespace-only lines only while their transient checkbox is
   enabled, and that bounded preview, Copy/Save or Copy/Download, row-mode counts, and preview totals
   all describe the same processed text while JSON remains unchanged.

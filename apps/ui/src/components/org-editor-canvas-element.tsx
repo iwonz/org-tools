@@ -13,8 +13,9 @@ import {
   getOrgEditorArrowControlPoints,
   getOrgEditorCanvasFont,
   getOrgEditorCanvasImagePlaceholderPoints,
+  getOrgEditorCanvasTextLayout,
   isOrgEditorRectElement,
-  layoutOrgEditorCanvasText,
+  normalizeOrgEditorCanvasDimension,
   ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS,
   type OrgEditorCanvasRect,
   type OrgEditorCanvasResizeHandle,
@@ -207,26 +208,7 @@ const CanvasText = ({
     };
   }, [element.typography.fontFamily, element.typography.fontSize, element.typography.fontWeight]);
 
-  const lines = (() => {
-    const canvas = typeof document === "undefined" ? null : document.createElement("canvas");
-    const context = canvas?.getContext("2d");
-    return layoutOrgEditorCanvasText({
-      height: element.height,
-      measure: (value, typography) => {
-        if (!context) return [...value].length * typography.fontSize * 0.55;
-        context.font = getOrgEditorCanvasFont(
-          typography.fontFamily,
-          typography.fontWeight,
-          typography.fontSize,
-        );
-        return context.measureText(value).width;
-      },
-      padding: element.type === "sticker" ? 16 : 4,
-      text: element.text,
-      typography: element.typography,
-      width: element.width,
-    });
-  })();
+  const lines = getCanvasTextLayout(element, element.text, element.height).lines;
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -249,6 +231,31 @@ const CanvasText = ({
       ))}
     </div>
   );
+};
+
+const getCanvasTextLayout = (
+  element: Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>,
+  text: string,
+  height: number,
+) => {
+  const canvas = typeof document === "undefined" ? null : document.createElement("canvas");
+  const context = canvas?.getContext("2d");
+  return getOrgEditorCanvasTextLayout({
+    height,
+    measure: (value, typography) => {
+      if (!context) return [...value].length * typography.fontSize * 0.55;
+      context.font = getOrgEditorCanvasFont(
+        typography.fontFamily,
+        typography.fontWeight,
+        typography.fontSize,
+      );
+      return context.measureText(value).width;
+    },
+    padding: element.type === "sticker" ? 16 : 4,
+    text,
+    typography: element.typography,
+    width: element.width,
+  });
 };
 
 const RectHandles = ({
@@ -295,8 +302,28 @@ export function OrgEditorCanvasElementNode({
   const [imageFailed, setImageFailed] = useState(false);
   const textEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const imageDataUrl = element.type === "image" ? element.dataUrl : null;
+  const rectElement = isOrgEditorRectElement(element) ? element : null;
   const stickerColors =
     element.type === "sticker" ? getStickerColorStyle(element.backgroundColor) : null;
+  const textDraft =
+    (element.type === "text" || element.type === "sticker") &&
+    editingText !== null &&
+    editingText !== undefined
+      ? editingText
+      : null;
+  const initialDraftLayout =
+    textDraft !== null && (element.type === "text" || element.type === "sticker")
+      ? getCanvasTextLayout(element, textDraft, element.height)
+      : null;
+  const displayHeight = initialDraftLayout
+    ? normalizeOrgEditorCanvasDimension(
+        Math.max(rectElement?.height ?? 0, initialDraftLayout.minimumHeight),
+      )
+    : (rectElement?.height ?? 0);
+  const draftLayout =
+    initialDraftLayout && (element.type === "text" || element.type === "sticker")
+      ? getCanvasTextLayout(element, textDraft ?? "", displayHeight)
+      : null;
 
   useEffect(() => {
     if (editingText !== null && editingText !== undefined) {
@@ -433,7 +460,7 @@ export function OrgEditorCanvasElementNode({
       }
       className={cn(
         "group absolute m-0 min-w-0 touch-none border-0 p-0",
-        element.type === "sticker" && "rounded-xl shadow-sm",
+        element.type === "sticker" && "rounded",
         element.type === "image" && "rounded-lg",
       )}
       data-canvas-element-id={element.id}
@@ -451,7 +478,7 @@ export function OrgEditorCanvasElementNode({
       onDoubleClick={() => onDoubleClick(element.id)}
       onPointerDown={(event) => onPointerDown(event, element)}
       style={{
-        height: element.height,
+        height: displayHeight,
         left: element.x,
         outline: isSelected
           ? `${canvasUiMetric("outline-width", 1)} solid var(--signal)`
@@ -466,21 +493,13 @@ export function OrgEditorCanvasElementNode({
       {element.type === "sticker" && stickerColors && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl shadow-[0_8px_18px_-12px_rgb(15_23_42/0.55)]"
+          className="pointer-events-none absolute inset-0 rounded"
           data-canvas-sticker-paper
           style={{
-            background: `linear-gradient(145deg, ${stickerColors.sheenStyle}, transparent 44%), ${stickerColors.fillStyle}`,
+            backgroundColor: stickerColors.fillStyle,
+            border: `1px solid ${stickerColors.borderStyle}`,
           }}
-        >
-          <span
-            className="absolute right-0 top-0 size-6"
-            data-canvas-sticker-fold
-            style={{
-              backgroundColor: stickerColors.foldFillStyle,
-              clipPath: "polygon(0 0, 100% 100%, 0 100%)",
-            }}
-          />
-        </div>
+        />
       )}
       {element.type === "image" ? (
         <div className="size-full overflow-hidden rounded-lg bg-muted">
@@ -523,10 +542,10 @@ export function OrgEditorCanvasElementNode({
             />
           )}
         </div>
-      ) : editingText !== null && editingText !== undefined ? (
+      ) : textDraft !== null && draftLayout ? (
         <textarea
           aria-label={t("Canvas element text")}
-          className="absolute inset-0 z-10 size-full resize-none border-0 bg-transparent outline-none"
+          className="absolute start-0 z-10 resize-none border-0 bg-transparent outline-none"
           data-canvas-text-editor={element.id}
           onBlur={onFinishEditing}
           onChange={(event) => onEditingTextChange?.(event.currentTarget.value)}
@@ -544,11 +563,15 @@ export function OrgEditorCanvasElementNode({
             fontFamily: element.typography.fontFamily,
             fontSize: element.typography.fontSize,
             fontWeight: element.typography.fontWeight,
-            lineHeight: `${Math.ceil(element.typography.fontSize * 1.25)}px`,
-            padding: element.type === "sticker" ? 16 : 4,
+            height: draftLayout.contentHeight,
+            lineHeight: `${draftLayout.lineHeight}px`,
+            overflow: "hidden",
+            padding: `0 ${element.type === "sticker" ? 16 : 4}px`,
             textAlign: element.typography.horizontalAlign,
+            top: draftLayout.firstY,
+            width: element.width,
           }}
-          value={editingText}
+          value={textDraft}
         />
       ) : (
         <CanvasText element={element} />

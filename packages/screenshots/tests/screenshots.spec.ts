@@ -496,7 +496,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
     textAnnotation.locator('[data-canvas-transform-handle="corner-resize"]'),
   ).toHaveCount(4);
   await expect(page.locator("[data-canvas-sticker-paper]")).toBeVisible();
-  await expect(page.locator("[data-canvas-sticker-fold]")).toBeVisible();
+  await expect(page.locator("[data-canvas-sticker-fold]")).toHaveCount(0);
   await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toHaveCSS(
     "font-weight",
     "400",
@@ -635,7 +635,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(viewImageDialog.getByAltText("View export preview", { exact: true })).toBeVisible();
   await expect(
     viewImageDialog.locator('[data-demo-id="org-editor-view-image-dimensions"]'),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await capture(page, "editor-image-export");
   await viewImageDialog.locator('[data-demo-id="org-editor-view-image-density"]').click();
   await page.getByRole("option", { name: "3×", exact: true }).click();

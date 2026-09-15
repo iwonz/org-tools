@@ -1111,7 +1111,16 @@ export const remapOrgEditorAnchorRef = (
 
 export type OrgEditorTextLine = { text: string; width: number; x: number; y: number };
 
-export const layoutOrgEditorCanvasText = ({
+export type OrgEditorCanvasTextLayout = {
+  contentHeight: number;
+  firstY: number;
+  lineHeight: number;
+  lines: OrgEditorTextLine[];
+  minimumHeight: number;
+};
+
+/** Measures the complete text block used by live, draft, auto-fit, and PNG renderers. */
+export const getOrgEditorCanvasTextLayout = ({
   height,
   measure,
   padding,
@@ -1125,7 +1134,7 @@ export const layoutOrgEditorCanvasText = ({
   text: string;
   typography: OrgEditorTypography;
   width: number;
-}) => {
+}): OrgEditorCanvasTextLayout => {
   const availableWidth = Math.max(1, width - padding * 2);
   const lineHeight = Math.ceil(typography.fontSize * 1.25);
   const lines: Array<{ text: string; width: number }> = [];
@@ -1174,7 +1183,7 @@ export const layoutOrgEditorCanvasText = ({
       : typography.verticalAlign === "middle"
         ? Math.max(padding, (height - contentHeight) / 2)
         : padding;
-  return lines.map(
+  const positionedLines = lines.map(
     (line, index): OrgEditorTextLine => ({
       ...line,
       x:
@@ -1186,7 +1195,21 @@ export const layoutOrgEditorCanvasText = ({
       y: firstY + index * lineHeight,
     }),
   );
+  return {
+    contentHeight,
+    firstY,
+    lineHeight,
+    lines: positionedLines,
+    minimumHeight: Math.min(
+      ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
+      Math.max(ORG_EDITOR_CANVAS_MIN_RECT_SIZE, padding * 2 + contentHeight),
+    ),
+  };
 };
+
+export const layoutOrgEditorCanvasText = (
+  options: Parameters<typeof getOrgEditorCanvasTextLayout>[0],
+) => getOrgEditorCanvasTextLayout(options).lines;
 
 /** Returns the smallest persisted height that can contain every wrapped text line. */
 export const getOrgEditorCanvasTextMinimumHeight = ({
@@ -1197,7 +1220,7 @@ export const getOrgEditorCanvasTextMinimumHeight = ({
   measure: (text: string, typography: OrgEditorTypography) => number;
 }) => {
   const padding = element.type === "sticker" ? 16 : 4;
-  const lines = layoutOrgEditorCanvasText({
+  const layout = getOrgEditorCanvasTextLayout({
     height: 0,
     measure,
     padding,
@@ -1205,11 +1228,7 @@ export const getOrgEditorCanvasTextMinimumHeight = ({
     typography: { ...element.typography, verticalAlign: "top" },
     width: element.width,
   });
-  const lineHeight = Math.ceil(element.typography.fontSize * 1.25);
-  return Math.min(
-    ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
-    Math.max(ORG_EDITOR_CANVAS_MIN_RECT_SIZE, padding * 2 + lines.length * lineHeight),
-  );
+  return layout.minimumHeight;
 };
 
 /** Grows text-backed rectangles when wrapping or typography would otherwise clip content. */

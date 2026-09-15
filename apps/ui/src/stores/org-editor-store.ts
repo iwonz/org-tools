@@ -1197,50 +1197,24 @@ export class OrgEditorStore {
 
   reorderCanvasElements(
     elementIds: Iterable<OrgEditorCanvasElementId>,
-    direction: "back" | "backward" | "forward" | "front",
+    direction: "back" | "front",
   ): void {
     const selectedIds = new Set(elementIds);
     if (selectedIds.size === 0) return;
     this.runCommand("Reorder canvas elements", () => {
-      const reorderPlane = (plane: OrgEditorCanvasElement[]) => {
-        if (direction === "front") {
-          return [
-            ...plane.filter((element) => !selectedIds.has(element.id)),
-            ...plane.filter((element) => selectedIds.has(element.id)),
-          ];
-        }
-        if (direction === "back") {
-          return [
-            ...plane.filter((element) => selectedIds.has(element.id)),
-            ...plane.filter((element) => !selectedIds.has(element.id)),
-          ];
-        }
-        const next = [...plane];
-        const indexes = direction === "forward" ? [...next.keys()].reverse() : [...next.keys()];
-        for (const index of indexes) {
-          const neighbor = direction === "forward" ? index + 1 : index - 1;
-          if (
-            neighbor < 0 ||
-            neighbor >= next.length ||
-            !selectedIds.has(next[index]?.id ?? "") ||
-            selectedIds.has(next[neighbor]?.id ?? "")
-          ) {
-            continue;
-          }
-          [next[index], next[neighbor]] = [
-            next[neighbor] as OrgEditorCanvasElement,
-            next[index] as OrgEditorCanvasElement,
-          ];
-        }
-        return next;
-      };
-      const behind = reorderPlane(
-        this.canvasElements.filter((element) => element.layer === "behindUnits"),
-      );
-      const above = reorderPlane(
-        this.canvasElements.filter((element) => element.layer === "aboveUnits"),
-      );
-      this.canvasElements = [...behind, ...above];
+      const selected = this.canvasElements
+        .filter((element) => selectedIds.has(element.id))
+        .map((element) => ({
+          ...element,
+          layer: direction === "back" ? ("behindUnits" as const) : ("aboveUnits" as const),
+        }));
+      const remaining = this.canvasElements.filter((element) => !selectedIds.has(element.id));
+      const behind = remaining.filter((element) => element.layer === "behindUnits");
+      const above = remaining.filter((element) => element.layer === "aboveUnits");
+      this.canvasElements =
+        direction === "back"
+          ? [...selected, ...behind, ...above]
+          : [...behind, ...above, ...selected];
     });
   }
 

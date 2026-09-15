@@ -672,23 +672,22 @@ const paintOrgEditorCanvasElement = ({
   context.translate(-element.width / 2, -element.height / 2);
   if (element.type === "sticker") {
     const stickerColors = getStickerColorStyle(element.backgroundColor);
-    drawRoundedRect(context, { height: element.height, width: element.width, x: 0, y: 0 }, 12);
+    drawRoundedRect(context, { height: element.height, width: element.width, x: 0, y: 0 }, 4);
     context.fillStyle = stickerColors.fillStyle;
     context.fill();
-    const sheen = context.createLinearGradient(0, 0, element.width, element.height);
-    sheen.addColorStop(0, stickerColors.sheenStyle);
-    sheen.addColorStop(0.44, "rgba(255, 255, 255, 0)");
-    context.fillStyle = sheen;
-    drawRoundedRect(context, { height: element.height, width: element.width, x: 0, y: 0 }, 12);
-    context.fill();
-    const foldSize = Math.min(24, element.width / 3, element.height / 3);
-    context.beginPath();
-    context.moveTo(element.width - foldSize, 0);
-    context.lineTo(element.width, foldSize);
-    context.lineTo(element.width - foldSize, foldSize);
-    context.closePath();
-    context.fillStyle = stickerColors.foldFillStyle;
-    context.fill();
+    drawRoundedRect(
+      context,
+      {
+        height: Math.max(0, element.height - 1),
+        width: Math.max(0, element.width - 1),
+        x: 0.5,
+        y: 0.5,
+      },
+      4,
+    );
+    context.lineWidth = 1;
+    context.strokeStyle = stickerColors.borderStyle;
+    context.stroke();
   }
   if (element.type === "image") {
     const image = imageByUrl.get(element.dataUrl) ?? null;

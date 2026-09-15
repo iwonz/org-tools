@@ -10,7 +10,6 @@ import type {
   OrgEditorViewSettings,
   TagId,
 } from "@org-tools/types";
-import Image from "next/image";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,6 +27,7 @@ import {
 
 import { ExportRowModeControl } from "@/components/export-row-mode-control";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
+import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
 import {
   StructuredJsonSettings,
   type StructuredJsonSettingsValue,
@@ -75,12 +75,10 @@ import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorExportFileBaseName,
   createOrgEditorImageExportResult,
-  createOrgEditorImageRenderPlan,
   createOrgEditorUnitImageBlob,
   getOrgEditorExportUnits,
   ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
-  ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
   orgEditorTemplateContainsBossToken,
@@ -194,9 +192,7 @@ export function OrgEditorExportDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<UiTextKey | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [imagePlan, setImagePlan] = useState<ReturnType<
-    typeof createOrgEditorImageRenderPlan
-  > | null>(null);
+  const [previewSize, setPreviewSize] = useState({ height: 0, width: 0 });
   useEffect(() => {
     const previousLocalizedManagerLabel = previousLocalizedManagerLabelRef.current;
     if (previousLocalizedManagerLabel === localizedManagerLabel) return;
@@ -337,6 +333,7 @@ export function OrgEditorExportDialog({
         if (currentUrl) URL.revokeObjectURL(currentUrl);
         return null;
       });
+      setPreviewSize({ height: 0, width: 0 });
       setPreviewError("Provide a value for the {isBoss} token.");
       return;
     }
@@ -370,14 +367,7 @@ export function OrgEditorExportDialog({
           if (currentUrl) URL.revokeObjectURL(currentUrl);
           return nextUrl;
         });
-        setImagePlan(
-          createOrgEditorImageRenderPlan({
-            logicalHeight: plan.logicalHeight,
-            logicalWidth: plan.logicalWidth,
-            maxCanvasPixels: ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
-            requestedDensity: imageSettings.density,
-          }),
-        );
+        setPreviewSize({ height: plan.pixelHeight, width: plan.pixelWidth });
       })
       .catch(() => {
         if (isCancelled) return;
@@ -414,7 +404,7 @@ export function OrgEditorExportDialog({
     if (open) return;
 
     setStatus(null);
-    setImagePlan(null);
+    setPreviewSize({ height: 0, width: 0 });
     setPreviewUrl((currentUrl) => {
       if (currentUrl) URL.revokeObjectURL(currentUrl);
       return null;
@@ -594,57 +584,18 @@ export function OrgEditorExportDialog({
             value={activeTab}
           >
             <TabsContent className="mt-0 grid gap-4" value="image">
-              <section className="grid gap-3">
-                <div
-                  className="relative grid min-h-64 place-items-center overflow-hidden rounded-md border bg-[linear-gradient(45deg,#f1f5f9_25%,transparent_25%),linear-gradient(-45deg,#f1f5f9_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f1f5f9_75%),linear-gradient(-45deg,transparent_75%,#f1f5f9_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0] p-4"
-                  data-demo-id="org-editor-export-image-preview"
-                >
-                  {previewUrl && (
-                    <Image
-                      alt={t("Unit export preview")}
-                      className="max-h-[360px] max-w-full object-contain"
-                      data-demo-id="org-editor-export-image"
-                      height={800}
-                      src={previewUrl}
-                      unoptimized
-                      width={1200}
-                    />
-                  )}
-                  {isPreviewLoading && (
-                    <div className="absolute inset-0 grid place-items-center bg-background/80 text-sm text-muted-foreground">
-                      {t("Preparing preview...")}
-                    </div>
-                  )}
-                  {previewError && (
-                    <div className="max-w-md rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                      {t(previewError)}
-                    </div>
-                  )}
-                </div>
-                {imagePlan && (
-                  <div
-                    className="mt-3 rounded-lg border bg-muted/30 p-3 text-sm"
-                    data-demo-id="org-editor-image-dimensions"
-                  >
-                    <p>
-                      {t("Final image: {width} × {height} px", {
-                        height: imagePlan.pixelHeight,
-                        width: imagePlan.pixelWidth,
-                      })}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {t("Effective density: {density}×", {
-                        density: imagePlan.effectiveDensity.toFixed(2),
-                      })}
-                    </p>
-                    {imagePlan.clamped && (
-                      <p className="text-amber-700">
-                        {t("Density was reduced to fit safe PNG limits.")}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </section>
+              <OrgEditorImagePreview
+                alt={t("Unit export preview")}
+                className="h-[360px]"
+                dataDemoId="org-editor-export-image-preview"
+                errorLabel={previewError ? t(previewError) : null}
+                height={previewSize.height}
+                imageDataDemoId="org-editor-export-image"
+                loading={isPreviewLoading}
+                loadingLabel={t("Preparing preview...")}
+                src={previewError ? null : previewUrl}
+                width={previewSize.width}
+              />
 
               <section className="grid gap-4 py-2">
                 <div className="grid gap-2">

@@ -8,7 +8,10 @@ import {
   ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES,
 } from "@/lib/org-editor";
 import {
+  createOrgEditorArrowElement,
+  createOrgEditorImageElement,
   createOrgEditorStickerElement,
+  createOrgEditorTextElement,
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorRectAnchorPoint,
 } from "@/lib/org-editor-canvas";
@@ -118,6 +121,109 @@ describe("OrgEditorStore grid geometry", () => {
         .map(({ id, x, y }) => ({ id, x, y })),
     ).toEqual(beforeSelected);
     expect(store.selectedUnitIds).toEqual(new Set([root.id, child.id]));
+  });
+});
+
+describe("OrgEditorStore canvas layers", () => {
+  test("moves selected elements across the Unit plane while preserving order and attachments", () => {
+    let documentChanges = 0;
+    const store = new OrgEditorStore(() => {
+      documentChanges += 1;
+    });
+    const state = createDefaultOrgEditorState();
+    const arrow = createOrgEditorArrowElement({ x: 0, y: 0 }, { x: 100, y: 100 });
+    const image = {
+      ...createOrgEditorImageElement({
+        dataUrl:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
+        intrinsicHeight: 1,
+        intrinsicWidth: 1,
+        point: { x: 100, y: 100 },
+      }),
+      layer: "behindUnits" as const,
+    };
+    const text = createOrgEditorTextElement({ x: 200, y: 200 });
+    const sticker = {
+      ...createOrgEditorStickerElement({ x: 300, y: 300 }),
+      attachment: {
+        offset: { x: 12, y: -8 },
+        sourceAnchorId: "center" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { elementId: text.id, type: "element" as const },
+        },
+      },
+    };
+    store.loadState({ ...state, canvasElements: [arrow, image, text, sticker] });
+    store.clearHistory();
+    documentChanges = 0;
+
+    store.reorderCanvasElements([image.id, sticker.id], "front");
+
+    expect(store.canvasElements.map(({ id }) => id)).toEqual([
+      arrow.id,
+      text.id,
+      image.id,
+      sticker.id,
+    ]);
+    expect(store.canvasElements.slice(-2).map(({ layer }) => layer)).toEqual([
+      "aboveUnits",
+      "aboveUnits",
+    ]);
+    expect(store.canvasElements[3]).toMatchObject({ attachment: sticker.attachment });
+    expect(documentChanges).toBe(1);
+
+    store.undo();
+    expect(store.canvasElements).toEqual([arrow, image, text, sticker]);
+    store.redo();
+    expect(store.canvasElements.map(({ id }) => id)).toEqual([
+      arrow.id,
+      text.id,
+      image.id,
+      sticker.id,
+    ]);
+
+    store.reorderCanvasElements([image.id, sticker.id], "back");
+    expect(store.canvasElements.map(({ id }) => id)).toEqual([
+      image.id,
+      sticker.id,
+      arrow.id,
+      text.id,
+    ]);
+    expect(store.canvasElements.slice(0, 2).map(({ layer }) => layer)).toEqual([
+      "behindUnits",
+      "behindUnits",
+    ]);
+    expect(store.canvasElements[1]).toMatchObject({ attachment: sticker.attachment });
+  });
+
+  test("applies global Front and Back to every canvas element kind", () => {
+    const elements = [
+      createOrgEditorTextElement({ x: 0, y: 0 }),
+      createOrgEditorStickerElement({ x: 100, y: 0 }),
+      createOrgEditorImageElement({
+        dataUrl:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
+        intrinsicHeight: 1,
+        intrinsicWidth: 1,
+        point: { x: 200, y: 0 },
+      }),
+      createOrgEditorArrowElement({ x: 0, y: 100 }, { x: 200, y: 100 }),
+    ];
+    for (const element of elements) {
+      const store = new OrgEditorStore();
+      store.loadState({ ...createDefaultOrgEditorState(), canvasElements: elements });
+      store.reorderCanvasElements([element.id], "front");
+      expect(store.canvasElements.at(-1)).toMatchObject({
+        id: element.id,
+        layer: "aboveUnits",
+      });
+      store.reorderCanvasElements([element.id], "back");
+      expect(store.canvasElements[0]).toMatchObject({
+        id: element.id,
+        layer: "behindUnits",
+      });
+    }
   });
 });
 

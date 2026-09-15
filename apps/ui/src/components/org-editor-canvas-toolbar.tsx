@@ -3,17 +3,21 @@
 import type {
   EmployeeTagColor,
   OrgEditorCanvasElement,
+  OrgEditorHorizontalAlign,
   OrgEditorVerticalAlign,
 } from "@org-tools/types";
+import { useState } from "react";
 import {
   HiOutlineArrowDownTray,
   HiOutlineArrowLongRight,
+  HiOutlineArrowsPointingOut,
   HiOutlineBars3BottomLeft,
   HiOutlineBars3BottomRight,
   HiOutlineBars3CenterLeft,
   HiOutlineChatBubbleBottomCenterText,
   HiOutlineCursorArrowRays,
   HiOutlineDocumentDuplicate,
+  HiOutlineEllipsisHorizontal,
   HiOutlinePhoto,
   HiOutlineQueueList,
   HiOutlineTrash,
@@ -23,6 +27,7 @@ import { TbLetterT } from "react-icons/tb";
 import { TagColorPicker } from "@/components/tag-color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -48,6 +53,25 @@ const toolDefinitions = [
   { icon: HiOutlinePhoto, tool: "image" as const },
 ];
 
+const horizontalAlignments = ["left", "center", "right"] as const;
+const verticalAlignments = ["top", "middle", "bottom"] as const;
+
+const getHorizontalAlignmentLabel = (alignment: OrgEditorHorizontalAlign) =>
+  alignment === "left" ? "Align left" : alignment === "center" ? "Align center" : "Align right";
+
+const getVerticalAlignmentLabel = (alignment: OrgEditorVerticalAlign) =>
+  alignment === "top" ? "Align top" : alignment === "middle" ? "Align middle" : "Align bottom";
+
+function AlignmentIcon({ alignment }: { alignment: OrgEditorHorizontalAlign }) {
+  const Icon =
+    alignment === "left"
+      ? HiOutlineBars3BottomLeft
+      : alignment === "center"
+        ? HiOutlineBars3CenterLeft
+        : HiOutlineBars3BottomRight;
+  return <Icon />;
+}
+
 export function OrgEditorCanvasToolbar({
   activeTool,
   onDelete,
@@ -64,14 +88,25 @@ export function OrgEditorCanvasToolbar({
   onDuplicate: () => void;
   onExport: () => void;
   onImage: () => void;
-  onOrder: (direction: "back" | "backward" | "forward" | "front") => void;
+  onOrder: (direction: "back" | "front") => void;
   onToolChange: (tool: OrgEditorCanvasTool) => void;
   onUpdate: (update: (element: OrgEditorCanvasElement) => OrgEditorCanvasElement) => void;
   selectedElements: OrgEditorCanvasElement[];
 }) {
   const t = useUiText();
+  const [alignmentOpen, setAlignmentOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const selected = selectedElements.length === 1 ? selectedElements[0] : null;
   const textElement = selected?.type === "text" || selected?.type === "sticker" ? selected : null;
+
+  const updateTextTypography = (
+    patch: Partial<Extract<OrgEditorCanvasElement, { type: "text" | "sticker" }>["typography"]>,
+  ) =>
+    onUpdate((element) =>
+      element.type === "text" || element.type === "sticker"
+        ? { ...element, typography: { ...element.typography, ...patch } }
+        : element,
+    );
 
   return (
     <div
@@ -129,22 +164,13 @@ export function OrgEditorCanvasToolbar({
 
       {selectedElements.length > 0 && (
         <div
-          className="flex w-[min(46rem,calc(100vw-1.5rem))] max-w-full flex-wrap items-center justify-end gap-1 rounded-lg border border-border/80 bg-background/95 p-1 shadow-sm backdrop-blur"
+          className="inline-flex max-w-[min(46rem,calc(100vw-1.5rem))] items-center gap-1 rounded-lg border border-border/80 bg-background/95 p-1 shadow-sm backdrop-blur"
           data-demo-id="org-editor-canvas-properties"
         >
           {textElement && (
-            <div
-              className="flex min-w-0 basis-full flex-wrap items-center justify-end gap-1 rounded-md bg-muted/45 p-1"
-              data-canvas-property-group="typography"
-            >
+            <>
               <Select
-                onValueChange={(fontFamily) =>
-                  onUpdate((element) =>
-                    element.type === "text" || element.type === "sticker"
-                      ? { ...element, typography: { ...element.typography, fontFamily } }
-                      : element,
-                  )
-                }
+                onValueChange={(fontFamily) => updateTextTypography({ fontFamily })}
                 value={textElement.typography.fontFamily}
               >
                 <SelectTrigger aria-label={t("Font")} className="h-8 w-28 min-w-0 text-xs">
@@ -165,31 +191,17 @@ export function OrgEditorCanvasToolbar({
                 min={8}
                 onChange={(event) => {
                   const fontSize = Number(event.currentTarget.value);
-                  if (!Number.isFinite(fontSize)) return;
-                  onUpdate((element) =>
-                    element.type === "text" || element.type === "sticker"
-                      ? {
-                          ...element,
-                          typography: {
-                            ...element.typography,
-                            fontSize: Math.min(200, Math.max(8, fontSize)),
-                          },
-                        }
-                      : element,
-                  );
+                  if (Number.isFinite(fontSize)) {
+                    updateTextTypography({ fontSize: Math.min(200, Math.max(8, fontSize)) });
+                  }
                 }}
                 type="number"
                 value={textElement.typography.fontSize}
               />
               <Select
-                onValueChange={(value) => {
-                  const fontWeight = Number(value) as 400 | 500 | 700;
-                  onUpdate((element) =>
-                    element.type === "text" || element.type === "sticker"
-                      ? { ...element, typography: { ...element.typography, fontWeight } }
-                      : element,
-                  );
-                }}
+                onValueChange={(value) =>
+                  updateTextTypography({ fontWeight: Number(value) as 400 | 500 | 700 })
+                }
                 value={String(textElement.typography.fontWeight)}
               >
                 <SelectTrigger aria-label={t("Font weight")} className="h-8 w-24 min-w-0 text-xs">
@@ -201,55 +213,10 @@ export function OrgEditorCanvasToolbar({
                   <SelectItem value="700">{t("Bold")}</SelectItem>
                 </SelectContent>
               </Select>
-              {(["left", "center", "right"] as const).map((alignment) => {
-                const Icon =
-                  alignment === "left"
-                    ? HiOutlineBars3BottomLeft
-                    : alignment === "center"
-                      ? HiOutlineBars3CenterLeft
-                      : HiOutlineBars3BottomRight;
-                return (
-                  <Button
-                    aria-label={t(
-                      alignment === "left"
-                        ? "Align left"
-                        : alignment === "center"
-                          ? "Align center"
-                          : "Align right",
-                    )}
-                    className={cn(
-                      "size-8 p-0",
-                      textElement.typography.horizontalAlign === alignment && "bg-accent-strong",
-                    )}
-                    key={alignment}
-                    onClick={() =>
-                      onUpdate((element) =>
-                        element.type === "text" || element.type === "sticker"
-                          ? {
-                              ...element,
-                              typography: { ...element.typography, horizontalAlign: alignment },
-                            }
-                          : element,
-                      )
-                    }
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Icon />
-                  </Button>
-                );
-              })}
               <TagColorPicker
                 allowNoColor={false}
                 label={t("Text color")}
-                onChange={(color) => {
-                  if (!color) return;
-                  onUpdate((element) =>
-                    element.type === "text" || element.type === "sticker"
-                      ? { ...element, typography: { ...element.typography, color } }
-                      : element,
-                  );
-                }}
+                onChange={(color) => color && updateTextTypography({ color })}
                 value={textElement.typography.color}
                 variant="icon"
               />
@@ -267,37 +234,68 @@ export function OrgEditorCanvasToolbar({
                   variant="icon"
                 />
               )}
-              <Select
-                onValueChange={(value) => {
-                  const verticalAlign = value as OrgEditorVerticalAlign;
-                  onUpdate((element) =>
-                    element.type === "text" || element.type === "sticker"
-                      ? { ...element, typography: { ...element.typography, verticalAlign } }
-                      : element,
-                  );
-                }}
-                value={textElement.typography.verticalAlign}
-              >
-                <SelectTrigger
-                  aria-label={t("Vertical alignment")}
-                  className="h-8 w-28 min-w-0 text-xs"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="top">{t("Align top")}</SelectItem>
-                  <SelectItem value="middle">{t("Align middle")}</SelectItem>
-                  <SelectItem value="bottom">{t("Align bottom")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <Popover onOpenChange={setAlignmentOpen} open={alignmentOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    aria-label={t("Alignment")}
+                    className="size-8 p-0"
+                    data-canvas-alignment-trigger
+                    title={`${t(getHorizontalAlignmentLabel(textElement.typography.horizontalAlign))} · ${t(getVerticalAlignmentLabel(textElement.typography.verticalAlign))}`}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <AlignmentIcon alignment={textElement.typography.horizontalAlign} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="grid grid-cols-3 gap-1 p-1.5">
+                  {verticalAlignments.flatMap((verticalAlign) =>
+                    horizontalAlignments.map((horizontalAlign) => {
+                      const active =
+                        textElement.typography.horizontalAlign === horizontalAlign &&
+                        textElement.typography.verticalAlign === verticalAlign;
+                      const label = `${t(getHorizontalAlignmentLabel(horizontalAlign))} · ${t(getVerticalAlignmentLabel(verticalAlign))}`;
+                      return (
+                        <Button
+                          aria-label={label}
+                          aria-pressed={active}
+                          className={cn("relative size-8 p-0", active && "bg-accent-strong")}
+                          data-canvas-alignment={`${verticalAlign}:${horizontalAlign}`}
+                          key={`${verticalAlign}:${horizontalAlign}`}
+                          onClick={() => {
+                            updateTextTypography({ horizontalAlign, verticalAlign });
+                            setAlignmentOpen(false);
+                          }}
+                          title={label}
+                          type="button"
+                          variant="ghost"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "absolute size-1.5 rounded-full bg-current",
+                              horizontalAlign === "left"
+                                ? "left-1.5"
+                                : horizontalAlign === "right"
+                                  ? "right-1.5"
+                                  : "left-1/2 -translate-x-1/2",
+                              verticalAlign === "top"
+                                ? "top-1.5"
+                                : verticalAlign === "bottom"
+                                  ? "bottom-1.5"
+                                  : "top-1/2 -translate-y-1/2",
+                            )}
+                          />
+                        </Button>
+                      );
+                    }),
+                  )}
+                </PopoverContent>
+              </Popover>
+            </>
           )}
 
           {selected?.type === "arrow" && (
-            <div
-              className="flex min-w-0 basis-full flex-wrap items-center justify-end gap-1 rounded-md bg-muted/45 p-1"
-              data-canvas-property-group="arrow"
-            >
+            <>
               <TagColorPicker
                 allowNoColor={false}
                 label={t("Arrow color")}
@@ -328,6 +326,7 @@ export function OrgEditorCanvasToolbar({
                 value={selected.strokeWidth}
               />
               <Button
+                className="h-8 px-2 text-xs"
                 onClick={() =>
                   onUpdate((element) =>
                     element.type === "arrow"
@@ -335,189 +334,184 @@ export function OrgEditorCanvasToolbar({
                       : element,
                   )
                 }
-                size="sm"
+                title={t(selected.dash === "solid" ? "Solid line" : "Dashed line")}
                 type="button"
                 variant="ghost"
               >
                 {t(selected.dash === "solid" ? "Solid line" : "Dashed line")}
               </Button>
-              <Select
-                onValueChange={(value) => {
-                  const startMarker = value as "arrow" | "none";
-                  onUpdate((element) =>
-                    element.type === "arrow" ? { ...element, startMarker } : element,
-                  );
-                }}
-                value={selected.startMarker}
-              >
-                <SelectTrigger
-                  aria-label={t("Arrow start marker")}
-                  className="h-8 w-28 min-w-0 text-xs"
+              {(["start", "end"] as const).map((endpoint) => (
+                <Select
+                  key={endpoint}
+                  onValueChange={(value) =>
+                    onUpdate((element) =>
+                      element.type === "arrow"
+                        ? { ...element, [`${endpoint}Marker`]: value as "arrow" | "none" }
+                        : element,
+                    )
+                  }
+                  value={selected[`${endpoint}Marker`]}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("No marker")}</SelectItem>
-                  <SelectItem value="arrow">{t("Arrow marker")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                onValueChange={(value) => {
-                  const endMarker = value as "arrow" | "none";
-                  onUpdate((element) =>
-                    element.type === "arrow" ? { ...element, endMarker } : element,
-                  );
-                }}
-                value={selected.endMarker}
-              >
-                <SelectTrigger
-                  aria-label={t("Arrow end marker")}
-                  className="h-8 w-28 min-w-0 text-xs"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("No marker")}</SelectItem>
-                  <SelectItem value="arrow">{t("Arrow marker")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                  <SelectTrigger
+                    aria-label={t(endpoint === "start" ? "Arrow start marker" : "Arrow end marker")}
+                    className="h-8 w-24 min-w-0 text-xs"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t("No marker")}</SelectItem>
+                    <SelectItem value="arrow">{t("Arrow marker")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              ))}
+            </>
           )}
 
           {selected && selected.type !== "arrow" && (
-            <div
-              className="flex items-center gap-1 rounded-md bg-muted/45 p-1"
-              data-canvas-property-group="geometry"
-            >
-              <Input
-                aria-label={t("Element width")}
-                className="h-8 w-20 text-xs"
-                max={20_000}
-                min={24}
-                onChange={(event) => {
-                  const width = Number(event.currentTarget.value);
-                  if (!Number.isFinite(width)) return;
-                  onUpdate((element) => {
-                    if (element.type === "arrow") return element;
-                    const normalizedWidth = normalizeOrgEditorCanvasDimension(width);
-                    const dimensions = normalizeOrgEditorCanvasDimensions({
-                      height: element.height,
-                      width: normalizedWidth,
-                    });
-                    return { ...element, ...dimensions };
-                  });
-                }}
-                step={1}
-                type="number"
-                value={normalizeOrgEditorCanvasDimension(selected.width)}
-              />
-              <Input
-                aria-label={t("Element height")}
-                className="h-8 w-20 text-xs"
-                max={20_000}
-                min={24}
-                onChange={(event) => {
-                  const height = Number(event.currentTarget.value);
-                  if (!Number.isFinite(height)) return;
-                  onUpdate((element) => {
-                    if (element.type === "arrow") return element;
-                    const normalizedHeight = normalizeOrgEditorCanvasDimension(height);
-                    const dimensions = normalizeOrgEditorCanvasDimensions({
-                      height: normalizedHeight,
-                      width: element.width,
-                    });
-                    return { ...element, ...dimensions };
-                  });
-                }}
-                step={1}
-                type="number"
-                value={normalizeOrgEditorCanvasDimension(selected.height)}
-              />
-              <Input
-                aria-label={t("Rotation")}
-                className="h-8 w-20 text-xs"
-                max={180}
-                min={-180}
-                onChange={(event) => {
-                  const rotation = Number(event.currentTarget.value);
-                  if (!Number.isFinite(rotation)) return;
-                  onUpdate((element) =>
-                    element.type === "arrow"
-                      ? element
-                      : { ...element, rotation: Math.min(180, Math.max(-180, rotation)) },
-                  );
-                }}
-                type="number"
-                value={selected.rotation}
-              />
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  aria-label={t("Geometry")}
+                  className="size-8 p-0"
+                  data-canvas-geometry-trigger
+                  title={t("Geometry")}
+                  type="button"
+                  variant="ghost"
+                >
+                  <HiOutlineArrowsPointingOut />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="grid w-56 grid-cols-3 gap-2 p-2">
+                <Input
+                  aria-label={t("Element width")}
+                  max={20_000}
+                  min={24}
+                  onChange={(event) => {
+                    const width = Number(event.currentTarget.value);
+                    if (!Number.isFinite(width)) return;
+                    onUpdate((element) =>
+                      element.type === "arrow"
+                        ? element
+                        : {
+                            ...element,
+                            ...normalizeOrgEditorCanvasDimensions({
+                              height: element.height,
+                              width,
+                            }),
+                          },
+                    );
+                  }}
+                  step={1}
+                  title={t("Element width")}
+                  type="number"
+                  value={normalizeOrgEditorCanvasDimension(selected.width)}
+                />
+                <Input
+                  aria-label={t("Element height")}
+                  max={20_000}
+                  min={24}
+                  onChange={(event) => {
+                    const height = Number(event.currentTarget.value);
+                    if (!Number.isFinite(height)) return;
+                    onUpdate((element) =>
+                      element.type === "arrow"
+                        ? element
+                        : {
+                            ...element,
+                            ...normalizeOrgEditorCanvasDimensions({
+                              height,
+                              width: element.width,
+                            }),
+                          },
+                    );
+                  }}
+                  step={1}
+                  title={t("Element height")}
+                  type="number"
+                  value={normalizeOrgEditorCanvasDimension(selected.height)}
+                />
+                <Input
+                  aria-label={t("Rotation")}
+                  max={180}
+                  min={-180}
+                  onChange={(event) => {
+                    const rotation = Number(event.currentTarget.value);
+                    if (!Number.isFinite(rotation)) return;
+                    onUpdate((element) =>
+                      element.type === "arrow"
+                        ? element
+                        : { ...element, rotation: Math.min(180, Math.max(-180, rotation)) },
+                    );
+                  }}
+                  step={1}
+                  title={t("Rotation")}
+                  type="number"
+                  value={selected.rotation}
+                />
+              </PopoverContent>
+            </Popover>
           )}
 
-          <div
-            className="flex items-center gap-1 rounded-md bg-muted/45 p-1"
-            data-canvas-property-group="arrangement"
-          >
-            <Button
-              aria-label={t("Send to back")}
-              className="size-8 p-0"
-              onClick={() => onOrder("back")}
-              title={t("Send to back")}
-              type="button"
-              variant="ghost"
-            >
-              <HiOutlineQueueList />
-            </Button>
-            <Button
-              aria-label={t("Send backward")}
-              className="size-8 p-0"
-              onClick={() => onOrder("backward")}
-              title={t("Send backward")}
-              type="button"
-              variant="ghost"
-            >
-              <HiOutlineQueueList />
-            </Button>
-            <Button
-              aria-label={t("Bring forward")}
-              className="size-8 p-0"
-              onClick={() => onOrder("forward")}
-              title={t("Bring forward")}
-              type="button"
-              variant="ghost"
-            >
-              <HiOutlineQueueList className="rotate-180" />
-            </Button>
-            <Button
-              aria-label={t("Bring to front")}
-              className="size-8 p-0"
-              onClick={() => onOrder("front")}
-              title={t("Bring to front")}
-              type="button"
-              variant="ghost"
-            >
-              <HiOutlineQueueList className="rotate-180" />
-            </Button>
-            <Button
-              aria-label={t("Duplicate")}
-              className="size-8 p-0"
-              onClick={onDuplicate}
-              title={t("Duplicate")}
-              type="button"
-              variant="ghost"
-            >
-              <HiOutlineDocumentDuplicate />
-            </Button>
-            <Button
-              aria-label={t("Delete")}
-              className="size-8 p-0 text-destructive"
-              onClick={onDelete}
-              title={t("Delete")}
-              type="button"
-              variant="ghost"
-            >
-              <HiOutlineTrash />
-            </Button>
-          </div>
+          <Popover onOpenChange={setMoreOpen} open={moreOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                aria-label={t("More")}
+                className="size-8 p-0"
+                data-canvas-more-trigger
+                title={t("More")}
+                type="button"
+                variant="ghost"
+              >
+                <HiOutlineEllipsisHorizontal />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="grid w-48 gap-0.5 p-1">
+              {(
+                [
+                  ["back", "Send to back", false],
+                  ["front", "Bring to front", true],
+                ] as const
+              ).map(([direction, label, flipped]) => (
+                <Button
+                  className="h-8 justify-start px-2 font-normal"
+                  key={direction}
+                  onClick={() => {
+                    onOrder(direction);
+                    setMoreOpen(false);
+                  }}
+                  type="button"
+                  variant="ghost"
+                >
+                  <HiOutlineQueueList className={flipped ? "rotate-180" : undefined} />
+                  {t(label)}
+                </Button>
+              ))}
+              <Button
+                className="h-8 justify-start px-2 font-normal"
+                onClick={() => {
+                  onDuplicate();
+                  setMoreOpen(false);
+                }}
+                type="button"
+                variant="ghost"
+              >
+                <HiOutlineDocumentDuplicate />
+                {t("Duplicate")}
+              </Button>
+              <Button
+                className="h-8 justify-start px-2 font-normal text-destructive"
+                onClick={() => {
+                  onDelete();
+                  setMoreOpen(false);
+                }}
+                type="button"
+                variant="ghost"
+              >
+                <HiOutlineTrash />
+                {t("Delete")}
+              </Button>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
     </div>

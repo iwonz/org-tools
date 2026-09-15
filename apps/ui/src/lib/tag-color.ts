@@ -249,12 +249,11 @@ export const employeeTagColorToHex = (color: EmployeeTagColor | null | undefined
 };
 
 export type StickerColorStyle = {
+  borderStyle: `#${string}`;
   fillStyle: `#${string}`;
-  foldFillStyle: `#${string}`;
-  sheenStyle: `#${string}`;
 };
 
-/** Returns deterministic paper, fold, and sheen colors shared by DOM and Canvas Stickers. */
+/** Returns deterministic flat fill and tonal border colors shared by DOM and Canvas Stickers. */
 export const getStickerColorStyle = (
   color: EmployeeTagColor | null | undefined,
 ): StickerColorStyle => {
@@ -262,22 +261,15 @@ export const getStickerColorStyle = (
   const parsed = parseHex(resolved);
   if (!parsed) {
     return {
+      borderStyle: "#5658d6",
       fillStyle: DEFAULT_CUSTOM_TAG_COLOR,
-      foldFillStyle: "#4f46e5",
-      sheenStyle: "#ffffff24",
     };
   }
   const rgb = { blue: parsed.blue, green: parsed.green, red: parsed.red };
   const nearBlack = { blue: 23, green: 23, red: 23 };
   return {
+    borderStyle: rgbaToHex({ ...mix(rgb, nearBlack, 0.88), alpha: parsed.alpha }),
     fillStyle: rgbaToHex(parsed),
-    foldFillStyle: rgbaToHex({ ...mix(rgb, nearBlack, 0.78), alpha: parsed.alpha }),
-    sheenStyle: rgbaToHex({
-      alpha: Math.min(0.22, parsed.alpha * 0.22),
-      blue: 255,
-      green: 255,
-      red: 255,
-    }),
   };
 };
 

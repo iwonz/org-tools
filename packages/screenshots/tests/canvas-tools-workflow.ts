@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { expect, type Page } from "@playwright/test";
+import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
@@ -75,7 +76,67 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(stickerElements).toHaveCount(initialStickerCount + 1);
   await expect(properties).toBeVisible();
   await expect(stickerElements.last().locator("[data-canvas-sticker-paper]")).toHaveCount(1);
-  await expect(stickerElements.last().locator("[data-canvas-sticker-fold]")).toHaveCount(1);
+  await expect(stickerElements.last().locator("[data-canvas-sticker-fold]")).toHaveCount(0);
+  await expect(stickerElements.last().locator("[data-canvas-sticker-paper]")).toHaveCSS(
+    "border-radius",
+    "4px",
+  );
+  await expect(stickerElements.last().locator("[data-canvas-sticker-paper]")).toHaveCSS(
+    "box-shadow",
+    "none",
+  );
+  const createdStickerNode = stickerElements.last();
+  const stickerHeightBeforeDraft = Number.parseFloat(
+    await createdStickerNode.evaluate((element: HTMLElement) => element.style.height),
+  );
+  const restingStickerTextTop = Number.parseFloat(
+    await createdStickerNode
+      .locator("span")
+      .first()
+      .evaluate((element: HTMLElement) => element.style.top),
+  );
+  await createdStickerNode.dblclick();
+  await expect(editor).toBeFocused();
+  const editingStickerTextTop = Number.parseFloat(
+    await editor.evaluate((element: HTMLTextAreaElement) => element.style.top),
+  );
+  expect(Math.abs(editingStickerTextTop - restingStickerTextTop)).toBeLessThan(0.01);
+  const overflowStickerText = Array.from({ length: 12 }, (_, index) => `Line ${index + 1}`).join(
+    "\n",
+  );
+  await editor.fill(overflowStickerText);
+  await expect
+    .poll(() =>
+      createdStickerNode.evaluate((element: HTMLElement) =>
+        Number.parseFloat(element.style.height),
+      ),
+    )
+    .toBeGreaterThan(stickerHeightBeforeDraft);
+  const transientStickerHeight = Number.parseFloat(
+    await createdStickerNode.evaluate((element: HTMLElement) => element.style.height),
+  );
+  await editor.press("Escape");
+  await expect(createdStickerNode).toHaveAttribute("data-canvas-element-text", overflowStickerText);
+  await expect
+    .poll(() =>
+      createdStickerNode.evaluate((element: HTMLElement) =>
+        Number.parseFloat(element.style.height),
+      ),
+    )
+    .toBe(transientStickerHeight);
+  await page.keyboard.press("Control+z");
+  await expect(createdStickerNode).toHaveAttribute("data-canvas-element-text", "Browser sticker");
+  await expect
+    .poll(() =>
+      createdStickerNode.evaluate((element: HTMLElement) =>
+        Number.parseFloat(element.style.height),
+      ),
+    )
+    .toBe(stickerHeightBeforeDraft);
+  await page.keyboard.press("Control+Shift+z");
+  await expect(createdStickerNode).toHaveAttribute("data-canvas-element-text", overflowStickerText);
+  await page.keyboard.press("Control+z");
+  await expect(createdStickerNode).toHaveAttribute("data-canvas-element-text", "Browser sticker");
 
   await toolbar.locator('[data-canvas-tool="arrow"]').click();
   const arrowStart = point(Math.max(620, canvasBox.width * 0.48), canvasBox.height - 70);
@@ -141,7 +202,8 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await createdText.dblclick();
   await expect(editor).toBeFocused();
   await editor.fill("Committed before using properties");
-  await properties.getByLabel("Element width", { exact: true }).click();
+  await properties.getByRole("button", { name: "Geometry", exact: true }).click();
+  await page.getByLabel("Element width", { exact: true }).click();
   await expect(editor).toBeHidden();
   await expect(properties).toBeVisible();
   await expect(createdText).toHaveCSS("outline-style", "solid");
@@ -182,16 +244,15 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
 
   await createdText.click({ button: "right" });
   const elementMenu = page.locator("[data-org-editor-context-menu]");
-  for (const action of [
-    "Send to back",
-    "Send backward",
-    "Bring forward",
-    "Bring to front",
-    "Duplicate",
-    "Delete",
-  ]) {
+  for (const action of ["Send to back", "Bring to front", "Duplicate", "Delete"]) {
     await expect(elementMenu.getByRole("menuitem", { name: action, exact: true })).toBeVisible();
   }
+  await expect(
+    elementMenu.getByRole("menuitem", { name: "Send backward", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    elementMenu.getByRole("menuitem", { name: "Bring forward", exact: true }),
+  ).toHaveCount(0);
   await expect(
     elementMenu.getByRole("menuitem", { name: "Behind Units", exact: true }),
   ).toHaveCount(0);
@@ -217,8 +278,9 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   expect(
     await properties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
   ).toBe(true);
-  const widthInput = properties.getByLabel("Element width", { exact: true });
-  const heightInput = properties.getByLabel("Element height", { exact: true });
+  await properties.getByRole("button", { name: "Geometry", exact: true }).click();
+  const widthInput = page.getByLabel("Element width", { exact: true });
+  const heightInput = page.getByLabel("Element height", { exact: true });
   await expect(widthInput).toHaveAttribute("step", "1");
   await expect(heightInput).toHaveAttribute("step", "1");
   expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
@@ -234,6 +296,9 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     "font-family",
     /Montserrat/,
   );
+  await properties.getByRole("button", { name: "Alignment", exact: true }).click();
+  await expect(page.locator("[data-canvas-alignment]")).toHaveCount(9);
+  await page.locator('[data-canvas-alignment="bottom:right"]').click();
 
   const cornerHandle = createdText.locator('[data-canvas-resize-handle="topRight"]');
   const cornerBeforeZoom = await cornerHandle.boundingBox();
@@ -273,6 +338,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.mouse.up();
   const textAfterResize = await createdText.boundingBox();
   expect((textAfterResize?.width ?? 0) - textBeforeResize.width).toBeGreaterThan(40);
+  await properties.getByRole("button", { name: "Geometry", exact: true }).click();
   expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
 
   const textBeforeRotate = await centerOf(createdText);
@@ -390,12 +456,28 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   expect(textAfter.x - textBefore.x).toBeGreaterThan(24);
   expect(stickerAfter.x - stickerBefore.x).toBeGreaterThan(24);
   await page.keyboard.press("Control+z");
+  await properties.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("button", { name: "Send to back", exact: true }).click();
+  await expect(createdText).toHaveAttribute("data-canvas-element-layer", "behindUnits");
+  await expect(createdSticker).toHaveAttribute("data-canvas-element-layer", "behindUnits");
+  await page.keyboard.press("Control+z");
+  await expect(createdText).toHaveAttribute("data-canvas-element-layer", "aboveUnits");
+  await expect(createdSticker).toHaveAttribute("data-canvas-element-layer", "aboveUnits");
 
   const attachedSticker = canvas.locator(
     '[data-canvas-element-id="dddddddd-dddd-4ddd-8ddd-dddddddddddd"]',
   );
   const product = canvas.locator('fieldset[aria-label="Canvas Unit Product"]');
   const attachedBefore = await centerOf(attachedSticker);
+  await attachedSticker.click({ button: "right" });
+  await elementMenu.getByRole("menuitem", { name: "Send to back", exact: true }).click();
+  await expect(attachedSticker).toHaveAttribute("data-canvas-element-layer", "behindUnits");
+  const attachedAfterBack = await centerOf(attachedSticker);
+  expect(
+    Math.hypot(attachedAfterBack.x - attachedBefore.x, attachedAfterBack.y - attachedBefore.y),
+  ).toBeLessThan(0.01);
+  await page.keyboard.press("Control+z");
+  await expect(attachedSticker).toHaveAttribute("data-canvas-element-layer", "aboveUnits");
   const productBox = await product.boundingBox();
   if (!productBox) throw new Error("Product Unit geometry is unavailable.");
   await page.mouse.move(productBox.x + 70, productBox.y + 30);
@@ -491,14 +573,43 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(dialog).toBeVisible();
   const preview = dialog.getByAltText("View export preview", { exact: true });
   await expect(preview).toBeVisible();
-  await expect(dialog.locator('[data-demo-id="org-editor-view-image-dimensions"]')).toContainText(
-    "px",
+  await expect(dialog.locator('[data-demo-id="org-editor-view-image-dimensions"]')).toHaveCount(0);
+  const previewViewport = dialog.locator('[data-demo-id="org-editor-view-image-preview"]');
+  await expect(previewViewport).toHaveAttribute("data-preview-mode", "fit");
+  const fittedScale = Number(await previewViewport.getAttribute("data-preview-scale"));
+  await previewViewport.hover();
+  await page.mouse.wheel(0, -500);
+  await expect(previewViewport).toHaveAttribute("data-preview-mode", "manual");
+  await expect
+    .poll(async () => Number(await previewViewport.getAttribute("data-preview-scale")))
+    .toBeGreaterThan(fittedScale);
+  const manualScale = Number(await previewViewport.getAttribute("data-preview-scale"));
+  const transformBeforePan = await preview.getAttribute("style");
+  const previewBox = await previewViewport.boundingBox();
+  if (!previewBox) throw new Error("View preview viewport geometry is unavailable.");
+  await page.mouse.move(previewBox.x + previewBox.width / 2, previewBox.y + previewBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    previewBox.x + previewBox.width / 2 + 48,
+    previewBox.y + previewBox.height / 2 + 24,
+    { steps: 3 },
   );
+  await page.mouse.up();
+  await expect.poll(() => preview.getAttribute("style")).not.toBe(transformBeforePan);
+  const transformBeforeKeyboardPan = await preview.getAttribute("style");
+  await previewViewport.press("ArrowRight");
+  await expect.poll(() => preview.getAttribute("style")).not.toBe(transformBeforeKeyboardPan);
   await dialog.locator('[data-demo-id="org-editor-view-image-density"]').click();
   await page.getByRole("option", { name: "3×", exact: true }).click();
-  await expect(dialog.locator('[data-demo-id="org-editor-view-image-dimensions"]')).toContainText(
-    "3.00×",
-  );
+  await expect
+    .poll(async () => Number(await previewViewport.getAttribute("data-preview-scale")))
+    .toBeCloseTo(manualScale, 4);
+  await previewViewport.getByRole("button", { name: "Fit", exact: true }).click();
+  await expect(previewViewport).toHaveAttribute("data-preview-mode", "fit");
+  await previewViewport.getByRole("button", { name: "Actual size", exact: true }).click();
+  await expect
+    .poll(async () => Number(await previewViewport.getAttribute("data-preview-scale")))
+    .toBe(1);
   const employeeFormat = dialog.locator("#org-editor-view-image-employee-format");
   await employeeFormat.fill("@full");
   const suggestions = dialog.locator('[data-demo-id="template-token-suggestions"]');
@@ -533,6 +644,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await unitDialog.getByRole("tab", { name: "Unit only", exact: true }).click();
   const unitPreview = unitDialog.getByAltText("Unit export preview", { exact: true });
   await expect(unitPreview).toBeVisible();
+  await expect(unitDialog.getByRole("button", { name: "Fit", exact: true })).toBeVisible();
   const scopedImage = await unitPreview.evaluate((image: HTMLImageElement) => {
     const canvas = document.createElement("canvas");
     canvas.width = image.naturalWidth;
@@ -584,6 +696,18 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const templatePath = await templateDownload.path();
   expect(await readFile(templatePath ?? "", "utf8")).not.toContain("\n\n");
   await page.keyboard.press("Escape");
+
+  await createdText.click();
+  await page.setViewportSize({ height: 800, width: 900 });
+  await page.locator('[data-demo-id="language-toggle"]').click();
+  await page.locator('[data-demo-id="language-dialog"] label:has(input[value="ru"])').click();
+  await expect(properties).toBeVisible();
+  expect(
+    await properties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+  ).toBe(true);
+  await expect(
+    properties.getByRole("button", { name: ruMessages.Ui.More, exact: true }),
+  ).toBeVisible();
 
   page.off("request", onRequest);
   expect(externalRequests).toEqual([]);

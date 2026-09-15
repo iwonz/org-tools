@@ -4971,8 +4971,6 @@ export const OrgStructureEditorTab = observer(() => {
               {(
                 [
                   ["back", "Send to back"],
-                  ["backward", "Send backward"],
-                  ["forward", "Bring forward"],
                   ["front", "Bring to front"],
                 ] as const
               ).map(([direction, label]) => (
@@ -4984,9 +4982,7 @@ export const OrgStructureEditorTab = observer(() => {
                   }}
                 >
                   <HiOutlineQueueList
-                    className={
-                      direction === "forward" || direction === "front" ? "rotate-180" : undefined
-                    }
+                    className={direction === "front" ? "rotate-180" : undefined}
                   />
                   {t(label)}
                 </OrgEditorMenuButton>
