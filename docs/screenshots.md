@@ -273,11 +273,12 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 Arrange opaque Unit cards and representative Text, Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
-the upper-right canvas toolbar. The selected annotation demonstrates the compact grouped properties,
-all-edge resize, corner rotation, and element-specific context actions.
+the upper-right canvas toolbar. The selected annotation demonstrates compact grouped properties, a
+thin Miro-like frame with four corner markers, all-edge resize, outside-corner rotation, and
+element-specific context actions without layer-plane commands.
 
-Capabilities: Canvas layout, Text, Sticker, Image, Arrow, Anchors, Layers, Adaptive snap grid,
-Hierarchy, Zoom, Element transforms and context actions.
+Capabilities: Canvas layout, Text, Sticker, Image, Arrow, Contextual anchors, Adaptive snap grid,
+Hierarchy, Zoom-independent transforms and context actions.
 
 ### View settings
 
@@ -621,9 +622,11 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   clipboard/download action icons as scoped Image export.
 - Confirm a plain canvas-element click selects only that element, Ctrl/Cmd creates an explicit
   group, choosing a creation tool clears prior selection, and element right-click exposes only
-  element layer/order, Duplicate, and Delete actions. Verify eight resize directions, four corner
-  rotation targets, a stable live center for free and attached single-element rotation, Escape
-  selection clearing, and readable non-overlapping property groups.
+  within-plane order, Duplicate, and Delete actions. Verify four visible corner markers, transparent
+  side resize targets, four outside-corner rotation targets, stable screen sizing across zoom, whole
+  Width/Height values, a stable live center for free and attached single-element rotation,
+  contextual connector/nearest-target feedback, two-step text Escape behavior, canvas scroll
+  isolation, resting selection clearing, and readable non-overlapping property groups.
 - Confirm Employee Import shows a bounded richest-record preview beside virtualized fixed-source →
   target-Select rows, transfers occupied targets, imports Teams only through mapping, and keeps
   duplicate review virtualized.

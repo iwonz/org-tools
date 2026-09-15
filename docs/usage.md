@@ -108,19 +108,25 @@ control.
   embedded Image, and full-View Image export without a separating divider, including in an empty
   View. Choosing a creation tool clears the current canvas selection; a plain element click selects
   only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens its
-  layer, Forward/Backward/Front/Back, Duplicate, and Delete actions instead of Unit commands. Text
+  Forward/Backward/Front/Back, Duplicate, and Delete actions instead of Unit or layer-plane
+  commands. Text
   and Sticker support
   bundled fonts, size, weight, color, horizontal/vertical alignment, resize, rotation, and
   non-clipping wrapping; Sticker also has a background color. Images accept only local PNG, JPEG, or
   WebP file/clipboard bytes and support aspect-locked resize and rotation. Cubic Arrows expose two
   endpoints, Bezier controls, line style, independent markers, and shared anchors. Modifier and
-  marquee selection, group move/resize/rotation, layer-plane/order actions, Delete, Copy/Paste,
+  marquee selection, group move/resize/rotation, within-plane order actions, Delete, Copy/Paste,
   Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture. Selected
-  rectangular and group frames resize from every side or corner and rotate from any corner around
-  the exact center; one element keeps the center of its current width and height fixed even when it
-  is attached, while groups use their shared bounds center. There is no detached rotation handle.
-  Press Escape outside an active editor, menu, or transform to clear a canvas-element selection.
-  Contextual settings wrap into compact readable groups.
+  rectangular and group frames use a thin solid outline with four visible corner resize markers;
+  transparent side targets resize one dimension and transparent zones directly outside the corners
+  rotate around the exact center. Their screen size stays constant while zooming, every changed
+  rectangle receives whole-pixel Width and Height values, one attached element keeps the center of
+  its current bounds fixed, and groups use their shared bounds center. Connector handles appear only
+  while a selected frame is hovered or focused, then an attachment gesture reveals only its nearest
+  valid target. There is no detached rotation handle or permanent anchor field. Clicking outside an
+  active Text or Sticker editor saves once before normal selection routing; the first Escape saves
+  and leaves the element selected, while the next Escape clears that resting selection. Contextual
+  settings wrap into compact readable groups.
   Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
   also assigned to ancestors. Bosses count once, and collapse or distribution mode never changes
   the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.

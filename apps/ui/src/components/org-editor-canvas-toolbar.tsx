@@ -14,13 +14,13 @@ import {
   HiOutlineChatBubbleBottomCenterText,
   HiOutlineCursorArrowRays,
   HiOutlineDocumentDuplicate,
-  HiOutlineDocumentText,
   HiOutlineLockClosed,
   HiOutlineLockOpen,
   HiOutlinePhoto,
   HiOutlineQueueList,
   HiOutlineTrash,
 } from "react-icons/hi2";
+import { TbLetterT } from "react-icons/tb";
 
 import { TagColorPicker } from "@/components/tag-color-picker";
 import { Button } from "@/components/ui/button";
@@ -33,14 +33,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUiText } from "@/i18n/use-ui-text";
-import { ORG_EDITOR_CANVAS_FONTS } from "@/lib/org-editor-canvas";
+import {
+  normalizeOrgEditorCanvasDimension,
+  normalizeOrgEditorCanvasDimensions,
+  ORG_EDITOR_CANVAS_FONTS,
+} from "@/lib/org-editor-canvas";
 import { cn } from "@/lib/utils";
 
 export type OrgEditorCanvasTool = "arrow" | "image" | "select" | "sticker" | "text";
 
 const toolDefinitions = [
   { icon: HiOutlineCursorArrowRays, tool: "select" as const },
-  { icon: HiOutlineDocumentText, tool: "text" as const },
+  { icon: TbLetterT, tool: "text" as const },
   { icon: HiOutlineArrowLongRight, tool: "arrow" as const },
   { icon: HiOutlineChatBubbleBottomCenterText, tool: "sticker" as const },
   { icon: HiOutlinePhoto, tool: "image" as const },
@@ -52,7 +56,6 @@ export function OrgEditorCanvasToolbar({
   onDuplicate,
   onExport,
   onImage,
-  onLayer,
   onOrder,
   onToolChange,
   onUpdate,
@@ -63,7 +66,6 @@ export function OrgEditorCanvasToolbar({
   onDuplicate: () => void;
   onExport: () => void;
   onImage: () => void;
-  onLayer: (layer: OrgEditorCanvasElement["layer"]) => void;
   onOrder: (direction: "back" | "backward" | "forward" | "front") => void;
   onToolChange: (tool: OrgEditorCanvasTool) => void;
   onUpdate: (update: (element: OrgEditorCanvasElement) => OrgEditorCanvasElement) => void;
@@ -415,27 +417,22 @@ export function OrgEditorCanvasToolbar({
                 onChange={(event) => {
                   const width = Number(event.currentTarget.value);
                   if (!Number.isFinite(width)) return;
-                  onUpdate((element) =>
-                    element.type === "arrow"
-                      ? element
-                      : element.type === "image" && element.lockAspectRatio
-                        ? {
-                            ...element,
-                            height: Math.min(
-                              20_000,
-                              Math.max(
-                                24,
-                                (Math.min(20_000, Math.max(24, width)) / element.width) *
-                                  element.height,
-                              ),
-                            ),
-                            width: Math.min(20_000, Math.max(24, width)),
-                          }
-                        : { ...element, width: Math.min(20_000, Math.max(24, width)) },
-                  );
+                  onUpdate((element) => {
+                    if (element.type === "arrow") return element;
+                    const normalizedWidth = normalizeOrgEditorCanvasDimension(width);
+                    const dimensions = normalizeOrgEditorCanvasDimensions({
+                      height:
+                        element.type === "image" && element.lockAspectRatio
+                          ? (normalizedWidth / element.width) * element.height
+                          : element.height,
+                      width: normalizedWidth,
+                    });
+                    return { ...element, ...dimensions };
+                  });
                 }}
+                step={1}
                 type="number"
-                value={selected.width}
+                value={normalizeOrgEditorCanvasDimension(selected.width)}
               />
               <Input
                 aria-label={t("Element height")}
@@ -445,27 +442,22 @@ export function OrgEditorCanvasToolbar({
                 onChange={(event) => {
                   const height = Number(event.currentTarget.value);
                   if (!Number.isFinite(height)) return;
-                  onUpdate((element) =>
-                    element.type === "arrow"
-                      ? element
-                      : element.type === "image" && element.lockAspectRatio
-                        ? {
-                            ...element,
-                            height: Math.min(20_000, Math.max(24, height)),
-                            width: Math.min(
-                              20_000,
-                              Math.max(
-                                24,
-                                (Math.min(20_000, Math.max(24, height)) / element.height) *
-                                  element.width,
-                              ),
-                            ),
-                          }
-                        : { ...element, height: Math.min(20_000, Math.max(24, height)) },
-                  );
+                  onUpdate((element) => {
+                    if (element.type === "arrow") return element;
+                    const normalizedHeight = normalizeOrgEditorCanvasDimension(height);
+                    const dimensions = normalizeOrgEditorCanvasDimensions({
+                      height: normalizedHeight,
+                      width:
+                        element.type === "image" && element.lockAspectRatio
+                          ? (normalizedHeight / element.height) * element.width
+                          : element.width,
+                    });
+                    return { ...element, ...dimensions };
+                  });
                 }}
+                step={1}
                 type="number"
-                value={selected.height}
+                value={normalizeOrgEditorCanvasDimension(selected.height)}
               />
               <Input
                 aria-label={t("Rotation")}
@@ -491,18 +483,6 @@ export function OrgEditorCanvasToolbar({
             className="flex items-center gap-1 rounded-md bg-muted/45 p-1"
             data-canvas-property-group="arrangement"
           >
-            <Select
-              onValueChange={(value) => onLayer(value as OrgEditorCanvasElement["layer"])}
-              value={selected?.layer ?? selectedElements[0]?.layer ?? "aboveUnits"}
-            >
-              <SelectTrigger aria-label={t("Layer")} className="h-8 w-28 min-w-0 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="behindUnits">{t("Behind Units")}</SelectItem>
-                <SelectItem value="aboveUnits">{t("Above Units")}</SelectItem>
-              </SelectContent>
-            </Select>
             <Button
               aria-label={t("Send to back")}
               className="size-8 p-0"

@@ -161,6 +161,17 @@ textarea::placeholder {
   background: color-mix(in oklab, var(--signal) 24%, transparent);
 }
 
+.canvas-rotate-cursor {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M7 7h5a5 5 0 1 1-4.2 7.7' fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='4'/%3E%3Cpath d='m7 7 2-3M7 7l3 2M7 7h5a5 5 0 1 1-4.2 7.7' fill='none' stroke='%23334155' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E")
+    7 7,
+    grab;
+}
+
+.canvas-rotate-cursor:active {
+  cursor: grabbing;
+}
+
 .tag-color-custom {
   background-color: var(--tag-custom-fill);
   color: var(--tag-custom-foreground);

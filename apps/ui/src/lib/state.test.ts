@@ -104,6 +104,17 @@ describe("OrgToolsState", () => {
       second,
     ]);
 
+    const fractional = structuredClone(state);
+    const fractionalElement = fractional.organization.views[0]?.structure.canvasElements[0];
+    if (!fractionalElement || fractionalElement.type === "arrow") {
+      throw new Error("Expected a rectangular canvas element.");
+    }
+    fractionalElement.width = 220.5;
+    fractionalElement.height = 168.25;
+    expect(
+      parseOrgToolsState(fractional).organization.views[0]?.structure.canvasElements[0],
+    ).toMatchObject({ height: 168.25, width: 220.5 });
+
     const missing = structuredClone(state) as unknown as {
       organization: { views: Array<{ structure: Record<string, unknown> }> };
     };

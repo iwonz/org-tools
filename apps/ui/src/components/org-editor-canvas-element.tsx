@@ -6,19 +6,15 @@ import type {
   OrgEditorRectAnchorId,
 } from "@org-tools/types";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 
 import { useUiText } from "@/i18n/use-ui-text";
 import {
   getOrgEditorArrowControlPoints,
-  getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasImagePlaceholderPoints,
   isOrgEditorRectElement,
   layoutOrgEditorCanvasText,
-  ORG_EDITOR_ARROW_ANCHOR_IDS,
-  ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS,
   ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS,
-  ORG_EDITOR_RECT_ANCHOR_IDS,
   type OrgEditorCanvasRect,
   type OrgEditorCanvasResizeHandle,
 } from "@/lib/org-editor-canvas";
@@ -35,27 +31,86 @@ export type OrgEditorCanvasElementHandle =
   | { endpoint: "end" | "start"; type: "arrowEndpoint" }
   | { endpoint: "end" | "start"; type: "arrowControl" };
 
-const resizeHandleClassName = (anchorId: OrgEditorCanvasResizeHandle) =>
-  cn(
-    "pointer-events-auto absolute z-20 size-3 rounded-sm border border-signal bg-background",
-    anchorId.startsWith("top") && "-top-1.5",
-    anchorId.startsWith("bottom") && "-bottom-1.5",
-    anchorId === "leftCenter" && "-left-1.5 top-1/2 -translate-y-1/2 cursor-ew-resize",
-    anchorId === "rightCenter" && "-right-1.5 top-1/2 -translate-y-1/2 cursor-ew-resize",
-    (anchorId === "topCenter" || anchorId === "bottomCenter") &&
-      "left-1/2 -translate-x-1/2 cursor-ns-resize",
-    (anchorId === "topLeft" || anchorId === "bottomLeft") && "-left-1.5",
-    (anchorId === "topRight" || anchorId === "bottomRight") && "-right-1.5",
-    (anchorId === "topLeft" || anchorId === "bottomRight") && "cursor-nwse-resize",
-    (anchorId === "topRight" || anchorId === "bottomLeft") && "cursor-nesw-resize",
-  );
+const canvasUiMetric = (name: string, fallback: number) =>
+  `var(--org-editor-canvas-ui-${name}, ${fallback}px)`;
+const CANVAS_CORNER_RESIZE_HANDLE_IDS = ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS;
+const CANVAS_SIDE_RESIZE_HANDLE_IDS = [
+  "topCenter",
+  "rightCenter",
+  "bottomCenter",
+  "leftCenter",
+] as const satisfies readonly OrgEditorCanvasResizeHandle[];
+const CANVAS_CONNECTOR_ANCHOR_IDS = CANVAS_SIDE_RESIZE_HANDLE_IDS;
 
-const rotateHandleClassName = (cornerId: (typeof ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS)[number]) =>
-  cn(
-    "pointer-events-auto absolute z-20 size-4 cursor-grab rounded-full border border-signal bg-background shadow-sm active:cursor-grabbing",
-    cornerId.startsWith("top") ? "-top-7" : "-bottom-7",
-    cornerId.endsWith("Left") ? "-left-7" : "-right-7",
-  );
+const getCornerInsetStyle = (
+  cornerId: (typeof ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS)[number],
+  inset: number,
+): CSSProperties => ({
+  [cornerId.endsWith("Left") ? "left" : "right"]: canvasUiMetric(
+    inset === -4 ? "corner-offset" : "rotate-offset",
+    inset,
+  ),
+  [cornerId.startsWith("top") ? "top" : "bottom"]: canvasUiMetric(
+    inset === -4 ? "corner-offset" : "rotate-offset",
+    inset,
+  ),
+});
+
+const getSideHandleStyle = (
+  anchorId: (typeof CANVAS_SIDE_RESIZE_HANDLE_IDS)[number],
+): CSSProperties => {
+  const thickness = canvasUiMetric("side-size", 12);
+  const offset = canvasUiMetric("side-offset", -6);
+  const cornerClearance = canvasUiMetric("corner-size", 8);
+  if (anchorId === "leftCenter" || anchorId === "rightCenter") {
+    return {
+      bottom: cornerClearance,
+      height: "auto",
+      [anchorId === "leftCenter" ? "left" : "right"]: offset,
+      top: cornerClearance,
+      width: thickness,
+    };
+  }
+  return {
+    [anchorId === "topCenter" ? "top" : "bottom"]: offset,
+    height: thickness,
+    left: cornerClearance,
+    right: cornerClearance,
+    width: "auto",
+  };
+};
+
+const getConnectorStyle = (
+  anchorId: (typeof CANVAS_CONNECTOR_ANCHOR_IDS)[number],
+): CSSProperties => {
+  const offset = canvasUiMetric("connector-offset", -10);
+  if (anchorId === "leftCenter") {
+    return {
+      left: offset,
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+    };
+  }
+  if (anchorId === "rightCenter") {
+    return {
+      right: offset,
+      top: "50%",
+      transform: "translate(50%, -50%)",
+    };
+  }
+  if (anchorId === "bottomCenter") {
+    return {
+      bottom: offset,
+      left: "50%",
+      transform: "translate(-50%, 50%)",
+    };
+  }
+  return {
+    top: offset,
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+  };
+};
 
 function CanvasPerimeterTransformHandles({
   group = false,
@@ -70,25 +125,59 @@ function CanvasPerimeterTransformHandles({
   const t = useUiText();
   return (
     <>
-      {ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS.map((anchorId) => (
+      {CANVAS_SIDE_RESIZE_HANDLE_IDS.map((anchorId) => (
         <button
           aria-label={t("Resize canvas element")}
-          className={resizeHandleClassName(anchorId)}
+          className={cn(
+            "pointer-events-auto absolute z-20 border-0 bg-transparent p-0",
+            (anchorId === "leftCenter" || anchorId === "rightCenter") && "cursor-ew-resize",
+            (anchorId === "topCenter" || anchorId === "bottomCenter") && "cursor-ns-resize",
+          )}
           data-canvas-group-resize-handle={group ? anchorId : undefined}
           data-canvas-resize-handle={group ? undefined : anchorId}
+          data-canvas-transform-handle="side-resize"
           key={`resize:${anchorId}`}
           onPointerDown={(event) => onHandlePointerDown(event, { anchorId, type: "resize" })}
+          style={getSideHandleStyle(anchorId)}
+          type="button"
+        />
+      ))}
+      {CANVAS_CORNER_RESIZE_HANDLE_IDS.map((anchorId) => (
+        <button
+          aria-label={t("Resize canvas element")}
+          className={cn(
+            "pointer-events-auto absolute z-30 rounded-full border border-signal bg-background p-0 shadow-sm",
+            (anchorId === "topLeft" || anchorId === "bottomRight") && "cursor-nwse-resize",
+            (anchorId === "topRight" || anchorId === "bottomLeft") && "cursor-nesw-resize",
+          )}
+          data-canvas-group-resize-handle={group ? anchorId : undefined}
+          data-canvas-resize-handle={group ? undefined : anchorId}
+          data-canvas-transform-handle="corner-resize"
+          key={`resize:${anchorId}`}
+          onPointerDown={(event) => onHandlePointerDown(event, { anchorId, type: "resize" })}
+          style={{
+            ...getCornerInsetStyle(anchorId, -4),
+            borderWidth: canvasUiMetric("outline-width", 1),
+            height: canvasUiMetric("corner-size", 8),
+            width: canvasUiMetric("corner-size", 8),
+          }}
           type="button"
         />
       ))}
       {ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS.map((cornerId) => (
         <button
           aria-label={t("Rotate canvas element")}
-          className={rotateHandleClassName(cornerId)}
+          className="canvas-rotate-cursor pointer-events-auto absolute z-20 border-0 bg-transparent p-0"
           data-canvas-group-rotate-handle={group ? cornerId : undefined}
           data-canvas-rotate-handle={group ? undefined : cornerId}
+          data-canvas-transform-handle="corner-rotate"
           key={`rotate:${cornerId}`}
           onPointerDown={(event) => onHandlePointerDown(event, { cornerId, type: "rotate" })}
+          style={{
+            ...getCornerInsetStyle(cornerId, -22),
+            height: canvasUiMetric("rotate-size", 18),
+            width: canvasUiMetric("rotate-size", 18),
+          }}
           type="button"
         />
       ))}
@@ -108,9 +197,16 @@ export function OrgEditorCanvasGroupFrame({
 }) {
   return (
     <div
-      className="pointer-events-none absolute z-40 border-2 border-dashed border-signal"
+      className="pointer-events-none absolute z-40"
       data-canvas-group-frame
-      style={{ height: bounds.height, left: bounds.x, top: bounds.y, width: bounds.width }}
+      style={{
+        height: bounds.height,
+        left: bounds.x,
+        outline: `${canvasUiMetric("outline-width", 1)} solid var(--signal)`,
+        outlineOffset: canvasUiMetric("outline-offset", 2),
+        top: bounds.y,
+        width: bounds.width,
+      }}
     >
       <CanvasPerimeterTransformHandles group onHandlePointerDown={onHandlePointerDown} />
     </div>
@@ -170,10 +266,8 @@ const CanvasText = ({
 };
 
 const RectHandles = ({
-  element,
   onHandlePointerDown,
 }: {
-  element: Exclude<OrgEditorCanvasElement, { type: "arrow" }>;
   onHandlePointerDown: (
     event: React.PointerEvent<Element>,
     handle: OrgEditorCanvasElementHandle,
@@ -184,34 +278,28 @@ const RectHandles = ({
   return (
     <>
       <CanvasPerimeterTransformHandles onHandlePointerDown={onHandlePointerDown} />
-      {ORG_EDITOR_RECT_ANCHOR_IDS.map((anchorId) => {
-        if (anchorId === "center") return null;
-        const point = getOrgEditorCanvasElementAnchorPoint(
-          { ...element, rotation: 0, x: 0, y: 0 },
-          anchorId,
-        );
-        if (!point) return null;
-        const inset = Math.min(10, element.width / 3, element.height / 3);
-        return (
-          <button
-            aria-label={t("Attach canvas element")}
-            className="absolute z-30 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-background bg-signal"
-            data-canvas-anchor-id={anchorId}
-            key={anchorId}
-            onPointerDown={(event) =>
-              onHandlePointerDown(event, {
-                anchorId: anchorId as OrgEditorRectAnchorId,
-                type: "attach",
-              })
-            }
-            style={{
-              left: Math.min(element.width - inset, Math.max(inset, point.x)),
-              top: Math.min(element.height - inset, Math.max(inset, point.y)),
-            }}
-            type="button"
-          />
-        );
-      })}
+      {CANVAS_CONNECTOR_ANCHOR_IDS.map((anchorId) => (
+        <button
+          aria-label={t("Attach canvas element")}
+          className="pointer-events-none absolute z-40 rounded-full border border-background bg-signal p-0 opacity-0 shadow-sm transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 focus:pointer-events-auto focus:opacity-100"
+          data-canvas-anchor-id={anchorId}
+          data-canvas-connector-handle
+          key={anchorId}
+          onPointerDown={(event) =>
+            onHandlePointerDown(event, {
+              anchorId: anchorId as OrgEditorRectAnchorId,
+              type: "attach",
+            })
+          }
+          style={{
+            ...getConnectorStyle(anchorId),
+            borderWidth: canvasUiMetric("outline-width", 1),
+            height: canvasUiMetric("connector-size", 7),
+            width: canvasUiMetric("connector-size", 7),
+          }}
+          type="button"
+        />
+      ))}
     </>
   );
 };
@@ -251,7 +339,9 @@ export function OrgEditorCanvasElementNode({
   const imageDataUrl = element.type === "image" ? element.dataUrl : null;
 
   useEffect(() => {
-    if (editingText !== null && editingText !== undefined) textEditorRef.current?.focus();
+    if (editingText !== null && editingText !== undefined) {
+      textEditorRef.current?.focus({ preventScroll: true });
+    }
   }, [editingText]);
 
   useEffect(() => {
@@ -365,19 +455,6 @@ export function OrgEditorCanvasElementNode({
                   </g>
                 );
               })}
-              {ORG_EDITOR_ARROW_ANCHOR_IDS.map((anchorId) => {
-                const point = getOrgEditorCanvasElementAnchorPoint(element, anchorId);
-                return point ? (
-                  <circle
-                    className="pointer-events-none fill-signal stroke-background"
-                    cx={point.x}
-                    cy={point.y}
-                    data-canvas-anchor-id={anchorId}
-                    key={anchorId}
-                    r={3}
-                  />
-                ) : null;
-              })}
             </>
           )}
         </svg>
@@ -395,13 +472,15 @@ export function OrgEditorCanvasElementNode({
             : t("Text canvas element")
       }
       className={cn(
-        "absolute m-0 min-w-0 touch-none border-0 p-0",
+        "group absolute m-0 min-w-0 touch-none border-0 p-0",
         element.type === "sticker" && "rounded-xl shadow-sm",
         element.type === "image" && "rounded-lg",
-        isSelected && "outline outline-2 outline-offset-2 outline-signal",
       )}
       data-canvas-element-id={element.id}
       data-canvas-element-layer={element.layer}
+      data-canvas-element-text={
+        element.type === "text" || element.type === "sticker" ? element.text : undefined
+      }
       data-canvas-element-type={element.type}
       onContextMenu={(event) => onContextMenu(event, element)}
       onDoubleClick={() => onDoubleClick(element.id)}
@@ -411,6 +490,10 @@ export function OrgEditorCanvasElementNode({
           element.type === "sticker" ? employeeTagColorToHex(element.backgroundColor) : undefined,
         height: element.height,
         left: element.x,
+        outline: isSelected
+          ? `${canvasUiMetric("outline-width", 1)} solid var(--signal)`
+          : undefined,
+        outlineOffset: isSelected ? canvasUiMetric("outline-offset", 2) : undefined,
         top: element.y,
         transform: `rotate(${element.rotation}deg)`,
         transformOrigin: "center",
@@ -462,6 +545,7 @@ export function OrgEditorCanvasElementNode({
         <textarea
           aria-label={t("Canvas element text")}
           className="absolute inset-0 z-10 size-full resize-none border-0 bg-transparent p-2 outline-none"
+          data-canvas-text-editor={element.id}
           onBlur={onFinishEditing}
           onChange={(event) => onEditingTextChange?.(event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -487,7 +571,6 @@ export function OrgEditorCanvasElementNode({
       )}
       {showHandles && isSelected && isOrgEditorRectElement(element) && (
         <RectHandles
-          element={element}
           onHandlePointerDown={(event, handle) => onHandlePointerDown(event, element, handle)}
         />
       )}
