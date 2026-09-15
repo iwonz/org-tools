@@ -20,6 +20,7 @@ const documentCenterOf = (locator: ReturnType<Page["locator"]>) =>
   }));
 
 export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void> {
+  const additiveSelectionModifier = process.platform === "darwin" ? "Meta" : "Control";
   const externalRequests: string[] = [];
   const onRequest = (request: { url(): string }) => {
     const url = new URL(request.url());
@@ -45,18 +46,26 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const stickerElements = canvas.locator('[data-canvas-element-type="sticker"]');
   const arrowElements = canvas.locator('[data-canvas-element-type="arrow"]');
   const imageElements = canvas.locator('[data-canvas-element-type="image"]');
+  const properties = page.locator('[data-demo-id="org-editor-canvas-properties"]');
   const initialTextCount = await textElements.count();
   const initialStickerCount = await stickerElements.count();
   const initialArrowCount = await arrowElements.count();
   const initialImageCount = await imageElements.count();
 
   await toolbar.locator('[data-canvas-tool="text"]').click();
-  await canvas.click({ position: { x: canvasBox.width - 150, y: canvasBox.height - 130 } });
+  await canvas.click({ position: { x: canvasBox.width - 220, y: canvasBox.height - 130 } });
   const editor = canvas.getByRole("textbox", { name: "Canvas element text", exact: true });
   await expect(editor).toBeFocused();
   await editor.fill("Browser-created canvas text that wraps without clipping");
   await editor.press("Escape");
   await expect(textElements).toHaveCount(initialTextCount + 1);
+  await expect(editor).toBeHidden();
+  expect(await canvas.evaluate((element) => [element.scrollLeft, element.scrollTop])).toEqual([
+    0, 0,
+  ]);
+  await expect(properties).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(properties).toBeHidden();
 
   await toolbar.locator('[data-canvas-tool="sticker"]').click();
   await canvas.click({ position: { x: canvasBox.width - 410, y: canvasBox.height - 150 } });
@@ -64,6 +73,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await editor.fill("Browser sticker");
   await editor.press("Escape");
   await expect(stickerElements).toHaveCount(initialStickerCount + 1);
+  await expect(properties).toBeVisible();
 
   await toolbar.locator('[data-canvas-tool="arrow"]').click();
   const arrowStart = point(Math.max(620, canvasBox.width * 0.48), canvasBox.height - 70);
@@ -90,15 +100,67 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     throw new Error("Created canvas identity is unavailable.");
   const createdText = canvas.locator(`[data-canvas-element-id="${createdTextId}"]`);
   const createdSticker = canvas.locator(`[data-canvas-element-id="${createdStickerId}"]`);
-  const properties = page.locator('[data-demo-id="org-editor-canvas-properties"]');
+
+  const initialCommittedText = await createdText.getAttribute("data-canvas-element-text");
+  await createdText.dblclick();
+  await expect(editor).toBeFocused();
+  await editor.fill("Committed before selecting another element");
+  await createdSticker.click();
+  await expect(editor).toBeHidden();
+  await expect(createdText).toHaveAttribute(
+    "data-canvas-element-text",
+    "Committed before selecting another element",
+  );
+  await expect(createdText).toHaveCSS("outline-style", "none");
+  await expect(createdSticker).toHaveCSS("outline-style", "solid");
+  await page.keyboard.press("Control+z");
+  await expect(createdText).toHaveAttribute("data-canvas-element-text", initialCommittedText ?? "");
+  await page.keyboard.press("Control+Shift+z");
+  await expect(createdText).toHaveAttribute(
+    "data-canvas-element-text",
+    "Committed before selecting another element",
+  );
+
+  await createdText.dblclick();
+  await expect(editor).toBeFocused();
+  await editor.fill("Committed before an empty-canvas click");
+  await canvas.click({ position: { x: canvasBox.width / 2, y: canvasBox.height - 16 } });
+  await expect(editor).toBeHidden();
+  await expect(createdText).toHaveAttribute(
+    "data-canvas-element-text",
+    "Committed before an empty-canvas click",
+  );
+  await expect(properties).toBeHidden();
+
+  await createdText.dblclick();
+  await expect(editor).toBeFocused();
+  await editor.fill("Committed before using properties");
+  await properties.getByLabel("Element width", { exact: true }).click();
+  await expect(editor).toBeHidden();
+  await expect(properties).toBeVisible();
+  await expect(createdText).toHaveCSS("outline-style", "solid");
+  await expect(createdText).toHaveAttribute(
+    "data-canvas-element-text",
+    "Committed before using properties",
+  );
+
+  await createdText.dblclick();
+  await editor.fill("Committed by Escape");
+  await editor.press("Escape");
+  await expect(editor).toBeHidden();
+  await expect(properties).toBeVisible();
+  await expect(createdText).toHaveCSS("outline-style", "solid");
+  await page.keyboard.press("Escape");
+  await expect(properties).toBeHidden();
+
   await createdText.click();
-  await createdSticker.click({ modifiers: ["Control"] });
+  await createdSticker.click({ modifiers: [additiveSelectionModifier] });
   const groupFrame = canvas.locator("[data-canvas-group-frame]");
   await expect(groupFrame).toBeVisible();
   await createdText.click();
   await expect(groupFrame).toBeHidden();
-  await expect(createdText).toHaveClass(/outline-signal/);
-  await expect(createdSticker).not.toHaveClass(/outline-signal/);
+  await expect(createdText).toHaveCSS("outline-style", "solid");
+  await expect(createdSticker).toHaveCSS("outline-style", "none");
   await toolbar.locator('[data-canvas-tool="arrow"]').click();
   await expect(toolbar.locator('[data-canvas-tool="arrow"]')).toHaveAttribute(
     "aria-pressed",
@@ -109,16 +171,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     "false",
   );
   await expect(properties).toBeHidden();
-  await expect(createdText).not.toHaveClass(/outline-signal/);
+  await expect(createdText).toHaveCSS("outline-style", "none");
   await toolbar.locator('[data-canvas-tool="select"]').click();
 
   await createdText.click({ button: "right" });
   const elementMenu = page.locator("[data-org-editor-context-menu]");
-  await expect(
-    elementMenu.getByRole("menuitem", { name: "Behind Units", exact: true }),
-  ).toBeVisible();
   for (const action of [
-    "Above Units",
     "Send to back",
     "Send backward",
     "Bring forward",
@@ -128,12 +186,14 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   ]) {
     await expect(elementMenu.getByRole("menuitem", { name: action, exact: true })).toBeVisible();
   }
+  await expect(
+    elementMenu.getByRole("menuitem", { name: "Behind Units", exact: true }),
+  ).toHaveCount(0);
+  await expect(elementMenu.getByRole("menuitem", { name: "Above Units", exact: true })).toHaveCount(
+    0,
+  );
   await expect(elementMenu.getByRole("menuitem", { name: "Add Unit", exact: true })).toHaveCount(0);
-  await elementMenu.getByRole("menuitem", { name: "Behind Units", exact: true }).click();
-  await expect(createdText).toHaveAttribute("data-canvas-element-layer", "behindUnits");
-  await createdText.click({ button: "right" });
-  await elementMenu.getByRole("menuitem", { name: "Above Units", exact: true }).click();
-  await expect(createdText).toHaveAttribute("data-canvas-element-layer", "aboveUnits");
+  await page.keyboard.press("Escape");
   await expect(elementMenu).toBeHidden();
 
   await createdText.click();
@@ -141,9 +201,46 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const rotateHandles = createdText.locator("[data-canvas-rotate-handle]");
   await expect(resizeHandles).toHaveCount(8);
   await expect(rotateHandles).toHaveCount(4);
+  await expect(createdText.locator('[data-canvas-transform-handle="corner-resize"]')).toHaveCount(
+    4,
+  );
+  await expect(createdText.locator('[data-canvas-transform-handle="side-resize"]')).toHaveCount(4);
+  await expect(createdText.locator("[data-canvas-connector-handle]")).toHaveCount(4);
+  await expect(properties.getByLabel("Layer", { exact: true })).toHaveCount(0);
   expect(
     await properties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
   ).toBe(true);
+  const widthInput = properties.getByLabel("Element width", { exact: true });
+  const heightInput = properties.getByLabel("Element height", { exact: true });
+  await expect(widthInput).toHaveAttribute("step", "1");
+  await expect(heightInput).toHaveAttribute("step", "1");
+  expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
+  expect(Number.isInteger(Number(await heightInput.inputValue()))).toBe(true);
+
+  await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height - 16);
+  await expect(createdText.locator("[data-canvas-connector-handle]").first()).toHaveCSS(
+    "opacity",
+    "0",
+  );
+  await createdText.hover();
+  await expect(createdText.locator("[data-canvas-connector-handle]").first()).toHaveCSS(
+    "opacity",
+    "1",
+  );
+
+  const cornerHandle = createdText.locator('[data-canvas-resize-handle="topRight"]');
+  const cornerBeforeZoom = await cornerHandle.boundingBox();
+  const viewportActions = page.locator('[data-demo-id="org-editor-viewport-actions"]');
+  await viewportActions.getByRole("button").first().click();
+  await viewportActions.getByRole("button").first().click();
+  const cornerAfterZoom = await cornerHandle.boundingBox();
+  if (!cornerBeforeZoom || !cornerAfterZoom) {
+    throw new Error("Corner resize geometry is unavailable.");
+  }
+  expect(Math.abs(cornerAfterZoom.width - cornerBeforeZoom.width)).toBeLessThan(0.25);
+  expect(Math.abs(cornerAfterZoom.height - cornerBeforeZoom.height)).toBeLessThan(0.25);
+  await viewportActions.getByRole("button").nth(2).click();
+
   const textBeforeResize = await createdText.boundingBox();
   const rightResize = await createdText
     .locator('[data-canvas-resize-handle="rightCenter"]')
@@ -159,9 +256,17 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     rightResize.y + rightResize.height / 2,
     { steps: 4 },
   );
+  await expect
+    .poll(() =>
+      createdText.evaluate((element: HTMLElement) =>
+        Number.isInteger(Number.parseFloat(element.style.width)),
+      ),
+    )
+    .toBe(true);
   await page.mouse.up();
   const textAfterResize = await createdText.boundingBox();
   expect((textAfterResize?.width ?? 0) - textBeforeResize.width).toBeGreaterThan(40);
+  expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
 
   const textBeforeRotate = await centerOf(createdText);
   const textDocumentCenterBeforeRotate = await documentCenterOf(createdText);
@@ -201,7 +306,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(properties).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(properties).toBeHidden();
-  await expect(createdText).not.toHaveClass(/outline-signal/);
+  await expect(createdText).toHaveCSS("outline-style", "none");
 
   await imageElements.last().click();
   await expect(
@@ -212,12 +317,13 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   ).toBeVisible();
 
   await createdText.click();
-  await createdSticker.click({ modifiers: ["Control"] });
+  await createdSticker.click({ modifiers: [additiveSelectionModifier] });
   await expect(groupFrame).toBeVisible();
-  await expect(createdText).toHaveClass(/outline-signal/);
-  await expect(createdSticker).toHaveClass(/outline-signal/);
+  await expect(createdText).toHaveCSS("outline-style", "solid");
+  await expect(createdSticker).toHaveCSS("outline-style", "solid");
   await expect(groupFrame.locator("[data-canvas-group-resize-handle]")).toHaveCount(8);
   await expect(groupFrame.locator("[data-canvas-group-rotate-handle]")).toHaveCount(4);
+  await expect(groupFrame.locator('[data-canvas-transform-handle="corner-resize"]')).toHaveCount(4);
   const textBefore = await documentCenterOf(createdText);
   const stickerBefore = await documentCenterOf(createdSticker);
   const stickerScreenCenter = await centerOf(createdSticker);
@@ -250,7 +356,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await attachedSticker.click();
   const attachedDocumentCenterBeforeRotate = await documentCenterOf(attachedSticker);
   const attachedScreenCenterBeforeRotate = await centerOf(attachedSticker);
-  const attachedRotateHandle = attachedSticker.locator('[data-canvas-rotate-handle="topRight"]');
+  const attachedRotateHandle = attachedSticker.locator('[data-canvas-rotate-handle="bottomLeft"]');
   const attachedRotateHandleBox = await attachedRotateHandle.boundingBox();
   if (!attachedRotateHandleBox)
     throw new Error("Attached Sticker rotation geometry is unavailable.");
@@ -282,7 +388,36 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.keyboard.press("Control+z");
 
   await createdText.click();
-  await createdSticker.click({ modifiers: ["Control"] });
+  await createdText.hover();
+  const connector = createdText.locator('[data-canvas-anchor-id="rightCenter"]');
+  await expect(connector).toHaveCSS("opacity", "1");
+  const connectorBox = await connector.boundingBox();
+  const attachmentTargetBox = await createdSticker.boundingBox();
+  if (!connectorBox || !attachmentTargetBox) {
+    throw new Error("Canvas attachment geometry is unavailable.");
+  }
+  await page.mouse.move(
+    connectorBox.x + connectorBox.width / 2,
+    connectorBox.y + connectorBox.height / 2,
+  );
+  await page.mouse.down();
+  await expect(canvas).toHaveAttribute("data-active-drag-type", "canvasElement");
+  await expect(canvas).toHaveAttribute("data-active-canvas-handle", "attach");
+  await expect(elementMenu).toBeHidden();
+  await page.mouse.move(
+    attachmentTargetBox.x + attachmentTargetBox.width / 2,
+    attachmentTargetBox.y + attachmentTargetBox.height / 2,
+    { steps: 4 },
+  );
+  expect(await canvas.evaluate((element) => [element.scrollLeft, element.scrollTop])).toEqual([
+    0, 0,
+  ]);
+  await expect(canvas.locator("[data-canvas-snap-anchor]")).toHaveCount(1);
+  await page.mouse.up();
+  await expect(canvas.locator("[data-canvas-snap-anchor]")).toHaveCount(0);
+
+  await createdText.click();
+  await createdSticker.click({ modifiers: [additiveSelectionModifier] });
   await expect(groupFrame).toBeVisible();
   await toolbar.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
   const dialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');

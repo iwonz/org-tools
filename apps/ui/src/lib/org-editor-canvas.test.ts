@@ -17,6 +17,8 @@ import {
   hasOrgEditorCanvasElementDependencyCycle,
   layoutOrgEditorCanvasText,
   moveOrgEditorCanvasElement,
+  normalizeOrgEditorCanvasDimension,
+  normalizeOrgEditorCanvasDimensions,
   ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS,
   resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElements,
@@ -198,6 +200,8 @@ describe("Org Editor canvas geometry", () => {
     };
     const fitted = fitOrgEditorCanvasTextElementHeight(text, (value) => [...value].length * 10);
     expect(fitted.height).toBeGreaterThan(text.height);
+    expect(Number.isInteger(fitted.height)).toBe(true);
+    expect(Number.isInteger(fitted.width)).toBe(true);
 
     const image = {
       attachment: null,
@@ -225,6 +229,27 @@ describe("Org Editor canvas geometry", () => {
     expect(transformed.width / transformed.height).toBeCloseTo(2);
     expect(transformed.width).toBe(300);
     expect(transformed.height).toBe(150);
+  });
+
+  test("normalizes rectangle dimensions to bounded whole logical pixels", () => {
+    expect(normalizeOrgEditorCanvasDimension(23.9)).toBe(24);
+    expect(normalizeOrgEditorCanvasDimension(240.51)).toBe(241);
+    expect(normalizeOrgEditorCanvasDimension(20_000.8)).toBe(20_000);
+    expect(normalizeOrgEditorCanvasDimensions({ height: 96.49, width: 240.5 })).toEqual({
+      height: 96,
+      width: 241,
+    });
+
+    const fitted = fitOrgEditorCanvasTextElementHeight(
+      {
+        ...createOrgEditorTextElement({ x: 0, y: 0 }),
+        height: 96.4,
+        text: "short",
+        width: 240.6,
+      },
+      (value) => [...value].length * 10,
+    );
+    expect(fitted).toMatchObject({ height: 96, width: 241 });
   });
 
   test("resizes from every perimeter handle while retaining opposite edges", () => {
@@ -258,6 +283,25 @@ describe("Org Editor canvas geometry", () => {
     }
   });
 
+  test("quantizes resize previews while retaining the opposite edge or corner", () => {
+    const sourceBounds = { height: 100.4, width: 200.4, x: 100, y: 100 };
+    expect(
+      getOrgEditorCanvasResizeBounds({
+        handle: "rightCenter",
+        pointer: { x: 350.6, y: 900 },
+        sourceBounds,
+      }),
+    ).toEqual({ height: 100, width: 251, x: 100, y: 100.2 });
+    const topLeft = getOrgEditorCanvasResizeBounds({
+      handle: "topLeft",
+      pointer: { x: 49.4, y: 59.6 },
+      sourceBounds,
+    });
+    expect(topLeft).toMatchObject({ height: 141, width: 251 });
+    expect(topLeft.x).toBeCloseTo(49.4);
+    expect(topLeft.y).toBeCloseTo(59.4);
+  });
+
   test("resizes locked and rotated rectangles around their local geometry", () => {
     const lockedImage = {
       attachment: null,
@@ -276,10 +320,12 @@ describe("Org Editor canvas geometry", () => {
       y: 100,
     };
     const resizedImage = resizeOrgEditorCanvasRectElement(lockedImage, "rightCenter", {
-      x: 500,
+      x: 500.6,
       y: 150,
     });
-    expect(resizedImage).toMatchObject({ height: 200, width: 400, x: 100, y: 50 });
+    expect(resizedImage).toMatchObject({ height: 200, width: 401, x: 100, y: 50 });
+    expect(Number.isInteger(resizedImage.width)).toBe(true);
+    expect(Number.isInteger(resizedImage.height)).toBe(true);
 
     const rotated = {
       ...createOrgEditorTextElement({ x: 200, y: 150 }),
@@ -296,6 +342,27 @@ describe("Org Editor canvas geometry", () => {
     });
     expect(resizedRotated.width).toBeCloseTo(300);
     expect(getOrgEditorRectAnchorPoint(resizedRotated, "leftCenter")).toEqual(previousLeft);
+  });
+
+  test("rounds group rectangle sizes without moving their transformed centers", () => {
+    const source = {
+      ...createOrgEditorStickerElement({ x: 120, y: 80 }),
+      height: 80.4,
+      width: 120.4,
+      x: 59.8,
+      y: 39.8,
+    };
+    const [transformed] = transformOrgEditorCanvasElements({
+      elements: [source],
+      sourceBounds: { height: 80.4, width: 120.4, x: 59.8, y: 39.8 },
+      targetBounds: { height: 133, width: 199, x: 10, y: 20 },
+    });
+    expect(transformed?.type).toBe("sticker");
+    if (transformed?.type !== "sticker") return;
+    expect(Number.isInteger(transformed.width)).toBe(true);
+    expect(Number.isInteger(transformed.height)).toBe(true);
+    expect(transformed.x + transformed.width / 2).toBeCloseTo(109.5);
+    expect(transformed.y + transformed.height / 2).toBeCloseTo(86.5);
   });
 
   test("derives rotation from the exact selected-bounds center", () => {

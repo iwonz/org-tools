@@ -52,6 +52,20 @@ export const ORG_EDITOR_CANVAS_FONTS = [
   "PT Sans",
 ] as const;
 
+export const normalizeOrgEditorCanvasDimension = (value: number) =>
+  Math.min(
+    ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
+    Math.max(ORG_EDITOR_CANVAS_MIN_RECT_SIZE, Math.round(value)),
+  );
+
+export const normalizeOrgEditorCanvasDimensions = ({
+  height,
+  width,
+}: Pick<OrgEditorCanvasRect, "height" | "width">) => ({
+  height: normalizeOrgEditorCanvasDimension(height),
+  width: normalizeOrgEditorCanvasDimension(width),
+});
+
 export const ORG_EDITOR_RECT_ANCHOR_IDS: readonly OrgEditorRectAnchorId[] = [
   "topLeft",
   "topCenter",
@@ -149,8 +163,10 @@ export const createOrgEditorImageElement = ({
   point: OrgEditorCanvasPoint;
 }): OrgEditorImageElement => {
   const scale = Math.min(1, 320 / Math.max(intrinsicWidth, intrinsicHeight));
-  const width = Math.max(ORG_EDITOR_CANVAS_MIN_RECT_SIZE, intrinsicWidth * scale);
-  const height = Math.max(ORG_EDITOR_CANVAS_MIN_RECT_SIZE, intrinsicHeight * scale);
+  const { height, width } = normalizeOrgEditorCanvasDimensions({
+    height: intrinsicHeight * scale,
+    width: intrinsicWidth * scale,
+  });
   return {
     attachment: null,
     dataUrl,
@@ -415,27 +431,21 @@ export const getOrgEditorCanvasResizeBounds = ({
     const scale = Math.min(maximumScale, Math.max(minimumScale, requestedScale));
     width = sourceBounds.width * scale;
     height = sourceBounds.height * scale;
-
-    if (edges.left) left = sourceRight - width;
-    else if (edges.right) right = sourceBounds.x + width;
-    else {
-      left = sourceBounds.x + (sourceBounds.width - width) / 2;
-      right = left + width;
-    }
-    if (edges.top) top = sourceBottom - height;
-    else if (edges.bottom) bottom = sourceBounds.y + height;
-    else {
-      top = sourceBounds.y + (sourceBounds.height - height) / 2;
-      bottom = top + height;
-    }
-  } else {
-    if (edges.left) left = sourceRight - width;
-    if (edges.right) right = sourceBounds.x + width;
-    if (edges.top) top = sourceBottom - height;
-    if (edges.bottom) bottom = sourceBounds.y + height;
   }
 
-  return { height: bottom - top, width: right - left, x: left, y: top };
+  ({ height, width } = normalizeOrgEditorCanvasDimensions({ height, width }));
+
+  if (edges.left) left = sourceRight - width;
+  else if (edges.right) right = sourceBounds.x + width;
+  else left = sourceBounds.x + (sourceBounds.width - width) / 2;
+  right = left + width;
+
+  if (edges.top) top = sourceBottom - height;
+  else if (edges.bottom) bottom = sourceBounds.y + height;
+  else top = sourceBounds.y + (sourceBounds.height - height) / 2;
+  bottom = top + height;
+
+  return { height, width, x: left, y: top };
 };
 
 /** Resizes one rotated rectangular element in its local axes. */
@@ -1021,22 +1031,47 @@ export const transformOrgEditorCanvasElements = ({
     const scaleY = targetBounds.height / Math.max(1e-6, sourceBounds.height);
     const lockedScale =
       source.type === "image" && source.lockAspectRatio ? Math.min(scaleX, scaleY) : null;
-    const width = Math.max(ORG_EDITOR_CANVAS_MIN_RECT_SIZE, source.width * (lockedScale ?? scaleX));
-    const height = Math.max(
-      ORG_EDITOR_CANVAS_MIN_RECT_SIZE,
-      source.height * (lockedScale ?? scaleY),
-    );
-    return {
+    const idealWidth = source.width * (lockedScale ?? scaleX);
+    const idealHeight = source.height * (lockedScale ?? scaleY);
+    const { height, width } = normalizeOrgEditorCanvasDimensions({
+      height: idealHeight,
+      width: idealWidth,
+    });
+    const rotationValue = normalizeOrgEditorRotation(source.rotation + rotation);
+    const attachment = source.attachment
+      ? { ...source.attachment, offset: transformOffset(source.attachment.offset) }
+      : null;
+    const transformed = {
       ...cloneOrgEditorCanvasElement(source),
-      attachment: source.attachment
-        ? { ...source.attachment, offset: transformOffset(source.attachment.offset) }
-        : null,
+      attachment,
       height,
-      rotation: normalizeOrgEditorRotation(source.rotation + rotation),
+      rotation: rotationValue,
       width,
       x: center.x - width / 2,
       y: center.y - height / 2,
     } as Exclude<OrgEditorCanvasElement, OrgEditorArrowElement>;
+
+    if (!attachment || (height === idealHeight && width === idealWidth)) return transformed;
+
+    const ideal = {
+      ...transformed,
+      height: idealHeight,
+      width: idealWidth,
+      x: center.x - idealWidth / 2,
+      y: center.y - idealHeight / 2,
+    };
+    const idealAnchor = getOrgEditorRectAnchorPoint(ideal, attachment.sourceAnchorId);
+    const roundedAnchor = getOrgEditorRectAnchorPoint(transformed, attachment.sourceAnchorId);
+    return {
+      ...transformed,
+      attachment: {
+        ...attachment,
+        offset: {
+          x: attachment.offset.x + roundedAnchor.x - idealAnchor.x,
+          y: attachment.offset.y + roundedAnchor.y - idealAnchor.y,
+        },
+      },
+    };
   });
 
 export const createOrgEditorCanvasElementKey = (elementId: OrgEditorCanvasElementId) =>
@@ -1181,10 +1216,13 @@ export const fitOrgEditorCanvasTextElementHeight = <
 >(
   element: Element,
   measure: (text: string, typography: OrgEditorTypography) => number,
-): Element => ({
-  ...element,
-  height: Math.max(element.height, getOrgEditorCanvasTextMinimumHeight({ element, measure })),
-});
+): Element => {
+  const dimensions = normalizeOrgEditorCanvasDimensions({
+    height: Math.max(element.height, getOrgEditorCanvasTextMinimumHeight({ element, measure })),
+    width: element.width,
+  });
+  return { ...element, ...dimensions };
+};
 
 export const isFiniteOrgEditorCanvasNumber = (value: unknown): value is number =>
   typeof value === "number" &&

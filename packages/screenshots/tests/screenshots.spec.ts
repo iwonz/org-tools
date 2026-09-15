@@ -476,8 +476,26 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(
     page
       .locator("[data-org-editor-context-menu]")
-      .getByRole("menuitem", { name: "Behind Units", exact: true }),
+      .getByRole("menuitem", { name: "Send to back", exact: true }),
   ).toBeVisible();
+  await expect(
+    page
+      .locator("[data-org-editor-context-menu]")
+      .getByRole("menuitem", { name: "Behind Units", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .locator("[data-org-editor-context-menu]")
+    .getByRole("menuitem", { name: "Send to back", exact: true })
+    .hover();
+  await page.keyboard.press("Escape");
+  const textAnnotation = page
+    .locator('[data-canvas-element-type="text"]')
+    .filter({ hasText: "Product direction · Q4" });
+  await textAnnotation.click();
+  await expect(
+    textAnnotation.locator('[data-canvas-transform-handle="corner-resize"]'),
+  ).toHaveCount(4);
+  await page.mouse.move(1000, 760);
   await capture(page, "editor");
   await page.keyboard.press("Escape");
 

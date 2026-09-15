@@ -18,6 +18,7 @@ import type {
 } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
 import {
+  type CSSProperties,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
@@ -1998,6 +1999,8 @@ export const OrgStructureEditorTab = observer(() => {
   const [editingCanvasElementId, setEditingCanvasElementId] =
     useState<OrgEditorCanvasElementId | null>(null);
   const [editingCanvasText, setEditingCanvasText] = useState<string | null>(null);
+  const editingCanvasElementIdRef = useRef<OrgEditorCanvasElementId | null>(null);
+  const editingCanvasTextRef = useRef<string | null>(null);
   const [canvasToolError, setCanvasToolError] = useState<string | null>(null);
   const [noteUnitId, setNoteUnitId] = useState<OrgEditorUnitId | null>(null);
   const [placementTarget, setPlacementTarget] = useState<{
@@ -3900,6 +3903,8 @@ export const OrgStructureEditorTab = observer(() => {
           ? { ...createOrgEditorTextElement(canvasPoint), text: t("Text") }
           : { ...createOrgEditorStickerElement(canvasPoint), text: t("Note") };
       editor.addCanvasElement(element);
+      editingCanvasElementIdRef.current = element.id;
+      editingCanvasTextRef.current = element.text;
       setEditingCanvasElementId(element.id);
       setEditingCanvasText(element.text);
       setActiveCanvasTool("select");
@@ -3968,8 +3973,10 @@ export const OrgStructureEditorTab = observer(() => {
   };
 
   const finishCanvasTextEditing = () => {
-    const elementId = editingCanvasElementId;
-    const text = editingCanvasText;
+    const elementId = editingCanvasElementIdRef.current;
+    const text = editingCanvasTextRef.current;
+    editingCanvasElementIdRef.current = null;
+    editingCanvasTextRef.current = null;
     setEditingCanvasElementId(null);
     setEditingCanvasText(null);
     if (!elementId || text === null) return;
@@ -3988,6 +3995,19 @@ export const OrgStructureEditorTab = observer(() => {
     setCanvasToolError(null);
   };
 
+  const handleCanvasPointerDownCapture = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!editingCanvasElementIdRef.current) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("textarea[data-canvas-text-editor]")) return;
+    finishCanvasTextEditing();
+  };
+
+  const updateCanvasTextEditing = (text: string) => {
+    if (!editingCanvasElementIdRef.current) return;
+    editingCanvasTextRef.current = text;
+    setEditingCanvasText(text);
+  };
+
   const handleCanvasElementPointerDown = (
     event: React.PointerEvent<Element>,
     element: OrgEditorCanvasElement,
@@ -3995,6 +4015,7 @@ export const OrgStructureEditorTab = observer(() => {
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    setContextMenu(null);
     const item = { elementId: element.id, type: "element" } as const;
     const mode = selectionModeFromEvent(event);
     const preserveForPotentialGroupDrag =
@@ -4059,6 +4080,7 @@ export const OrgStructureEditorTab = observer(() => {
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    setContextMenu(null);
     if (!selectedCanvasElementIds.has(element.id)) {
       editor.setSelectedItems([{ elementId: element.id, type: "element" }]);
     }
@@ -4091,6 +4113,8 @@ export const OrgStructureEditorTab = observer(() => {
   const startCanvasTextEditing = (elementId: OrgEditorCanvasElementId) => {
     const element = editor.canvasElements.find((candidate) => candidate.id === elementId);
     if (element?.type !== "text" && element?.type !== "sticker") return;
+    editingCanvasElementIdRef.current = elementId;
+    editingCanvasTextRef.current = element.text;
     setEditingCanvasElementId(elementId);
     setEditingCanvasText(element.text);
   };
@@ -4458,7 +4482,7 @@ export const OrgStructureEditorTab = observer(() => {
           key={element.id}
           onDoubleClick={startCanvasTextEditing}
           onContextMenu={handleCanvasElementContextMenu}
-          onEditingTextChange={setEditingCanvasText}
+          onEditingTextChange={updateCanvasTextEditing}
           onFinishEditing={finishCanvasTextEditing}
           onHandlePointerDown={handleCanvasElementHandlePointerDown}
           onPointerDown={handleCanvasElementPointerDown}
@@ -4476,10 +4500,13 @@ export const OrgStructureEditorTab = observer(() => {
         <div
           aria-label={t("Org Editor canvas")}
           className={cn(
-            "absolute inset-0 select-none overflow-hidden bg-canvas",
+            "absolute inset-0 select-none overflow-clip bg-canvas",
             editor.units.length > 0 && "cursor-grab active:cursor-grabbing",
           )}
           data-demo-id="org-editor-canvas"
+          data-active-canvas-handle={
+            dragState?.type === "canvasElement" ? dragState.handle.type : "none"
+          }
           data-active-drag-type={dragState?.type ?? "none"}
           data-canvas-element-spatial-candidate-count={visibleCanvasElementQuery.candidateCount}
           data-grid-base-size={ORG_EDITOR_GRID_SIZE}
@@ -4491,6 +4518,7 @@ export const OrgStructureEditorTab = observer(() => {
           onAuxClick={(event) => event.preventDefault()}
           onContextMenu={handleCanvasContextMenu}
           onPointerDown={handleCanvasPointerDown}
+          onPointerDownCapture={handleCanvasPointerDownCapture}
           ref={canvasRef}
           role="application"
           style={{
@@ -4510,10 +4538,22 @@ export const OrgStructureEditorTab = observer(() => {
             data-org-editor-rendered-unit-count={visibleUnits.length}
             data-org-editor-total-unit-count={editor.units.length}
             dir="ltr"
-            style={{
-              transform: `translate(${renderViewport.x}px, ${renderViewport.y}px) scale(${renderViewport.scale})`,
-              transformOrigin: "0 0",
-            }}
+            style={
+              {
+                "--org-editor-canvas-ui-connector-offset": `${-10 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-connector-size": `${7 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-corner-offset": `${-4 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-corner-size": `${8 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-outline-offset": `${2 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-outline-width": `${1 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-rotate-offset": `${-22 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-rotate-size": `${18 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-side-offset": `${-6 / renderViewport.scale}px`,
+                "--org-editor-canvas-ui-side-size": `${12 / renderViewport.scale}px`,
+                transform: `translate(${renderViewport.x}px, ${renderViewport.y}px) scale(${renderViewport.scale})`,
+                transformOrigin: "0 0",
+              } as CSSProperties
+            }
           >
             <svg
               aria-hidden="true"
@@ -4725,25 +4765,6 @@ export const OrgStructureEditorTab = observer(() => {
           )}
           {contextMenu?.type === "elements" && (
             <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
-              <OrgEditorMenuButton
-                onClick={() => {
-                  editor.setCanvasElementLayer(contextMenu.elementIds, "behindUnits");
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlineQueueList />
-                {t("Behind Units")}
-              </OrgEditorMenuButton>
-              <OrgEditorMenuButton
-                onClick={() => {
-                  editor.setCanvasElementLayer(contextMenu.elementIds, "aboveUnits");
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlineQueueList className="rotate-180" />
-                {t("Above Units")}
-              </OrgEditorMenuButton>
-              <span className="my-1 h-px bg-border" />
               {(
                 [
                   ["back", "Send to back"],
@@ -5115,12 +5136,11 @@ export const OrgStructureEditorTab = observer(() => {
               imageInputRef.current?.click();
               setActiveCanvasTool("select");
             }}
-            onLayer={(layer) => editor.setCanvasElementLayer(selectedCanvasElementIds, layer)}
             onOrder={(direction) =>
               editor.reorderCanvasElements(selectedCanvasElementIds, direction)
             }
             onToolChange={(tool) => {
-              if (editingCanvasElementId) finishCanvasTextEditing();
+              if (editingCanvasElementIdRef.current) finishCanvasTextEditing();
               if (tool !== "select") editor.clearSelection();
               setContextMenu(null);
               setActiveCanvasTool(tool);

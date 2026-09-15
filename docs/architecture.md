@@ -58,11 +58,17 @@ View-local history, cloning, persistence, live-tab synchronization, and complete
 Plain element pointer selection replaces the previous selection while Ctrl/Cmd explicitly toggles
 group membership. Creation-tool activation clears the previous item selection, and right-click is
 routed through a discriminated element menu whose commands affect canvas elements only. Rectangle
-and group frames share eight perimeter resize directions plus four corner rotation targets; resize
-uses local axes and a fixed opposite edge. One rectangular element rotates around its live center
-from current position and dimensions, compensating an attachment offset so target resolution cannot
-move that pivot; groups retain the exact selected-bounds center. Escape clears a resting element
-selection after higher-priority editing, menu, and transform interactions have handled the key.
+and group frames use one zoom-compensated solid outline, four visible corner resize markers,
+transparent side resize strips, and transparent outside-corner rotation targets. Resize uses local
+axes, retains the opposite edge or corner, and normalizes rectangular width and height to whole
+logical pixels without tightening validation of older fractional State. One rectangular element
+rotates around its live center from current position and dimensions, compensating an attachment
+offset so target resolution cannot move that pivot; groups retain the exact selected-bounds center.
+Side connector handles appear only while the selected frame is hovered or focused, and an
+attachment drag paints only its nearest valid target. Escape clears a resting element selection
+after higher-priority editing, menu, and transform interactions have handled the key. Text
+completion is idempotent across capture, blur, Escape, and tool changes, and textarea focus cannot
+create an internal canvas scroll offset.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
@@ -279,7 +285,9 @@ edit or deletion.
 The Editor omits the shared content header. A styled View selector plus Create, Rename, and Delete
 actions occupy the logical start beside Undo/Redo; the system View cannot be renamed or deleted.
 Search and canvas commands occupy the logical end and mirror around the LTR world in Arabic. The
-Editor keeps pointer and wheel previews outside the MobX structure document. One animation-frame
+Editor keeps pointer and wheel previews outside the MobX structure document. The canvas uses
+clipping rather than a browser scroll container, so navigation remains exclusively represented by
+the View viewport. One animation-frame
 scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce
 performs the single snapped command and persistence observation. A geometry-keyed spatial index
 limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
