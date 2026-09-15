@@ -20,6 +20,7 @@ import {
   ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS,
   resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElements,
+  rotateOrgEditorCanvasRectElementAroundCenter,
   transformOrgEditorCanvasElements,
 } from "@/lib/org-editor-canvas";
 import { createSpatialIndex } from "@/lib/org-editor-interaction";
@@ -321,6 +322,71 @@ describe("Org Editor canvas geometry", () => {
     expect(rotated.rotation).toBe(102);
     expect(rotated.x + rotated.width / 2).toBeCloseTo(120);
     expect(rotated.y + rotated.height / 2).toBeCloseTo(90);
+  });
+
+  test("rotates one resized attached rectangle around its live center", () => {
+    const target = {
+      ...createOrgEditorStickerElement({ x: 90, y: 80 }),
+      height: 110,
+      id: uuid(32),
+      width: 150,
+      x: 15,
+      y: 25,
+    };
+    const sourceWithoutAttachment = {
+      ...createOrgEditorTextElement({ x: 360, y: 240 }),
+      height: 96,
+      id: uuid(33),
+      rotation: 27,
+      width: 280,
+      x: 220,
+      y: 192,
+    };
+    const targetAnchor = getOrgEditorRectAnchorPoint(target, "rightCenter");
+    const sourceAnchor = getOrgEditorRectAnchorPoint(sourceWithoutAttachment, "topLeft");
+    const source = {
+      ...sourceWithoutAttachment,
+      attachment: {
+        offset: {
+          x: sourceAnchor.x - targetAnchor.x,
+          y: sourceAnchor.y - targetAnchor.y,
+        },
+        sourceAnchorId: "topLeft" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { elementId: target.id, type: "element" as const },
+        },
+      },
+    };
+    const resolvedBefore = resolveOrgEditorCanvasElements({
+      elements: [target, source],
+      resolveExternalAnchor: () => null,
+    }).get(source.id)?.element;
+    expect(resolvedBefore?.type).toBe("text");
+    if (resolvedBefore?.type !== "text") return;
+    const centerBefore = {
+      x: resolvedBefore.x + resolvedBefore.width / 2,
+      y: resolvedBefore.y + resolvedBefore.height / 2,
+    };
+
+    const rotated = rotateOrgEditorCanvasRectElementAroundCenter(resolvedBefore, 81);
+    expect(rotated).toMatchObject({
+      height: 96,
+      rotation: 108,
+      width: 280,
+      x: resolvedBefore.x,
+      y: resolvedBefore.y,
+    });
+    expect(rotated.attachment?.offset).not.toEqual(resolvedBefore.attachment?.offset);
+
+    const resolvedAfter = resolveOrgEditorCanvasElements({
+      elements: [target, rotated],
+      resolveExternalAnchor: () => null,
+    }).get(rotated.id)?.element;
+    expect(resolvedAfter?.type).toBe("text");
+    if (resolvedAfter?.type !== "text") return;
+    expect(resolvedAfter.x + resolvedAfter.width / 2).toBeCloseTo(centerBefore.x);
+    expect(resolvedAfter.y + resolvedAfter.height / 2).toBeCloseTo(centerBefore.y);
   });
 
   test("keeps attachment offsets stable when a target moves with its dependent", () => {

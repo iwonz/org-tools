@@ -198,6 +198,10 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     ),
   ).toBeGreaterThan(45);
   await page.keyboard.press("Control+z");
+  await expect(properties).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(properties).toBeHidden();
+  await expect(createdText).not.toHaveClass(/outline-signal/);
 
   await imageElements.last().click();
   await expect(
@@ -242,6 +246,40 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.mouse.up();
   const attachedAfter = await centerOf(attachedSticker);
   expect(attachedAfter.x - attachedBefore.x).toBeGreaterThan(40);
+
+  await attachedSticker.click();
+  const attachedDocumentCenterBeforeRotate = await documentCenterOf(attachedSticker);
+  const attachedScreenCenterBeforeRotate = await centerOf(attachedSticker);
+  const attachedRotateHandle = attachedSticker.locator('[data-canvas-rotate-handle="topRight"]');
+  const attachedRotateHandleBox = await attachedRotateHandle.boundingBox();
+  if (!attachedRotateHandleBox)
+    throw new Error("Attached Sticker rotation geometry is unavailable.");
+  const attachedRotateStart = {
+    x: attachedRotateHandleBox.x + attachedRotateHandleBox.width / 2,
+    y: attachedRotateHandleBox.y + attachedRotateHandleBox.height / 2,
+  };
+  const attachedRotateVector = {
+    x: attachedRotateStart.x - attachedScreenCenterBeforeRotate.x,
+    y: attachedRotateStart.y - attachedScreenCenterBeforeRotate.y,
+  };
+  await attachedRotateHandle.hover();
+  await page.mouse.down();
+  await page.mouse.move(
+    attachedScreenCenterBeforeRotate.x - attachedRotateVector.y,
+    attachedScreenCenterBeforeRotate.y + attachedRotateVector.x,
+    { steps: 5 },
+  );
+  await page.mouse.up();
+  await expect
+    .poll(async () => {
+      const center = await documentCenterOf(attachedSticker);
+      return Math.hypot(
+        center.x - attachedDocumentCenterBeforeRotate.x,
+        center.y - attachedDocumentCenterBeforeRotate.y,
+      );
+    })
+    .toBeLessThan(0.01);
+  await page.keyboard.press("Control+z");
 
   await createdText.click();
   await createdSticker.click({ modifiers: ["Control"] });

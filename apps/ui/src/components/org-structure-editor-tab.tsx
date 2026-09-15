@@ -187,6 +187,7 @@ import {
   resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElementSubset,
   resolveOrgEditorCanvasElements,
+  rotateOrgEditorCanvasRectElementAroundCenter,
   transformOrgEditorCanvasElements,
 } from "@/lib/org-editor-canvas";
 import { loadOrgEditorCanvasImageFile } from "@/lib/org-editor-canvas-image";
@@ -428,13 +429,18 @@ const getCanvasElementDragPreview = (
     });
   }
   if (drag.handle.type === "rotate") {
+    const rotation = getOrgEditorCanvasRotationDelta(
+      drag.sourceBounds,
+      drag.startCanvasPoint,
+      currentPoint,
+    );
+    const [singleElement] = drag.sourceElements;
+    if (drag.sourceElements.length === 1 && singleElement && singleElement.type !== "arrow") {
+      return [rotateOrgEditorCanvasRectElementAroundCenter(singleElement, rotation)];
+    }
     return transformOrgEditorCanvasElements({
       elements: drag.sourceElements,
-      rotation: getOrgEditorCanvasRotationDelta(
-        drag.sourceBounds,
-        drag.startCanvasPoint,
-        currentPoint,
-      ),
+      rotation,
       sourceBounds: drag.sourceBounds,
       targetBounds: drag.sourceBounds,
     });
@@ -3623,6 +3629,20 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       const key = event.key.toLocaleLowerCase();
+
+      if (event.key === "Escape") {
+        if (
+          event.defaultPrevented ||
+          contextMenu ||
+          dragStateRef.current ||
+          editor.selectedElementIds.size === 0
+        ) {
+          return;
+        }
+        event.preventDefault();
+        editor.clearSelection();
+        return;
+      }
 
       if ((event.metaKey || event.ctrlKey) && key === "z") {
         event.preventDefault();

@@ -117,8 +117,10 @@ control.
   marquee selection, group move/resize/rotation, layer-plane/order actions, Delete, Copy/Paste,
   Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture. Selected
   rectangular and group frames resize from every side or corner and rotate from any corner around
-  the exact center; there is no detached rotation handle. Contextual settings wrap into compact
-  readable groups.
+  the exact center; one element keeps the center of its current width and height fixed even when it
+  is attached, while groups use their shared bounds center. There is no detached rotation handle.
+  Press Escape outside an active editor, menu, or transform to clear a canvas-element selection.
+  Contextual settings wrap into compact readable groups.
   Every hierarchy total counts unique Employees in that Unit and all descendants, including anyone
   also assigned to ancestors. Bosses count once, and collapse or distribution mode never changes
   the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.

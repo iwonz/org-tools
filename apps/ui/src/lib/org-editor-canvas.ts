@@ -497,6 +497,33 @@ export const resizeOrgEditorCanvasRectElement = <
   };
 };
 
+/** Rotates one rectangle around its live center while keeping an attachment from moving it. */
+export const rotateOrgEditorCanvasRectElementAroundCenter = <
+  Element extends OrgEditorImageElement | OrgEditorStickerElement | OrgEditorTextElement,
+>(
+  element: Element,
+  rotationDelta: number,
+): Element => {
+  const rotated = {
+    ...cloneOrgEditorCanvasElement(element),
+    rotation: normalizeOrgEditorRotation(element.rotation + rotationDelta),
+  } as Element;
+
+  if (!element.attachment) return rotated;
+  const previousAnchor = getOrgEditorRectAnchorPoint(element, element.attachment.sourceAnchorId);
+  const nextAnchor = getOrgEditorRectAnchorPoint(rotated, element.attachment.sourceAnchorId);
+  return {
+    ...rotated,
+    attachment: {
+      ...element.attachment,
+      offset: {
+        x: element.attachment.offset.x + nextAnchor.x - previousAnchor.x,
+        y: element.attachment.offset.y + nextAnchor.y - previousAnchor.y,
+      },
+    },
+  };
+};
+
 export const getOrgEditorCanvasRotationDelta = (
   bounds: OrgEditorCanvasRect,
   start: OrgEditorCanvasPoint,

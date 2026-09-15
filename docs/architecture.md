@@ -59,8 +59,10 @@ Plain element pointer selection replaces the previous selection while Ctrl/Cmd e
 group membership. Creation-tool activation clears the previous item selection, and right-click is
 routed through a discriminated element menu whose commands affect canvas elements only. Rectangle
 and group frames share eight perimeter resize directions plus four corner rotation targets; resize
-uses local axes and a fixed opposite edge, while rotation derives one angle around the exact selected
-bounds center.
+uses local axes and a fixed opposite edge. One rectangular element rotates around its live center
+from current position and dimensions, compensating an attachment offset so target resolution cannot
+move that pivot; groups retain the exact selected-bounds center. Escape clears a resting element
+selection after higher-priority editing, menu, and transform interactions have handled the key.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View

@@ -622,7 +622,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm a plain canvas-element click selects only that element, Ctrl/Cmd creates an explicit
   group, choosing a creation tool clears prior selection, and element right-click exposes only
   element layer/order, Duplicate, and Delete actions. Verify eight resize directions, four corner
-  rotation targets, a stable center during rotation, and readable non-overlapping property groups.
+  rotation targets, a stable live center for free and attached single-element rotation, Escape
+  selection clearing, and readable non-overlapping property groups.
 - Confirm Employee Import shows a bounded richest-record preview beside virtualized fixed-source →
   target-Select rows, transfers occupied targets, imports Teams only through mapping, and keeps
   duplicate review virtualized.
