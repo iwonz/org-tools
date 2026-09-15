@@ -37,4 +37,4 @@
 
 - [x] 7.1 Run formatting, lint, typecheck, unit tests, development check, production build, browser tests, Pages build/check, public check, strict OpenSpec validation, and diff checks.
 - [x] 7.2 Generate and visually inspect every gallery PNG twice and verify deterministic hashes.
-- [ ] 7.3 Synchronize canonical specs, archive the change, integrate current origin/main, merge and push main, delete the merged branch, and verify a clean synchronized repository with no active changes.
+- [x] 7.3 Synchronize canonical specs, archive the change, integrate current origin/main, merge and push main, delete the merged branch, and verify a clean synchronized repository with no active changes.
