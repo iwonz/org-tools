@@ -11,14 +11,14 @@ surface SHALL show the total catalog count below search and SHALL additionally s
 count only while search or filters are active. The populated Editor SHALL place Search, layout,
 hierarchy, and Image export controls in one compact top logical-end toolbar surface, a View selector
 and lifecycle actions at the top logical start, history plus viewport controls at the bottom logical
-start, and tools at the bottom geometric center. Editor and Units SHALL operate on the same Unit document only while the
-system View is active; custom Views SHALL keep independent Unit documents over the global Employee
-catalog. The Editor canvas SHALL retain a distinct neutral-gray background while the sidebar,
-context header, and ordinary workflows use the layered shell system. Selected Team nodes SHALL
-retain the same opaque background as their resting state and communicate selection only through the
-existing semantic boundary. Arrange and hierarchy commands SHALL use normal text weight and place
-their thematic icon before the label. Closing Editor Search SHALL clear its query, and an empty query
-SHALL render no explanatory result surface.
+start, and tools at the bottom geometric center. Editor and Units SHALL operate on the same Unit
+document only while the system View is active; custom Views SHALL keep independent Unit documents
+over the global Employee catalog. The Editor canvas SHALL retain a distinct neutral-gray background
+while the sidebar, context header, and ordinary workflows use the layered shell system. Selected
+Team nodes SHALL retain the same opaque background as their resting state and communicate selection
+only through the existing semantic boundary. Layout and hierarchy commands SHALL use normal text
+weight and place their thematic icon before the label. Closing Editor Search SHALL clear its query,
+and an empty query SHALL render no explanatory result surface.
 
 #### Scenario: Product navigation order
 - **WHEN** the product shell renders in any supported locale
@@ -44,8 +44,7 @@ SHALL render no explanatory result surface.
 
 #### Scenario: Narrow application shell
 - **WHEN** the viewport is narrower than 1024 px
-- **THEN** the sidebar uses a 64 px icon rail whose controls hide visible labels while retaining
-  localized accessible names and tooltips
+- **THEN** the sidebar uses a 64 px icon rail whose controls hide visible labels while retaining localized accessible names and tooltips
 - **AND** the workspace and icon-only context action remain contained without page-level overflow or changing navigation order
 
 #### Scenario: Populated Employee catalog count
@@ -58,7 +57,7 @@ SHALL render no explanatory result surface.
 
 #### Scenario: Editor control surfaces
 - **WHEN** current Units exist
-- **THEN** View management is top-left, Search, layout, arrange, hierarchy, and Image export are top-right, history plus viewport controls are bottom-left, and tools are centered at the bottom
+- **THEN** View management is top-left, Search, layout, hierarchy, and Image export are top-right, history plus viewport controls are bottom-left without an internal separator, and tools are centered at the bottom
 - **AND** every toolbar surface shares the same background, blur, radius, six-pixel padding, 48-pixel height, and 36-pixel control height without a decorative border or shadow
 
 #### Scenario: Editor search placement
@@ -540,31 +539,39 @@ movement SHALL preserve ordinary single-click replacement behavior.
 - **THEN** ordinary selection reduces to that Unit without creating a move command
 
 ### Requirement: Arrange targets an explicit Unit multi-selection
-When at least two Units are selected, Arrange SHALL label itself `Arrange selected` and lay out only
-those Units as an induced forest. It SHALL preserve the previous group center, snap affected origins
-to the 24-unit grid, avoid overlap with unselected Units, preserve selection, and create one history
-command and organization write. Zero or one selected Unit SHALL retain full-hierarchy Arrange.
+Every Vertical or Horizontal layout activation SHALL arrange using that requested direction,
+including a repeated activation of the already selected direction. When at least two Units are
+selected, the activation SHALL lay out only those Units as an induced forest. It SHALL preserve the
+previous group center, snap affected origins to the 24-unit grid, avoid overlap with unselected
+Units, preserve selection, and create one history command and organization write. Zero or one
+selected Unit SHALL arrange the complete hierarchy. A separate Arrange action SHALL NOT render.
 
-#### Scenario: Arrange selected Units
-- **WHEN** two or more Units are selected and Arrange is activated
+#### Scenario: Repeat the active layout direction
+- **WHEN** the user activates the currently selected Vertical or Horizontal layout direction
+- **THEN** the applicable Unit hierarchy is arranged again in that direction as one undoable command
+
+#### Scenario: Arrange selected Units from a direction
+- **WHEN** two or more Units are selected and either layout direction is activated
 - **THEN** only their coordinates change and their internal selected parent relationships determine layout
 
 #### Scenario: Keep unselected descendants stationary
 - **WHEN** a selected Unit has an unselected descendant
-- **THEN** selected-only Arrange does not move or implicitly select that descendant
+- **THEN** selected-only arrangement does not move or implicitly select that descendant
 
 #### Scenario: Undo selected arrangement
-- **WHEN** selected-only Arrange completes and Undo is activated
+- **WHEN** selected-only arrangement completes and Undo is activated
 - **THEN** one undo restores all affected coordinates without changing unselected Units
 
 ### Requirement: Editor controls maximize and respect the canvas
 Editor SHALL omit the shared content header. View management SHALL occupy the top logical-start
-surface. Search, layout direction, Arrange, Collapse/Expand, and full-View Image export SHALL occupy
-a top logical-end surface, with Export last and available in an empty View. Undo/Redo SHALL join
-viewport scale and focus controls in one bottom logical-start surface. Select, Text, Arrow, Sticker,
-and Image tools SHALL occupy the bottom geometric center, with applicable contextual properties in a
-separate same-width row directly above them. Search SHALL be the inner-start control and expand away
-from the anchored group without shifting its other actions.
+surface. Search, layout direction, Collapse/Expand, and full-View Image export SHALL occupy a top
+logical-end surface, with Export last and available in an empty View. Undo/Redo SHALL join viewport
+scale and focus controls in one bottom logical-start surface without a separator between history and
+viewport actions. Select, Text, Arrow, Sticker, and Image tools SHALL occupy the bottom geometric
+center, with applicable contextual properties in a separate same-width row directly above them.
+Search SHALL be the inner-start control and expand away from the anchored group without shifting its
+other actions. View settings SHALL group its sections through spacing and headings without a
+horizontal divider.
 
 Every Editor toolbar surface SHALL use the same non-bordered, non-shadowed background, blur, radius,
 six-pixel padding, 48-pixel total height, and 36-pixel button height. At widths below the maintained
@@ -574,7 +581,7 @@ geometric positions and LTR coordinates.
 
 #### Scenario: Render Editor controls in LTR
 - **WHEN** Editor opens in a left-to-right locale at desktop width
-- **THEN** View management is top-left, canvas commands and Export are top-right, history and viewport controls are bottom-left, and tools are centered at the bottom
+- **THEN** View management is top-left, Search, layout, hierarchy, and Export are top-right, history and viewport controls are bottom-left without an internal divider, and tools are centered at the bottom
 
 #### Scenario: Render Editor controls in RTL
 - **WHEN** Editor opens in Arabic
@@ -587,6 +594,10 @@ geometric positions and LTR coordinates.
 #### Scenario: Avoid compact toolbar collisions
 - **WHEN** Editor renders below the maintained desktop breakpoint with or without contextual properties
 - **THEN** the top-end and bottom toolbar groups use separate rows without overlap, clipping, or moving the centered tool row off screen
+
+#### Scenario: Separate View settings semantically
+- **WHEN** View settings shows Unit display and Distribution mode
+- **THEN** headings and spacing distinguish the sections without a horizontal rule
 
 #### Scenario: Export an empty View
 - **WHEN** the active View has no Units or canvas elements
@@ -710,14 +721,22 @@ behavior. Navigation SHALL reuse the Editor's exact Employee occurrence reveal a
 - **THEN** the Unit expands before the exact row is selected and centered
 
 ### Requirement: Layout directions are independently selectable
-The Editor SHALL preserve the compact two-icon layout control while providing separate accessible pressed buttons for top-down and left-to-right direction. Selecting a different direction SHALL invoke the existing undoable arrangement command once. Selecting the active direction MUST NOT change state or geometry. The separate Arrange command SHALL remain available.
+The Editor SHALL preserve the compact two-icon layout control with separate accessible pressed
+buttons for top-down and left-to-right direction. Activating either direction SHALL invoke the
+existing undoable arrangement command in that direction, including repeated activation of the
+currently pressed direction. At least two selected Units SHALL use selected-only arrangement;
+otherwise the complete hierarchy SHALL be arranged. A separate Arrange command SHALL NOT render.
 
 #### Scenario: Select one direction explicitly
 - **WHEN** a user clicks or keyboard-activates a direction button
-- **THEN** that direction becomes active and repeated activation is a no-op
+- **THEN** that direction becomes active and the applicable hierarchy is arranged once
 
-#### Scenario: Undo a direction change
-- **WHEN** the user changes direction and then performs Undo
+#### Scenario: Repeat one direction explicitly
+- **WHEN** a user activates the already pressed direction button
+- **THEN** the applicable hierarchy is arranged again in that direction as one undoable command
+
+#### Scenario: Undo a direction arrangement
+- **WHEN** the user activates a direction and then performs Undo
 - **THEN** the previous direction and Unit geometry are restored together
 
 ### Requirement: Every hierarchy count is a unique subtree total
@@ -756,101 +775,81 @@ restore focus; changing or deleting its View SHALL close it safely.
 
 ### Requirement: Editor provides durable canvas tools
 The Editor SHALL place a View-local tools surface at the bottom geometric center, including Select,
-Text, Arrow, Sticker, and Image without full-View Image export or element command actions. The Text
-tool SHALL use a letter `T` icon, Sticker SHALL use a sticker-shaped icon, and exactly one tool SHALL
-appear active. Choosing Text, Arrow, Sticker, or Image SHALL clear the current Unit, Employee, and
-canvas-element selection before activating the requested creation workflow; choosing another tool
-while an element is selected SHALL immediately remove that element's selection frame and properties.
-Text and Sticker SHALL support bounded text, System or Georgia family, size, Regular or Bold weight,
-foreground, horizontal and vertical alignment, rotation, and resizing. Bold SHALL be one pressed
-toggle that stores 700 when active and 400 when inactive; current UI operations SHALL NOT create
-weight 500. Sticker SHALL additionally support background color and a flat four-pixel-radius surface
-with one tonal border and no fold, sheen, or shadow, mirrored in Editor PNG. Image SHALL support
-local file and clipboard PNG, JPEG, or WebP insertion, independent-axis resize, Shift-modified
-aspect-preserving resize, and rotation without a persistent aspect-lock control. Arrow SHALL be a
-cubic Bezier with editable control handles, color, width, dash style, and independent endpoint
-markers. The tools surface SHALL remain usable in an otherwise empty View.
+Text, Arrow, Sticker, and Image without full-View Image export or element command actions. Text SHALL
+use a `Tt` glyph, Arrow SHALL use a Bezier-curve glyph, Sticker SHALL use a square sticker glyph, and
+exactly one tool SHALL appear active. Choosing Text, Arrow, Sticker, or Image SHALL clear the current
+Unit, Employee, and canvas-element selection before activating the requested creation workflow.
 
-The contextual property surface SHALL use one auto-width row directly above the tools and SHALL
-render only for one selected element with applicable editable properties. It SHALL keep applicable
-appearance controls inline, expose horizontal and vertical text alignment through one icon-only
-3-by-3 popover, and expose Width, Height, and Rotation through one geometry popover. Back, Front,
-Duplicate, Delete, and a More trigger SHALL NOT appear in contextual properties; those commands
-remain in the canvas-element context menu and existing keyboard flows. Long localized control names
-SHALL remain available through accessible names and tooltips without appearing as clipped trigger
-text. Width and Height controls SHALL show and commit whole logical pixels with a step of one while
-the State validator continues to accept existing finite fractional dimensions.
+Text SHALL persist bounded plain content, base typography, normalized non-overlapping grapheme-safe
+inline format ranges, automatic/fixed width, derived height, and none/block/per-line fill. Selection
+formatting SHALL support family, size, Regular/Bold weight, and foreground color. A non-empty range
+SHALL receive the requested property, a caret SHALL apply it to subsequent input, and an element
+property change outside editing SHALL apply to the complete Text. Paste SHALL consume text/plain and
+MUST NOT retain external HTML or styling. Text SHALL expose horizontal alignment only. Sticker SHALL
+retain bounded plain text, horizontal and vertical alignment, background color, and its flat
+four-pixel-radius bordered surface.
 
-The current family values SHALL be canonical `system-ui`, presented as localized System with a
-local sans-serif stack, and `Georgia`, presented with local Times/serif fallbacks. The State validator
-SHALL continue to accept the previous ten canvas family strings and weight 500. Resting DOM, drafts,
-measurement, auto-fit, and PNG SHALL resolve a legacy family to System and legacy weight 500 to
-Regular without changing untouched State. The first explicit typography edit SHALL store the
-resolved current family and weight together with the requested change as one history command.
+The contextual property surface SHALL use one auto-width row directly above the tools and render
+only for one selected element with applicable editable properties. Text geometry SHALL expose Width
+and Rotation without Height. Text left/right and corner resize targets SHALL modify width only;
+height SHALL be derived from content, wrapping, and font sizes. New auto-width Text SHALL follow its
+content until a manual width edit switches it to fixed-width. Empty Text SHALL retain at least a
+48-by-32 logical-pixel selectable box. Other rectangle geometry and whole-pixel behavior SHALL
+remain unchanged.
 
-#### Scenario: Add and format every durable element
-- **WHEN** the user creates Text, Sticker, Image, and Arrow elements and changes their supported properties
-- **THEN** the active View renders the committed values at their world coordinates and Undo/Redo treats each completed edit as one View-local command
+The current family values SHALL be `system-ui`, `Georgia`, `Bebas Neue`, `Lobster`, and `Montserrat`.
+System SHALL use a localized label; the other names SHALL render literally. All families SHALL use
+local stacks or bundled files without a remote request. Montserrat SHALL resolve as a current
+family; other historical family strings SHALL resolve to System and weight 500 to Regular. Bold
+SHALL request weight 700, including local synthesis for the regular-only Bebas Neue and Lobster.
 
-#### Scenario: Insert a clipboard image
-- **WHEN** the canvas has editing focus and the user pastes a supported local image outside an editable field
-- **THEN** one selected Image element is created at the current viewport center without interpreting a remote URL or replacing native text paste
+#### Scenario: Use thematic tool icons
+- **WHEN** the tools surface renders
+- **THEN** Text shows `Tt`, Arrow shows a Bezier curve, and Sticker shows a square sticker without changing their accessible names
 
-#### Scenario: Preview an interaction
-- **WHEN** a move, resize, rotate, Bezier-handle, anchor, or text-edit gesture is in progress
-- **THEN** its latest preview is frame-coalesced without a document write and completion creates at most one history command and automatic write
+#### Scenario: Create automatic Text
+- **WHEN** the user creates Text, types, deletes all content, or changes its inline font sizes
+- **THEN** auto-width follows content, height always follows the shared layout, and empty content retains a selectable minimum box
 
-#### Scenario: Switch from a selected element to a creation tool
-- **WHEN** a canvas element is selected and the user chooses Text, Arrow, Sticker, or Image
-- **THEN** the prior selection and property surface clear immediately and only the chosen tool appears active
+#### Scenario: Fix Text width manually
+- **WHEN** the user drags a Text width target or changes its Width field
+- **THEN** width becomes fixed, text wraps within it, derived height updates, and no direct Height action is available
 
-#### Scenario: Render compact properties without commands
-- **WHEN** one element, a group, or a mixed canvas selection is active at a maintained desktop or narrow viewport
-- **THEN** one selected element shows only applicable appearance and geometry controls while a selection without shared editable properties shows no empty row or duplicate context-menu actions
+#### Scenario: Format a Text selection
+- **WHEN** the user selects part of Text and changes family, size, Bold, or color
+- **THEN** only that grapheme-safe range changes and adjacent equivalent ranges normalize without losing content or selection
 
-#### Scenario: Choose two-dimensional text alignment
-- **WHEN** the user opens alignment for Text or Sticker and chooses one of the nine horizontal and vertical combinations
-- **THEN** the trigger reflects that combination and draft, resting DOM, and PNG use the same saved alignment
+#### Scenario: Format at a caret
+- **WHEN** the user changes inline typography at a collapsed caret and continues typing
+- **THEN** subsequent text uses the pending style while existing text remains unchanged
 
-#### Scenario: Toggle Bold
-- **WHEN** the user activates or deactivates the Bold button for Text or Sticker
-- **THEN** its pressed state and text use weight 700 or 400 respectively and the completed toggle creates one history command
+#### Scenario: Paste plain text
+- **WHEN** formatted clipboard content is pasted into an active Text editor
+- **THEN** only its plain characters enter the draft using the caret style and no HTML is stored or rendered
+
+#### Scenario: Complete rich editing once
+- **WHEN** composition, outside pointer capture, blur, Escape, or a tool change completes Text editing
+- **THEN** the latest text, runs, and derived geometry commit atomically at most once and one Undo restores the prior element
 
 #### Scenario: Choose a current canvas family
-- **WHEN** the user opens the Text or Sticker Font control
-- **THEN** only localized System and Georgia are offered and the selected family is used by resting DOM, editing draft, measurement, and PNG
+- **WHEN** the user opens a Text or Sticker Font control
+- **THEN** System, Georgia, Bebas Neue, Lobster, and Montserrat are offered and the chosen local family drives draft, resting DOM, measurement, and PNG
 
-#### Scenario: Load legacy typography
-- **WHEN** a valid State contains one of the previous canvas font families or weight 500
-- **THEN** the State loads without repair or a corruption error, renders as System and Regular in DOM and PNG, and the first explicit typography edit stores current resolved values
+#### Scenario: Load preceding Text state
+- **WHEN** the immediately preceding exact plain Text shape is loaded from SQLite or explicit State import
+- **THEN** it loads without a corruption error and normalizes once to fixed width, top alignment, no runs, no fill, and shared-layout height without adding Undo history
 
-#### Scenario: Edit whole-pixel dimensions
-- **WHEN** the user resizes a rectangular canvas element or changes its Width or Height control
-- **THEN** every preview and committed width and height is a bounded integer while continuous position, rotation, and attachment geometry remain available
+#### Scenario: Reject invalid rich Text
+- **WHEN** State contains overlapping, unsorted, empty, out-of-range, non-grapheme-safe, or invalidly styled Text format runs
+- **THEN** the complete State is rejected atomically without replacing the current organization
 
-#### Scenario: Resize an Image with a gesture modifier
-- **WHEN** the user resizes an Image without Shift and then holds or releases Shift during the gesture
-- **THEN** ordinary resize follows the dragged axes, Shift preserves the Image aspect ratio immediately, and no persistent aspect-lock control is present
+#### Scenario: Render Text fill modes
+- **WHEN** Text uses none, block, or lines fill with a configured color
+- **THEN** live DOM and PNG omit fill, paint the complete rounded bounds, or paint padded rounded visual-line strips respectively before identical glyph fragments
 
-#### Scenario: Load legacy fractional dimensions
-- **WHEN** a valid State contains a finite fractional canvas-element width or height
-- **THEN** the State loads without repair, the geometry surface shows a rounded value, and the next explicit geometry edit normalizes the affected dimensions
-
-#### Scenario: Render a flat Sticker
-- **WHEN** a Sticker renders on the live canvas or in Editor PNG
-- **THEN** its configured fill, tonal border, text, typography, alignment, bounds, and rotation match without a fold, sheen, or shadow
-
-#### Scenario: Keep a draft at its final alignment
-- **WHEN** the user creates or reopens Text or Sticker editing, changes its draft, and finishes editing
-- **THEN** wrapping and horizontal and vertical placement remain stable across focus and blur, overflow grows transiently, and text plus final height commit once
-
-#### Scenario: Finish text editing outside the draft
-- **WHEN** the user clicks outside an active Text or Sticker textarea
-- **THEN** the draft commits once before the empty canvas clears selection, another object replaces selection, or a property control retains the edited element selection
-
-#### Scenario: Leave text editing with Escape
-- **WHEN** the user presses Escape inside an active Text or Sticker textarea
-- **THEN** the draft commits once, editing ends, and the element remains selected so a later Escape can clear the resting selection
+#### Scenario: Preserve Sticker behavior
+- **WHEN** Sticker is edited or aligned
+- **THEN** it retains plain-text editing, all nine alignment combinations, and the same flat live/PNG surface
 
 ### Requirement: Canvas entities share persistent anchors
 The Editor SHALL resolve anchors through one extensible registry. Units and rectangular tools SHALL
@@ -894,147 +893,54 @@ the attachment committed on release.
 - **THEN** the owner outline and all valid anchors appear, pointer-down on one anchor starts with an attached endpoint, and pointer-down on free canvas starts with a free endpoint
 
 ### Requirement: Canvas elements support layered group editing
-Canvas elements SHALL occupy ordered `behindUnits` or `aboveUnits` planes. Arrows SHALL default
-behind Units and other tools above them. The Editor SHALL support single and modifier selection,
-marquee, move, copy, paste, duplicate, delete, global Back and Front ordering, and a shared
-resize/rotation frame for multiple canvas elements. Back SHALL move only the selected elements to
-the beginning of `behindUnits`; Front SHALL move only the selected elements to the end of
-`aboveUnits`. Both commands SHALL preserve the selected block's relative order, every attachment and
-offset, and unselected targets and dependents as one undoable command. Unit cards and their Employee
-rows SHALL remain one indivisible plane, with hierarchy connections retaining their fixed base
-layer. Forward, Backward, and explicit plane actions SHALL NOT be exposed.
+Canvas elements SHALL retain ordered `behindUnits` and `aboveUnits` planes, global Back/Front,
+selection, move, copy, paste, duplicate, delete, resize, and rotation behavior. A Text single-element
+frame SHALL omit top/bottom side resize targets, and every Text resize target SHALL alter width only
+before deriving height. A group resize SHALL apply horizontal scale to Text width, vertical scale to
+its base and inline font sizes, and then derive Text height once. It SHALL preserve selected order,
+attachments, fallback geometry, Arrow geometry, and one-command history. Other rectangles and mixed
+Unit/element restrictions SHALL retain their existing behavior.
 
-A plain click on a canvas element SHALL replace the current selection with only that element, while
-Ctrl/Cmd SHALL toggle explicit group membership. Pressing Escape outside an editable control, open
-menu, or active transform SHALL clear a resting canvas-element selection without changing the View
-document or history. Right-clicking a canvas element SHALL open an element-specific menu for the
-selected element set with Back, Front, Duplicate, and Delete actions and SHALL NOT open canvas, Unit,
-Employee, intermediate-order, or plane actions. Rectangular single-element and group frames SHALL
-render a thin solid selection outline, four visible corner resize markers, transparent resize
-targets along all four sides, and transparent rotation targets immediately outside all four corners.
-Their outline and target sizes SHALL remain constant in screen pixels across View zoom. A single
-rectangular element SHALL rotate around the live world-space center derived from its current
-`x + width / 2` and `y + height / 2`, including while attached; a group SHALL rotate around the exact
-center of the selected bounds. Side resize SHALL alter only its corresponding dimension. Holding
-Shift while resizing one Image SHALL preserve that Image's aspect ratio for the current pointer
-sample; no stored aspect-lock value SHALL affect the gesture. Resize SHALL retain the opposite edge
-or corner and quantize rectangle dimensions to whole logical pixels during preview and commit. A
-mixed Unit/element selection SHALL support move, copy, and delete but SHALL NOT resize or rotate
-Units.
+#### Scenario: Resize one Text
+- **WHEN** the user drags a Text side or corner resize target
+- **THEN** only width is directly resized, the opposite horizontal edge remains fixed, height is derived, attachment remains valid, and one command commits
 
-#### Scenario: Select one element plainly
-- **WHEN** multiple canvas elements or mixed canvas items are selected and the user clicks one canvas element without Ctrl/Cmd
-- **THEN** only the clicked element remains selected and only its contextual properties render
+#### Scenario: Resize a group containing Text
+- **WHEN** a selected element group containing Text is resized
+- **THEN** Text width and font sizes follow the group scales, Text height is derived, and every selected element and attachment commits atomically
 
-#### Scenario: Clear an element selection with Escape
-- **WHEN** one or more canvas elements are selected at rest and focus is outside an editable control or open menu
-- **THEN** pressing Escape clears the selection frame and contextual properties without changing canvas elements or adding history
+#### Scenario: Rotate derived Text
+- **WHEN** free or attached Text is rotated after content or typography changes its derived bounds
+- **THEN** rotation uses the center of the current derived width and height without detaching it
 
-#### Scenario: Preserve Escape priority
-- **WHEN** a canvas menu, editable control, or transform gesture is active
-- **THEN** Escape is handled by or reserved for that active interaction before any resting canvas-element selection is cleared
-
-#### Scenario: Open concise element actions
-- **WHEN** the user right-clicks a selected canvas element
-- **THEN** the menu contains Back, Front, Duplicate, and Delete without Forward, Backward, plane, Unit, Employee, or empty-canvas actions
-
-#### Scenario: Send every element kind behind Units
-- **WHEN** Text, Sticker, Image, Arrow, or a selected group activates Back while above or below a Unit Employee row
-- **THEN** only the selected block moves to the back extreme below the complete Unit card while its internal order and attachment graph remain unchanged
-
-#### Scenario: Bring every element kind in front of Units
-- **WHEN** Text, Sticker, Image, Arrow, or a selected group activates Front while above or below a Unit Employee row
-- **THEN** only the selected block moves to the front extreme above the complete Unit card while its internal order and attachment graph remain unchanged
-
-#### Scenario: Render restrained transform chrome
-- **WHEN** one rectangle or an element group is selected at any supported View zoom
-- **THEN** the frame shows one solid screen-pixel outline and four corner dots while side resize and outside-corner rotation retain constant-size pointer targets without persistent extra dots or connector markers
-
-#### Scenario: Resize from every edge
-- **WHEN** the user drags any corner or side resize target on a rectangular element or canvas-element group
-- **THEN** the preview follows that edge, retains the opposite edge or corner, produces whole-pixel rectangle dimensions, respects minimum size and the current Shift modifier for one Image, and commits one history command
-
-#### Scenario: Rotate one rectangle around its live center
-- **WHEN** the user rotates one free or attached rectangular canvas element after changing its width or height
-- **THEN** every preview sample and the committed element preserve the world point at `x + width / 2`, `y + height / 2` while only its angle changes
-
-#### Scenario: Rotate a group from the perimeter
-- **WHEN** the user drags an outside-corner rotation target for multiple canvas elements
-- **THEN** every selected canvas element rotates around the center derived from the selected bounds' width and height and commits one history command
-
-#### Scenario: Transform a group
-- **WHEN** the user moves, resizes, or rotates multiple selected canvas elements
-- **THEN** integer rectangular dimensions, Arrow endpoints and controls, and attachment offsets commit as one command while externally attached elements remain attached
-
-#### Scenario: Render two planes
-- **WHEN** the View contains elements in both planes
-- **THEN** hierarchy connections render first, behind-Unit elements render next, Unit cards render next, and above-Unit elements render last using stable order within each plane
+#### Scenario: Preserve global layers
+- **WHEN** Back or Front is applied to Text with mixed formatting or fill
+- **THEN** its complete durable presentation moves below or above Unit cards without changing content, format runs, fill, or attachments
 
 ### Requirement: Editor exports one complete View image
-The Editor SHALL provide an image-only full-View export dialog whose scene contains every Unit,
-hierarchy connection, and durable canvas element regardless of viewport. Collapsed cards SHALL keep
-their collapsed roster/footer presentation while descendant Units remain part of the structural
-scene. The dialog SHALL retain background, padding, title, title font/size/alignment, Unit radius,
-Employee format, and boss-label controls and SHALL offer 1x, 2x, and 3x density with 2x default. Both
-full-View and Unit/subtree Image dialogs SHALL offer exactly localized System and Georgia for their
-output font, default to System, and resolve those values through the same local stacks used by canvas
-Text and Sticker. They SHALL NOT request a remote font.
-
-The dialogs SHALL NOT display final pixel dimensions, effective density, or density-clamping copy.
-Preview and final rendering SHALL still enforce the existing raster pixel and canvas-side limits.
-The full-View Employee format SHALL use the shared token-aware Format input with `@` suggestions and
-documented `?` conditional expressions. Its footer Copy and Save actions SHALL use the same clipboard
-and download icons as the scoped Editor Image export dialog. Text and Sticker SHALL load and paint
-their resolved current local family and element weight, and Sticker SHALL retain its live flat fill
-and border.
-
-Both full-View and Unit/subtree Image dialogs SHALL render their local object-URL preview through one
-transient viewport. It SHALL begin fitted, support pointer-centered wheel zoom, centered Zoom In and
-Zoom Out, 100-percent reset, Fit, constrained primary-pointer pan, and keyboard pan. Scale SHALL be
-bounded from the smaller of Fit and 10 percent through 400 percent, with 100 percent representing one
-preview pixel per CSS pixel. Regeneration SHALL retain Fit when untouched and otherwise preserve the
-manual scale and normalized focal point. Preview viewport state SHALL NOT enter View state, history,
-storage, synchronization, final PNG composition, or network traffic.
-
-#### Scenario: Preview and export a complete View
-- **WHEN** the user opens full-View Image export and previews, copies, or saves the PNG
-- **THEN** every durable tool, card, hierarchy connection, font, color, alignment, rotation, embedded image, Arrow, and distribution tone is painted from one shared scene with the same composition
+The Editor SHALL provide the existing bounded full-View and scoped Image export workflows. Both
+dialogs SHALL offer System, Georgia, Bebas Neue, Lobster, and Montserrat and SHALL use only local
+font files or stacks. Before layout, preview, Copy, or Save, the renderer SHALL wait for every unique
+output, Text-base, Sticker, and Text-range font request. Rich Text glyph fragments, block/per-line
+fills, automatic geometry, alignment, rotation, layers, and attachments SHALL match the live canvas.
+All existing preview navigation, safety limits, settings, Employee formatting, action icons, scope,
+and transient-chrome exclusions SHALL remain unchanged.
 
 #### Scenario: Select an output font
 - **WHEN** the user opens Font in full-View or Unit/subtree Image settings
-- **THEN** only localized System and Georgia are offered and preview, Copy, and Save use the selected local fallback stack
+- **THEN** System, Georgia, Bebas Neue, Lobster, and Montserrat are offered and preview, Copy, and Save use the selected local stack
 
-#### Scenario: Preserve resolved canvas typography and flat Sticker treatment
-- **WHEN** Text and Sticker elements use System, Georgia, or accepted legacy typography with different colors, alignments, and rotations
-- **THEN** the live canvas and PNG use the same resolved family and Regular/Bold element weight and paint the same flat Sticker fill and border inside unchanged element bounds
+#### Scenario: Export rich Text
+- **WHEN** scoped or full-View PNG includes Text with mixed family, size, weight, color, wrapping, or fill
+- **THEN** the image uses the same fragment and line geometry, derived bounds, glyph styling, and background painting as the live canvas
 
-#### Scenario: Navigate either PNG preview
-- **WHEN** the user wheels at a point, uses Zoom In, Zoom Out, 100 percent, or Fit, drags the preview, or presses a pan key in either Image dialog
-- **THEN** only the local preview viewport changes around the requested focal point within its scale and translation bounds
+#### Scenario: Keep fonts local
+- **WHEN** either runtime renders canvas content or generates PNG with any current family
+- **THEN** no remote font, font catalog, organization data, or image output request is made
 
-#### Scenario: Preserve manual inspection during regeneration
-- **WHEN** Image settings regenerate a preview after the user has manually zoomed or panned
-- **THEN** the new preview preserves the manual scale and normalized focal point, while an untouched fitted preview remains fitted
-
-#### Scenario: Hide render-plan copy while retaining safety
-- **WHEN** either Image export dialog renders or a requested density exceeds a raster safety limit
-- **THEN** no final-dimension, effective-density, or clamping label appears and preview, Copy, and Save still use the safely clamped complete scene
-
-#### Scenario: Configure the Employee format
-- **WHEN** the user focuses the full-View Employee Format help or types `@` in its input
-- **THEN** localized help explains token suggestions and `?` conditionals, matching Employee tokens can be inserted, and existing conditional expressions continue to render in preview, Copy, and Save
-
-#### Scenario: Use consistent export actions
-- **WHEN** the full-View Image dialog footer renders
-- **THEN** Copy has the clipboard icon and Save has the download icon used by scoped Editor Image export
-
-#### Scenario: Bound a requested density
-- **WHEN** the selected density would exceed the preview, final-pixel, or canvas-side limit
-- **THEN** the render plan silently clamps only the raster scale and preserves the complete logical scene
-
-#### Scenario: Omit transient chrome
-- **WHEN** selection, hover, focus, menus, anchors, target outlines, preview controls, resize or rotation handles, Bezier controls, marquee, or placement overlays are visible
-- **THEN** none of those transient states appear in preview, copied PNG, or saved PNG
+#### Scenario: Preserve image workflows
+- **WHEN** preview, zoom, pan, Fit, Copy, Save, density clamping, or Unit/subtree scope is used
+- **THEN** the existing bounded local behavior remains available and transient interaction chrome stays out of the PNG
 
 ### Requirement: Scoped Editor PNG includes related annotations
 Unit-only and subtree Image export SHALL include the selected Unit closure plus rectangular elements
@@ -1050,4 +956,3 @@ MUST NOT include canvas elements.
 #### Scenario: Exclude an external Arrow
 - **WHEN** one Arrow endpoint targets the scoped branch and the other targets an owner outside it
 - **THEN** the Arrow and any otherwise unreachable dependent annotation are absent from that scoped PNG
-

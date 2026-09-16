@@ -757,6 +757,30 @@ export class OrgEditorStore {
     this.onDocumentChange?.();
   }
 
+  normalizeCanvasTextGeometry(
+    fit: (
+      element: Extract<OrgEditorCanvasElement, { type: "text" }>,
+    ) => Extract<OrgEditorCanvasElement, { type: "text" }>,
+  ): void {
+    let changed = false;
+    const canvasElements = this.canvasElements.map((element) => {
+      if (element.type !== "text") return element;
+      const next = fit(element);
+      const geometryChanged =
+        next.height !== element.height ||
+        next.width !== element.width ||
+        next.x !== element.x ||
+        next.y !== element.y ||
+        next.typography.verticalAlign !== element.typography.verticalAlign;
+      if (!geometryChanged) return element;
+      changed = true;
+      return next;
+    });
+    if (!changed) return;
+    this.canvasElements = canvasElements;
+    this.onDocumentChange?.();
+  }
+
   reset(): void {
     this.loadState(createDefaultOrgEditorState());
     this.setClipboard(null);

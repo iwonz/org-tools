@@ -63,7 +63,7 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   offsets, and update only the affected dependency closure. Move, resize, rotation, endpoint,
   Bezier, anchor, and text drafts use the latest-value frame scheduler; only pointer release or edit
   completion mutates the View document once. Four visible corner handles, four transparent side
-  strips, and four transparent corner-rotation targets are constant per selected frame and use
+  strips (two for width-only Text), and four transparent corner-rotation targets are constant per selected frame and use
   inverse-zoom CSS metrics without rebuilding geometry. Rectangle resize resolves one local-axis
   bounds calculation plus bounded integer-dimension normalization; rotation reads one cached
   selected-bounds center per pointer sample without scanning Units or canvas elements. Resting
@@ -78,9 +78,11 @@ measurement. DOM and PNG consume the same line rectangles and indivisible count 
   cloud sets every footer height to zero, including cached geometry. Distribution color drafts stay
   local to the open picker; shared light/dark/canvas tonal values are derived from one color
   calculation, and each included PNG row performs only indexed status and cached-color lookups.
-- Resolve Editor annotation typography through two constant local stacks, System and Georgia, before
-  DOM measurement or PNG painting. Legacy family names and weight 500 collapse to System/Regular at
-  presentation time without a migration, remote font work, or additional layout pass.
+- Resolve Editor annotation typography through five bounded local stacks before DOM measurement or
+  PNG painting. Text scans graphemes and normalized format runs linearly, computes fragment/line/fill
+  geometry once per draft or document revision, and reuses it for bounds and painting. A selected
+  Text exposes only two side resize strips because height is derived; Sticker/Image and group frames
+  retain four. Legacy family names and weight 500 collapse to System/Regular without remote work.
 - Keep the Unit Markdown renderer out of the main Editor bundle and mount it only while a note
   Preview is open. Closed notes are opaque bounded strings: canvas layout, spatial indexing, search,
   PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save

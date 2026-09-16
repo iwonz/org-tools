@@ -39,8 +39,6 @@
     "Geometry": "الهندسة",
     "Analytics": "التحليلات",
     "Apply": "التطبيق",
-    "Arrange": "الترتيب",
-    "Arrange the current hierarchy": "ترتيب الهيكل الهرمي الحالي",
     "Background": "الخلفية",
     "Birth months": "أشهر الميلاد",
     "Birthday": "عيد الميلاد",
@@ -329,7 +327,6 @@
     "Selected Unit path": "مسار الفريق المحدد",
     "Size": "الحجم",
     "Static": "ثابت",
-    "Georgia": "خط جورجيا",
     "System": "النظام",
     "Tags": "الوسوم",
     "Template": "النموذج",
@@ -533,7 +530,6 @@
     "Arabic": "العربية",
     "Choose interface language": "اختر لغة الواجهة.",
     "Choose interface theme": "اختر مظهر الواجهة.",
-    "Arrange selected": "ترتيب الفرق المحددة",
     "A View with this name already exists.": "يوجد عرض بهذا الاسم بالفعل.",
     "Enter a View name.": "أدخل اسم العرض.",
     "The source View is unavailable.": "العرض المصدر غير متاح.",
@@ -624,6 +620,11 @@
     "Density": "الكثافة",
     "Export the complete View with Units and canvas elements.": "صدّر العرض كاملاً مع الفرق وعناصر اللوحة.",
     "View export preview": "معاينة تصدير العرض",
-    "Background color": "لون الخلفية"
+    "Background color": "لون الخلفية",
+    "Mixed": "قيم مختلطة",
+    "Text background": "خلفية النص",
+    "No background": "بدون خلفية",
+    "Block background": "خلفية الكتلة",
+    "Line background": "خلفية الأسطر"
   }
 }

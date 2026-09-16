@@ -271,12 +271,12 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 [![Visual organization Editor](screenshots/demo-editor.png)](screenshots/demo-editor.png)
 
-Arrange opaque Unit cards and representative Text, flat bordered Sticker, embedded Image, and curved Arrow tools
+Arrange opaque Unit cards and representative rich Text, flat bordered Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
 the bottom-centered canvas toolbar. View management stays top-left, canvas commands and Image export
-stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates compact
-System/Georgia properties, the Bold toggle, a
-thin Miro-like frame with four corner markers, all-edge resize, outside-corner rotation, and
+stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates the
+five local fonts, partial typography, line fill, auto-height, the Bold toggle, and a thin Miro-like
+frame with four corner markers, width-only Text resize, outside-corner rotation, and
 element-specific context actions without layer-plane commands.
 
 Capabilities: Canvas layout, Text, Sticker, Image, Arrow, Contextual anchors, Adaptive snap grid,
@@ -440,7 +440,7 @@ Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, U
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Configure 1x/2x/3x density, background presets, title, font, spacing, localized
+Configure 1x/2x/3x density, background presets, title, the five local fonts, spacing, localized
 boss label, and `@`-assisted conditional Employee card content beside the complete View preview.
 
 Capabilities: Density and silent clamping, Fit/manual preview, Background, Title and font, Spacing
@@ -612,8 +612,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   date counts are hidden. Check full-row pointer previews, animated insertion, edge scrolling, touch, reduced motion,
   filtered insertion, keyboard moves, and cancellation including peer catalog replacement.
   Preview must write nothing and successful release must commit exactly once.
-- Confirm each layout direction button explicitly selects its direction, repeated activation does
-  nothing, and Undo/Redo restores both direction and geometry. Verify every hierarchy total includes
+- Confirm each layout direction button explicitly selects its direction, repeated activation
+  arranges the applicable selection or hierarchy again, and Undo/Redo restores both direction and
+  geometry. Verify every hierarchy total includes
   unique direct and descendant Employees, including repeated ancestor memberships and bosses.
 - Confirm View settings is available beside the selector for system, custom, and empty Views. Its
   Unit display switches control all manual/Live Units and PNG, default on, and support Undo/Redo.

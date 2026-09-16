@@ -3,10 +3,12 @@
 import type {
   OrgEditorCanvasElement,
   OrgEditorCanvasElementId,
+  OrgEditorInlineTypography,
   OrgEditorRectAnchorId,
+  OrgEditorTextFormatRun,
 } from "@org-tools/types";
 import Image from "next/image";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { useUiText } from "@/i18n/use-ui-text";
 import {
@@ -15,11 +17,17 @@ import {
   getOrgEditorCanvasElementFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorCanvasTextLayout,
+  getOrgEditorInlineTypography,
+  getOrgEditorRichTextLayout,
+  getOrgEditorTextFillRects,
+  getOrgEditorTextGraphemes,
+  getOrgEditorTextStyleAt,
   isOrgEditorRectElement,
   normalizeOrgEditorCanvasDimension,
   ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS,
   type OrgEditorCanvasRect,
   type OrgEditorCanvasResizeHandle,
+  resolveOrgEditorCanvasInlineTypography,
   resolveOrgEditorCanvasTypography,
 } from "@/lib/org-editor-canvas";
 import { employeeTagColorToHex, getStickerColorStyle } from "@/lib/tag-color";
@@ -34,6 +42,56 @@ export type OrgEditorCanvasElementHandle =
     }
   | { endpoint: "end" | "start"; type: "arrowEndpoint" }
   | { endpoint: "end" | "start"; type: "arrowControl" };
+
+export type OrgEditorCanvasTextDraft = {
+  formatRuns: OrgEditorTextFormatRun[];
+  pendingTypography: OrgEditorInlineTypography | null;
+  selection: { end: number; start: number };
+  text: string;
+};
+
+const getContentEditableSelection = (root: HTMLElement) => {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+  const offsetOf = (node: Node, offset: number) => {
+    const prefix = document.createRange();
+    prefix.selectNodeContents(root);
+    prefix.setEnd(node, offset);
+    return prefix.toString().length;
+  };
+  return {
+    end: offsetOf(range.endContainer, range.endOffset),
+    start: offsetOf(range.startContainer, range.startOffset),
+  };
+};
+
+const restoreContentEditableSelection = (
+  root: HTMLElement,
+  selectionRange: { end: number; start: number },
+) => {
+  const textNodes: Text[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) textNodes.push(node as Text);
+  const resolve = (requestedOffset: number) => {
+    let remaining = Math.max(0, requestedOffset);
+    for (const node of textNodes) {
+      if (remaining <= node.data.length) return { node, offset: remaining };
+      remaining -= node.data.length;
+    }
+    const node = textNodes.at(-1) ?? root;
+    return { node, offset: node instanceof Text ? node.data.length : node.childNodes.length };
+  };
+  const start = resolve(selectionRange.start);
+  const end = resolve(selectionRange.end);
+  const range = document.createRange();
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+};
 
 const canvasUiMetric = (name: string, fallback: number) =>
   `var(--org-editor-canvas-ui-${name}, ${fallback}px)`;
@@ -86,17 +144,21 @@ const getSideHandleStyle = (
 function CanvasPerimeterTransformHandles({
   group = false,
   onHandlePointerDown,
+  textWidthOnly = false,
 }: {
   group?: boolean;
   onHandlePointerDown: (
     event: React.PointerEvent<HTMLButtonElement>,
     handle: Extract<OrgEditorCanvasElementHandle, { type: "resize" | "rotate" }>,
   ) => void;
+  textWidthOnly?: boolean;
 }) {
   const t = useUiText();
   return (
     <>
-      {CANVAS_SIDE_RESIZE_HANDLE_IDS.map((anchorId) => (
+      {CANVAS_SIDE_RESIZE_HANDLE_IDS.filter(
+        (anchorId) => !textWidthOnly || anchorId === "leftCenter" || anchorId === "rightCenter",
+      ).map((anchorId) => (
         <button
           aria-label={t("Resize canvas element")}
           className={cn(
@@ -191,18 +253,71 @@ const CanvasText = ({
 }) => {
   const [, setFontRevision] = useState(0);
   const typography = resolveOrgEditorCanvasTypography(element.typography);
-  const fontRequest = getOrgEditorCanvasElementFont(element.typography);
+  const fontRequests =
+    element.type === "text"
+      ? [element.typography, ...element.formatRuns.map((run) => run.typography)].map(
+          getOrgEditorCanvasElementFont,
+        )
+      : [getOrgEditorCanvasElementFont(element.typography)];
+  const fontRequestKey = [...new Set(fontRequests)].sort().join("|");
 
   useEffect(() => {
     if (!document.fonts) return;
     let cancelled = false;
-    void document.fonts.load(fontRequest).then(() => {
+    void Promise.all(
+      fontRequestKey
+        .split("|")
+        .filter(Boolean)
+        .map((request) => document.fonts.load(request)),
+    ).then(() => {
       if (!cancelled) setFontRevision((revision) => revision + 1);
     });
     return () => {
       cancelled = true;
     };
-  }, [fontRequest]);
+  }, [fontRequestKey]);
+
+  if (element.type === "text") {
+    const layout = getCanvasRichTextLayout(element);
+    return (
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-visible">
+        {getOrgEditorTextFillRects(element, layout).map((rect) => (
+          <span
+            className="absolute"
+            data-canvas-text-fill={element.fillMode}
+            key={`fill:${rect.x}:${rect.y}:${rect.width}:${rect.height}`}
+            style={{
+              backgroundColor: employeeTagColorToHex(element.fillColor),
+              borderRadius: rect.radius,
+              height: rect.height,
+              left: rect.x,
+              top: rect.y,
+              width: rect.width,
+            }}
+          />
+        ))}
+        {layout.lines.flatMap((line) =>
+          line.fragments.map((fragment) => (
+            <span
+              className="absolute whitespace-pre"
+              key={`${fragment.start}:${fragment.end}`}
+              style={{
+                color: employeeTagColorToHex(fragment.typography.color),
+                fontFamily: getOrgEditorCanvasCssFontFamily(fragment.typography.fontFamily),
+                fontSize: fragment.typography.fontSize,
+                fontWeight: fragment.typography.fontWeight,
+                left: fragment.x,
+                lineHeight: `${Math.ceil(fragment.typography.fontSize * 1.25)}px`,
+                top: fragment.y,
+              }}
+            >
+              {fragment.text}
+            </span>
+          )),
+        )}
+      </div>
+    );
+  }
 
   const lines = getCanvasTextLayout(element, element.text, element.height).lines;
 
@@ -229,13 +344,31 @@ const CanvasText = ({
   );
 };
 
+const getCanvasMeasureContext = () =>
+  typeof document === "undefined" ? null : document.createElement("canvas").getContext("2d");
+
+const getCanvasRichTextLayout = (element: Extract<OrgEditorCanvasElement, { type: "text" }>) => {
+  const context = getCanvasMeasureContext();
+  return getOrgEditorRichTextLayout({
+    autoWidth: element.autoWidth,
+    formatRuns: element.formatRuns,
+    measure: (value, fragmentTypography) => {
+      if (!context) return [...value].length * fragmentTypography.fontSize * 0.55;
+      context.font = getOrgEditorCanvasElementFont(fragmentTypography);
+      return context.measureText(value).width;
+    },
+    text: element.text,
+    typography: element.typography,
+    width: element.width,
+  });
+};
+
 const getCanvasTextLayout = (
   element: Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>,
   text: string,
   height: number,
 ) => {
-  const canvas = typeof document === "undefined" ? null : document.createElement("canvas");
-  const context = canvas?.getContext("2d");
+  const context = getCanvasMeasureContext();
   return getOrgEditorCanvasTextLayout({
     height,
     measure: (value, typography) => {
@@ -250,23 +383,197 @@ const getCanvasTextLayout = (
   });
 };
 
+const getRichTextDraftSegments = (
+  element: Extract<OrgEditorCanvasElement, { type: "text" }>,
+  draft: OrgEditorCanvasTextDraft,
+) => {
+  const base = resolveOrgEditorCanvasInlineTypography(
+    getOrgEditorInlineTypography(element.typography),
+  );
+  const segments: Array<{
+    end: number;
+    start: number;
+    text: string;
+    typography: OrgEditorInlineTypography;
+  }> = [];
+  for (const grapheme of getOrgEditorTextGraphemes(draft.text)) {
+    const typography = resolveOrgEditorCanvasInlineTypography(
+      getOrgEditorTextStyleAt(base, draft.formatRuns, grapheme.start),
+    );
+    const previous = segments.at(-1);
+    if (
+      previous &&
+      previous.end === grapheme.start &&
+      previous.typography.color === typography.color &&
+      previous.typography.fontFamily === typography.fontFamily &&
+      previous.typography.fontSize === typography.fontSize &&
+      previous.typography.fontWeight === typography.fontWeight
+    ) {
+      previous.end = grapheme.end;
+      previous.text += grapheme.text;
+    } else {
+      segments.push({ ...grapheme, typography });
+    }
+  }
+  return segments;
+};
+
+function CanvasRichTextEditor({
+  draft,
+  element,
+  onDraftTextChange,
+  onFinishEditing,
+  onSelectionChange,
+}: {
+  draft: OrgEditorCanvasTextDraft;
+  element: Extract<OrgEditorCanvasElement, { type: "text" }>;
+  onDraftTextChange?:
+    | ((text: string, selection: { end: number; start: number }) => void)
+    | undefined;
+  onFinishEditing?: (() => void) | undefined;
+  onSelectionChange?: ((selection: { end: number; start: number }) => void) | undefined;
+}) {
+  const t = useUiText();
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const composingRef = useRef(false);
+  const segments = useMemo(() => getRichTextDraftSegments(element, draft), [draft, element]);
+
+  useLayoutEffect(() => {
+    const root = editorRef.current;
+    if (!root) return;
+    const shouldRestoreSelection = document.activeElement === root;
+    root.replaceChildren();
+    if (segments.length === 0) {
+      root.append(document.createElement("br"));
+    } else {
+      for (const segment of segments) {
+        const span = document.createElement("span");
+        span.dataset.textStart = String(segment.start);
+        span.dataset.textEnd = String(segment.end);
+        span.style.color = employeeTagColorToHex(segment.typography.color);
+        span.style.fontFamily = getOrgEditorCanvasCssFontFamily(segment.typography.fontFamily);
+        span.style.fontSize = `${segment.typography.fontSize}px`;
+        span.style.fontWeight = String(segment.typography.fontWeight);
+        span.style.lineHeight = `${Math.ceil(segment.typography.fontSize * 1.25)}px`;
+        span.textContent = segment.text;
+        root.append(span);
+      }
+    }
+    if (shouldRestoreSelection) restoreContentEditableSelection(root, draft.selection);
+  }, [draft.selection, segments]);
+
+  useEffect(() => {
+    editorRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  const publishSelection = () => {
+    const root = editorRef.current;
+    if (!root) return;
+    const selection = getContentEditableSelection(root);
+    if (selection) onSelectionChange?.(selection);
+  };
+  const publishText = () => {
+    const root = editorRef.current;
+    if (!root) return;
+    const selection = getContentEditableSelection(root) ?? draft.selection;
+    const innerText = root.innerText.replace(/\r\n?/gu, "\n");
+    onDraftTextChange?.(root.textContent ? innerText : "", selection);
+  };
+
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: Rich selection formatting requires a contenteditable surface.
+    <div
+      aria-label={t("Canvas element text")}
+      className="absolute inset-0 z-10 overflow-visible border-0 bg-transparent outline-none"
+      contentEditable
+      data-canvas-text-editor={element.id}
+      onBlur={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (
+          nextTarget instanceof Element &&
+          nextTarget.closest('[data-demo-id="org-editor-canvas-properties"]')
+        ) {
+          return;
+        }
+        onFinishEditing?.();
+      }}
+      onCompositionEnd={() => {
+        composingRef.current = false;
+        publishText();
+      }}
+      onCompositionStart={() => {
+        composingRef.current = true;
+      }}
+      onInput={() => {
+        if (!composingRef.current) publishText();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onFinishEditing?.();
+        }
+        event.stopPropagation();
+      }}
+      onKeyUp={publishSelection}
+      onPaste={(event) => {
+        event.preventDefault();
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+        const range = selection.getRangeAt(0);
+        if (!editorRef.current?.contains(range.commonAncestorContainer)) return;
+        range.deleteContents();
+        const textNode = document.createTextNode(event.clipboardData.getData("text/plain"));
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        publishText();
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+      onPointerUp={publishSelection}
+      ref={editorRef}
+      role="textbox"
+      spellCheck={false}
+      style={{
+        padding: 4,
+        textAlign: element.typography.horizontalAlign,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}
+      suppressContentEditableWarning
+      tabIndex={0}
+    />
+  );
+}
+
 const RectHandles = ({
+  elementType,
   onHandlePointerDown,
 }: {
+  elementType: "image" | "sticker" | "text";
   onHandlePointerDown: (
     event: React.PointerEvent<Element>,
     handle: OrgEditorCanvasElementHandle,
   ) => void;
 }) => {
-  return <CanvasPerimeterTransformHandles onHandlePointerDown={onHandlePointerDown} />;
+  return (
+    <CanvasPerimeterTransformHandles
+      onHandlePointerDown={onHandlePointerDown}
+      textWidthOnly={elementType === "text"}
+    />
+  );
 };
 
 export function OrgEditorCanvasElementNode({
+  editingRichTextDraft,
   editingText,
   element,
   imageUnavailableLabel,
   isSelected,
   onEditingTextChange,
+  onEditingRichTextChange,
+  onEditingSelectionChange,
   onFinishEditing,
   onDoubleClick,
   onContextMenu,
@@ -275,6 +582,7 @@ export function OrgEditorCanvasElementNode({
   showHandles = isSelected,
 }: {
   element: OrgEditorCanvasElement;
+  editingRichTextDraft?: OrgEditorCanvasTextDraft | null;
   editingText?: string | null;
   imageUnavailableLabel: string;
   isSelected: boolean;
@@ -286,6 +594,8 @@ export function OrgEditorCanvasElementNode({
     handle: OrgEditorCanvasElementHandle,
   ) => void;
   onEditingTextChange?: (text: string) => void;
+  onEditingRichTextChange?: (text: string, selection: { end: number; start: number }) => void;
+  onEditingSelectionChange?: (selection: { end: number; start: number }) => void;
   onFinishEditing?: () => void;
   onPointerDown: (event: React.PointerEvent<Element>, element: OrgEditorCanvasElement) => void;
   showHandles?: boolean;
@@ -294,7 +604,31 @@ export function OrgEditorCanvasElementNode({
   const [imageFailed, setImageFailed] = useState(false);
   const textEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const imageDataUrl = element.type === "image" ? element.dataUrl : null;
-  const rectElement = isOrgEditorRectElement(element) ? element : null;
+  const richDraftLayout =
+    element.type === "text" && editingRichTextDraft
+      ? getCanvasRichTextLayout({
+          ...element,
+          formatRuns: editingRichTextDraft.formatRuns,
+          text: editingRichTextDraft.text,
+        })
+      : null;
+  const displayedElement =
+    element.type === "text" && richDraftLayout
+      ? {
+          ...element,
+          formatRuns: editingRichTextDraft?.formatRuns ?? element.formatRuns,
+          height: richDraftLayout.height,
+          text: editingRichTextDraft?.text ?? element.text,
+          width: richDraftLayout.width,
+          x:
+            element.autoWidth && element.typography.horizontalAlign === "right"
+              ? element.x - (richDraftLayout.width - element.width)
+              : element.autoWidth && element.typography.horizontalAlign === "center"
+                ? element.x - (richDraftLayout.width - element.width) / 2
+                : element.x,
+        }
+      : element;
+  const rectElement = isOrgEditorRectElement(displayedElement) ? displayedElement : null;
   const stickerColors =
     element.type === "sticker" ? getStickerColorStyle(element.backgroundColor) : null;
   const textDraft =
@@ -471,15 +805,15 @@ export function OrgEditorCanvasElementNode({
       onPointerDown={(event) => onPointerDown(event, element)}
       style={{
         height: displayHeight,
-        left: element.x,
+        left: displayedElement.type === "arrow" ? 0 : displayedElement.x,
         outline: isSelected
           ? `${canvasUiMetric("outline-width", 1)} solid var(--signal)`
           : undefined,
         outlineOffset: isSelected ? canvasUiMetric("outline-offset", 2) : undefined,
-        top: element.y,
+        top: displayedElement.type === "arrow" ? 0 : displayedElement.y,
         transform: `rotate(${element.rotation}deg)`,
         transformOrigin: "center",
-        width: element.width,
+        width: displayedElement.type === "arrow" ? 0 : displayedElement.width,
       }}
     >
       {element.type === "sticker" && stickerColors && (
@@ -492,6 +826,28 @@ export function OrgEditorCanvasElementNode({
             border: `1px solid ${stickerColors.borderStyle}`,
           }}
         />
+      )}
+      {element.type === "text" && editingRichTextDraft && richDraftLayout && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          {getOrgEditorTextFillRects(
+            displayedElement as Extract<OrgEditorCanvasElement, { type: "text" }>,
+            richDraftLayout,
+          ).map((rect) => (
+            <span
+              className="absolute"
+              data-canvas-text-fill={element.fillMode}
+              key={`draft-fill:${rect.x}:${rect.y}:${rect.width}:${rect.height}`}
+              style={{
+                backgroundColor: employeeTagColorToHex(element.fillColor),
+                borderRadius: rect.radius,
+                height: rect.height,
+                left: rect.x,
+                top: rect.y,
+                width: rect.width,
+              }}
+            />
+          ))}
+        </div>
       )}
       {element.type === "image" ? (
         <div className="size-full overflow-hidden rounded-lg bg-muted">
@@ -534,6 +890,14 @@ export function OrgEditorCanvasElementNode({
             />
           )}
         </div>
+      ) : element.type === "text" && editingRichTextDraft ? (
+        <CanvasRichTextEditor
+          draft={editingRichTextDraft}
+          element={displayedElement as Extract<OrgEditorCanvasElement, { type: "text" }>}
+          onDraftTextChange={onEditingRichTextChange}
+          onFinishEditing={onFinishEditing}
+          onSelectionChange={onEditingSelectionChange}
+        />
       ) : textDraft !== null && draftLayout ? (
         <textarea
           aria-label={t("Canvas element text")}
@@ -570,6 +934,7 @@ export function OrgEditorCanvasElementNode({
       )}
       {showHandles && isSelected && isOrgEditorRectElement(element) && (
         <RectHandles
+          elementType={element.type}
           onHandlePointerDown={(event, handle) => onHandlePointerDown(event, element, handle)}
         />
       )}

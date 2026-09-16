@@ -2044,12 +2044,10 @@ test("renders split Org Editor controls and reveals search to the left", async (
     ),
   ).toEqual(new Set(["0px"]));
 
-  const editorCommand = page.locator('[data-demo-id="org-editor-align-button"]');
+  const editorCommand = page.getByRole("button", { name: "Vertical layout", exact: true });
   const collapseCommand = page.locator('[data-demo-id="org-editor-toggle-all-units-button"]');
-  for (const command of [editorCommand, collapseCommand]) {
-    await expect(command).toHaveCSS("font-weight", "400");
-    await expectIconBeforeText(command);
-  }
+  await expect(collapseCommand).toHaveCSS("font-weight", "400");
+  await expectIconBeforeText(collapseCommand);
   await collapseCommand.click();
   await expect(collapseCommand).toHaveAccessibleName("Expand all");
   await expectIconBeforeText(collapseCommand);
@@ -2230,7 +2228,7 @@ test("renders split Org Editor controls and reveals search to the left", async (
     expect(metric.labelScrollWidth, context).toBeLessThanOrEqual(metric.labelClientWidth + 1);
   }
   expect(new Set(footerChipMetrics.map((metric) => metric.width)).size).toBeGreaterThan(1);
-  await expect(editorCommand).toHaveText("Arrange selected");
+  await expect(editorCommand).toHaveAttribute("aria-pressed", "true");
   const dragBox = await editorUnit.boundingBox();
   if (!dragBox) throw new Error("Selected Editor Unit is unavailable for group drag.");
   await page.mouse.move(dragBox.x + 72, dragBox.y + 64);

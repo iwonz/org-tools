@@ -31,6 +31,7 @@ export type OrgEditorCanvasElementLayer = "aboveUnits" | "behindUnits";
 export type OrgEditorHorizontalAlign = "center" | "left" | "right";
 export type OrgEditorVerticalAlign = "bottom" | "middle" | "top";
 export type OrgEditorFontWeight = 400 | 500 | 700;
+export type OrgEditorTextFillMode = "block" | "lines" | "none";
 
 export type OrgEditorRectAnchorId =
   | "bottomCenter"
@@ -77,6 +78,17 @@ export type OrgEditorTypography = {
   verticalAlign: OrgEditorVerticalAlign;
 };
 
+export type OrgEditorInlineTypography = Pick<
+  OrgEditorTypography,
+  "color" | "fontFamily" | "fontSize" | "fontWeight"
+>;
+
+export type OrgEditorTextFormatRun = {
+  end: number;
+  start: number;
+  typography: OrgEditorInlineTypography;
+};
+
 type OrgEditorRectElementBase = {
   attachment: OrgEditorAttachment | null;
   height: number;
@@ -89,6 +101,10 @@ type OrgEditorRectElementBase = {
 };
 
 export type OrgEditorTextElement = OrgEditorRectElementBase & {
+  autoWidth: boolean;
+  fillColor: EmployeeTagColor;
+  fillMode: OrgEditorTextFillMode;
+  formatRuns: OrgEditorTextFormatRun[];
   text: string;
   typography: OrgEditorTypography;
   type: "text";

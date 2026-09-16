@@ -39,8 +39,6 @@
     "Geometry": "几何",
     "Analytics": "分析",
     "Apply": "应用",
-    "Arrange": "排列",
-    "Arrange the current hierarchy": "整理当前层级",
     "Background": "背景",
     "Birth months": "出生月份",
     "Birthday": "生日",
@@ -329,7 +327,6 @@
     "Selected Unit path": "所选团队路径",
     "Size": "大小",
     "Static": "静态",
-    "Georgia": "Georgia 字体",
     "System": "跟随系统",
     "Tags": "标签",
     "Template": "模板",
@@ -533,7 +530,6 @@
     "Arabic": "阿拉伯语",
     "Choose interface language": "选择界面语言。",
     "Choose interface theme": "选择界面外观。",
-    "Arrange selected": "整理所选团队",
     "A View with this name already exists.": "已存在同名视图。",
     "Enter a View name.": "请输入视图名称。",
     "The source View is unavailable.": "源视图不可用。",
@@ -624,6 +620,11 @@
     "Density": "密度",
     "Export the complete View with Units and canvas elements.": "导出包含团队和画布元素的完整视图。",
     "View export preview": "视图导出预览",
-    "Background color": "背景颜色"
+    "Background color": "背景颜色",
+    "Mixed": "混合值",
+    "Text background": "文本背景",
+    "No background": "无背景",
+    "Block background": "块背景",
+    "Line background": "行背景"
   }
 }

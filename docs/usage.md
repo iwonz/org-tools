@@ -86,15 +86,16 @@ control.
   global. Copy and Paste share one transient clipboard across Views in the current tab, regenerate
   Unit identity on Paste, and keep Undo limited to the target View. A copied Live Unit whose source
   is outside the copied group is pasted as a static snapshot of its visible membership. View
-  selection and management occupy the top logical start; Search, layout, Arrange, Collapse/Expand,
+  selection and management occupy the top logical start; Search, layout, Collapse/Expand,
   and always-available **Export image** occupy the top logical end. Undo/Redo share the bottom
   logical-start surface with zoom and focus, while tools stay centered at the bottom with applicable
   single-element properties directly above. The surfaces share one 48-pixel, borderless, shadowless
   visual treatment and stack into collision-free rows on compact screens. Vertical and horizontal layout are separate
-  buttons: choosing a direction arranges once and supports Undo/Redo; choosing it again does nothing.
+  buttons: every press arranges in that direction and supports Undo/Redo, including a repeated press.
   Search expands inward without moving the
   other controls. Dragging one Unit in an existing multi-selection keeps the group selected;
-  **Arrange selected** moves only those Units in one undoable snapped operation. Closing Search
+  With at least two selected Units, a direction button moves only those Units in one undoable snapped
+  operation; otherwise it arranges the complete hierarchy. Closing Search
   clears its query. **View settings** beside the View selector applies to every Unit in the active View,
   including Live Units. **Unit display** contains **Group by tag** and **Show Tag cloud**, both on by
   default. Each Employee appears once under their earliest catalog Tag priority; groups have no
@@ -111,12 +112,15 @@ control.
   an empty View. Choosing a creation tool clears the current canvas selection; a plain element click selects
   only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens Back,
   Front, Duplicate, and Delete instead of Unit or layer-plane commands; these commands are absent
-  from the properties row. Text and Sticker offer only localized **System** and **Georgia** families,
-  with one **Bold** button switching between Regular and Bold, plus size, color, resize, rotation,
-  and non-clipping wrapping. Historical font values and Medium weight still import safely and render
-  as System/Regular until the next explicit typography edit normalizes them. DOM and PNG use the
-  same local fallback stacks and measurements. One compact alignment control exposes all nine horizontal/vertical combinations, and
-  editing retains the same wrapping and placement before and after focus. Sticker also has a
+  from the properties row. Text and Sticker offer **System**, **Georgia**, **Bebas Neue**, **Lobster**,
+  and **Montserrat**, with one **Bold** button switching between Regular and Bold. Text starts in
+  auto-width, always derives height from mixed typography, becomes fixed-width after manual width
+  resize, and keeps a selectable 48 by 32 box while empty. Its contenteditable supports grapheme-safe
+  partial family, size, weight, and color formatting plus plain-text paste. Text can omit its
+  background, fill the complete block, or fill each visual line; its alignment control is horizontal
+  only. Historical font values and Medium weight still import safely as System/Regular, and the
+  preceding plain Text State shape loads without a corruption error. DOM and PNG use the same local
+  stacks, fragment layout, fills, and geometry. Sticker keeps all nine alignment combinations and has a
   background color and a flat four-pixel-radius bordered surface mirrored in PNG. Images accept only
   local PNG, JPEG, or WebP file/clipboard bytes and
   resize independently by default; hold Shift during a resize to preserve proportions. Cubic Arrows expose two
@@ -171,7 +175,7 @@ control.
   JSON, or Template output. Editor Image exports preserve its stable row tones without selection,
   placement lines, or endpoint markers. The dedicated View Image dialog previews the entire durable
   scene and offers the same
-  background, padding, title, System/Georgia font choice, Unit radius, Employee format, boss label,
+  background, padding, title, the same five-font choice, Unit radius, Employee format, boss label,
   Copy, and Save controls.
   Full-View and Unit/subtree previews begin fitted and support pointer-centered wheel zoom,
   10%-to-400% controls, 100%, Fit, drag pan, and keyboard pan. Manual zoom and the relative center

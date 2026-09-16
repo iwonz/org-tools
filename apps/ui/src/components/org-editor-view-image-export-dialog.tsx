@@ -400,7 +400,7 @@ export function OrgEditorViewImageExportDialog({
                     {ORG_EDITOR_EXPORT_FONTS.map((font) => (
                       <SelectItem key={font.family} value={font.family}>
                         <span style={{ fontFamily: getOrgEditorCanvasCssFontFamily(font.family) }}>
-                          {font.family === "system-ui" ? t("System") : t("Georgia")}
+                          {font.family === "system-ui" ? t("System") : font.family}
                         </span>
                       </SelectItem>
                     ))}

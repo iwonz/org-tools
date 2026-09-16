@@ -82,7 +82,7 @@ export function ViewSettingsDialog({
               </div>
             ))}
           </section>
-          <section aria-labelledby={`${id}-distribution`} className="grid gap-4 border-t pt-5">
+          <section aria-labelledby={`${id}-distribution`} className="grid gap-4 pt-1">
             <h3 className="text-sm font-semibold" id={`${id}-distribution`}>
               {t("Distribution mode")}
             </h3>

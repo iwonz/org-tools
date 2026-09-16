@@ -722,7 +722,7 @@ export function OrgEditorExportDialog({
                             <span
                               style={{ fontFamily: getOrgEditorCanvasCssFontFamily(font.family) }}
                             >
-                              {font.family === "system-ui" ? t("System") : t("Georgia")}
+                              {font.family === "system-ui" ? t("System") : font.family}
                             </span>
                           </SelectItem>
                         ))}

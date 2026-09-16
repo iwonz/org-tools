@@ -39,8 +39,6 @@
     "Geometry": "Геометрия",
     "Analytics": "Аналитика",
     "Apply": "Применить",
-    "Arrange": "Упорядочить",
-    "Arrange the current hierarchy": "Упорядочить текущую иерархию",
     "Background": "Фон",
     "Birth months": "Месяцы рождения",
     "Birthday": "День рождения",
@@ -329,7 +327,6 @@
     "Selected Unit path": "Путь выбранной команды",
     "Size": "Размер",
     "Static": "Обычная",
-    "Georgia": "Шрифт Georgia",
     "System": "Системная",
     "Tags": "Теги",
     "Template": "Шаблон",
@@ -533,7 +530,6 @@
     "Arabic": "Арабский",
     "Choose interface language": "Выберите язык интерфейса.",
     "Choose interface theme": "Выберите оформление интерфейса.",
-    "Arrange selected": "Упорядочить выбранные",
     "A View with this name already exists.": "Представление с таким названием уже существует.",
     "Enter a View name.": "Введите название представления.",
     "The source View is unavailable.": "Исходное представление недоступно.",
@@ -624,6 +620,11 @@
     "Density": "Плотность",
     "Export the complete View with Units and canvas elements.": "Экспорт всего Представления с Командами и элементами холста.",
     "View export preview": "Предпросмотр экспорта Представления",
-    "Background color": "Цвет фона"
+    "Background color": "Цвет фона",
+    "Mixed": "Смешанные значения",
+    "Text background": "Фон текста",
+    "No background": "Без фона",
+    "Block background": "Фон блока",
+    "Line background": "Фон строк"
   }
 }

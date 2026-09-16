@@ -54,7 +54,8 @@ Canvas selection, tool activation, contextual target outlines and anchors, perim
 resize/rotation previews, context menus, Format token suggestions, Format help, and the Remove empty
 lines choice remain transient browser UI. PNG preview Fit/manual mode, zoom, pan, pointer capture,
 keyboard position, normalized focal point, and local object URL also remain in dialog memory only.
-Only a completed element command updates the active View;
+Rich Text drafts, DOM ranges, pending caret typography, and composition state remain transient and
+store plain text plus normalized style ranges only when editing completes. Only a completed element command updates the active View;
 Template line filtering derives local output without writing State. None of these interactions adds
 storage, logging, telemetry, or network access.
 
@@ -80,10 +81,10 @@ working directories only to identify this checkout's development processes. It d
 process environments or organization state, persist a process registry, log command lines, access
 the network, or remove runtime files. Graceful shutdown precedes any verified forceful termination.
 
-The Pages artifact contains HTML, CSS, JavaScript, and locally bundled Noto UI families. Editor
-annotations and Image export resolve only the local system sans-serif stack or Georgia with local
-Times/serif fallbacks; historical imported family names resolve to the same System stack. Language,
-theme, and Editor font selectors never download catalogs or fonts. It
+The Pages artifact contains HTML, CSS, JavaScript, and locally bundled UI families. Editor
+annotations and Image export resolve System and Georgia fallbacks or bundled Bebas Neue, Lobster,
+and Montserrat files; historical imported family names resolve to System. Language, theme, and
+Editor font selectors never download catalogs or fonts. It
 contains no SQLite code, state endpoint, organization fixture, secret, remote asset, or external
 request. `pnpm pages:check` and `pnpm public:check` scan these boundaries.
 

@@ -31,11 +31,17 @@ importers:
 
   apps/pages:
     dependencies:
+      '@fontsource/bebas-neue':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/ibm-plex-sans':
         specifier: ^5.2.8
         version: 5.3.0
       '@fontsource/inter':
         specifier: ^5.2.8
+        version: 5.3.0
+      '@fontsource/lobster':
+        specifier: ^5.3.0
         version: 5.3.0
       '@fontsource/manrope':
         specifier: ^5.2.8
@@ -104,11 +110,17 @@ importers:
 
   apps/ui:
     dependencies:
+      '@fontsource/bebas-neue':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/ibm-plex-sans':
         specifier: ^5.2.8
         version: 5.3.0
       '@fontsource/inter':
         specifier: ^5.2.8
+        version: 5.3.0
+      '@fontsource/lobster':
+        specifier: ^5.3.0
         version: 5.3.0
       '@fontsource/manrope':
         specifier: ^5.2.8
@@ -353,11 +365,17 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
+  '@fontsource/bebas-neue@5.3.0':
+    resolution: {integrity: sha512-nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==}
+
   '@fontsource/ibm-plex-sans@5.3.0':
     resolution: {integrity: sha512-CbE4CbbEEZJX860XyUiRpsksXIQR8Rp2XDva2VO53NJox9tVNtusrysd2x5YkUEY3ErQ66W1IiiQL8/wihhw5w==}
 
   '@fontsource/inter@5.3.0':
     resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
+
+  '@fontsource/lobster@5.3.0':
+    resolution: {integrity: sha512-jt+RDk/8Sstl1Omhox62gTbvRSLbh06kn5BNfDFgf4rNuDPHF+19eWYFxzq5FsdkalbRJNtc5p5C3qE0+leNVg==}
 
   '@fontsource/manrope@5.3.0':
     resolution: {integrity: sha512-obJ1Dv3+uCA6HlHgW8u4BGYxJR9In2HW7gjJhlflEvkrj1X1iSEwu0fToL+JYGC/FEKFfIz1sBuPduvcL2gIAA==}
@@ -2879,9 +2897,13 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
+  '@fontsource/bebas-neue@5.3.0': {}
+
   '@fontsource/ibm-plex-sans@5.3.0': {}
 
   '@fontsource/inter@5.3.0': {}
+
+  '@fontsource/lobster@5.3.0': {}
 
   '@fontsource/manrope@5.3.0': {}
 

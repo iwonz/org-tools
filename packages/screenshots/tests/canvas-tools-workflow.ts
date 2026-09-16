@@ -206,9 +206,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await editor.fill("Committed before using properties");
   await properties.getByRole("button", { name: "Geometry", exact: true }).click();
   await page.getByLabel("Element width", { exact: true }).click();
-  await expect(editor).toBeHidden();
+  await expect(editor).toBeVisible();
   await expect(properties).toBeVisible();
   await expect(createdText).toHaveCSS("outline-style", "solid");
+  await canvas.click({ position: { x: canvasBox.width - 24, y: canvasBox.height / 2 } });
+  await expect(editor).toBeHidden();
+  await createdText.click();
   await expect(createdText).toHaveAttribute(
     "data-canvas-element-text",
     "Committed before using properties",
@@ -268,12 +271,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await createdText.click();
   const resizeHandles = createdText.locator("[data-canvas-resize-handle]");
   const rotateHandles = createdText.locator("[data-canvas-rotate-handle]");
-  await expect(resizeHandles).toHaveCount(8);
+  await expect(resizeHandles).toHaveCount(6);
   await expect(rotateHandles).toHaveCount(4);
   await expect(createdText.locator('[data-canvas-transform-handle="corner-resize"]')).toHaveCount(
     4,
   );
-  await expect(createdText.locator('[data-canvas-transform-handle="side-resize"]')).toHaveCount(4);
+  await expect(createdText.locator('[data-canvas-transform-handle="side-resize"]')).toHaveCount(2);
   await expect(createdText.locator("[data-canvas-connector-handle]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Lock aspect ratio", exact: true })).toHaveCount(0);
   await expect(properties.getByLabel("Layer", { exact: true })).toHaveCount(0);
@@ -284,15 +287,17 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const widthInput = page.getByLabel("Element width", { exact: true });
   const heightInput = page.getByLabel("Element height", { exact: true });
   await expect(widthInput).toHaveAttribute("step", "1");
-  await expect(heightInput).toHaveAttribute("step", "1");
+  await expect(heightInput).toHaveCount(0);
   expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
-  expect(Number.isInteger(Number(await heightInput.inputValue()))).toBe(true);
 
   await createdText.hover();
   await expect(canvas.locator("[data-canvas-target-anchor]")).toHaveCount(0);
 
   await properties.getByLabel("Font", { exact: true }).click();
-  await expect(page.getByRole("option")).toHaveCount(2);
+  await expect(page.getByRole("option")).toHaveCount(5);
+  for (const font of ["System", "Georgia", "Bebas Neue", "Lobster", "Montserrat"]) {
+    await expect(page.getByRole("option", { name: font, exact: true })).toBeVisible();
+  }
   await page.getByRole("option", { name: "Georgia", exact: true }).click();
   await expect(createdText).toHaveAttribute("data-canvas-font-family", "Georgia");
   await expect(createdText.locator('span[style*="font-family"]').first()).toHaveCSS(
@@ -309,9 +314,79 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   );
   await boldButton.click();
   await expect(boldButton).toHaveAttribute("aria-pressed", "false");
-  await properties.getByRole("button", { name: "Alignment", exact: true }).click();
-  await expect(page.locator("[data-canvas-alignment]")).toHaveCount(9);
-  await page.locator('[data-canvas-alignment="bottom:right"]').click();
+  const textBackgroundControl = properties.getByLabel("Text background", { exact: true });
+  const alignmentControl = properties.getByRole("button", { name: "Alignment", exact: true });
+  const [textBackgroundBox, alignmentBox] = await Promise.all([
+    textBackgroundControl.boundingBox(),
+    alignmentControl.boundingBox(),
+  ]);
+  if (!textBackgroundBox || !alignmentBox) {
+    throw new Error("Text property geometry is unavailable.");
+  }
+  const alignmentHitLabel = await page.evaluate(
+    ({ x, y }) =>
+      document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label") ?? null,
+    { x: alignmentBox.x + alignmentBox.width / 2, y: alignmentBox.y + alignmentBox.height / 2 },
+  );
+  expect(alignmentBox.x).toBeGreaterThanOrEqual(textBackgroundBox.x + textBackgroundBox.width);
+  expect(alignmentBox.width).toBe(36);
+  expect(alignmentHitLabel).toBe("Alignment");
+  await alignmentControl.click();
+  await expect(page.locator("[data-canvas-alignment]")).toHaveCount(3);
+  await page.locator('[data-canvas-alignment="top:right"]').click();
+
+  await createdText.dblclick();
+  await editor.fill("A");
+  const autoWidthBefore = Number.parseFloat(
+    await createdText.evaluate((element: HTMLElement) => element.style.width),
+  );
+  await editor.fill("Alpha Beta rich text grows automatically");
+  await expect
+    .poll(() =>
+      createdText.evaluate((element: HTMLElement) => Number.parseFloat(element.style.width)),
+    )
+    .toBeGreaterThan(autoWidthBefore);
+  await editor.press("Home");
+  for (let index = 0; index < 5; index += 1) await editor.press("Shift+ArrowRight");
+  await boldButton.click();
+  await expect(editor).toBeVisible();
+  await expect(boldButton).toHaveAttribute("aria-pressed", "true");
+  await editor.press("Home");
+  for (let index = 0; index < 7; index += 1) await editor.press("Shift+ArrowRight");
+  await expect(boldButton).toHaveAttribute("aria-pressed", "mixed");
+  await editor.press("End");
+  await editor.evaluate((element) => {
+    const clipboard = new DataTransfer();
+    clipboard.setData("text/plain", " plain paste");
+    clipboard.setData("text/html", "<strong>formatted paste</strong>");
+    element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData: clipboard }));
+  });
+  await expect(editor).toContainText("Alpha Beta rich text grows automatically plain paste");
+  await expect(editor.locator("strong")).toHaveCount(0);
+  await canvas.click({ position: { x: canvasBox.width - 24, y: canvasBox.height / 2 } });
+  await createdText.click();
+  await expect(createdText).toHaveAttribute(
+    "data-canvas-element-text",
+    "Alpha Beta rich text grows automatically plain paste",
+  );
+  await expect(createdText.locator('span[style*="font-weight: 700"]').first()).toContainText(
+    "Alpha",
+  );
+  await properties.getByLabel("Text background", { exact: true }).click();
+  await page.getByRole("option", { name: "Line background", exact: true }).click();
+  await expect(createdText.locator('[data-canvas-text-fill="lines"]')).toHaveCount(1);
+
+  const textBeforeMove = await createdText.boundingBox();
+  if (!textBeforeMove) throw new Error("Text move geometry is unavailable.");
+  const moveTarget = point(canvasBox.width * 0.62, canvasBox.height * 0.58);
+  await page.mouse.move(
+    textBeforeMove.x + textBeforeMove.width / 2,
+    textBeforeMove.y + textBeforeMove.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(moveTarget.x, moveTarget.y, { steps: 4 });
+  await expect(canvas).toHaveAttribute("data-active-drag-type", "canvasElement");
+  await page.mouse.up();
 
   const cornerHandle = createdText.locator('[data-canvas-resize-handle="topRight"]');
   const cornerBeforeZoom = await cornerHandle.boundingBox();
@@ -585,7 +660,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const dialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Font", { exact: true }).click();
-  await expect(page.getByRole("option")).toHaveCount(2);
+  await expect(page.getByRole("option")).toHaveCount(5);
   await expect(page.getByRole("option", { name: "System", exact: true })).toBeVisible();
   await expect(page.getByRole("option", { name: "Georgia", exact: true })).toBeVisible();
   await page.getByRole("option", { name: "System", exact: true }).click();
@@ -661,7 +736,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(unitDialog).toBeVisible();
   await unitDialog.getByRole("tab", { name: "Unit only", exact: true }).click();
   await unitDialog.getByLabel("Font", { exact: true }).click();
-  await expect(page.getByRole("option")).toHaveCount(2);
+  await expect(page.getByRole("option")).toHaveCount(5);
   await expect(page.getByRole("option", { name: "System", exact: true })).toBeVisible();
   await expect(page.getByRole("option", { name: "Georgia", exact: true })).toBeVisible();
   await page.getByRole("option", { name: "System", exact: true }).click();
@@ -741,6 +816,10 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   }
   legacyElement.typography.fontFamily = "Inter";
   legacyElement.typography.fontWeight = 500;
+  legacyElement.formatRuns = legacyElement.formatRuns.map((run) => ({
+    ...run,
+    typography: { ...run.typography, fontFamily: "Inter", fontWeight: 500 },
+  }));
   const legacyDialog = await openImportDialog(page, {
     buffer: Buffer.from(JSON.stringify(legacyState)),
     mimeType: "application/json",

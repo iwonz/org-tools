@@ -72,15 +72,19 @@ free-canvas pointer-down keeps a free endpoint. Image resize reads Shift from ea
 preserving proportions only while the modifier is held; the compatibility `lockAspectRatio` State
 field no longer controls interaction. Escape clears a resting element selection after
 higher-priority editing, menu, and transform interactions have handled the key. Text completion is
-idempotent across capture, blur, Escape, and tool changes, and textarea focus cannot create an
-internal canvas scroll offset. Text and Sticker use one typography resolver and text-block layout
-for DOM measurement, editing drafts, and PNG painting. Current choices are the local system
-sans-serif stack and Georgia with Times/serif fallbacks; the parser still accepts the ten historical
-families and weight 500, which resolve at presentation time to System and Regular without mutating
-untouched State. Sticker fill and its one tonal border come from one shared flat-style helper without
-changing bounds or anchors. The contextual surface keeps applicable appearance controls in one row
-and moves alignment and geometry into bounded popovers. Element ordering, duplication, and deletion
-remain context-menu and keyboard commands rather than duplicated property actions.
+idempotent across capture, blur, Escape, and tool changes. Text uses a transient contenteditable
+draft with grapheme-safe UTF-16 format runs, plain-text paste, caret styling, and one atomic history
+commit; Sticker keeps its plain textarea. One fragment layout derives Text auto/fixed width, height,
+visual lines, block/per-line fill bounds, anchors, resting DOM, draft bounds, and PNG painting. Text
+exposes horizontal alignment and width-only resize, retains a 48 by 32 empty bound, and scales
+base/run font sizes during group resize. Current choices are System, Georgia, Bebas Neue, Lobster,
+and Montserrat; every non-system face is local or bundled. The parser also accepts historical
+families and weight 500, which resolve to System and Regular, plus the immediately preceding exact
+Text shape, which normalizes without history. Sticker fill and its one tonal border come from one
+shared flat-style helper without changing bounds or anchors. The contextual surface keeps applicable
+appearance controls in one row and moves alignment and geometry into bounded popovers. Element
+ordering, duplication, and deletion remain context-menu and keyboard commands rather than duplicated
+property actions.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
@@ -241,8 +245,8 @@ and effective 1x/2x/3x density, final dimensions, and 8/32-megapixel plus canvas
 rasterization. Both dialogs place their local object URL in one transient Fit-first viewport with
 bounded pointer/keyboard pan and 10%-to-400% zoom. Manual inspection preserves its normalized focal
 point across preview regeneration; viewport state and render-plan diagnostics are not persisted or
-painted. Text and Sticker wait for their canonical resolved local family and weight before
-measurement; Sticker uses the same live flat fill and tonal border. Global Back and Front move only
+painted. Text waits for every unique base/run family and weight, and Sticker waits for its resolved
+family, before measurement; Sticker uses the same live flat fill and tonal border. Global Back and Front move only
 the selected ordered block to the extreme of `behindUnits` or `aboveUnits`, preserving every
 attachment while crossing the indivisible Unit-card plane. Text, Sticker, Image, and Arrow painters
 omit every transient selection, target outline, anchor, resize, rotation,
@@ -305,7 +309,7 @@ edit or deletion.
 
 The Editor omits the shared content header. A styled View selector plus Create, Rename, and Delete
 actions occupy a top logical-start surface; the system View cannot be renamed or deleted. Search,
-layout, Arrange, Collapse/Expand, and full-View Image export occupy the top logical-end surface, with
+layout, Collapse/Expand, and full-View Image export occupy the top logical-end surface, with
 Export retained for an empty View. Undo/Redo share the bottom logical-start surface with zoom and
 focus, while the tools row is geometrically centered at the bottom and its single-selection
 properties sit directly above it. All five surfaces share 48-pixel geometry, a 36-pixel control
@@ -322,8 +326,9 @@ document geometry changes.
 Editor and PNG Employee summaries union each Unit's own IDs with all descendants. IDs repeated in
 ancestors remain included in the current subtree; bosses follow ordinary deduplication. The shared
 Units model's deepEmployeeIds union drives hierarchy selectors and export sources unchanged.
-Layout direction has two independent pressed buttons. Choosing another direction invokes one
-existing undoable arrangement; choosing the current direction does nothing.
+Layout direction has two independent pressed buttons. Every activation invokes one existing
+undoable arrangement in that direction; two or more selected Units use selected-only layout and
+zero or one selected Unit uses the complete hierarchy. No separate Arrange action renders.
 
 Each Editor store also owns a bounded list of Units with distribution mode enabled. A memoized
 active-View index maps each Employee ID to direct manual or resolved Live Unit IDs without treating
@@ -347,7 +352,7 @@ diagonal motion uses the same total cap. Drag and document-anchored marquee prev
 transient, pointer release commits at most one viewport change and one structural command, and
 cancel restores the gesture-start viewport.
 Dragging an already selected Unit past the movement threshold preserves the whole selection.
-Selected-only Arrange lays out the induced selected hierarchy, keeps its center, avoids unselected
+Selected-only layout lays out the induced selected hierarchy, keeps its center, avoids unselected
 bounds, and commits one snapped history operation without moving other Units. Expanded Unit cards
 derive a catalog-ordered footer from direct Employees only; its wrapped chip geometry participates
 in bounds, snapping, spatial indexing, connections, overlap resolution, and PNG output.

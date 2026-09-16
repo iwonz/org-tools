@@ -275,13 +275,14 @@
     "featured": true,
     "title": "Visual organization Editor",
     "file": "demo-editor.png",
-    "description": "Arrange Unit cards and durable Text, flat bordered Sticker, Image, and Arrow annotations with compact System/Georgia properties in the bottom-centered Miro-like tool dock.",
+    "description": "Arrange Unit cards and durable rich Text, flat bordered Sticker, Image, and curved Arrow annotations with five local fonts, partial typography, line fill, and compact bottom-centered tools.",
     "capabilities": [
       "Canvas layout",
       "Adaptive snap grid",
       "Hierarchy",
       "Zoom",
-      "Canvas tools and flat Sticker",
+      "Rich Text and flat Sticker",
+      "Five local fonts",
       "Perimeter transforms",
       "Element context actions"
     ]
@@ -459,7 +460,7 @@
     "featured": false,
     "title": "Editor image export",
     "file": "feature-editor-image-export.png",
-    "description": "Preview and navigate the complete View PNG with Unit cards, System/Georgia annotations, distribution tones, token-aware Employee format, and icon-labelled Copy and Save actions.",
+    "description": "Preview and navigate the complete View PNG with Unit cards, five-font rich annotations, distribution tones, token-aware Employee format, and icon-labelled Copy and Save actions.",
     "capabilities": [
       "Full-View PNG",
       "Canvas elements",
@@ -506,10 +507,11 @@
     "featured": false,
     "title": "Editor image detail settings",
     "file": "feature-editor-image-settings.png",
-    "description": "Configure density, background, title, spacing, and @-assisted conditional Employee content beside a navigable preview with focused format help.",
+    "description": "Configure density, background, title, five local fonts, spacing, and @-assisted conditional Employee content beside a navigable preview with focused format help.",
     "capabilities": [
       "Density and silent clamping",
       "Title and background",
+      "Five local fonts",
       "Localized boss label",
       "Token suggestions",
       "Conditional Employee format"

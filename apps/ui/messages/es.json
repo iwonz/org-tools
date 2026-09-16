@@ -39,8 +39,6 @@
     "Geometry": "Geometría",
     "Analytics": "Análisis",
     "Apply": "Aplicar",
-    "Arrange": "Arreglar",
-    "Arrange the current hierarchy": "Arregla la jerarquía actual",
     "Background": "Antecedentes",
     "Birth months": "Nacimientos",
     "Birthday": "Nacimiento",
@@ -329,7 +327,6 @@
     "Selected Unit path": "Sendero de unidad seleccionado",
     "Size": "Tamaño",
     "Static": "Estática",
-    "Georgia": "Fuente Georgia",
     "System": "Sistema",
     "Tags": "Etiquetas",
     "Template": "Plantilla",
@@ -533,7 +530,6 @@
     "Arabic": "Árabe",
     "Choose interface language": "Elige el idioma de la interfaz.",
     "Choose interface theme": "Elige la apariencia de la interfaz.",
-    "Arrange selected": "Organizar seleccionados",
     "A View with this name already exists.": "Ya existe una vista con este nombre.",
     "Enter a View name.": "Introduce un nombre para la vista.",
     "The source View is unavailable.": "La vista de origen no está disponible.",
@@ -624,6 +620,11 @@
     "Density": "Densidad",
     "Export the complete View with Units and canvas elements.": "Exporta la Vista completa con Equipos y elementos del lienzo.",
     "View export preview": "Vista previa de exportación",
-    "Background color": "Color de fondo"
+    "Background color": "Color de fondo",
+    "Mixed": "Valores mixtos",
+    "Text background": "Fondo de texto",
+    "No background": "Sin fondo",
+    "Block background": "Fondo de bloque",
+    "Line background": "Fondo por línea"
   }
 }

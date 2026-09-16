@@ -15,8 +15,10 @@ import type {
   OrgEditorCanvasElement,
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
+  OrgEditorInlineTypography,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
+  OrgEditorTextFormatRun,
   OrgEditorTypography,
   OrgEditorUnit,
   OrgEditorViewSettings,
@@ -55,7 +57,9 @@ import {
   isFiniteOrgEditorCanvasNumber,
   isOrgEditorCanvasColor,
   isOrgEditorCanvasFont,
+  isOrgEditorTextFormatRunSequence,
   normalizeOrgEditorRotation,
+  normalizeOrgEditorTextFormatRuns,
   ORG_EDITOR_ARROW_ANCHOR_IDS,
   ORG_EDITOR_CANVAS_MAX_FONT_SIZE,
   ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
@@ -1017,6 +1021,55 @@ const normalizeCanvasTypography = (value: unknown): OrgEditorTypography | null =
   };
 };
 
+const normalizeCanvasInlineTypography = (value: unknown): OrgEditorInlineTypography | null => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["color", "fontFamily", "fontSize", "fontWeight"]) ||
+    !isOrgEditorCanvasColor(value.color) ||
+    !isOrgEditorCanvasFont(value.fontFamily) ||
+    !isFiniteNumber(value.fontSize) ||
+    value.fontSize < ORG_EDITOR_CANVAS_MIN_FONT_SIZE ||
+    value.fontSize > ORG_EDITOR_CANVAS_MAX_FONT_SIZE ||
+    ![400, 500, 700].includes(value.fontWeight as number)
+  ) {
+    return null;
+  }
+  return {
+    color: value.color,
+    fontFamily: value.fontFamily,
+    fontSize: value.fontSize,
+    fontWeight: value.fontWeight as OrgEditorTypography["fontWeight"],
+  };
+};
+
+const normalizeCanvasTextFormatRuns = (
+  value: unknown,
+  text: string,
+  typography: OrgEditorTypography,
+): OrgEditorTextFormatRun[] | null => {
+  if (!Array.isArray(value)) return null;
+  const formatRuns: OrgEditorTextFormatRun[] = [];
+  for (const candidate of value) {
+    if (
+      !isRecord(candidate) ||
+      !hasExactKeys(candidate, ["end", "start", "typography"]) ||
+      !Number.isInteger(candidate.start) ||
+      !Number.isInteger(candidate.end)
+    ) {
+      return null;
+    }
+    const runTypography = normalizeCanvasInlineTypography(candidate.typography);
+    if (!runTypography) return null;
+    formatRuns.push({
+      end: candidate.end as number,
+      start: candidate.start as number,
+      typography: runTypography,
+    });
+  }
+  if (!isOrgEditorTextFormatRunSequence(text, formatRuns)) return null;
+  return normalizeOrgEditorTextFormatRuns(text, typography, formatRuns);
+};
+
 const normalizeCanvasRectBase = (value: Record<string, unknown>) => {
   if (
     !isUuid(value.id) ||
@@ -1050,7 +1103,7 @@ const normalizeCanvasRectBase = (value: Record<string, unknown>) => {
 const normalizeCanvasElement = (value: unknown): OrgEditorCanvasElement | null => {
   if (!isRecord(value) || typeof value.type !== "string") return null;
   if (value.type === "text" || value.type === "sticker") {
-    const keys = [
+    const precedingKeys = [
       "attachment",
       ...(value.type === "sticker" ? ["backgroundColor"] : []),
       "height",
@@ -1064,7 +1117,14 @@ const normalizeCanvasElement = (value: unknown): OrgEditorCanvasElement | null =
       "x",
       "y",
     ];
-    if (!hasExactKeys(value, keys) || !isString(value.text)) return null;
+    const currentTextKeys = [...precedingKeys, "autoWidth", "fillColor", "fillMode", "formatRuns"];
+    const isPrecedingText = value.type === "text" && hasExactKeys(value, precedingKeys);
+    const isCurrentText = value.type === "text" && hasExactKeys(value, currentTextKeys);
+    const hasExpectedKeys =
+      value.type === "sticker"
+        ? hasExactKeys(value, precedingKeys)
+        : isPrecedingText || isCurrentText;
+    if (!hasExpectedKeys || !isString(value.text)) return null;
     if (new TextEncoder().encode(value.text).byteLength > ORG_EDITOR_CANVAS_TEXT_MAX_UTF8_BYTES) {
       return null;
     }
@@ -1081,7 +1141,37 @@ const normalizeCanvasElement = (value: unknown): OrgEditorCanvasElement | null =
         type: "sticker",
       };
     }
-    return { ...base, text: value.text, typography, type: "text" };
+    if (isPrecedingText) {
+      return {
+        ...base,
+        autoWidth: false,
+        fillColor: "amber",
+        fillMode: "none",
+        formatRuns: [],
+        text: value.text,
+        typography: { ...typography, verticalAlign: "top" },
+        type: "text",
+      };
+    }
+    if (
+      typeof value.autoWidth !== "boolean" ||
+      !["none", "block", "lines"].includes(value.fillMode as string) ||
+      !isOrgEditorCanvasColor(value.fillColor)
+    ) {
+      return null;
+    }
+    const formatRuns = normalizeCanvasTextFormatRuns(value.formatRuns, value.text, typography);
+    if (!formatRuns) return null;
+    return {
+      ...base,
+      autoWidth: value.autoWidth,
+      fillColor: value.fillColor,
+      fillMode: value.fillMode as "block" | "lines" | "none",
+      formatRuns,
+      text: value.text,
+      typography: { ...typography, verticalAlign: "top" },
+      type: "text",
+    };
   }
   if (value.type === "image") {
     if (

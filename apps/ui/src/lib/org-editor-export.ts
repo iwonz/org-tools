@@ -63,7 +63,9 @@ import {
   getOrgEditorCanvasFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorRectAnchorPoint,
+  getOrgEditorRichTextLayout,
   getOrgEditorScopedCanvasElementIds,
+  getOrgEditorTextFillRects,
   layoutOrgEditorCanvasText,
   ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
   ORG_EDITOR_RECT_ANCHOR_IDS,
@@ -188,6 +190,9 @@ type OrgEditorExportGradientLayer =
 export const ORG_EDITOR_EXPORT_FONTS: OrgEditorExportFont[] = [
   { family: "system-ui", label: "System" },
   { family: "Georgia", label: "Georgia" },
+  { family: "Bebas Neue", label: "Bebas Neue" },
+  { family: "Lobster", label: "Lobster" },
+  { family: "Montserrat", label: "Montserrat" },
 ];
 
 export const ORG_EDITOR_EXPORT_GRADIENTS: OrgEditorExportGradient[] = [
@@ -714,6 +719,36 @@ const paintOrgEditorCanvasElement = ({
     return;
   }
 
+  if (element.type === "text") {
+    const layout = getOrgEditorRichTextLayout({
+      autoWidth: element.autoWidth,
+      formatRuns: element.formatRuns,
+      measure: (value, fragmentTypography) => {
+        context.font = getOrgEditorCanvasElementFont(fragmentTypography);
+        return context.measureText(value).width;
+      },
+      text: element.text,
+      typography: element.typography,
+      width: element.width,
+    });
+    for (const rect of getOrgEditorTextFillRects(element, layout)) {
+      drawRoundedRect(context, rect, rect.radius);
+      context.fillStyle = employeeTagColorToHex(element.fillColor);
+      context.fill();
+    }
+    context.textAlign = "start";
+    context.textBaseline = "top";
+    for (const line of layout.lines) {
+      for (const fragment of line.fragments) {
+        context.font = getOrgEditorCanvasElementFont(fragment.typography);
+        context.fillStyle = employeeTagColorToHex(fragment.typography.color);
+        context.fillText(fragment.text, fragment.x, fragment.y);
+      }
+    }
+    context.restore();
+    return;
+  }
+
   const typography = resolveOrgEditorCanvasTypography(element.typography);
   context.font = getOrgEditorCanvasElementFont(element.typography);
   const lines = layoutOrgEditorCanvasText({
@@ -1073,7 +1108,7 @@ const drawOrgEditorEmployeeTags = ({
   }
 };
 
-const waitForCanvasFont = async ({
+export const getOrgEditorExportFontRequests = ({
   canvasElements = [],
   fontFamily,
   titleFontSize,
@@ -1082,8 +1117,6 @@ const waitForCanvasFont = async ({
   fontFamily: string;
   titleFontSize: number;
 }) => {
-  if (typeof document === "undefined" || !document.fonts) return;
-
   const fontRequests = new Set<string>([
     getCanvasFont(fontFamily, 400, ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize),
     getCanvasFont(fontFamily, 400, ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE),
@@ -1094,9 +1127,22 @@ const waitForCanvasFont = async ({
   for (const element of canvasElements) {
     if (element.type === "image" || element.type === "arrow") continue;
     fontRequests.add(getOrgEditorCanvasElementFont(element.typography));
+    if (element.type === "text") {
+      for (const run of element.formatRuns) {
+        fontRequests.add(getOrgEditorCanvasElementFont(run.typography));
+      }
+    }
   }
 
-  await Promise.all([...fontRequests].map((fontRequest) => document.fonts.load(fontRequest)));
+  return [...fontRequests].sort();
+};
+
+const waitForCanvasFont = async (options: Parameters<typeof getOrgEditorExportFontRequests>[0]) => {
+  if (typeof document === "undefined" || !document.fonts) return;
+
+  await Promise.all(
+    getOrgEditorExportFontRequests(options).map((fontRequest) => document.fonts.load(fontRequest)),
+  );
 };
 
 export const getOrgEditorExportConnectionPath = ({

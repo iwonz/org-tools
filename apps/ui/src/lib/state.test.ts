@@ -164,6 +164,64 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(unsafe)).toThrow();
   });
 
+  test("normalizes the preceding Text shape and rejects invalid rich ranges atomically", () => {
+    const state = createBlankOrgToolsState();
+    const structure = state.organization.views[0]?.structure;
+    if (!structure) throw new Error("Expected a system View.");
+    const current = {
+      ...createOrgEditorTextElement({ x: 120, y: 80 }),
+      id: uuid(93),
+      text: "A👩🏽‍💻B",
+      width: 220.5,
+    };
+    const preceding = structuredClone(current) as unknown as Record<string, unknown>;
+    delete preceding.autoWidth;
+    delete preceding.fillColor;
+    delete preceding.fillMode;
+    delete preceding.formatRuns;
+    structure.canvasElements = [preceding as never];
+    const normalized = parseOrgToolsState(state);
+    expect(normalized.organization.views[0]?.structure.canvasElements[0]).toMatchObject({
+      autoWidth: false,
+      fillColor: "amber",
+      fillMode: "none",
+      formatRuns: [],
+      typography: { verticalAlign: "top" },
+      width: 220.5,
+    });
+    const restored = new OrgStore();
+    restored.loadOrgToolsState(normalized, "preceding-state.json", null);
+    expect(restored.orgEditor.canUndo).toBe(false);
+
+    for (const formatRuns of [
+      [
+        {
+          end: 2,
+          start: 1,
+          typography: { color: "blue", fontFamily: "Georgia", fontSize: 18, fontWeight: 700 },
+        },
+      ],
+      [
+        {
+          end: current.text.length - 1,
+          start: 1,
+          typography: { color: "blue", fontFamily: "Georgia", fontSize: 18, fontWeight: 700 },
+        },
+        {
+          end: current.text.length,
+          start: 2,
+          typography: { color: "rose", fontFamily: "Lobster", fontSize: 20, fontWeight: 400 },
+        },
+      ],
+    ]) {
+      const invalidState = createBlankOrgToolsState();
+      const invalidStructure = invalidState.organization.views[0]?.structure;
+      if (!invalidStructure) throw new Error("Expected a system View.");
+      invalidStructure.canvasElements = [{ ...current, formatRuns } as never];
+      expect(() => parseOrgToolsState(invalidState)).toThrow();
+    }
+  });
+
   test("round-trips Employees, assignments, structure, and Editor UI", () => {
     const { employeeId, store, unitId } = populatedStore();
     store.updateEmployee(

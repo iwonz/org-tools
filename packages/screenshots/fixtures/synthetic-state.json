@@ -267,6 +267,21 @@
                   }
                 }
               },
+              "autoWidth": true,
+              "fillColor": "amber",
+              "fillMode": "lines",
+              "formatRuns": [
+                {
+                  "end": 7,
+                  "start": 0,
+                  "typography": {
+                    "color": "blue",
+                    "fontFamily": "Bebas Neue",
+                    "fontSize": 28,
+                    "fontWeight": 700
+                  }
+                }
+              ],
               "height": 96,
               "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
               "layer": "aboveUnits",
@@ -276,7 +291,7 @@
                 "color": "#334155",
                 "fontFamily": "Georgia",
                 "fontSize": 22,
-                "fontWeight": 700,
+                "fontWeight": 400,
                 "horizontalAlign": "center",
                 "verticalAlign": "top"
               },

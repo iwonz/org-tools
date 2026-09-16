@@ -10,6 +10,7 @@ import {
   ORG_EDITOR_UNIT_BORDER_RADIUS,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
 } from "@/lib/org-editor";
+import { createOrgEditorTextElement } from "@/lib/org-editor-canvas";
 import {
   buildOrgEditorExportRows,
   createDefaultOrgEditorImageExportSettings,
@@ -26,6 +27,7 @@ import {
   getOrgEditorExportEmployeeTagLabels,
   getOrgEditorExportEmployeeTagRowCount,
   getOrgEditorExportEmployeeTags,
+  getOrgEditorExportFontRequests,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
@@ -87,6 +89,9 @@ describe("Org Editor image export", () => {
     expect(ORG_EDITOR_EXPORT_FONTS).toEqual([
       { family: "system-ui", label: "System" },
       { family: "Georgia", label: "Georgia" },
+      { family: "Bebas Neue", label: "Bebas Neue" },
+      { family: "Lobster", label: "Lobster" },
+      { family: "Montserrat", label: "Montserrat" },
     ]);
     expect(createDefaultOrgEditorImageExportSettings("Localized manager").imageBossLabel).toBe(
       "Localized manager",
@@ -101,6 +106,38 @@ describe("Org Editor image export", () => {
       "Aurora",
     ]);
     expect(createOrgEditorExportFileBaseName(unit)).toBe("Research-Development-Lab");
+  });
+
+  test("waits for every base and inline Text font used by PNG", () => {
+    const text = {
+      ...createOrgEditorTextElement({ x: 0, y: 0 }),
+      formatRuns: [
+        {
+          end: 2,
+          start: 0,
+          typography: {
+            color: "blue" as const,
+            fontFamily: "Lobster",
+            fontSize: 31,
+            fontWeight: 700 as const,
+          },
+        },
+      ],
+      text: "Hi",
+      typography: {
+        ...createOrgEditorTextElement({ x: 0, y: 0 }).typography,
+        fontFamily: "Bebas Neue",
+        fontSize: 24,
+      },
+    };
+    const requests = getOrgEditorExportFontRequests({
+      canvasElements: [text],
+      fontFamily: "Montserrat",
+      titleFontSize: 28,
+    });
+    expect(requests).toContain('400 24px "Bebas Neue", Impact, sans-serif');
+    expect(requests).toContain("700 31px Lobster, Georgia, serif");
+    expect(requests.some((request) => request.includes("Montserrat"))).toBe(true);
   });
 
   test("localizes every dated tag and expands PNG rows with compact export geometry", () => {

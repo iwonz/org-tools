@@ -39,8 +39,6 @@
     "Geometry": "Geometry",
     "Analytics": "Analytics",
     "Apply": "Apply",
-    "Arrange": "Arrange",
-    "Arrange the current hierarchy": "Arrange the current hierarchy",
     "Background": "Background",
     "Birth months": "Birth months",
     "Birthday": "Birthday",
@@ -329,7 +327,6 @@
     "Selected Unit path": "Selected Unit path",
     "Size": "Size",
     "Static": "Static",
-    "Georgia": "Georgia",
     "System": "System",
     "Tags": "Tags",
     "Template": "Template",
@@ -533,7 +530,6 @@
     "Arabic": "Arabic",
     "Choose interface language": "Choose the interface language.",
     "Choose interface theme": "Choose the interface appearance.",
-    "Arrange selected": "Arrange selected",
     "A View with this name already exists.": "A View with this name already exists.",
     "Enter a View name.": "Enter a View name.",
     "The source View is unavailable.": "The source View is unavailable.",
@@ -624,6 +620,11 @@
     "Density": "Density",
     "Export the complete View with Units and canvas elements.": "Export the complete View with Units and canvas elements.",
     "View export preview": "View export preview",
-    "Background color": "Background color"
+    "Background color": "Background color",
+    "Mixed": "Mixed",
+    "Text background": "Text background",
+    "No background": "No background",
+    "Block background": "Block background",
+    "Line background": "Line background"
   }
 }

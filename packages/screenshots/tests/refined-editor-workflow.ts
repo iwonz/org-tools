@@ -113,21 +113,30 @@ export async function exerciseRefinedEditor(page: Page) {
   await peer.close();
   await importState(page, state);
 
-  // Direction changes own one arrangement command; repeat activation cannot rearrange geometry.
+  // Every direction activation owns one arrangement command, including the already active mode.
   const vertical = page.getByRole("button", { name: "Vertical layout", exact: true });
   const horizontal = page.getByRole("button", { name: "Horizontal layout", exact: true });
   const before = required((await exportState(page)).organization.views[0]).structure;
+  await expect(vertical).toHaveAttribute("aria-pressed", "true");
   await vertical.click();
+  const repeatedVertical = required((await exportState(page)).organization.views[0]).structure;
+  expect(repeatedVertical.layoutMode).toBe("topDown");
+  expect(repeatedVertical).not.toEqual(before);
+  await page.keyboard.press("Control+z");
   expect(required((await exportState(page)).organization.views[0]).structure).toEqual(before);
+  await page.keyboard.press("Control+Shift+z");
+  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(
+    repeatedVertical,
+  );
   await horizontal.click();
   await expect(horizontal).toHaveAttribute("aria-pressed", "true");
   const changed = required((await exportState(page)).organization.views[0]).structure;
   expect(changed.layoutMode).toBe("leftRight");
-  await horizontal.press("Enter");
-  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(changed);
   await page.keyboard.press("Control+z");
   await expect(vertical).toHaveAttribute("aria-pressed", "true");
-  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(before);
+  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(
+    repeatedVertical,
+  );
   await page.keyboard.press("Control+Shift+z");
   expect(required((await exportState(page)).organization.views[0]).structure).toEqual(changed);
   await page.keyboard.press("Control+z");

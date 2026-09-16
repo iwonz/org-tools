@@ -1,10 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  applyOrgEditorTextFormat,
   createOrgEditorArrowElement,
   createOrgEditorCanvasDependencyIndexes,
   createOrgEditorStickerElement,
   createOrgEditorTextElement,
+  fitOrgEditorCanvasRichTextElement,
   fitOrgEditorCanvasTextElementHeight,
   getOrgEditorCanvasDependentClosure,
   getOrgEditorCanvasElementAnchorPoint,
@@ -16,14 +18,18 @@ import {
   getOrgEditorCanvasRotationDelta,
   getOrgEditorCanvasTextLayout,
   getOrgEditorRectAnchorPoint,
+  getOrgEditorRichTextLayout,
   getOrgEditorScopedCanvasElementIds,
+  getOrgEditorTextFillRects,
   hasOrgEditorCanvasElementDependencyCycle,
   layoutOrgEditorCanvasText,
   moveOrgEditorCanvasElement,
   normalizeOrgEditorCanvasDimension,
   normalizeOrgEditorCanvasDimensions,
+  normalizeOrgEditorTextFormatRuns,
   ORG_EDITOR_CANVAS_FONTS,
   ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS,
+  replaceOrgEditorTextRange,
   resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElements,
   resolveOrgEditorCanvasFontFamily,
@@ -37,10 +43,20 @@ const uuid = (value: number) => `00000000-0000-4000-8000-${String(value).padStar
 
 describe("Org Editor canvas geometry", () => {
   test("shares current font stacks and resolves legacy typography for DOM and PNG", () => {
-    expect(ORG_EDITOR_CANVAS_FONTS).toEqual(["system-ui", "Georgia"]);
+    expect(ORG_EDITOR_CANVAS_FONTS).toEqual([
+      "system-ui",
+      "Georgia",
+      "Bebas Neue",
+      "Lobster",
+      "Montserrat",
+    ]);
     expect(getOrgEditorCanvasFont("Montserrat", 500, 18)).toBe(
-      '400 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      "400 18px Montserrat, system-ui, sans-serif",
     );
+    expect(getOrgEditorCanvasFont("Bebas Neue", 700, 20)).toBe(
+      '700 20px "Bebas Neue", Impact, sans-serif',
+    );
+    expect(getOrgEditorCanvasFont("Lobster", 400, 20)).toBe("400 20px Lobster, Georgia, serif");
     expect(getOrgEditorCanvasFont("Georgia", 700, 24)).toBe(
       '700 24px Georgia, "Times New Roman", serif',
     );
@@ -227,6 +243,106 @@ describe("Org Editor canvas geometry", () => {
     expect(lines.length).toBeGreaterThan(1);
     expect(lines.every((line) => line.x >= 0 && line.width <= 74)).toBe(true);
     expect(lines[0]?.y).toBeGreaterThan(8);
+  });
+
+  test("normalizes grapheme-safe rich ranges and preserves inserted caret styling", () => {
+    const element = createOrgEditorTextElement({ x: 0, y: 0 });
+    const text = "A👩🏽‍💻B";
+    const formatted = applyOrgEditorTextFormat({
+      end: 2,
+      formatRuns: [],
+      patch: { color: "blue", fontWeight: 700 },
+      start: 1,
+      text,
+      typography: element.typography,
+    });
+    expect(formatted).toEqual([
+      {
+        end: text.length - 1,
+        start: 1,
+        typography: {
+          color: "blue",
+          fontFamily: "system-ui",
+          fontSize: 18,
+          fontWeight: 700,
+        },
+      },
+    ]);
+    const inserted = replaceOrgEditorTextRange({
+      end: text.length - 1,
+      formatRuns: formatted,
+      insertedText: "ok",
+      insertedTypography: {
+        color: "rose",
+        fontFamily: "Georgia",
+        fontSize: 24,
+        fontWeight: 400,
+      },
+      start: 1,
+      text,
+      typography: element.typography,
+    });
+    expect(inserted.text).toBe("AokB");
+    expect(inserted.selection).toBe(3);
+    expect(inserted.formatRuns).toEqual([
+      {
+        end: 3,
+        start: 1,
+        typography: {
+          color: "rose",
+          fontFamily: "Georgia",
+          fontSize: 24,
+          fontWeight: 400,
+        },
+      },
+    ]);
+    expect(
+      normalizeOrgEditorTextFormatRuns(inserted.text, element.typography, inserted.formatRuns),
+    ).toEqual(inserted.formatRuns);
+  });
+
+  test("derives automatic rich Text bounds and all fill geometries", () => {
+    const element = {
+      ...createOrgEditorTextElement({ x: 100, y: 100 }),
+      fillMode: "lines" as const,
+      formatRuns: [
+        {
+          end: 2,
+          start: 1,
+          typography: {
+            color: "blue" as const,
+            fontFamily: "Georgia",
+            fontSize: 32,
+            fontWeight: 700 as const,
+          },
+        },
+      ],
+      text: "AB\nC",
+    };
+    const layout = getOrgEditorRichTextLayout({
+      autoWidth: true,
+      formatRuns: element.formatRuns,
+      measure: (_value, typography) => typography.fontSize,
+      text: element.text,
+      typography: element.typography,
+      width: element.width,
+    });
+    expect(layout.width).toBe(58);
+    expect(layout.height).toBe(71);
+    expect(layout.lines).toHaveLength(2);
+    expect(getOrgEditorTextFillRects(element, layout)).toEqual([
+      { height: 44, radius: 4, width: 58, x: 0, y: 2 },
+      { height: 27, radius: 4, width: 26, x: 0, y: 42 },
+    ]);
+    expect(getOrgEditorTextFillRects({ ...element, fillMode: "block" }, layout)).toEqual([
+      { height: 32, radius: 4, width: 48, x: 0, y: 0 },
+    ]);
+    expect(getOrgEditorTextFillRects({ ...element, fillMode: "none" }, layout)).toEqual([]);
+    const fitted = fitOrgEditorCanvasRichTextElement(
+      element,
+      (_value, typography) => typography.fontSize,
+    );
+    expect(fitted).toMatchObject({ height: 71, width: 58 });
   });
 
   test("uses one text-block geometry for all nine saved alignments and overflow", () => {
@@ -442,6 +558,45 @@ describe("Org Editor canvas geometry", () => {
     expect(Number.isInteger(transformed.height)).toBe(true);
     expect(transformed.x + transformed.width / 2).toBeCloseTo(109.5);
     expect(transformed.y + transformed.height / 2).toBeCloseTo(86.5);
+  });
+
+  test("scales Text width and rich font sizes before deriving group height", () => {
+    const source = {
+      ...createOrgEditorTextElement({ x: 100, y: 80 }),
+      autoWidth: false,
+      formatRuns: [
+        {
+          end: 2,
+          start: 0,
+          typography: {
+            color: "blue" as const,
+            fontFamily: "Georgia",
+            fontSize: 24,
+            fontWeight: 700 as const,
+          },
+        },
+      ],
+      height: 54,
+      text: "AB CD",
+      width: 100,
+      x: 50,
+      y: 53,
+    };
+    const [transformed] = transformOrgEditorCanvasElements({
+      elements: [source],
+      measureText: (value, typography) => value.length * typography.fontSize * 0.5,
+      sourceBounds: { height: 54, width: 100, x: 50, y: 53 },
+      targetBounds: { height: 108, width: 150, x: 20, y: 30 },
+    });
+    expect(transformed?.type).toBe("text");
+    if (transformed?.type !== "text") return;
+    expect(transformed.autoWidth).toBe(false);
+    expect(transformed.width).toBe(150);
+    expect(transformed.typography.fontSize).toBe(36);
+    expect(transformed.formatRuns[0]?.typography.fontSize).toBe(48);
+    expect(transformed.height).toBe(68);
+    expect(transformed.x + transformed.width / 2).toBeCloseTo(95);
+    expect(transformed.y + transformed.height / 2).toBeCloseTo(84);
   });
 
   test("derives rotation from the exact selected-bounds center", () => {

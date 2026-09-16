@@ -9,8 +9,10 @@ import type {
   OrgEditorCanvasElementId,
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
+  OrgEditorInlineTypography,
   OrgEditorLayoutMode,
   OrgEditorSelectedItem,
+  OrgEditorTextElement,
   OrgEditorUnit,
   OrgEditorUnitId,
   OrgEditorViewSettings,
@@ -48,7 +50,6 @@ import {
   HiOutlinePlus,
   HiOutlineQueueList,
   HiOutlineShare,
-  HiOutlineSquares2X2,
   HiOutlineTag,
   HiOutlineTrash,
   HiOutlineUserGroup,
@@ -74,6 +75,7 @@ import {
   type OrgEditorCanvasElementHandle,
   OrgEditorCanvasElementNode,
   OrgEditorCanvasGroupFrame,
+  type OrgEditorCanvasTextDraft,
 } from "@/components/org-editor-canvas-element";
 import {
   type OrgEditorCanvasTool,
@@ -170,12 +172,14 @@ import {
   setOrgEditorUnitTagFooterHeight,
 } from "@/lib/org-editor";
 import {
+  applyOrgEditorTextFormat,
   cloneOrgEditorCanvasElement,
   createOrgEditorArrowElement,
   createOrgEditorCanvasDependencyIndexes,
   createOrgEditorImageElement,
   createOrgEditorStickerElement,
   createOrgEditorTextElement,
+  fitOrgEditorCanvasRichTextElement,
   fitOrgEditorCanvasTextElementHeight,
   getOrgEditorCanvasDependentClosure,
   getOrgEditorCanvasElementAnchorPoint,
@@ -184,14 +188,19 @@ import {
   getOrgEditorCanvasElementsBounds,
   getOrgEditorCanvasResizeBounds,
   getOrgEditorCanvasRotationDelta,
+  getOrgEditorInlineTypography,
   getOrgEditorRectAnchorPoint,
+  getOrgEditorTextStyleAt,
   moveOrgEditorCanvasElement,
+  normalizeOrgEditorTextFormatRuns,
   ORG_EDITOR_ARROW_ANCHOR_IDS,
   ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
   ORG_EDITOR_RECT_ANCHOR_IDS,
+  replaceOrgEditorTextRange,
   resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElementSubset,
   resolveOrgEditorCanvasElements,
+  resolveOrgEditorCanvasInlineTypography,
   rotateOrgEditorCanvasRectElementAroundCenter,
   transformOrgEditorCanvasElements,
 } from "@/lib/org-editor-canvas";
@@ -379,11 +388,14 @@ const getPointerScreenPoint = (event: Pick<PointerEvent, "clientX" | "clientY">)
 const fitCanvasTextElementHeight = (element: OrgEditorCanvasElement): OrgEditorCanvasElement => {
   if (element.type !== "text" && element.type !== "sticker") return element;
   const context = document.createElement("canvas").getContext("2d");
-  return fitOrgEditorCanvasTextElementHeight(element, (value, typography) => {
+  const measure = (value: string, typography: OrgEditorInlineTypography) => {
     if (!context) return [...value].length * typography.fontSize * 0.55;
     context.font = getOrgEditorCanvasElementFont(typography);
     return context.measureText(value).width;
-  });
+  };
+  return element.type === "text"
+    ? fitOrgEditorCanvasRichTextElement(element, measure)
+    : fitOrgEditorCanvasTextElementHeight(element, measure);
 };
 
 const getSelectionRect = (firstPoint: ScreenPoint, secondPoint: ScreenPoint) => ({
@@ -959,7 +971,7 @@ function OrgEditorLayoutDirection({
             layoutMode === mode && "bg-primary text-primary-foreground hover:bg-primary",
           )}
           key={mode}
-          onClick={() => layoutMode !== mode && onSelect(mode)}
+          onClick={() => onSelect(mode)}
           type="button"
         >
           {mode === "topDown" ? (
@@ -2048,8 +2060,11 @@ export const OrgStructureEditorTab = observer(() => {
   const [editingCanvasElementId, setEditingCanvasElementId] =
     useState<OrgEditorCanvasElementId | null>(null);
   const [editingCanvasText, setEditingCanvasText] = useState<string | null>(null);
+  const [editingCanvasRichTextDraft, setEditingCanvasRichTextDraft] =
+    useState<OrgEditorCanvasTextDraft | null>(null);
   const editingCanvasElementIdRef = useRef<OrgEditorCanvasElementId | null>(null);
   const editingCanvasTextRef = useRef<string | null>(null);
+  const editingCanvasRichTextDraftRef = useRef<OrgEditorCanvasTextDraft | null>(null);
   const [canvasToolError, setCanvasToolError] = useState<string | null>(null);
   const [noteUnitId, setNoteUnitId] = useState<OrgEditorUnitId | null>(null);
   const [placementTarget, setPlacementTarget] = useState<{
@@ -2059,6 +2074,23 @@ export const OrgStructureEditorTab = observer(() => {
   const { searchOpen, searchQuery } = store.editorUi;
   const [searchPinnedUnitId, setSearchPinnedUnitId] = useState<OrgEditorUnitId | null>(null);
   const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
+  const canvasTextFontRequestKey = useMemo(
+    () =>
+      [
+        ...new Set(
+          editor.canvasElements.flatMap((element) =>
+            element.type === "text"
+              ? [element.typography, ...element.formatRuns.map((run) => run.typography)].map(
+                  getOrgEditorCanvasElementFont,
+                )
+              : [],
+          ),
+        ),
+      ]
+        .sort()
+        .join("|"),
+    [editor.canvasElements],
+  );
   const [renderViewport, setRenderViewport] = useState<OrgEditorCanvasViewport>(() => ({
     ...editor.viewport,
   }));
@@ -2081,6 +2113,28 @@ export const OrgStructureEditorTab = observer(() => {
     typeof createLatestFrameScheduler<CanvasPoint>
   > | null>(null);
   const edgePanFrameIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const normalize = async () => {
+      if (document.fonts) {
+        await Promise.all(
+          canvasTextFontRequestKey
+            .split("|")
+            .filter(Boolean)
+            .map((request) => document.fonts.load(request)),
+        );
+      }
+      if (cancelled) return;
+      editor.normalizeCanvasTextGeometry(
+        (element) => fitCanvasTextElementHeight(element) as OrgEditorTextElement,
+      );
+    };
+    void normalize();
+    return () => {
+      cancelled = true;
+    };
+  }, [canvasTextFontRequestKey, editor]);
 
   useEffect(() => {
     viewportFrameSchedulerRef.current = createLatestFrameScheduler({
@@ -4075,9 +4129,20 @@ export const OrgStructureEditorTab = observer(() => {
           : { ...createOrgEditorStickerElement(canvasPoint), text: t("Note") };
       editor.addCanvasElement(element);
       editingCanvasElementIdRef.current = element.id;
-      editingCanvasTextRef.current = element.text;
       setEditingCanvasElementId(element.id);
-      setEditingCanvasText(element.text);
+      if (element.type === "text") {
+        const draft: OrgEditorCanvasTextDraft = {
+          formatRuns: element.formatRuns,
+          pendingTypography: null,
+          selection: { end: element.text.length, start: element.text.length },
+          text: element.text,
+        };
+        editingCanvasRichTextDraftRef.current = draft;
+        setEditingCanvasRichTextDraft(draft);
+      } else {
+        editingCanvasTextRef.current = element.text;
+        setEditingCanvasText(element.text);
+      }
       setActiveCanvasTool("select");
       return;
     }
@@ -4131,21 +4196,31 @@ export const OrgStructureEditorTab = observer(() => {
   const finishCanvasTextEditing = () => {
     const elementId = editingCanvasElementIdRef.current;
     const text = editingCanvasTextRef.current;
+    const richTextDraft = editingCanvasRichTextDraftRef.current;
     editingCanvasElementIdRef.current = null;
     editingCanvasTextRef.current = null;
+    editingCanvasRichTextDraftRef.current = null;
     setEditingCanvasElementId(null);
     setEditingCanvasText(null);
-    if (!elementId || text === null) return;
-    if (new TextEncoder().encode(text).byteLength > 64 * 1024) {
+    setEditingCanvasRichTextDraft(null);
+    const nextText = richTextDraft?.text ?? text;
+    if (!elementId || nextText === null) return;
+    if (new TextEncoder().encode(nextText).byteLength > 64 * 1024) {
       setCanvasToolError(t("Canvas text can contain at most 64 KiB."));
       return;
     }
     editor.updateCanvasElements(
       [elementId],
       (element) =>
-        element.type === "text" || element.type === "sticker"
-          ? fitCanvasTextElementHeight({ ...element, text })
-          : element,
+        element.type === "text" && richTextDraft
+          ? fitCanvasTextElementHeight({
+              ...element,
+              formatRuns: richTextDraft.formatRuns,
+              text: richTextDraft.text,
+            })
+          : element.type === "sticker" && text !== null
+            ? fitCanvasTextElementHeight({ ...element, text })
+            : element,
       "Edit canvas text",
     );
     setCanvasToolError(null);
@@ -4154,7 +4229,7 @@ export const OrgStructureEditorTab = observer(() => {
   const handleCanvasPointerDownCapture = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!editingCanvasElementIdRef.current) return;
     const target = event.target;
-    if (target instanceof Element && target.closest("textarea[data-canvas-text-editor]")) return;
+    if (target instanceof Element && target.closest("[data-canvas-text-editor]")) return;
     finishCanvasTextEditing();
   };
 
@@ -4162,6 +4237,124 @@ export const OrgStructureEditorTab = observer(() => {
     if (!editingCanvasElementIdRef.current) return;
     editingCanvasTextRef.current = text;
     setEditingCanvasText(text);
+  };
+
+  const updateCanvasRichTextEditing = (text: string, selection: { end: number; start: number }) => {
+    const elementId = editingCanvasElementIdRef.current;
+    const draft = editingCanvasRichTextDraftRef.current;
+    const element = editor.canvasElements.find(
+      (candidate): candidate is OrgEditorTextElement =>
+        candidate.id === elementId && candidate.type === "text",
+    );
+    if (!elementId || !draft || !element) return;
+    let prefixLength = 0;
+    while (
+      prefixLength < draft.text.length &&
+      prefixLength < text.length &&
+      draft.text[prefixLength] === text[prefixLength]
+    ) {
+      prefixLength += 1;
+    }
+    let suffixLength = 0;
+    while (
+      suffixLength < draft.text.length - prefixLength &&
+      suffixLength < text.length - prefixLength &&
+      draft.text[draft.text.length - 1 - suffixLength] === text[text.length - 1 - suffixLength]
+    ) {
+      suffixLength += 1;
+    }
+    const base = resolveOrgEditorCanvasInlineTypography(
+      getOrgEditorInlineTypography(element.typography),
+    );
+    const styleIndex = Math.max(0, Math.min(draft.text.length - 1, draft.selection.start));
+    const result = replaceOrgEditorTextRange({
+      end: draft.text.length - suffixLength,
+      formatRuns: draft.formatRuns,
+      insertedText: text.slice(prefixLength, text.length - suffixLength),
+      insertedTypography:
+        draft.pendingTypography ?? getOrgEditorTextStyleAt(base, draft.formatRuns, styleIndex),
+      start: prefixLength,
+      text: draft.text,
+      typography: element.typography,
+    });
+    const nextDraft: OrgEditorCanvasTextDraft = {
+      ...draft,
+      formatRuns: result.formatRuns,
+      selection,
+      text: result.text,
+    };
+    editingCanvasRichTextDraftRef.current = nextDraft;
+    setEditingCanvasRichTextDraft(nextDraft);
+  };
+
+  const updateCanvasRichTextSelection = (selection: { end: number; start: number }) => {
+    const draft = editingCanvasRichTextDraftRef.current;
+    if (!draft) return;
+    const nextDraft = { ...draft, pendingTypography: null, selection };
+    editingCanvasRichTextDraftRef.current = nextDraft;
+    setEditingCanvasRichTextDraft(nextDraft);
+  };
+
+  const updateCanvasTextTypography = (patch: Partial<OrgEditorInlineTypography>) => {
+    const elementId = editingCanvasElementIdRef.current;
+    const draft = editingCanvasRichTextDraftRef.current;
+    const editingElement = editor.canvasElements.find(
+      (candidate): candidate is OrgEditorTextElement =>
+        candidate.id === elementId && candidate.type === "text",
+    );
+    if (editingElement && draft) {
+      const { end, start } = draft.selection;
+      const base = resolveOrgEditorCanvasInlineTypography(
+        getOrgEditorInlineTypography(editingElement.typography),
+      );
+      const styleIndex = Math.max(0, Math.min(draft.text.length - 1, start));
+      const nextDraft: OrgEditorCanvasTextDraft =
+        start === end
+          ? {
+              ...draft,
+              pendingTypography: resolveOrgEditorCanvasInlineTypography({
+                ...(draft.pendingTypography ??
+                  getOrgEditorTextStyleAt(base, draft.formatRuns, styleIndex)),
+                ...patch,
+              }),
+            }
+          : {
+              ...draft,
+              formatRuns: applyOrgEditorTextFormat({
+                end,
+                formatRuns: draft.formatRuns,
+                patch,
+                start,
+                text: draft.text,
+                typography: editingElement.typography,
+              }),
+              pendingTypography: null,
+            };
+      editingCanvasRichTextDraftRef.current = nextDraft;
+      setEditingCanvasRichTextDraft(nextDraft);
+      return;
+    }
+    editor.updateCanvasElements(selectedCanvasElementIds, (element) => {
+      if (element.type !== "text") return element;
+      const typography = {
+        ...element.typography,
+        ...patch,
+        verticalAlign: "top" as const,
+      };
+      const formatRuns = normalizeOrgEditorTextFormatRuns(
+        element.text,
+        typography,
+        element.formatRuns.map((run) => ({
+          ...run,
+          typography: resolveOrgEditorCanvasInlineTypography({ ...run.typography, ...patch }),
+        })),
+      );
+      return fitCanvasTextElementHeight({
+        ...element,
+        formatRuns,
+        typography,
+      });
+    });
   };
 
   const handleCanvasElementPointerDown = (
@@ -4273,9 +4466,24 @@ export const OrgStructureEditorTab = observer(() => {
     const element = editor.canvasElements.find((candidate) => candidate.id === elementId);
     if (element?.type !== "text" && element?.type !== "sticker") return;
     editingCanvasElementIdRef.current = elementId;
-    editingCanvasTextRef.current = element.text;
     setEditingCanvasElementId(elementId);
-    setEditingCanvasText(element.text);
+    if (element.type === "text") {
+      const draft: OrgEditorCanvasTextDraft = {
+        formatRuns: element.formatRuns,
+        pendingTypography: null,
+        selection: { end: element.text.length, start: element.text.length },
+        text: element.text,
+      };
+      editingCanvasRichTextDraftRef.current = draft;
+      setEditingCanvasRichTextDraft(draft);
+      editingCanvasTextRef.current = null;
+      setEditingCanvasText(null);
+    } else {
+      editingCanvasTextRef.current = element.text;
+      setEditingCanvasText(element.text);
+      editingCanvasRichTextDraftRef.current = null;
+      setEditingCanvasRichTextDraft(null);
+    }
   };
 
   const handleUnitPointerDown = (
@@ -4638,7 +4846,14 @@ export const OrgStructureEditorTab = observer(() => {
       .filter((element) => element.layer === layer)
       .map((element) => (
         <OrgEditorCanvasElementNode
-          editingText={editingCanvasElementId === element.id ? editingCanvasText : null}
+          editingRichTextDraft={
+            editingCanvasElementId === element.id ? editingCanvasRichTextDraft : null
+          }
+          editingText={
+            editingCanvasElementId === element.id && element.type === "sticker"
+              ? editingCanvasText
+              : null
+          }
           element={element}
           imageUnavailableLabel={t("Image unavailable")}
           isSelected={selectedCanvasElementIds.has(element.id)}
@@ -4646,6 +4861,8 @@ export const OrgStructureEditorTab = observer(() => {
           onDoubleClick={startCanvasTextEditing}
           onContextMenu={handleCanvasElementContextMenu}
           onEditingTextChange={updateCanvasTextEditing}
+          onEditingRichTextChange={updateCanvasRichTextEditing}
+          onEditingSelectionChange={updateCanvasRichTextSelection}
           onFinishEditing={finishCanvasTextEditing}
           onHandlePointerDown={handleCanvasElementHandlePointerDown}
           onPointerDown={handleCanvasElementPointerDown}
@@ -5276,24 +5493,12 @@ export const OrgStructureEditorTab = observer(() => {
               />
               <OrgEditorLayoutDirection
                 layoutMode={editor.layoutMode}
-                onSelect={(mode) => editor.applyLayout(mode)}
+                onSelect={(mode) =>
+                  selectedUnitCount >= 2
+                    ? editor.applyLayoutToUnits(selectedUnitIds, mode)
+                    : editor.applyLayout(mode)
+                }
               />
-              <OrgEditorToolbarButton
-                dataDemoId="org-editor-align-button"
-                onClick={() =>
-                  selectedUnitCount >= 2
-                    ? editor.applyLayoutToUnits(selectedUnitIds)
-                    : editor.applyLayout()
-                }
-                title={
-                  selectedUnitCount >= 2
-                    ? t("Arrange selected")
-                    : t("Arrange the current hierarchy")
-                }
-              >
-                <HiOutlineSquares2X2 />
-                <span>{t(selectedUnitCount >= 2 ? "Arrange selected" : "Arrange")}</span>
-              </OrgEditorToolbarButton>
               <OrgEditorToolbarButton
                 ariaLabel={toggleAllUnitsLabel}
                 dataDemoId="org-editor-toggle-all-units-button"
@@ -5340,7 +5545,6 @@ export const OrgStructureEditorTab = observer(() => {
                   onUndo={editor.undo}
                 />
               </div>
-              <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
               <OrgEditorToolbarButton
                 ariaLabel={t("Zoom out")}
                 onClick={() =>
@@ -5404,6 +5608,7 @@ export const OrgStructureEditorTab = observer(() => {
             )}
             <OrgEditorCanvasToolbar
               activeTool={activeCanvasTool}
+              editingTextDraft={editingCanvasRichTextDraft}
               onImage={() => {
                 imageInputRef.current?.click();
                 setActiveCanvasTool("select");
@@ -5416,6 +5621,7 @@ export const OrgStructureEditorTab = observer(() => {
                 setActiveCanvasTool(tool);
                 setCanvasToolError(null);
               }}
+              onTextTypographyChange={updateCanvasTextTypography}
               onUpdate={(update) =>
                 editor.updateCanvasElements(selectedCanvasElementIds, (element) =>
                   fitCanvasTextElementHeight(update(element)),

@@ -39,8 +39,6 @@
     "Geometry": "Géométrie",
     "Analytics": "Analyse",
     "Apply": "Appliquer",
-    "Arrange": "Régler",
-    "Arrange the current hierarchy": "Régler la hiérarchie actuelle",
     "Background": "Historique",
     "Birth months": "Mois de naissance",
     "Birthday": "Anniversaire",
@@ -329,7 +327,6 @@
     "Selected Unit path": "Emplacement de l'unité sélectionnée",
     "Size": "Taille",
     "Static": "Statique",
-    "Georgia": "Police Georgia",
     "System": "Système",
     "Tags": "Étiquettes",
     "Template": "Modèle",
@@ -533,7 +530,6 @@
     "Arabic": "Arabe",
     "Choose interface language": "Choisissez la langue de l’interface.",
     "Choose interface theme": "Choisissez l’apparence de l’interface.",
-    "Arrange selected": "Organiser la sélection",
     "A View with this name already exists.": "Une vue portant ce nom existe déjà.",
     "Enter a View name.": "Saisissez un nom de vue.",
     "The source View is unavailable.": "La vue source est indisponible.",
@@ -624,6 +620,11 @@
     "Density": "Densité",
     "Export the complete View with Units and canvas elements.": "Exportez la Vue complète avec les Équipes et les éléments du canevas.",
     "View export preview": "Aperçu de l’export de la Vue",
-    "Background color": "Couleur d’arrière-plan"
+    "Background color": "Couleur d’arrière-plan",
+    "Mixed": "Valeurs mixtes",
+    "Text background": "Arrière-plan du texte",
+    "No background": "Sans arrière-plan",
+    "Block background": "Arrière-plan du bloc",
+    "Line background": "Arrière-plan des lignes"
   }
 }
