@@ -114,17 +114,24 @@ control.
   Front, Duplicate, and Delete instead of Unit or layer-plane commands; these commands are absent
   from the properties row. Text and Sticker offer **System**, **Georgia**, **Bebas Neue**, **Lobster**,
   and **Montserrat**, with one **Bold** button switching between Regular and Bold. Text starts in
-  auto-width, always derives height from mixed typography, becomes fixed-width after manual width
-  resize, and keeps a selectable 48 by 32 box while empty. Its contenteditable supports grapheme-safe
-  partial family, size, weight, and color formatting plus plain-text paste. Text can omit its
+  two-axis automatic sizing, stays tight from 48 by 32 through the normal 480 by 320 cap, and may
+  uniformly reduce rendered type to an 8 px floor without changing chosen font sizes. Content that
+  still exceeds the cap grows downward without clipping. Any side or corner resize creates a fixed
+  Width/Height frame; enlarging it restores type only to its chosen size, and an undersized frame
+  grows to the minimum complete height. The shared Text/Sticker contenteditable supports
+  grapheme-safe partial family, size, weight, and color formatting, caret styling, retained selection
+  across property controls, and plain-text paste. Text can omit its
   background, fill the complete block, or fill each visual line; its alignment control is horizontal
   only. Historical font values and Medium weight still import safely as System/Regular, and the
   preceding plain Text State shape loads without a corruption error. DOM and PNG use the same local
-  stacks, fragment layout, fills, and geometry. Sticker keeps all nine alignment combinations and has a
-  background color and a flat four-pixel-radius bordered surface mirrored in PNG. Images accept only
+  stacks, word wrapping, effective fragment layout, fills, and geometry. Sticker keeps authored
+  type, grows on overflow, retains all nine alignment combinations, and has a background color and a
+  flat four-pixel-radius bordered surface mirrored in PNG. Images accept only
   local PNG, JPEG, or WebP file/clipboard bytes and
   resize independently by default; hold Shift during a resize to preserve proportions. Cubic Arrows expose two
-  endpoints, Bezier controls, line style, independent markers, and shared anchors. Modifier and
+  endpoints, Bezier controls, line style, independent icon-toggle markers, and shared anchors.
+  Moving or attaching one endpoint keeps the opposite endpoint and preserves the curve in the new
+  chord direction. Modifier and
   marquee selection, group move/resize/rotation, global Back/Front, Delete, Copy/Paste,
   Duplicate, and Undo/Redo apply as one committed View-local command per completed gesture. Selected
   rectangular and group frames use a thin solid outline with four visible corner resize markers;

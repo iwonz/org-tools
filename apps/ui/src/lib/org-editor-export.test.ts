@@ -10,7 +10,7 @@ import {
   ORG_EDITOR_UNIT_BORDER_RADIUS,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
 } from "@/lib/org-editor";
-import { createOrgEditorTextElement } from "@/lib/org-editor-canvas";
+import { createOrgEditorStickerElement, createOrgEditorTextElement } from "@/lib/org-editor-canvas";
 import {
   buildOrgEditorExportRows,
   createDefaultOrgEditorImageExportSettings,
@@ -108,7 +108,7 @@ describe("Org Editor image export", () => {
     expect(createOrgEditorExportFileBaseName(unit)).toBe("Research-Development-Lab");
   });
 
-  test("waits for every base and inline Text font used by PNG", () => {
+  test("waits for every base and inline Text and Sticker font used by PNG", () => {
     const text = {
       ...createOrgEditorTextElement({ x: 0, y: 0 }),
       formatRuns: [
@@ -130,13 +130,30 @@ describe("Org Editor image export", () => {
         fontSize: 24,
       },
     };
+    const sticker = {
+      ...createOrgEditorStickerElement({ x: 0, y: 0 }),
+      formatRuns: [
+        {
+          end: 2,
+          start: 0,
+          typography: {
+            color: "rose" as const,
+            fontFamily: "Georgia",
+            fontSize: 27,
+            fontWeight: 400 as const,
+          },
+        },
+      ],
+      text: "Hi",
+    };
     const requests = getOrgEditorExportFontRequests({
-      canvasElements: [text],
+      canvasElements: [text, sticker],
       fontFamily: "Montserrat",
       titleFontSize: 28,
     });
     expect(requests).toContain('400 24px "Bebas Neue", Impact, sans-serif');
     expect(requests).toContain("700 31px Lobster, Georgia, serif");
+    expect(requests).toContain('400 27px Georgia, "Times New Roman", serif');
     expect(requests.some((request) => request.includes("Montserrat"))).toBe(true);
   });
 

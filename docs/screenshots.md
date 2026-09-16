@@ -275,8 +275,8 @@ Arrange opaque Unit cards and representative rich Text, flat bordered Sticker, e
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
 the bottom-centered canvas toolbar. View management stays top-left, canvas commands and Image export
 stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates the
-five local fonts, partial typography, line fill, auto-height, the Bold toggle, and a thin Miro-like
-frame with four corner markers, width-only Text resize, outside-corner rotation, and
+five local fonts, partial Text/Sticker typography, line fill, bounded two-axis Text auto-fit, the Bold
+toggle, and a thin Miro-like frame with four corner markers, two-axis Text resize, outside-corner rotation, and
 element-specific context actions without layer-plane commands.
 
 Capabilities: Canvas layout, Text, Sticker, Image, Arrow, Contextual anchors, Adaptive snap grid,
@@ -631,10 +631,12 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   group, choosing a creation tool clears prior selection, and element right-click exposes only
   global Back/Front, Duplicate, and Delete actions. Verify four visible corner markers, transparent
   side resize targets, four outside-corner rotation targets, stable screen sizing across zoom, whole
-  Width/Height values, a stable live center for free and attached single-element rotation,
+  Width/Height values, bounded word-aware Text fitting, shared Text/Sticker range formatting, a
+  stable live center for free and attached single-element rotation,
   hidden resting connectors, one outlined hovered owner with its complete anchor set during Arrow
   creation or attachment, exact-anchor starts and nearest-target emphasis, Shift-only Image aspect
-  resize, flat Sticker parity, bundled font application, stable nine-way draft alignment, two-step
+  resize, flat rich Sticker parity, bundled font application, stable nine-way draft alignment,
+  icon-toggle Arrow markers, normalized curve preservation, Image selection without properties, two-step
   text Escape behavior, canvas scroll isolation, resting selection clearing, global Front/Back, and
   one compact non-overlapping property row.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the

@@ -164,7 +164,7 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(unsafe)).toThrow();
   });
 
-  test("normalizes the preceding Text shape and rejects invalid rich ranges atomically", () => {
+  test("normalizes preceding Text and Sticker shapes and rejects invalid rich ranges atomically", () => {
     const state = createBlankOrgToolsState();
     const structure = state.organization.views[0]?.structure;
     if (!structure) throw new Error("Expected a system View.");
@@ -193,6 +193,21 @@ describe("OrgToolsState", () => {
     restored.loadOrgToolsState(normalized, "preceding-state.json", null);
     expect(restored.orgEditor.canUndo).toBe(false);
 
+    const stickerState = createBlankOrgToolsState();
+    const stickerStructure = stickerState.organization.views[0]?.structure;
+    if (!stickerStructure) throw new Error("Expected a system View.");
+    const sticker = {
+      ...createOrgEditorStickerElement({ x: 120, y: 80 }),
+      id: uuid(94),
+      text: "A👩🏽‍💻B",
+    };
+    const precedingSticker = structuredClone(sticker) as unknown as Record<string, unknown>;
+    delete precedingSticker.formatRuns;
+    stickerStructure.canvasElements = [precedingSticker as never];
+    expect(
+      parseOrgToolsState(stickerState).organization.views[0]?.structure.canvasElements[0],
+    ).toMatchObject({ formatRuns: [], type: "sticker" });
+
     for (const formatRuns of [
       [
         {
@@ -219,6 +234,12 @@ describe("OrgToolsState", () => {
       if (!invalidStructure) throw new Error("Expected a system View.");
       invalidStructure.canvasElements = [{ ...current, formatRuns } as never];
       expect(() => parseOrgToolsState(invalidState)).toThrow();
+
+      const invalidStickerState = createBlankOrgToolsState();
+      const invalidStickerStructure = invalidStickerState.organization.views[0]?.structure;
+      if (!invalidStickerStructure) throw new Error("Expected a system View.");
+      invalidStickerStructure.canvasElements = [{ ...sticker, formatRuns } as never];
+      expect(() => parseOrgToolsState(invalidStickerState)).toThrow();
     }
   });
 

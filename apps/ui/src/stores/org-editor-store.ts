@@ -759,18 +759,20 @@ export class OrgEditorStore {
 
   normalizeCanvasTextGeometry(
     fit: (
-      element: Extract<OrgEditorCanvasElement, { type: "text" }>,
-    ) => Extract<OrgEditorCanvasElement, { type: "text" }>,
+      element: Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>,
+    ) => Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>,
   ): void {
     let changed = false;
     const canvasElements = this.canvasElements.map((element) => {
-      if (element.type !== "text") return element;
+      if (element.type !== "text" && element.type !== "sticker") return element;
       const next = fit(element);
       const geometryChanged =
         next.height !== element.height ||
         next.width !== element.width ||
         next.x !== element.x ||
         next.y !== element.y ||
+        next.attachment?.offset.x !== element.attachment?.offset.x ||
+        next.attachment?.offset.y !== element.attachment?.offset.y ||
         next.typography.verticalAlign !== element.typography.verticalAlign;
       if (!geometryChanged) return element;
       changed = true;

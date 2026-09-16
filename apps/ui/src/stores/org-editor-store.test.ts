@@ -225,6 +225,44 @@ describe("OrgEditorStore canvas layers", () => {
       });
     }
   });
+
+  test("keeps Sticker format runs in one undoable history command", () => {
+    const store = new OrgEditorStore();
+    const sticker = createOrgEditorStickerElement({ x: 100, y: 100 });
+    store.loadState({ ...createDefaultOrgEditorState(), canvasElements: [sticker] });
+    store.clearHistory();
+    store.updateCanvasElements(
+      [sticker.id],
+      (element) =>
+        element.type === "sticker"
+          ? {
+              ...element,
+              formatRuns: [
+                {
+                  end: element.text.length,
+                  start: 0,
+                  typography: {
+                    color: "blue",
+                    fontFamily: "Georgia",
+                    fontSize: 28,
+                    fontWeight: 700,
+                  },
+                },
+              ],
+            }
+          : element,
+      "Format Sticker text",
+    );
+    expect(store.canvasElements[0]).toMatchObject({
+      formatRuns: [{ end: 4, start: 0, typography: { fontFamily: "Georgia" } }],
+    });
+    store.undo();
+    expect(store.canvasElements[0]).toEqual(sticker);
+    store.redo();
+    expect(store.canvasElements[0]).toMatchObject({
+      formatRuns: [{ typography: { fontFamily: "Georgia" } }],
+    });
+  });
 });
 
 describe("OrgEditorStore deletion", () => {

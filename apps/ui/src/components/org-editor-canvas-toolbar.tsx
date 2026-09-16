@@ -17,7 +17,8 @@ import {
   HiOutlineCursorArrowRays,
   HiOutlinePhoto,
 } from "react-icons/hi2";
-import { PiBezierCurve, PiSticker } from "react-icons/pi";
+import { PiSticker } from "react-icons/pi";
+import { TbLetterT } from "react-icons/tb";
 
 import type { OrgEditorCanvasTextDraft } from "@/components/org-editor-canvas-element";
 import {
@@ -52,19 +53,38 @@ export type OrgEditorCanvasTool = "arrow" | "image" | "select" | "sticker" | "te
 
 const toolDefinitions = [
   { icon: HiOutlineCursorArrowRays, tool: "select" as const },
-  { icon: TextToolIcon, tool: "text" as const },
-  { icon: PiBezierCurve, tool: "arrow" as const },
+  { icon: TbLetterT, tool: "text" as const },
+  { icon: ArrowToolIcon, tool: "arrow" as const },
   { icon: PiSticker, tool: "sticker" as const },
   { icon: HiOutlinePhoto, tool: "image" as const },
 ];
 
-function TextToolIcon() {
+function ArrowToolIcon() {
   return (
     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
       <path
-        d="M3 5h10M8 5v14M5 19h6M14 10h7M17.5 10v9M15 19h5"
+        d="M3 17C7 6 15 5 20 12M16 11l4 1-1 4"
         stroke="currentColor"
         strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function ArrowMarkerIcon({ endpoint }: { endpoint: "end" | "start" }) {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path
+        d={
+          endpoint === "start"
+            ? "M20 7C14 7 10 10 5 16M5 16l1-5M5 16l5-1"
+            : "M4 7c6 0 10 3 15 9M19 16l-1-5M19 16l-5-1"
+        }
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         strokeWidth="1.8"
       />
     </svg>
@@ -94,6 +114,7 @@ export function OrgEditorCanvasToolbar({
   activeTool,
   editingTextDraft,
   onImage,
+  onPropertyInteractionStart,
   onToolChange,
   onTextTypographyChange,
   onUpdate,
@@ -102,6 +123,7 @@ export function OrgEditorCanvasToolbar({
   activeTool: OrgEditorCanvasTool;
   editingTextDraft?: OrgEditorCanvasTextDraft | null;
   onImage: () => void;
+  onPropertyInteractionStart?: () => void;
   onToolChange: (tool: OrgEditorCanvasTool) => void;
   onTextTypographyChange?: (patch: Partial<OrgEditorInlineTypography>) => void;
   onUpdate: (update: (element: OrgEditorCanvasElement) => OrgEditorCanvasElement) => void;
@@ -115,7 +137,7 @@ export function OrgEditorCanvasToolbar({
     ? resolveOrgEditorCanvasTypography(textElement.typography)
     : null;
   const selectedTextTypography =
-    textElement?.type === "text" && editingTextDraft
+    textElement && editingTextDraft
       ? (editingTextDraft.pendingTypography ??
         getOrgEditorTextRangeTypography({
           end: editingTextDraft.selection.end,
@@ -127,7 +149,7 @@ export function OrgEditorCanvasToolbar({
       : resolvedTextTypography;
 
   const updateTextTypography = (patch: Partial<OrgEditorInlineTypography>) => {
-    if (textElement?.type === "text" && onTextTypographyChange) {
+    if (textElement && onTextTypographyChange) {
       onTextTypographyChange(patch);
       return;
     }
@@ -186,13 +208,14 @@ export function OrgEditorCanvasToolbar({
         })}
       </div>
 
-      {selected && (
+      {selected && selected.type !== "image" && (
         <div
           className={cn(
             "inline-flex w-max max-w-[min(46rem,calc(100vw-1.5rem))] items-center gap-1 overflow-x-auto",
             ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
           )}
           data-demo-id="org-editor-canvas-properties"
+          onPointerDownCapture={onPropertyInteractionStart}
         >
           {textElement && (
             <>
@@ -439,28 +462,32 @@ export function OrgEditorCanvasToolbar({
                 {t(selected.dash === "solid" ? "Solid line" : "Dashed line")}
               </Button>
               {(["start", "end"] as const).map((endpoint) => (
-                <Select
+                <Button
+                  aria-label={t(endpoint === "start" ? "Arrow start marker" : "Arrow end marker")}
+                  aria-pressed={selected[`${endpoint}Marker`] === "arrow"}
+                  className={cn(
+                    ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME,
+                    selected[`${endpoint}Marker`] === "arrow" && "bg-accent-strong text-foreground",
+                  )}
+                  data-canvas-arrow-marker={endpoint}
                   key={endpoint}
-                  onValueChange={(value) =>
+                  onClick={() =>
                     onUpdate((element) =>
                       element.type === "arrow"
-                        ? { ...element, [`${endpoint}Marker`]: value as "arrow" | "none" }
+                        ? {
+                            ...element,
+                            [`${endpoint}Marker`]:
+                              element[`${endpoint}Marker`] === "arrow" ? "none" : "arrow",
+                          }
                         : element,
                     )
                   }
-                  value={selected[`${endpoint}Marker`]}
+                  title={t(endpoint === "start" ? "Arrow start marker" : "Arrow end marker")}
+                  type="button"
+                  variant="ghost"
                 >
-                  <SelectTrigger
-                    aria-label={t(endpoint === "start" ? "Arrow start marker" : "Arrow end marker")}
-                    className={cn(ORG_EDITOR_TOOLBAR_FIELD_CLASS_NAME, "w-24")}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t("No marker")}</SelectItem>
-                    <SelectItem value="arrow">{t("Arrow marker")}</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <ArrowMarkerIcon endpoint={endpoint} />
+                </Button>
               ))}
             </>
           )}
@@ -479,13 +506,7 @@ export function OrgEditorCanvasToolbar({
                   <HiOutlineArrowsPointingOut />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                className={cn(
-                  "grid gap-2 p-2",
-                  selected.type === "text" ? "w-40 grid-cols-2" : "w-56 grid-cols-3",
-                )}
-              >
+              <PopoverContent align="end" className={cn("grid gap-2 p-2", "w-56 grid-cols-3")}>
                 <Input
                   aria-label={t("Element width")}
                   max={20_000}
@@ -519,17 +540,22 @@ export function OrgEditorCanvasToolbar({
                     normalizeOrgEditorCanvasDimension(selected.width),
                   )}
                 />
-                {selected.type !== "text" && (
-                  <Input
-                    aria-label={t("Element height")}
-                    max={20_000}
-                    min={24}
-                    onChange={(event) => {
-                      const height = Number(event.currentTarget.value);
-                      if (!Number.isFinite(height)) return;
-                      onUpdate((element) =>
-                        element.type === "arrow"
-                          ? element
+                <Input
+                  aria-label={t("Element height")}
+                  max={20_000}
+                  min={selected.type === "text" ? 32 : 24}
+                  onChange={(event) => {
+                    const height = Number(event.currentTarget.value);
+                    if (!Number.isFinite(height)) return;
+                    onUpdate((element) =>
+                      element.type === "arrow"
+                        ? element
+                        : element.type === "text"
+                          ? {
+                              ...element,
+                              autoWidth: false,
+                              height: Math.max(32, normalizeOrgEditorCanvasDimension(height)),
+                            }
                           : {
                               ...element,
                               ...normalizeOrgEditorCanvasDimensions({
@@ -537,14 +563,16 @@ export function OrgEditorCanvasToolbar({
                                 width: element.width,
                               }),
                             },
-                      );
-                    }}
-                    step={1}
-                    title={t("Element height")}
-                    type="number"
-                    value={normalizeOrgEditorCanvasDimension(selected.height)}
-                  />
-                )}
+                    );
+                  }}
+                  step={1}
+                  title={t("Element height")}
+                  type="number"
+                  value={Math.max(
+                    selected.type === "text" ? 32 : 24,
+                    normalizeOrgEditorCanvasDimension(selected.height),
+                  )}
+                />
                 <Input
                   aria-label={t("Rotation")}
                   max={180}

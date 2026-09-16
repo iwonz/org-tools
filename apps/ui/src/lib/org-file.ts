@@ -1118,11 +1118,14 @@ const normalizeCanvasElement = (value: unknown): OrgEditorCanvasElement | null =
       "y",
     ];
     const currentTextKeys = [...precedingKeys, "autoWidth", "fillColor", "fillMode", "formatRuns"];
+    const currentStickerKeys = [...precedingKeys, "formatRuns"];
     const isPrecedingText = value.type === "text" && hasExactKeys(value, precedingKeys);
     const isCurrentText = value.type === "text" && hasExactKeys(value, currentTextKeys);
+    const isPrecedingSticker = value.type === "sticker" && hasExactKeys(value, precedingKeys);
+    const isCurrentSticker = value.type === "sticker" && hasExactKeys(value, currentStickerKeys);
     const hasExpectedKeys =
       value.type === "sticker"
-        ? hasExactKeys(value, precedingKeys)
+        ? isPrecedingSticker || isCurrentSticker
         : isPrecedingText || isCurrentText;
     if (!hasExpectedKeys || !isString(value.text)) return null;
     if (new TextEncoder().encode(value.text).byteLength > ORG_EDITOR_CANVAS_TEXT_MAX_UTF8_BYTES) {
@@ -1133,9 +1136,14 @@ const normalizeCanvasElement = (value: unknown): OrgEditorCanvasElement | null =
     if (!base || !typography) return null;
     if (value.type === "sticker") {
       if (!isOrgEditorCanvasColor(value.backgroundColor)) return null;
+      const formatRuns = isCurrentSticker
+        ? normalizeCanvasTextFormatRuns(value.formatRuns, value.text, typography)
+        : [];
+      if (!formatRuns) return null;
       return {
         ...base,
         backgroundColor: value.backgroundColor,
+        formatRuns,
         text: value.text,
         typography,
         type: "sticker",

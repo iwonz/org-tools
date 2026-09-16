@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   applyOrgEditorTextFormat,
+  cloneOrgEditorCanvasElement,
   createOrgEditorArrowElement,
   createOrgEditorCanvasDependencyIndexes,
   createOrgEditorStickerElement,
@@ -23,12 +24,14 @@ import {
   getOrgEditorTextFillRects,
   hasOrgEditorCanvasElementDependencyCycle,
   layoutOrgEditorCanvasText,
+  moveOrgEditorArrowEndpointPreservingShape,
   moveOrgEditorCanvasElement,
   normalizeOrgEditorCanvasDimension,
   normalizeOrgEditorCanvasDimensions,
   normalizeOrgEditorTextFormatRuns,
   ORG_EDITOR_CANVAS_FONTS,
   ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS,
+  projectOrgEditorArrowToEndpoints,
   replaceOrgEditorTextRange,
   resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElements,
@@ -335,7 +338,7 @@ describe("Org Editor canvas geometry", () => {
       { height: 27, radius: 4, width: 26, x: 0, y: 42 },
     ]);
     expect(getOrgEditorTextFillRects({ ...element, fillMode: "block" }, layout)).toEqual([
-      { height: 32, radius: 4, width: 48, x: 0, y: 0 },
+      { height: 71, radius: 4, width: 58, x: 0, y: 0 },
     ]);
     expect(getOrgEditorTextFillRects({ ...element, fillMode: "none" }, layout)).toEqual([]);
     const fitted = fitOrgEditorCanvasRichTextElement(
@@ -594,9 +597,210 @@ describe("Org Editor canvas geometry", () => {
     expect(transformed.width).toBe(150);
     expect(transformed.typography.fontSize).toBe(36);
     expect(transformed.formatRuns[0]?.typography.fontSize).toBe(48);
-    expect(transformed.height).toBe(68);
+    expect(transformed.height).toBe(108);
     expect(transformed.x + transformed.width / 2).toBeCloseTo(95);
     expect(transformed.y + transformed.height / 2).toBeCloseTo(84);
+  });
+
+  test("wraps rich Text by words and applies bounded non-destructive fitting", () => {
+    const element = {
+      ...createOrgEditorTextElement({ x: 0, y: 0 }),
+      formatRuns: [
+        {
+          end: 5,
+          start: 0,
+          typography: {
+            color: "blue" as const,
+            fontFamily: "Georgia",
+            fontSize: 40,
+            fontWeight: 700 as const,
+          },
+        },
+      ],
+      text: `alpha ${"beta ".repeat(180)}`,
+    };
+    const layout = getOrgEditorRichTextLayout({
+      autoWidth: true,
+      formatRuns: element.formatRuns,
+      height: element.height,
+      measure: (value, typography) => value.length * typography.fontSize * 0.5,
+      text: element.text,
+      typography: element.typography,
+      width: element.width,
+    });
+    expect(layout.width).toBe(480);
+    expect(layout.height).toBeLessThanOrEqual(320);
+    expect(layout.effectiveScale).toBeLessThan(1);
+    expect(
+      Math.min(
+        ...layout.lines.flatMap((line) =>
+          line.fragments.map((fragment) => fragment.typography.fontSize),
+        ),
+      ),
+    ).toBeGreaterThanOrEqual(8);
+    expect(element.typography.fontSize).toBe(18);
+    expect(element.formatRuns[0]?.typography.fontSize).toBe(40);
+
+    const wordLayout = getOrgEditorRichTextLayout({
+      autoWidth: false,
+      formatRuns: [],
+      height: 200,
+      measure: (value) => value.length * 10,
+      text: "one two three",
+      typography: element.typography,
+      width: 88,
+    });
+    expect(
+      wordLayout.lines.map((line) => line.fragments.map((fragment) => fragment.text).join("")),
+    ).toEqual(["one two ", "three"]);
+  });
+
+  test("grows exceptional automatic Text and clamps a fixed frame at the 8px floor", () => {
+    const automatic = {
+      ...createOrgEditorTextElement({ x: 0, y: 0 }),
+      text: Array.from({ length: 40 }, () => "line").join("\n"),
+      typography: {
+        ...createOrgEditorTextElement({ x: 0, y: 0 }).typography,
+        fontSize: 8,
+      },
+    };
+    const automaticLayout = getOrgEditorRichTextLayout({
+      autoWidth: true,
+      formatRuns: [],
+      height: automatic.height,
+      measure: (value) => value.length * 4,
+      text: automatic.text,
+      typography: automatic.typography,
+      width: automatic.width,
+    });
+    expect(automaticLayout.width).toBe(480);
+    expect(automaticLayout.height).toBeGreaterThan(320);
+    expect(automaticLayout.effectiveScale).toBe(1);
+
+    const fixed = { ...automatic, autoWidth: false, height: 32, width: 120 };
+    const fitted = fitOrgEditorCanvasRichTextElement(fixed, (value) => value.length * 4);
+    expect(fitted.height).toBeGreaterThan(32);
+    expect(fitted.typography.fontSize).toBe(8);
+  });
+
+  test("clones and vertically lays out rich Sticker runs without shrinking authored type", () => {
+    const sticker = {
+      ...createOrgEditorStickerElement({ x: 100, y: 100 }),
+      formatRuns: [
+        {
+          end: 4,
+          start: 0,
+          typography: {
+            color: "rose" as const,
+            fontFamily: "Lobster",
+            fontSize: 32,
+            fontWeight: 700 as const,
+          },
+        },
+      ],
+      text: "Rich sticker text",
+      typography: {
+        ...createOrgEditorStickerElement({ x: 0, y: 0 }).typography,
+        verticalAlign: "bottom" as const,
+      },
+    };
+    const clone = cloneOrgEditorCanvasElement(sticker);
+    expect(clone).toEqual(sticker);
+    if (clone.type !== "sticker") throw new Error("Expected a Sticker clone.");
+    expect(clone.formatRuns).not.toBe(sticker.formatRuns);
+    expect(clone.formatRuns[0]?.typography).not.toBe(sticker.formatRuns[0]?.typography);
+    const layout = getOrgEditorRichTextLayout({
+      autoWidth: false,
+      formatRuns: sticker.formatRuns,
+      height: sticker.height,
+      measure: (value, typography) => value.length * typography.fontSize * 0.5,
+      mode: "sticker",
+      text: sticker.text,
+      typography: sticker.typography,
+      width: sticker.width,
+    });
+    expect(layout.effectiveScale).toBe(1);
+    expect(layout.lines[0]?.y).toBeGreaterThan(16);
+    expect(layout.lines[0]?.fragments[0]?.typography.fontSize).toBe(32);
+  });
+
+  test("resizes fixed Text in both axes while retaining the opposite edge and attachment", () => {
+    const source = {
+      ...createOrgEditorTextElement({ x: 100, y: 100 }),
+      attachment: {
+        offset: { x: 10, y: 5 },
+        sourceAnchorId: "center" as const,
+        target: { anchorId: "center" as const, owner: { type: "unit" as const, unitId: uuid(71) } },
+      },
+      autoWidth: false,
+      height: 80,
+      text: "small",
+      width: 160,
+      x: 20,
+      y: 60,
+    };
+    const bottomRight = getOrgEditorRectAnchorPoint(source, "bottomRight");
+    const resized = resizeOrgEditorCanvasRectElement(source, "topLeft", { x: -40, y: 10 });
+    const fitted = fitOrgEditorCanvasRichTextElement(
+      resized,
+      (value) => value.length * 9,
+      "bottomRight",
+    );
+    expect(getOrgEditorRectAnchorPoint(fitted, "bottomRight")).toEqual(bottomRight);
+    expect(fitted.width).toBeGreaterThan(source.width);
+    expect(fitted.height).toBeGreaterThan(source.height);
+    expect(fitted.autoWidth).toBe(false);
+    expect(fitted.typography.fontSize).toBe(source.typography.fontSize);
+    expect(fitted.attachment).not.toBeNull();
+  });
+
+  test("projects Arrow controls through endpoint and attachment movement", () => {
+    const arrow = {
+      ...createOrgEditorArrowElement({ x: 0, y: 0 }, { x: 120, y: 0 }),
+      endControl: { x: -30, y: 36 },
+      startControl: { x: 30, y: -24 },
+    };
+    const moved = moveOrgEditorArrowEndpointPreservingShape(arrow, "end", { x: 0, y: 240 });
+    const projected = projectOrgEditorArrowToEndpoints(arrow, arrow.start, {
+      ...arrow.end,
+      x: 0,
+      y: 240,
+    });
+    expect(moved.start).toEqual(arrow.start);
+    expect(moved.startControl).toEqual(projected.startControl);
+    expect(moved.endControl).toEqual(projected.endControl);
+    expect(moved.startControl.x).toBeCloseTo(48);
+    expect(moved.startControl.y).toBeCloseTo(60);
+
+    const zero = createOrgEditorArrowElement({ x: 10, y: 10 }, { x: 10, y: 10 });
+    const fallback = moveOrgEditorArrowEndpointPreservingShape(zero, "end", { x: 100, y: 40 });
+    expect(fallback.startControl).toEqual({ x: 30, y: 10 });
+    expect(fallback.endControl).toEqual({ x: -30, y: -10 });
+
+    const attached = {
+      ...arrow,
+      end: {
+        ...arrow.end,
+        attachment: {
+          offset: { x: 0, y: 0 },
+          target: {
+            anchorId: "center" as const,
+            owner: { type: "unit" as const, unitId: uuid(72) },
+          },
+        },
+      },
+    };
+    const resolved = resolveOrgEditorCanvasElements({
+      elements: [attached],
+      resolveExternalAnchor: () => ({ x: 0, y: 240 }),
+    }).get(attached.id)?.element;
+    expect(resolved).toEqual(
+      projectOrgEditorArrowToEndpoints(attached, attached.start, {
+        ...attached.end,
+        x: 0,
+        y: 240,
+      }),
+    );
   });
 
   test("derives rotation from the exact selected-bounds center", () => {

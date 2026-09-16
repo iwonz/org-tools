@@ -66,11 +66,9 @@ import {
   getOrgEditorRichTextLayout,
   getOrgEditorScopedCanvasElementIds,
   getOrgEditorTextFillRects,
-  layoutOrgEditorCanvasText,
   ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
   ORG_EDITOR_RECT_ANCHOR_IDS,
   resolveOrgEditorCanvasElements,
-  resolveOrgEditorCanvasTypography,
 } from "@/lib/org-editor-canvas";
 import {
   employeeTagColorToHex,
@@ -719,22 +717,26 @@ const paintOrgEditorCanvasElement = ({
     return;
   }
 
-  if (element.type === "text") {
+  if (element.type === "text" || element.type === "sticker") {
     const layout = getOrgEditorRichTextLayout({
-      autoWidth: element.autoWidth,
+      autoWidth: element.type === "text" && element.autoWidth,
       formatRuns: element.formatRuns,
+      height: element.height,
       measure: (value, fragmentTypography) => {
         context.font = getOrgEditorCanvasElementFont(fragmentTypography);
         return context.measureText(value).width;
       },
+      mode: element.type,
       text: element.text,
       typography: element.typography,
       width: element.width,
     });
-    for (const rect of getOrgEditorTextFillRects(element, layout)) {
-      drawRoundedRect(context, rect, rect.radius);
-      context.fillStyle = employeeTagColorToHex(element.fillColor);
-      context.fill();
+    if (element.type === "text") {
+      for (const rect of getOrgEditorTextFillRects(element, layout)) {
+        drawRoundedRect(context, rect, rect.radius);
+        context.fillStyle = employeeTagColorToHex(element.fillColor);
+        context.fill();
+      }
     }
     context.textAlign = "start";
     context.textBaseline = "top";
@@ -749,20 +751,6 @@ const paintOrgEditorCanvasElement = ({
     return;
   }
 
-  const typography = resolveOrgEditorCanvasTypography(element.typography);
-  context.font = getOrgEditorCanvasElementFont(element.typography);
-  const lines = layoutOrgEditorCanvasText({
-    height: element.height,
-    measure: (value) => context.measureText(value).width,
-    padding: element.type === "sticker" ? 16 : 4,
-    text: element.text,
-    typography,
-    width: element.width,
-  });
-  context.fillStyle = employeeTagColorToHex(element.typography.color);
-  context.textAlign = "start";
-  context.textBaseline = "top";
-  for (const line of lines) context.fillText(line.text, line.x, line.y);
   context.restore();
 };
 
@@ -1127,10 +1115,8 @@ export const getOrgEditorExportFontRequests = ({
   for (const element of canvasElements) {
     if (element.type === "image" || element.type === "arrow") continue;
     fontRequests.add(getOrgEditorCanvasElementFont(element.typography));
-    if (element.type === "text") {
-      for (const run of element.formatRuns) {
-        fontRequests.add(getOrgEditorCanvasElementFont(run.typography));
-      }
+    for (const run of element.formatRuns) {
+      fontRequests.add(getOrgEditorCanvasElementFont(run.typography));
     }
   }
 

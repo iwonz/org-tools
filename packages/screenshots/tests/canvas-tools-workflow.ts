@@ -49,6 +49,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const arrowElements = canvas.locator('[data-canvas-element-type="arrow"]');
   const imageElements = canvas.locator('[data-canvas-element-type="image"]');
   const properties = page.locator('[data-demo-id="org-editor-canvas-properties"]');
+  const activeRichEditor = canvas.locator("[data-canvas-text-editor]");
   const initialTextCount = await textElements.count();
   const initialStickerCount = await stickerElements.count();
   const initialArrowCount = await arrowElements.count();
@@ -100,9 +101,43 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await createdStickerNode.dblclick();
   await expect(editor).toBeFocused();
   const editingStickerTextTop = Number.parseFloat(
-    await editor.evaluate((element: HTMLTextAreaElement) => element.style.top),
+    await editor.evaluate((element: HTMLElement) => getComputedStyle(element).paddingTop),
   );
   expect(Math.abs(editingStickerTextTop - restingStickerTextTop)).toBeLessThan(0.01);
+  const stickerEditorBox = await editor.boundingBox();
+  if (!stickerEditorBox) throw new Error("Sticker editor geometry is unavailable.");
+  await page.mouse.move(stickerEditorBox.x + 18, stickerEditorBox.y + editingStickerTextTop + 10);
+  await page.mouse.down();
+  await page.mouse.move(stickerEditorBox.x + 92, stickerEditorBox.y + editingStickerTextTop + 10, {
+    steps: 5,
+  });
+  await page.mouse.up();
+  await expect
+    .poll(() => page.evaluate(() => window.getSelection()?.toString().length ?? 0))
+    .toBeGreaterThan(0);
+  await properties.getByLabel("Font", { exact: true }).click();
+  await expect(activeRichEditor).toBeVisible();
+  await page.getByRole("option", { name: "Lobster", exact: true }).click();
+  await expect(editor).toBeVisible();
+  const stickerSize = properties.getByLabel("Font size", { exact: true });
+  await stickerSize.fill("26");
+  await expect(editor).toBeVisible();
+  await properties.getByRole("button", { name: "Bold", exact: true }).click();
+  await expect(editor).toBeVisible();
+  await properties.getByRole("button", { name: "Text color", exact: true }).click();
+  await expect(activeRichEditor).toBeVisible();
+  await page.getByRole("option", { name: "Rose", exact: true }).click();
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('span[style*="font-family"]').first()).toHaveCSS(
+    "font-family",
+    /Lobster/,
+  );
+  await expect(editor.locator('span[style*="font-weight: 700"]').first()).toBeVisible();
+  await expect(editor.locator('span[style*="font-size: 26px"]').first()).toBeVisible();
+  await expect(editor.locator('span[style*="color"]').first()).toHaveCSS(
+    "color",
+    "rgb(244, 63, 94)",
+  );
   const overflowStickerText = Array.from({ length: 12 }, (_, index) => `Line ${index + 1}`).join(
     "\n",
   );
@@ -148,6 +183,21 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.mouse.move(arrowEnd.x, arrowEnd.y, { steps: 4 });
   await page.mouse.up();
   await expect(arrowElements).toHaveCount(initialArrowCount + 1);
+  const startMarkerButton = properties.getByRole("button", {
+    name: "Arrow start marker",
+    exact: true,
+  });
+  const endMarkerButton = properties.getByRole("button", {
+    name: "Arrow end marker",
+    exact: true,
+  });
+  await expect(startMarkerButton).toHaveAttribute("aria-pressed", "false");
+  await expect(endMarkerButton).toHaveAttribute("aria-pressed", "true");
+  await startMarkerButton.click();
+  await endMarkerButton.click();
+  await expect(startMarkerButton).toHaveAttribute("aria-pressed", "true");
+  await expect(endMarkerButton).toHaveAttribute("aria-pressed", "false");
+  await expect(properties.getByRole("combobox", { name: "Arrow start marker" })).toHaveCount(0);
 
   await page.evaluate((bytes) => {
     const data = Uint8Array.from(atob(bytes), (character) => character.charCodeAt(0));
@@ -271,12 +321,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await createdText.click();
   const resizeHandles = createdText.locator("[data-canvas-resize-handle]");
   const rotateHandles = createdText.locator("[data-canvas-rotate-handle]");
-  await expect(resizeHandles).toHaveCount(6);
+  await expect(resizeHandles).toHaveCount(8);
   await expect(rotateHandles).toHaveCount(4);
   await expect(createdText.locator('[data-canvas-transform-handle="corner-resize"]')).toHaveCount(
     4,
   );
-  await expect(createdText.locator('[data-canvas-transform-handle="side-resize"]')).toHaveCount(2);
+  await expect(createdText.locator('[data-canvas-transform-handle="side-resize"]')).toHaveCount(4);
   await expect(createdText.locator("[data-canvas-connector-handle]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Lock aspect ratio", exact: true })).toHaveCount(0);
   await expect(properties.getByLabel("Layer", { exact: true })).toHaveCount(0);
@@ -287,8 +337,9 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const widthInput = page.getByLabel("Element width", { exact: true });
   const heightInput = page.getByLabel("Element height", { exact: true });
   await expect(widthInput).toHaveAttribute("step", "1");
-  await expect(heightInput).toHaveCount(0);
+  await expect(heightInput).toHaveAttribute("step", "1");
   expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
+  expect(Number.isInteger(Number(await heightInput.inputValue()))).toBe(true);
 
   await createdText.hover();
   await expect(canvas.locator("[data-canvas-target-anchor]")).toHaveCount(0);
@@ -334,6 +385,8 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await alignmentControl.click();
   await expect(page.locator("[data-canvas-alignment]")).toHaveCount(3);
   await page.locator('[data-canvas-alignment="top:right"]').click();
+  await alignmentControl.click();
+  await page.locator('[data-canvas-alignment="top:left"]').click();
 
   await createdText.dblclick();
   await editor.fill("A");
@@ -346,6 +399,41 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
       createdText.evaluate((element: HTMLElement) => Number.parseFloat(element.style.width)),
     )
     .toBeGreaterThan(autoWidthBefore);
+  await expect
+    .poll(() =>
+      createdText.evaluate((element: HTMLElement) => Number.parseFloat(element.style.width)),
+    )
+    .toBeLessThanOrEqual(480);
+  const textLineBox = await editor
+    .locator("span")
+    .first()
+    .evaluate((element) => {
+      const rect = element.getClientRects()[0];
+      if (!rect) return null;
+      return { height: rect.height, width: rect.width, x: rect.x, y: rect.y };
+    });
+  if (!textLineBox) throw new Error("Text editor line geometry is unavailable.");
+  await page.mouse.move(textLineBox.x + 2, textLineBox.y + textLineBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    textLineBox.x + Math.min(82, Math.max(12, textLineBox.width - 2)),
+    textLineBox.y + textLineBox.height / 2,
+    { steps: 5 },
+  );
+  await page.mouse.up();
+  await expect
+    .poll(() => page.evaluate(() => window.getSelection()?.toString().length ?? 0))
+    .toBeGreaterThan(0);
+  await properties.getByLabel("Font", { exact: true }).click();
+  await page.getByRole("option", { name: "Lobster", exact: true }).click();
+  await properties.getByLabel("Font size", { exact: true }).fill("24");
+  await properties.getByRole("button", { name: "Text color", exact: true }).click();
+  await page.getByRole("option", { name: "Blue", exact: true }).click();
+  await expect(editor.locator('span[style*="font-family"]').first()).toHaveCSS(
+    "font-family",
+    /Lobster/,
+  );
+  await expect(editor.locator('span[style*="font-size: 24px"]').first()).toBeVisible();
   await editor.press("Home");
   for (let index = 0; index < 5; index += 1) await editor.press("Shift+ArrowRight");
   await boldButton.click();
@@ -354,8 +442,13 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await editor.press("Home");
   for (let index = 0; index < 7; index += 1) await editor.press("Shift+ArrowRight");
   await expect(boldButton).toHaveAttribute("aria-pressed", "mixed");
-  await editor.press("End");
   await editor.evaluate((element) => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
     const clipboard = new DataTransfer();
     clipboard.setData("text/plain", " plain paste");
     clipboard.setData("text/html", "<strong>formatted paste</strong>");
@@ -426,8 +519,26 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.mouse.up();
   const textAfterResize = await createdText.boundingBox();
   expect((textAfterResize?.width ?? 0) - textBeforeResize.width).toBeGreaterThan(40);
+  const bottomResize = await createdText
+    .locator('[data-canvas-resize-handle="bottomCenter"]')
+    .boundingBox();
+  if (!bottomResize || !textAfterResize) throw new Error("Text height resize is unavailable.");
+  await page.mouse.move(
+    bottomResize.x + bottomResize.width / 2,
+    bottomResize.y + bottomResize.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    bottomResize.x + bottomResize.width / 2,
+    bottomResize.y + bottomResize.height / 2 + 64,
+    { steps: 4 },
+  );
+  await page.mouse.up();
+  const textAfterHeightResize = await createdText.boundingBox();
+  expect((textAfterHeightResize?.height ?? 0) - textAfterResize.height).toBeGreaterThan(32);
   await properties.getByRole("button", { name: "Geometry", exact: true }).click();
   expect(Number.isInteger(Number(await widthInput.inputValue()))).toBe(true);
+  expect(Number.isInteger(Number(await heightInput.inputValue()))).toBe(true);
 
   const textBeforeRotate = await centerOf(createdText);
   const textDocumentCenterBeforeRotate = await documentCenterOf(createdText);
@@ -470,6 +581,8 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(createdText).toHaveCSS("outline-style", "none");
 
   await imageElements.last().click();
+  await expect(properties).toBeHidden();
+  await expect(page.locator("[data-canvas-geometry-trigger]")).toHaveCount(0);
   await expect(
     imageElements.last().locator('[data-canvas-resize-handle="rightCenter"]'),
   ).toBeVisible();

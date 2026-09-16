@@ -43,6 +43,8 @@ export const ORG_EDITOR_CANVAS_MAX_STROKE_WIDTH = 24;
 export const ORG_EDITOR_CANVAS_MAX_COORDINATE = 1_000_000;
 export const ORG_EDITOR_CANVAS_MIN_TEXT_WIDTH = 48;
 export const ORG_EDITOR_CANVAS_MIN_TEXT_HEIGHT = 32;
+export const ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH = 480;
+export const ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_HEIGHT = 320;
 export const ORG_EDITOR_CANVAS_TEXT_PADDING = 4;
 export const ORG_EDITOR_CANVAS_FONTS = [
   "system-ui",
@@ -219,6 +221,7 @@ export const createOrgEditorStickerElement = (
 ): OrgEditorStickerElement => ({
   attachment: null,
   backgroundColor: "amber",
+  formatRuns: [],
   height: 168,
   id: createUuid(),
   layer: "aboveUnits",
@@ -337,14 +340,10 @@ export const cloneOrgEditorCanvasElement = (
       ? {}
       : {
           typography: { ...element.typography },
-          ...(element.type === "text"
-            ? {
-                formatRuns: element.formatRuns.map((run) => ({
-                  ...run,
-                  typography: { ...run.typography },
-                })),
-              }
-            : {}),
+          formatRuns: element.formatRuns.map((run) => ({
+            ...run,
+            typography: { ...run.typography },
+          })),
         }),
   } as OrgEditorCanvasElement;
 };
@@ -553,26 +552,17 @@ export const resizeOrgEditorCanvasRectElement = <
   pointer: OrgEditorCanvasPoint,
   preserveAspectRatio = false,
 ): Element => {
-  if (element.type === "text" && (handle === "topCenter" || handle === "bottomCenter")) {
-    return cloneOrgEditorCanvasElement(element) as Element;
-  }
   const sourceCenter = { x: element.x + element.width / 2, y: element.y + element.height / 2 };
   const localPointerDelta = rotateVector(
     { x: pointer.x - sourceCenter.x, y: pointer.y - sourceCenter.y },
     -element.rotation,
   );
-  const textHandle =
-    element.type === "text"
-      ? handle.endsWith("Left") || handle === "leftCenter"
-        ? "leftCenter"
-        : "rightCenter"
-      : handle;
   const targetBounds = getOrgEditorCanvasResizeBounds({
-    handle: textHandle,
+    handle,
     lockAspectRatio: element.type === "image" && preserveAspectRatio,
     pointer: {
       x: sourceCenter.x + localPointerDelta.x,
-      y: element.type === "text" ? sourceCenter.y : sourceCenter.y + localPointerDelta.y,
+      y: sourceCenter.y + localPointerDelta.y,
     },
     sourceBounds: {
       height: element.height,
@@ -592,7 +582,7 @@ export const resizeOrgEditorCanvasRectElement = <
   const targetCenter = { x: sourceCenter.x + centerDelta.x, y: sourceCenter.y + centerDelta.y };
   const resized = {
     ...cloneOrgEditorCanvasElement(element),
-    height: element.type === "text" ? element.height : targetBounds.height,
+    height: targetBounds.height,
     width: targetBounds.width,
     x: targetCenter.x - targetBounds.width / 2,
     y: targetCenter.y - targetBounds.height / 2,
@@ -612,6 +602,22 @@ export const resizeOrgEditorCanvasRectElement = <
       },
     },
   };
+};
+
+export const getOrgEditorCanvasOppositeResizeAnchor = (
+  handle: OrgEditorCanvasResizeHandle,
+): OrgEditorRectAnchorId => {
+  const opposite: Record<OrgEditorCanvasResizeHandle, OrgEditorRectAnchorId> = {
+    bottomCenter: "topCenter",
+    bottomLeft: "topRight",
+    bottomRight: "topLeft",
+    leftCenter: "rightCenter",
+    rightCenter: "leftCenter",
+    topCenter: "bottomCenter",
+    topLeft: "bottomRight",
+    topRight: "bottomLeft",
+  };
+  return opposite[handle];
 };
 
 /** Rotates one rectangle around its live center while keeping an attachment from moving it. */
@@ -680,6 +686,81 @@ export const getOrgEditorArrowControlPoints = (arrow: OrgEditorArrowElement) => 
     y: arrow.end.y + arrow.endControl.y,
   },
 });
+
+const getArrowChordFrame = (start: OrgEditorCanvasPoint, end: OrgEditorCanvasPoint) => {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-6) return null;
+  return {
+    length,
+    normalX: -dy / length,
+    normalY: dx / length,
+    unitX: dx / length,
+    unitY: dy / length,
+  };
+};
+
+/** Rebuilds a cubic in a new chord frame without changing its normalized shape. */
+export const projectOrgEditorArrowToEndpoints = (
+  arrow: OrgEditorArrowElement,
+  start: OrgEditorArrowEndpoint,
+  end: OrgEditorArrowEndpoint,
+): OrgEditorArrowElement => {
+  const sourceFrame = getArrowChordFrame(arrow.start, arrow.end);
+  const targetFrame = getArrowChordFrame(start, end);
+  if (!sourceFrame || !targetFrame) {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    return {
+      ...(cloneOrgEditorCanvasElement(arrow) as OrgEditorArrowElement),
+      end: { ...end },
+      endControl: { x: -dx / 3, y: -dy / 3 },
+      start: { ...start },
+      startControl: { x: dx / 3, y: dy / 3 },
+    };
+  }
+  const { control1, control2 } = getOrgEditorArrowControlPoints(arrow);
+  const normalizeControl = (control: OrgEditorCanvasPoint) => {
+    const offsetX = control.x - arrow.start.x;
+    const offsetY = control.y - arrow.start.y;
+    return {
+      longitudinal:
+        (offsetX * sourceFrame.unitX + offsetY * sourceFrame.unitY) / sourceFrame.length,
+      normal: (offsetX * sourceFrame.normalX + offsetY * sourceFrame.normalY) / sourceFrame.length,
+    };
+  };
+  const rebuildControl = (control: ReturnType<typeof normalizeControl>) => ({
+    x:
+      start.x +
+      targetFrame.length *
+        (control.longitudinal * targetFrame.unitX + control.normal * targetFrame.normalX),
+    y:
+      start.y +
+      targetFrame.length *
+        (control.longitudinal * targetFrame.unitY + control.normal * targetFrame.normalY),
+  });
+  const nextControl1 = rebuildControl(normalizeControl(control1));
+  const nextControl2 = rebuildControl(normalizeControl(control2));
+  return {
+    ...(cloneOrgEditorCanvasElement(arrow) as OrgEditorArrowElement),
+    end: { ...end },
+    endControl: { x: nextControl2.x - end.x, y: nextControl2.y - end.y },
+    start: { ...start },
+    startControl: { x: nextControl1.x - start.x, y: nextControl1.y - start.y },
+  };
+};
+
+export const moveOrgEditorArrowEndpointPreservingShape = (
+  arrow: OrgEditorArrowElement,
+  endpoint: "end" | "start",
+  point: OrgEditorCanvasPoint,
+) =>
+  projectOrgEditorArrowToEndpoints(
+    arrow,
+    endpoint === "start" ? { ...arrow.start, ...point } : arrow.start,
+    endpoint === "end" ? { ...arrow.end, ...point } : arrow.end,
+  );
 
 const getCubicExtrema = (p0: number, p1: number, p2: number, p3: number) => {
   const a = -p0 + 3 * p1 - 3 * p2 + p3;
@@ -881,11 +962,11 @@ const resolveOrgEditorCanvasElementSources = ({
             }
           : endpoint;
       };
-      element = {
-        ...element,
-        end: resolveEndpoint(element.end),
-        start: resolveEndpoint(element.start),
-      };
+      element = projectOrgEditorArrowToEndpoints(
+        element,
+        resolveEndpoint(element.start),
+        resolveEndpoint(element.end),
+      );
     } else if (element.attachment) {
       const target = resolveRef(element.attachment.target);
       if (target) {
@@ -1182,14 +1263,16 @@ export const transformOrgEditorCanvasElements = ({
         width: Math.max(ORG_EDITOR_CANVAS_MIN_TEXT_WIDTH, width),
       };
       const fitted = fitOrgEditorCanvasRichTextElement(textWithScaledTypography, measureText);
-      transformed = {
-        ...fitted,
-        x: center.x - fitted.width / 2,
-        y: center.y - fitted.height / 2,
-      };
+      transformed = moveOrgEditorCanvasElement(fitted, {
+        x: center.x - fitted.width / 2 - fitted.x,
+        y: center.y - fitted.height / 2 - fitted.y,
+      }) as OrgEditorTextElement;
     }
 
-    if (!attachment || (height === idealHeight && width === idealWidth)) return transformed;
+    const transformedAttachment = transformed.attachment;
+    if (!transformedAttachment || (height === idealHeight && width === idealWidth)) {
+      return transformed;
+    }
 
     const ideal = {
       ...transformed,
@@ -1198,15 +1281,18 @@ export const transformOrgEditorCanvasElements = ({
       x: center.x - idealWidth / 2,
       y: center.y - idealHeight / 2,
     };
-    const idealAnchor = getOrgEditorRectAnchorPoint(ideal, attachment.sourceAnchorId);
-    const roundedAnchor = getOrgEditorRectAnchorPoint(transformed, attachment.sourceAnchorId);
+    const idealAnchor = getOrgEditorRectAnchorPoint(ideal, transformedAttachment.sourceAnchorId);
+    const roundedAnchor = getOrgEditorRectAnchorPoint(
+      transformed,
+      transformedAttachment.sourceAnchorId,
+    );
     return {
       ...transformed,
       attachment: {
-        ...attachment,
+        ...transformedAttachment,
         offset: {
-          x: attachment.offset.x + roundedAnchor.x - idealAnchor.x,
-          y: attachment.offset.y + roundedAnchor.y - idealAnchor.y,
+          x: transformedAttachment.offset.x + roundedAnchor.x - idealAnchor.x,
+          y: transformedAttachment.offset.y + roundedAnchor.y - idealAnchor.y,
         },
       },
     };
@@ -1478,6 +1564,7 @@ export type OrgEditorRichTextLine = {
 
 export type OrgEditorRichTextLayout = {
   contentHeight: number;
+  effectiveScale: number;
   height: number;
   lines: OrgEditorRichTextLine[];
   width: number;
@@ -1491,7 +1578,7 @@ export const getOrgEditorTextFillRects = (
 ): OrgEditorTextFillRect[] => {
   if (element.fillMode === "none") return [];
   if (element.fillMode === "block") {
-    return [{ height: element.height, radius: 4, width: element.width, x: 0, y: 0 }];
+    return [{ height: layout.height, radius: 4, width: layout.width, x: 0, y: 0 }];
   }
   return layout.lines.flatMap((line) =>
     line.width <= 0
@@ -1550,163 +1637,306 @@ export const getOrgEditorTextRangeTypography = ({
 export const getOrgEditorRichTextLayout = ({
   autoWidth,
   formatRuns,
+  height,
   measure,
+  mode = "text",
   text,
   typography,
   width,
 }: {
   autoWidth: boolean;
   formatRuns: readonly OrgEditorTextFormatRun[];
+  height?: number;
   measure: (text: string, typography: OrgEditorInlineTypography) => number;
+  mode?: "sticker" | "text";
   text: string;
   typography: OrgEditorTypography;
   width: number;
 }): OrgEditorRichTextLayout => {
   const base = resolveOrgEditorCanvasInlineTypography(getOrgEditorInlineTypography(typography));
   const graphemes = getOrgEditorTextGraphemes(text);
-  const measured = graphemes.map((grapheme) => {
-    const style = resolveOrgEditorCanvasInlineTypography(
+  const authored = graphemes.map((grapheme) => ({
+    ...grapheme,
+    typography: resolveOrgEditorCanvasInlineTypography(
       getOrgEditorTextStyleAt(base, formatRuns, grapheme.start),
-    );
-    return {
-      ...grapheme,
-      height: Math.ceil(style.fontSize * 1.25),
-      typography: style,
-      width: grapheme.text === "\n" ? 0 : measure(grapheme.text, style),
-    };
-  });
+    ),
+  }));
   let paragraphWidth = 0;
   let maximumParagraphWidth = 0;
-  for (const grapheme of measured) {
+  for (const grapheme of authored) {
     if (grapheme.text === "\n") {
       maximumParagraphWidth = Math.max(maximumParagraphWidth, paragraphWidth);
       paragraphWidth = 0;
     } else {
-      paragraphWidth += grapheme.width;
+      paragraphWidth += measure(grapheme.text, grapheme.typography);
     }
   }
   maximumParagraphWidth = Math.max(maximumParagraphWidth, paragraphWidth);
-  const targetWidth = autoWidth
-    ? Math.min(
-        ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
-        Math.max(
-          ORG_EDITOR_CANVAS_MIN_TEXT_WIDTH,
-          Math.ceil(maximumParagraphWidth + ORG_EDITOR_CANVAS_TEXT_PADDING * 2),
-        ),
-      )
-    : Math.min(
-        ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
-        Math.max(ORG_EDITOR_CANVAS_MIN_TEXT_WIDTH, Math.round(width)),
-      );
-  const availableWidth = Math.max(1, targetWidth - ORG_EDITOR_CANVAS_TEXT_PADDING * 2);
-  const rawLines: Array<{
-    fragments: OrgEditorRichTextFragment[];
-    height: number;
-    width: number;
-  }> = [];
-  let current = { fragments: [] as OrgEditorRichTextFragment[], height: 0, width: 0 };
-  const finishLine = () => {
-    rawLines.push({ ...current, fragments: [...current.fragments] });
-    current = { fragments: [], height: 0, width: 0 };
-  };
-  const appendGrapheme = (grapheme: (typeof measured)[number]) => {
-    const previous = current.fragments.at(-1);
-    if (
-      previous &&
-      previous.end === grapheme.start &&
-      areInlineTypographiesEqual(previous.typography, grapheme.typography)
-    ) {
-      previous.end = grapheme.end;
-      previous.text += grapheme.text;
-      previous.width += grapheme.width;
-    } else {
-      current.fragments.push({
-        end: grapheme.end,
-        start: grapheme.start,
-        text: grapheme.text,
-        typography: grapheme.typography,
-        width: grapheme.width,
-        x: current.width,
-        y: 0,
+  const padding = mode === "sticker" ? 16 : ORG_EDITOR_CANVAS_TEXT_PADDING;
+  let targetWidth =
+    mode === "text" && autoWidth
+      ? Math.min(
+          ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH,
+          Math.max(
+            ORG_EDITOR_CANVAS_MIN_TEXT_WIDTH,
+            Math.ceil(maximumParagraphWidth + padding * 2),
+          ),
+        )
+      : Math.min(
+          ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
+          Math.max(ORG_EDITOR_CANVAS_MIN_TEXT_WIDTH, Math.round(width)),
+        );
+  let availableWidth = Math.max(1, targetWidth - padding * 2);
+  const createLines = (scale: number) => {
+    const measured = authored.map((grapheme) => {
+      const fragmentTypography = {
+        ...grapheme.typography,
+        fontSize: grapheme.typography.fontSize * scale,
+      };
+      return {
+        ...grapheme,
+        height: Math.ceil(fragmentTypography.fontSize * 1.25),
+        typography: fragmentTypography,
+        width: grapheme.text === "\n" ? 0 : measure(grapheme.text, fragmentTypography),
+      };
+    });
+    const rawLines: Array<{
+      fragments: OrgEditorRichTextFragment[];
+      height: number;
+      width: number;
+    }> = [];
+    let current = { fragments: [] as OrgEditorRichTextFragment[], height: 0, width: 0 };
+    const defaultLineHeight = Math.ceil(base.fontSize * scale * 1.25);
+    const finishLine = () => {
+      rawLines.push({
+        fragments: current.fragments.map((fragment) => ({ ...fragment })),
+        height: Math.max(defaultLineHeight, current.height),
+        width: current.width,
       });
+      current = { fragments: [], height: 0, width: 0 };
+    };
+    const appendGrapheme = (grapheme: (typeof measured)[number]) => {
+      const previous = current.fragments.at(-1);
+      if (
+        previous &&
+        previous.end === grapheme.start &&
+        areInlineTypographiesEqual(previous.typography, grapheme.typography)
+      ) {
+        previous.end = grapheme.end;
+        previous.text += grapheme.text;
+        previous.width += grapheme.width;
+      } else {
+        current.fragments.push({
+          end: grapheme.end,
+          start: grapheme.start,
+          text: grapheme.text,
+          typography: grapheme.typography,
+          width: grapheme.width,
+          x: current.width,
+          y: 0,
+        });
+      }
+      current.height = Math.max(current.height, grapheme.height);
+      current.width += grapheme.width;
+    };
+    const appendToken = (token: (typeof measured)[number][]) => {
+      const tokenWidth = token.reduce((sum, grapheme) => sum + grapheme.width, 0);
+      const isWhitespace = token.every((grapheme) => /\s/u.test(grapheme.text));
+      if (isWhitespace) {
+        if (current.width === 0) return;
+        if (current.width + tokenWidth > availableWidth) finishLine();
+        else for (const grapheme of token) appendGrapheme(grapheme);
+        return;
+      }
+      if (current.width > 0 && current.width + tokenWidth > availableWidth) finishLine();
+      if (tokenWidth <= availableWidth) {
+        for (const grapheme of token) appendGrapheme(grapheme);
+        return;
+      }
+      for (const grapheme of token) {
+        if (current.width > 0 && current.width + grapheme.width > availableWidth) finishLine();
+        appendGrapheme(grapheme);
+      }
+    };
+    let token: (typeof measured)[number][] = [];
+    let tokenWhitespace: boolean | null = null;
+    const flushToken = () => {
+      if (token.length > 0) appendToken(token);
+      token = [];
+      tokenWhitespace = null;
+    };
+    for (const grapheme of measured) {
+      if (grapheme.text === "\n") {
+        flushToken();
+        finishLine();
+        continue;
+      }
+      const whitespace = /\s/u.test(grapheme.text);
+      if (tokenWhitespace !== null && tokenWhitespace !== whitespace) flushToken();
+      tokenWhitespace = whitespace;
+      token.push(grapheme);
     }
-    current.height = Math.max(current.height, grapheme.height);
-    current.width += grapheme.width;
+    flushToken();
+    if (current.fragments.length > 0 || rawLines.length === 0 || text.endsWith("\n")) finishLine();
+    return rawLines;
   };
-  for (const grapheme of measured) {
-    if (grapheme.text === "\n") {
-      finishLine();
-      continue;
-    }
-    if (current.width > 0 && current.width + grapheme.width > availableWidth) finishLine();
-    appendGrapheme(grapheme);
+
+  const contentHeightAt = (scale: number) =>
+    createLines(scale).reduce((sum, line) => sum + line.height, 0) + padding * 2;
+  const authoredSizes = [
+    base.fontSize,
+    ...authored.map((grapheme) => grapheme.typography.fontSize),
+  ];
+  const minimumAuthoredSize = Math.min(...authoredSizes);
+  const minimumScale =
+    mode === "text" ? Math.min(1, ORG_EDITOR_CANVAS_MIN_FONT_SIZE / minimumAuthoredSize) : 1;
+  const requestedHeight = Math.min(
+    ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
+    Math.max(
+      ORG_EDITOR_CANVAS_MIN_TEXT_HEIGHT,
+      Math.round(height ?? ORG_EDITOR_CANVAS_MIN_TEXT_HEIGHT),
+    ),
+  );
+  const heightLimit =
+    mode === "sticker"
+      ? Number.POSITIVE_INFINITY
+      : autoWidth
+        ? ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_HEIGHT
+        : requestedHeight;
+  let effectiveScale = 1;
+  if (
+    mode === "text" &&
+    autoWidth &&
+    contentHeightAt(minimumScale) > heightLimit &&
+    targetWidth < ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH
+  ) {
+    targetWidth = ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH;
+    availableWidth = targetWidth - padding * 2;
   }
-  finishLine();
-  if (rawLines.length === 0) rawLines.push({ fragments: [], height: 0, width: 0 });
-  const defaultLineHeight = Math.ceil(base.fontSize * 1.25);
-  let nextY = ORG_EDITOR_CANVAS_TEXT_PADDING;
+  if (mode === "text" && contentHeightAt(1) > heightLimit) {
+    if (contentHeightAt(minimumScale) <= heightLimit) {
+      let lower = minimumScale;
+      let upper = 1;
+      for (let iteration = 0; iteration < 14; iteration += 1) {
+        const candidate = (lower + upper) / 2;
+        if (contentHeightAt(candidate) <= heightLimit) lower = candidate;
+        else upper = candidate;
+      }
+      effectiveScale = lower;
+    } else {
+      effectiveScale = minimumScale;
+    }
+  }
+  const rawLines = createLines(effectiveScale);
+  const contentHeight = rawLines.reduce((sum, line) => sum + line.height, 0);
+  const minimumContentHeight = Math.ceil(contentHeight + padding * 2);
+  const targetHeight = Math.min(
+    ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
+    Math.max(
+      ORG_EDITOR_CANVAS_MIN_TEXT_HEIGHT,
+      mode === "text" && autoWidth
+        ? minimumContentHeight
+        : Math.max(requestedHeight, minimumContentHeight),
+    ),
+  );
+  const firstY =
+    mode === "sticker" && typography.verticalAlign === "bottom"
+      ? Math.max(padding, targetHeight - padding - contentHeight)
+      : mode === "sticker" && typography.verticalAlign === "middle"
+        ? Math.max(padding, (targetHeight - contentHeight) / 2)
+        : padding;
+  let nextY = firstY;
   const lines = rawLines.map((line) => {
-    const height = Math.max(defaultLineHeight, line.height);
     const x =
       typography.horizontalAlign === "right"
-        ? targetWidth - ORG_EDITOR_CANVAS_TEXT_PADDING - line.width
+        ? targetWidth - padding - line.width
         : typography.horizontalAlign === "center"
           ? (targetWidth - line.width) / 2
-          : ORG_EDITOR_CANVAS_TEXT_PADDING;
+          : padding;
     const positioned = {
       fragments: line.fragments.map((fragment) => ({
         ...fragment,
         x: x + fragment.x,
-        y: nextY + (height - Math.ceil(fragment.typography.fontSize * 1.25)) / 2,
+        y: nextY + (line.height - Math.ceil(fragment.typography.fontSize * 1.25)) / 2,
       })),
-      height,
+      height: line.height,
       width: line.width,
       x,
       y: nextY,
     };
-    nextY += height;
+    nextY += line.height;
     return positioned;
   });
-  const contentHeight = lines.reduce((sum, line) => sum + line.height, 0);
   return {
     contentHeight,
-    height: Math.min(
-      ORG_EDITOR_CANVAS_MAX_RECT_SIZE,
-      Math.max(
-        ORG_EDITOR_CANVAS_MIN_TEXT_HEIGHT,
-        Math.ceil(contentHeight + ORG_EDITOR_CANVAS_TEXT_PADDING * 2),
-      ),
-    ),
+    effectiveScale,
+    height: targetHeight,
     lines,
     width: targetWidth,
   };
 };
 
-export const fitOrgEditorCanvasRichTextElement = (
-  element: OrgEditorTextElement,
+export const fitOrgEditorCanvasRichTextElement = <
+  Element extends OrgEditorStickerElement | OrgEditorTextElement,
+>(
+  element: Element,
   measure: (text: string, typography: OrgEditorInlineTypography) => number,
-): OrgEditorTextElement => {
+  preserveAnchorId: OrgEditorRectAnchorId | null = null,
+): Element => {
   const layout = getOrgEditorRichTextLayout({
-    autoWidth: element.autoWidth,
+    autoWidth: element.type === "text" && element.autoWidth,
     formatRuns: element.formatRuns,
+    height: element.height,
     measure,
+    mode: element.type,
     text: element.text,
-    typography: { ...element.typography, verticalAlign: "top" },
+    typography:
+      element.type === "text"
+        ? { ...element.typography, verticalAlign: "top" }
+        : element.typography,
     width: element.width,
   });
   const widthDelta = layout.width - element.width;
-  const fitted: OrgEditorTextElement = {
+  let fitted = {
     ...cloneOrgEditorCanvasElement(element),
     height: layout.height,
-    typography: { ...element.typography, verticalAlign: "top" },
+    typography:
+      element.type === "text"
+        ? { ...element.typography, verticalAlign: "top" }
+        : element.typography,
     width: layout.width,
     x:
-      element.autoWidth && element.typography.horizontalAlign === "right"
+      element.type === "text" && element.autoWidth && element.typography.horizontalAlign === "right"
         ? element.x - widthDelta
-        : element.autoWidth && element.typography.horizontalAlign === "center"
+        : element.type === "text" &&
+            element.autoWidth &&
+            element.typography.horizontalAlign === "center"
           ? element.x - widthDelta / 2
           : element.x,
-  } as OrgEditorTextElement;
+  } as Element;
+  if (preserveAnchorId) {
+    const previousAnchor = getOrgEditorRectAnchorPoint(element, preserveAnchorId);
+    const nextAnchor = getOrgEditorRectAnchorPoint(fitted, preserveAnchorId);
+    fitted = {
+      ...fitted,
+      x: fitted.x + previousAnchor.x - nextAnchor.x,
+      y: fitted.y + previousAnchor.y - nextAnchor.y,
+    };
+  }
+  if (element.attachment) {
+    const previousAnchor = getOrgEditorRectAnchorPoint(element, element.attachment.sourceAnchorId);
+    const nextAnchor = getOrgEditorRectAnchorPoint(fitted, element.attachment.sourceAnchorId);
+    fitted = {
+      ...fitted,
+      attachment: {
+        ...element.attachment,
+        offset: {
+          x: element.attachment.offset.x + nextAnchor.x - previousAnchor.x,
+          y: element.attachment.offset.y + nextAnchor.y - previousAnchor.y,
+        },
+      },
+    };
+  }
   return fitted;
 };
 

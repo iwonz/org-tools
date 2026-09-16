@@ -72,16 +72,23 @@ free-canvas pointer-down keeps a free endpoint. Image resize reads Shift from ea
 preserving proportions only while the modifier is held; the compatibility `lockAspectRatio` State
 field no longer controls interaction. Escape clears a resting element selection after
 higher-priority editing, menu, and transform interactions have handled the key. Text completion is
-idempotent across capture, blur, Escape, and tool changes. Text uses a transient contenteditable
-draft with grapheme-safe UTF-16 format runs, plain-text paste, caret styling, and one atomic history
-commit; Sticker keeps its plain textarea. One fragment layout derives Text auto/fixed width, height,
-visual lines, block/per-line fill bounds, anchors, resting DOM, draft bounds, and PNG painting. Text
-exposes horizontal alignment and width-only resize, retains a 48 by 32 empty bound, and scales
-base/run font sizes during group resize. Current choices are System, Georgia, Bebas Neue, Lobster,
-and Montserrat; every non-system face is local or bundled. The parser also accepts historical
-families and weight 500, which resolve to System and Regular, plus the immediately preceding exact
-Text shape, which normalizes without history. Sticker fill and its one tonal border come from one
-shared flat-style helper without changing bounds or anchors. The contextual surface keeps applicable
+idempotent across capture, blur, Escape, and tool changes. Text and Sticker share a transient
+contenteditable draft with grapheme-safe UTF-16 format runs, document-level range retention,
+plain-text paste, caret styling, and one atomic history commit. One word-aware fragment layout
+derives automatic or fixed Text geometry, Sticker overflow height and vertical alignment, effective
+typography, visual lines, block/per-line fill bounds, anchors, resting DOM, draft bounds, and PNG
+painting. Automatic Text stays tight between 48 by 32 and 480 by 320 logical pixels, uniformly
+reduces rendered typography no lower than 8 px without mutating authored sizes, and grows beyond the
+normal height cap only when the floor still cannot contain the content. Manual Text exposes all four
+side and corner resize targets, retains its requested two-axis frame or the minimum non-clipping
+height, and scales base/run authored sizes only during group resize. Current choices are System,
+Georgia, Bebas Neue, Lobster, and Montserrat; every non-system face is local or bundled. The parser
+also accepts historical families and weight 500, which resolve to System and Regular, plus the
+immediately preceding exact Text and no-run Sticker shapes, which normalize without history. Sticker
+fill and its one tonal border come from one shared flat-style helper without changing bounds or
+anchors. Cubic Arrow endpoint and attached-target movement projects both controls through normalized
+longitudinal/normal chord coordinates, with a one-third fallback for a near-zero source chord. The
+contextual surface keeps applicable
 appearance controls in one row and moves alignment and geometry into bounded popovers. Element
 ordering, duplication, and deletion remain context-menu and keyboard commands rather than duplicated
 property actions.
@@ -245,8 +252,9 @@ and effective 1x/2x/3x density, final dimensions, and 8/32-megapixel plus canvas
 rasterization. Both dialogs place their local object URL in one transient Fit-first viewport with
 bounded pointer/keyboard pan and 10%-to-400% zoom. Manual inspection preserves its normalized focal
 point across preview regeneration; viewport state and render-plan diagnostics are not persisted or
-painted. Text waits for every unique base/run family and weight, and Sticker waits for its resolved
-family, before measurement; Sticker uses the same live flat fill and tonal border. Global Back and Front move only
+painted. Text and Sticker wait for every unique base/run family and weight before measurement;
+Sticker uses the same live flat fill and tonal border, rich fragments, and nine-way alignment.
+Global Back and Front move only
 the selected ordered block to the extreme of `behindUnits` or `aboveUnits`, preserving every
 attachment while crossing the indivisible Unit-card plane. Text, Sticker, Image, and Arrow painters
 omit every transient selection, target outline, anchor, resize, rotation,

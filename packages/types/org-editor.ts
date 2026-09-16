@@ -112,6 +112,7 @@ export type OrgEditorTextElement = OrgEditorRectElementBase & {
 
 export type OrgEditorStickerElement = OrgEditorRectElementBase & {
   backgroundColor: EmployeeTagColor;
+  formatRuns: OrgEditorTextFormatRun[];
   text: string;
   typography: OrgEditorTypography;
   type: "sticker";

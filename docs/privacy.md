@@ -54,8 +54,9 @@ Canvas selection, tool activation, contextual target outlines and anchors, perim
 resize/rotation previews, context menus, Format token suggestions, Format help, and the Remove empty
 lines choice remain transient browser UI. PNG preview Fit/manual mode, zoom, pan, pointer capture,
 keyboard position, normalized focal point, and local object URL also remain in dialog memory only.
-Rich Text drafts, DOM ranges, pending caret typography, and composition state remain transient and
-store plain text plus normalized style ranges only when editing completes. Only a completed element command updates the active View;
+Rich Text and Sticker drafts, DOM ranges, pending caret typography, and composition state remain
+transient and store plain text plus normalized style ranges only when editing completes. Only a
+completed element command updates the active View;
 Template line filtering derives local output without writing State. None of these interactions adds
 storage, logging, telemetry, or network access.
 

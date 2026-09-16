@@ -237,6 +237,18 @@
                 }
               },
               "backgroundColor": "amber",
+              "formatRuns": [
+                {
+                  "end": 6,
+                  "start": 0,
+                  "typography": {
+                    "color": "rose",
+                    "fontFamily": "Lobster",
+                    "fontSize": 24,
+                    "fontWeight": 700
+                  }
+                }
+              ],
               "height": 168,
               "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
               "layer": "aboveUnits",
