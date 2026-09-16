@@ -33,7 +33,6 @@ import {
 } from "react";
 import {
   HiOutlineArrowDownTray,
-  HiOutlineArrowPath,
   HiOutlineArrowsPointingIn,
   HiOutlineArrowsPointingOut,
   HiOutlineArrowsRightLeft,
@@ -82,6 +81,10 @@ import {
 } from "@/components/org-editor-canvas-toolbar";
 import { OrgEditorExportDialog } from "@/components/org-editor-export-dialog";
 import { OrgEditorHistoryToolbar } from "@/components/org-editor-history-toolbar";
+import {
+  ORG_EDITOR_TOOLBAR_BUTTON_CLASS_NAME,
+  ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+} from "@/components/org-editor-toolbar-style";
 import { OrgEditorViewImageExportDialog } from "@/components/org-editor-view-image-export-dialog";
 import { OrgViewToolbar } from "@/components/org-view-toolbar";
 import {
@@ -177,8 +180,8 @@ import {
   getOrgEditorCanvasDependentClosure,
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasElementBounds,
+  getOrgEditorCanvasElementFont,
   getOrgEditorCanvasElementsBounds,
-  getOrgEditorCanvasFont,
   getOrgEditorCanvasResizeBounds,
   getOrgEditorCanvasRotationDelta,
   getOrgEditorRectAnchorPoint,
@@ -378,11 +381,7 @@ const fitCanvasTextElementHeight = (element: OrgEditorCanvasElement): OrgEditorC
   const context = document.createElement("canvas").getContext("2d");
   return fitOrgEditorCanvasTextElementHeight(element, (value, typography) => {
     if (!context) return [...value].length * typography.fontSize * 0.55;
-    context.font = getOrgEditorCanvasFont(
-      typography.fontFamily,
-      typography.fontWeight,
-      typography.fontSize,
-    );
+    context.font = getOrgEditorCanvasElementFont(typography);
     return context.measureText(value).width;
   });
 };
@@ -923,10 +922,7 @@ function OrgEditorToolbarButton({
   return (
     <Button
       aria-label={ariaLabel}
-      className={cn(
-        "h-9 rounded-md border-0 bg-transparent font-normal shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-inset",
-        className,
-      )}
+      className={cn(ORG_EDITOR_TOOLBAR_BUTTON_CLASS_NAME, className)}
       data-demo-id={dataDemoId}
       disabled={disabled}
       onClick={onClick}
@@ -939,8 +935,6 @@ function OrgEditorToolbarButton({
     </Button>
   );
 }
-
-const ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME = "rounded-lg bg-background/95 p-1.5 backdrop-blur-md";
 
 function OrgEditorLayoutDirection({
   layoutMode,
@@ -5239,8 +5233,11 @@ export const OrgStructureEditorTab = observer(() => {
           )}
         </div>
 
-        <div className="absolute start-3 top-3 z-30 flex max-w-[calc(100%-1.5rem)] min-w-0 items-stretch gap-2">
-          <div className={ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME}>
+        <div className="absolute start-3 top-3 z-30 max-w-[calc(100%-1.5rem)] min-w-0">
+          <div
+            className={ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME}
+            data-demo-id="org-editor-view-actions"
+          >
             <OrgViewToolbar
               activeViewId={store.activeOrgViewId}
               settings={viewSettings}
@@ -5252,30 +5249,17 @@ export const OrgStructureEditorTab = observer(() => {
               views={store.orgViewList}
             />
           </div>
-          {(editor.units.length > 0 || editor.canvasElements.length > 0) && (
-            <div
-              className={ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME}
-              data-demo-id="org-editor-history-actions"
-            >
-              <OrgEditorHistoryToolbar
-                canRedo={editor.canRedo}
-                canUndo={editor.canUndo}
-                onRedo={editor.redo}
-                onUndo={editor.undo}
-              />
-            </div>
-          )}
         </div>
 
-        <div className="absolute right-3 top-16 z-30 flex max-w-[calc(100%-1.5rem)] flex-col items-end gap-1 sm:top-3 rtl:items-start">
+        <div
+          className={cn(
+            "absolute end-3 top-16 z-30 flex max-w-[calc(100%-1.5rem)] items-stretch justify-end gap-1 lg:top-3",
+            ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+          )}
+          data-demo-id="org-editor-actions"
+        >
           {editor.units.length > 0 && (
-            <div
-              className={cn(
-                "relative z-30 flex items-stretch justify-end gap-1",
-                ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
-              )}
-              data-demo-id="org-editor-actions"
-            >
+            <>
               <OrgEditorSearchControl
                 onOpenChange={(nextSearchOpen) =>
                   store.setEditorUi({
@@ -5324,101 +5308,136 @@ export const OrgStructureEditorTab = observer(() => {
                 {hasCollapsedUnits ? <HiOutlineArrowsPointingOut /> : <HiOutlineArrowsPointingIn />}
                 <span>{toggleAllUnitsLabel}</span>
               </OrgEditorToolbarButton>
-            </div>
+            </>
           )}
-          <OrgEditorCanvasToolbar
-            activeTool={activeCanvasTool}
-            onDelete={() => store.deleteEditorSelection()}
-            onDuplicate={() => editor.duplicateSelectedCanvasElements()}
-            onExport={() => setViewImageExportOpen(true)}
-            onImage={() => {
-              imageInputRef.current?.click();
-              setActiveCanvasTool("select");
-            }}
-            onOrder={(direction) =>
-              editor.reorderCanvasElements(selectedCanvasElementIds, direction)
-            }
-            onToolChange={(tool) => {
-              if (editingCanvasElementIdRef.current) finishCanvasTextEditing();
-              if (tool !== "select") editor.clearSelection();
-              setCanvasAnchorHoverScreenPoint(null);
-              setContextMenu(null);
-              setActiveCanvasTool(tool);
-              setCanvasToolError(null);
-            }}
-            onUpdate={(update) =>
-              editor.updateCanvasElements(selectedCanvasElementIds, (element) =>
-                fitCanvasTextElementHeight(update(element)),
-              )
-            }
-            selectedElements={selectedCanvasElements}
-          />
-          <input
-            accept="image/png,image/jpeg,image/webp"
-            aria-label={t("Choose canvas image")}
-            className="sr-only"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              event.currentTarget.value = "";
-              if (file) void insertCanvasImageFile(file);
-              else setActiveCanvasTool("select");
-            }}
-            ref={imageInputRef}
-            type="file"
-          />
-          {canvasToolError && (
-            <p
-              className="max-w-sm rounded-md border border-destructive/30 bg-background/95 px-3 py-2 text-xs text-destructive shadow"
-              role="alert"
-            >
-              {canvasToolError}
-            </p>
-          )}
+          <OrgEditorToolbarButton
+            dataDemoId="org-editor-view-image-export-action"
+            onClick={() => setViewImageExportOpen(true)}
+            title={t("Export View image")}
+          >
+            <HiOutlineArrowDownTray />
+            <span>{t("Export image")}</span>
+          </OrgEditorToolbarButton>
         </div>
 
-        {(editor.units.length > 0 || editor.canvasElements.length > 0) && (
-          <div
-            className={cn(
-              "absolute bottom-3 start-3 z-30 flex items-stretch gap-1",
-              ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+        <div
+          className="pointer-events-none absolute inset-x-3 bottom-3 z-30 grid grid-cols-1 items-end gap-1 lg:grid-cols-[1fr_auto_1fr] lg:grid-rows-[auto_auto]"
+          data-demo-id="org-editor-bottom-controls"
+        >
+          {(editor.units.length > 0 || editor.canvasElements.length > 0) && (
+            <div
+              className={cn(
+                "pointer-events-auto flex items-center gap-1 justify-self-start lg:col-start-1 lg:row-start-2",
+                ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+              )}
+              data-demo-id="org-editor-viewport-actions"
+            >
+              <div data-demo-id="org-editor-history-actions">
+                <OrgEditorHistoryToolbar
+                  canRedo={editor.canRedo}
+                  canUndo={editor.canUndo}
+                  onRedo={editor.redo}
+                  onUndo={editor.undo}
+                />
+              </div>
+              <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+              <OrgEditorToolbarButton
+                ariaLabel={t("Zoom out")}
+                onClick={() =>
+                  zoomAt(
+                    { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+                    clamp(
+                      renderViewportRef.current.scale * 0.9,
+                      MIN_CANVAS_SCALE,
+                      MAX_CANVAS_SCALE,
+                    ),
+                  )
+                }
+                title={t("Zoom out")}
+              >
+                <HiOutlineMinus />
+              </OrgEditorToolbarButton>
+              <OrgEditorToolbarButton
+                ariaLabel={t("Zoom in")}
+                onClick={() =>
+                  zoomAt(
+                    { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+                    clamp(
+                      renderViewportRef.current.scale * 1.1,
+                      MIN_CANVAS_SCALE,
+                      MAX_CANVAS_SCALE,
+                    ),
+                  )
+                }
+                title={t("Zoom in")}
+              >
+                <HiOutlinePlus />
+              </OrgEditorToolbarButton>
+              <OrgEditorToolbarButton
+                ariaLabel={t("Reset zoom")}
+                dataDemoId="org-editor-reset-zoom-button"
+                onClick={resetViewportScale}
+                title={t("Reset zoom")}
+              >
+                <HiOutlineMagnifyingGlass />
+                {Math.round(renderViewport.scale * 100)}%
+              </OrgEditorToolbarButton>
+              <OrgEditorToolbarButton
+                ariaLabel={t("Focus the primary Unit")}
+                dataDemoId="org-editor-focus-primary-unit-button"
+                disabled={!primaryRootUnit}
+                onClick={focusPrimaryRootUnit}
+                title={t("Focus the primary Unit")}
+              >
+                <HiOutlineViewfinderCircle />
+              </OrgEditorToolbarButton>
+            </div>
+          )}
+          <div className="pointer-events-auto flex flex-col items-center gap-1 justify-self-center lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            {canvasToolError && (
+              <p
+                className="max-w-sm rounded-md border border-destructive/30 bg-background/95 px-3 py-2 text-xs text-destructive shadow"
+                role="alert"
+              >
+                {canvasToolError}
+              </p>
             )}
-            data-demo-id="org-editor-viewport-actions"
-          >
-            <OrgEditorToolbarButton
-              onClick={() =>
-                zoomAt(
-                  { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-                  clamp(renderViewportRef.current.scale * 0.9, MIN_CANVAS_SCALE, MAX_CANVAS_SCALE),
+            <OrgEditorCanvasToolbar
+              activeTool={activeCanvasTool}
+              onImage={() => {
+                imageInputRef.current?.click();
+                setActiveCanvasTool("select");
+              }}
+              onToolChange={(tool) => {
+                if (editingCanvasElementIdRef.current) finishCanvasTextEditing();
+                if (tool !== "select") editor.clearSelection();
+                setCanvasAnchorHoverScreenPoint(null);
+                setContextMenu(null);
+                setActiveCanvasTool(tool);
+                setCanvasToolError(null);
+              }}
+              onUpdate={(update) =>
+                editor.updateCanvasElements(selectedCanvasElementIds, (element) =>
+                  fitCanvasTextElementHeight(update(element)),
                 )
               }
-            >
-              <HiOutlineMinus />
-            </OrgEditorToolbarButton>
-            <OrgEditorToolbarButton
-              onClick={() =>
-                zoomAt(
-                  { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-                  clamp(renderViewportRef.current.scale * 1.1, MIN_CANVAS_SCALE, MAX_CANVAS_SCALE),
-                )
-              }
-            >
-              <HiOutlinePlus />
-            </OrgEditorToolbarButton>
-            <OrgEditorToolbarButton onClick={resetViewportScale}>
-              <HiOutlineArrowPath />
-              {Math.round(renderViewport.scale * 100)}%
-            </OrgEditorToolbarButton>
-            <OrgEditorToolbarButton
-              ariaLabel={t("Focus the primary Unit")}
-              dataDemoId="org-editor-focus-primary-unit-button"
-              disabled={!primaryRootUnit}
-              onClick={focusPrimaryRootUnit}
-              title={t("Focus the primary Unit")}
-            >
-              <HiOutlineViewfinderCircle />
-            </OrgEditorToolbarButton>
+              selectedElements={selectedCanvasElements}
+            />
           </div>
-        )}
+        </div>
+        <input
+          accept="image/png,image/jpeg,image/webp"
+          aria-label={t("Choose canvas image")}
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = "";
+            if (file) void insertCanvasImageFile(file);
+            else setActiveCanvasTool("select");
+          }}
+          ref={imageInputRef}
+          type="file"
+        />
       </section>
       {unitDialog && units && (
         <UnitDialog

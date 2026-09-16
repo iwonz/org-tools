@@ -488,9 +488,9 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
     .getByRole("menuitem", { name: "Send to back", exact: true })
     .hover();
   await page.keyboard.press("Escape");
-  const textAnnotation = page
-    .locator('[data-canvas-element-type="text"]')
-    .filter({ hasText: "Product direction · Q4" });
+  const textAnnotation = page.locator(
+    '[data-canvas-element-id="ffffffff-ffff-4fff-8fff-ffffffffffff"]',
+  );
   await textAnnotation.click();
   await expect(
     textAnnotation.locator('[data-canvas-transform-handle="corner-resize"]'),

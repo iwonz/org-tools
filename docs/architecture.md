@@ -73,11 +73,14 @@ preserving proportions only while the modifier is held; the compatibility `lockA
 field no longer controls interaction. Escape clears a resting element selection after
 higher-priority editing, menu, and transform interactions have handled the key. Text completion is
 idempotent across capture, blur, Escape, and tool changes, and textarea focus cannot create an
-internal canvas scroll offset. Text and Sticker use the same canonical locally bundled font string
-and text-block layout for DOM measurement, editing drafts, and PNG painting. Sticker fill and its
-one tonal border come from one shared flat-style helper without changing bounds or anchors. The
-contextual surface keeps appearance controls in one row and moves alignment, geometry, and common
-actions into bounded popovers.
+internal canvas scroll offset. Text and Sticker use one typography resolver and text-block layout
+for DOM measurement, editing drafts, and PNG painting. Current choices are the local system
+sans-serif stack and Georgia with Times/serif fallbacks; the parser still accepts the ten historical
+families and weight 500, which resolve at presentation time to System and Regular without mutating
+untouched State. Sticker fill and its one tonal border come from one shared flat-style helper without
+changing bounds or anchors. The contextual surface keeps applicable appearance controls in one row
+and moves alignment and geometry into bounded popovers. Element ordering, duplication, and deletion
+remain context-menu and keyboard commands rather than duplicated property actions.
 
 Every `OrgEditorUnit` owns a required LF-normalized `noteMarkdown` string bounded to 64 KiB of
 UTF-8. Notes are part of the View-local structural document, so View cloning and cross-View
@@ -238,7 +241,7 @@ and effective 1x/2x/3x density, final dimensions, and 8/32-megapixel plus canvas
 rasterization. Both dialogs place their local object URL in one transient Fit-first viewport with
 bounded pointer/keyboard pan and 10%-to-400% zoom. Manual inspection preserves its normalized focal
 point across preview regeneration; viewport state and render-plan diagnostics are not persisted or
-painted. Text and Sticker wait for their canonical locally bundled family and weight before
+painted. Text and Sticker wait for their canonical resolved local family and weight before
 measurement; Sticker uses the same live flat fill and tonal border. Global Back and Front move only
 the selected ordered block to the extreme of `behindUnits` or `aboveUnits`, preserving every
 attachment while crossing the indivisible Unit-card plane. Text, Sticker, Image, and Arrow painters
@@ -301,8 +304,14 @@ Drill-down stores only a stable group/entry key and re-resolves current full Emp
 edit or deletion.
 
 The Editor omits the shared content header. A styled View selector plus Create, Rename, and Delete
-actions occupy the logical start beside Undo/Redo; the system View cannot be renamed or deleted.
-Search and canvas commands occupy the logical end and mirror around the LTR world in Arabic. The
+actions occupy a top logical-start surface; the system View cannot be renamed or deleted. Search,
+layout, Arrange, Collapse/Expand, and full-View Image export occupy the top logical-end surface, with
+Export retained for an empty View. Undo/Redo share the bottom logical-start surface with zoom and
+focus, while the tools row is geometrically centered at the bottom and its single-selection
+properties sit directly above it. All five surfaces share 48-pixel geometry, a 36-pixel control
+height, six-pixel padding, background blur, and no border or shadow; compact layouts stack without
+intersection. Logical side surfaces mirror around the LTR world in Arabic while the tool dock stays
+centered. The
 Editor keeps pointer and wheel previews outside the MobX structure document. The canvas uses
 clipping rather than a browser scroll container, so navigation remains exclusively represented by
 the View viewport. One animation-frame

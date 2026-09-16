@@ -98,6 +98,8 @@ describe("OrgToolsState", () => {
       },
       id: uuid(92),
     };
+    first.typography = { ...first.typography, fontFamily: "Manrope", fontWeight: 500 };
+    second.typography = { ...second.typography, fontFamily: "Inter", fontWeight: 500 };
     structure.canvasElements = [first, second];
     expect(parseOrgToolsState(state).organization.views[0]?.structure.canvasElements).toEqual([
       first,

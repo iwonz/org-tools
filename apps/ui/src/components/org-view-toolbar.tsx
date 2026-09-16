@@ -9,6 +9,7 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi2";
 import { ActionIconButton } from "@/components/action-icon-button";
+import { ORG_EDITOR_TOOLBAR_BUTTON_CLASS_NAME } from "@/components/org-editor-toolbar-style";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -102,7 +103,7 @@ export function OrgViewToolbar({
         <Select onValueChange={onSelect} value={activeViewId}>
           <SelectTrigger
             aria-label={t("Organization View")}
-            className="h-9 w-20 border-0 bg-transparent px-2 shadow-none hover:bg-accent sm:w-44"
+            className={`${ORG_EDITOR_TOOLBAR_BUTTON_CLASS_NAME} w-20 px-2 sm:w-44`}
             data-demo-id="org-editor-view-select"
           >
             <SelectValue />

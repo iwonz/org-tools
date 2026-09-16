@@ -244,9 +244,9 @@
               "text": "Launch note\nKeep the customer loop visible",
               "typography": {
                 "color": "#334155",
-                "fontFamily": "Inter",
+                "fontFamily": "system-ui",
                 "fontSize": 20,
-                "fontWeight": 500,
+                "fontWeight": 400,
                 "horizontalAlign": "center",
                 "verticalAlign": "middle"
               },
@@ -274,7 +274,7 @@
               "text": "Product direction · Q4",
               "typography": {
                 "color": "#334155",
-                "fontFamily": "Manrope",
+                "fontFamily": "Georgia",
                 "fontSize": 22,
                 "fontWeight": 700,
                 "horizontalAlign": "center",

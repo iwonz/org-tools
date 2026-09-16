@@ -78,6 +78,9 @@ measurement. DOM and PNG consume the same line rectangles and indivisible count 
   cloud sets every footer height to zero, including cached geometry. Distribution color drafts stay
   local to the open picker; shared light/dark/canvas tonal values are derived from one color
   calculation, and each included PNG row performs only indexed status and cached-color lookups.
+- Resolve Editor annotation typography through two constant local stacks, System and Georgia, before
+  DOM measurement or PNG painting. Legacy family names and weight 500 collapse to System/Regular at
+  presentation time without a migration, remote font work, or additional layout pass.
 - Keep the Unit Markdown renderer out of the main Editor bundle and mount it only while a note
   Preview is open. Closed notes are opaque bounded strings: canvas layout, spatial indexing, search,
   PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save
@@ -114,7 +117,8 @@ Employee Import discovers source paths and its richest representative once. The 
 list virtualizes visible rows, keeps unique targets in a bounded map, and never repeats the 20,000-row
 analysis while scrolling or changing a target.
 Canvas PNG generation uses current layout, shared live-card geometry, bounded embedded avatar bytes,
-complete locally measured tag text, resolved Tag colors, and local vector primitives without network work. Oversized tags
+complete locally measured tag text, resolved local font stacks, Tag colors, and vector primitives
+without network work. Oversized tags
 increase only their Employee row and containing Unit height; the existing maximum canvas-pixel bound
 remains authoritative.
 The shared image scene computes rotated rectangle and cubic Bezier bounds once, then paints hierarchy

@@ -47,6 +47,7 @@ import type { UiTextKey } from "@/i18n/messages";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import { exportEmployeeFields } from "@/lib/export-format";
 import type { OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
+import { getOrgEditorCanvasCssFontFamily } from "@/lib/org-editor-canvas";
 import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorImageExportResult,
@@ -387,18 +388,20 @@ export function OrgEditorViewImageExportDialog({
                 />
               </div>
               <div className="grid gap-2">
-                <Label>{t("Font")}</Label>
+                <Label htmlFor="org-editor-view-export-font">{t("Font")}</Label>
                 <Select
                   onValueChange={(fontFamily) => update({ fontFamily })}
                   value={settings.fontFamily}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="org-editor-view-export-font">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {ORG_EDITOR_EXPORT_FONTS.map((font) => (
                       <SelectItem key={font.family} value={font.family}>
-                        {font.label}
+                        <span style={{ fontFamily: getOrgEditorCanvasCssFontFamily(font.family) }}>
+                          {font.family === "system-ui" ? t("System") : t("Georgia")}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>

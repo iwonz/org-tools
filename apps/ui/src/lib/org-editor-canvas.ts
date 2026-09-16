@@ -39,7 +39,9 @@ export const ORG_EDITOR_CANVAS_MAX_FONT_SIZE = 200;
 export const ORG_EDITOR_CANVAS_MIN_FONT_SIZE = 8;
 export const ORG_EDITOR_CANVAS_MAX_STROKE_WIDTH = 24;
 export const ORG_EDITOR_CANVAS_MAX_COORDINATE = 1_000_000;
-export const ORG_EDITOR_CANVAS_FONTS = [
+export const ORG_EDITOR_CANVAS_FONTS = ["system-ui", "Georgia"] as const;
+
+export const ORG_EDITOR_CANVAS_LEGACY_FONTS = [
   "Inter",
   "Roboto",
   "Open Sans",
@@ -52,8 +54,44 @@ export const ORG_EDITOR_CANVAS_FONTS = [
   "PT Sans",
 ] as const;
 
+export type OrgEditorCanvasFontFamily = (typeof ORG_EDITOR_CANVAS_FONTS)[number];
+
+const ORG_EDITOR_CANVAS_ACCEPTED_FONTS = [
+  ...ORG_EDITOR_CANVAS_FONTS,
+  ...ORG_EDITOR_CANVAS_LEGACY_FONTS,
+] as const;
+
+export const resolveOrgEditorCanvasFontFamily = (fontFamily: string): OrgEditorCanvasFontFamily =>
+  fontFamily === "Georgia" ? "Georgia" : "system-ui";
+
+export const getOrgEditorCanvasCssFontFamily = (fontFamily: string) =>
+  resolveOrgEditorCanvasFontFamily(fontFamily) === "Georgia"
+    ? 'Georgia, "Times New Roman", serif'
+    : 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+export const resolveOrgEditorCanvasElementFontWeight = (
+  fontWeight: OrgEditorTypography["fontWeight"],
+): 400 | 700 => (fontWeight === 700 ? 700 : 400);
+
+export const resolveOrgEditorCanvasTypography = (
+  typography: OrgEditorTypography,
+): OrgEditorTypography => ({
+  ...typography,
+  fontFamily: resolveOrgEditorCanvasFontFamily(typography.fontFamily),
+  fontWeight: resolveOrgEditorCanvasElementFontWeight(typography.fontWeight),
+});
+
 export const getOrgEditorCanvasFont = (fontFamily: string, weight: number, size: number) =>
-  `${weight} ${size}px "${fontFamily.replaceAll('"', "")}", Arial, sans-serif`;
+  `${weight === 700 ? 700 : 400} ${size}px ${getOrgEditorCanvasCssFontFamily(fontFamily)}`;
+
+export const getOrgEditorCanvasElementFont = (
+  typography: Pick<OrgEditorTypography, "fontFamily" | "fontSize" | "fontWeight">,
+) =>
+  getOrgEditorCanvasFont(
+    typography.fontFamily,
+    resolveOrgEditorCanvasElementFontWeight(typography.fontWeight),
+    typography.fontSize,
+  );
 
 export const normalizeOrgEditorCanvasDimension = (value: number) =>
   Math.min(
@@ -108,7 +146,7 @@ export const getOrgEditorCanvasImagePlaceholderPoints = (width: number, height: 
 
 const DEFAULT_TYPOGRAPHY: OrgEditorTypography = {
   color: "#334155",
-  fontFamily: "Inter",
+  fontFamily: "system-ui",
   fontSize: 18,
   fontWeight: 400,
   horizontalAlign: "left",
@@ -1256,4 +1294,4 @@ export const isOrgEditorCanvasColor = (value: unknown): value is EmployeeTagColo
     /^#[0-9a-f]{6}([0-9a-f]{2})?$/u.test(value));
 
 export const isOrgEditorCanvasFont = (value: unknown): value is string =>
-  typeof value === "string" && ORG_EDITOR_CANVAS_FONTS.includes(value as never);
+  typeof value === "string" && ORG_EDITOR_CANVAS_ACCEPTED_FONTS.includes(value as never);

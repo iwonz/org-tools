@@ -322,29 +322,33 @@ for (const [locale, messages] of [
     expect(
       await canvasProperties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
     ).toBe(true);
-    await expect(
-      canvasProperties.getByRole("button", { name: messages.Ui.More, exact: true }),
-    ).toBeVisible();
+    await expect(canvasProperties.getByRole("button", { name: /More/u })).toHaveCount(0);
     await page.keyboard.press("Escape");
     await page.setViewportSize({ height: 1_000, width: 1_440 });
     if (locale === "ar") {
-      const [canvasBox, viewBox, historyBox, actionBox] = await Promise.all([
+      const [canvasBox, viewBox, viewportBox, actionBox, toolsBox] = await Promise.all([
         editorCanvas.boundingBox(),
         page.locator('[data-demo-id="org-editor-view-toolbar"]').boundingBox(),
-        page.locator('[data-demo-id="org-editor-history-actions"]').boundingBox(),
+        page.locator('[data-demo-id="org-editor-viewport-actions"]').boundingBox(),
         page.locator('[data-demo-id="org-editor-actions"]').boundingBox(),
+        page.locator('[data-demo-id="org-editor-canvas-tool-actions"]').boundingBox(),
       ]);
       expect(canvasBox).not.toBeNull();
       expect(viewBox).not.toBeNull();
-      expect(historyBox).not.toBeNull();
+      expect(viewportBox).not.toBeNull();
       expect(actionBox).not.toBeNull();
+      expect(toolsBox).not.toBeNull();
       expect((viewBox?.x ?? 0) + (viewBox?.width ?? 0)).toBeCloseTo(
         (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) - 18,
         0,
       );
-      expect((historyBox?.x ?? 0) + (historyBox?.width ?? 0)).toBeLessThan(viewBox?.x ?? 0);
-      expect((actionBox?.x ?? 0) + (actionBox?.width ?? 0)).toBeCloseTo(
+      expect((viewportBox?.x ?? 0) + (viewportBox?.width ?? 0)).toBeCloseTo(
         (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) - 12,
+        0,
+      );
+      expect(actionBox?.x ?? 0).toBeCloseTo((canvasBox?.x ?? 0) + 12, 0);
+      expect((toolsBox?.x ?? 0) + (toolsBox?.width ?? 0) / 2).toBeCloseTo(
+        (canvasBox?.x ?? 0) + (canvasBox?.width ?? 0) / 2,
         0,
       );
     }

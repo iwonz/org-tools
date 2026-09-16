@@ -8,22 +8,23 @@ import type {
 } from "@org-tools/types";
 import { useState } from "react";
 import {
-  HiOutlineArrowDownTray,
   HiOutlineArrowLongRight,
   HiOutlineArrowsPointingOut,
   HiOutlineBars3BottomLeft,
   HiOutlineBars3BottomRight,
   HiOutlineBars3CenterLeft,
-  HiOutlineChatBubbleBottomCenterText,
+  HiOutlineBold,
   HiOutlineCursorArrowRays,
-  HiOutlineDocumentDuplicate,
-  HiOutlineEllipsisHorizontal,
   HiOutlinePhoto,
-  HiOutlineQueueList,
-  HiOutlineTrash,
 } from "react-icons/hi2";
-import { TbLetterT } from "react-icons/tb";
+import { TbLetterT, TbSticker } from "react-icons/tb";
 
+import {
+  ORG_EDITOR_TOOLBAR_BUTTON_CLASS_NAME,
+  ORG_EDITOR_TOOLBAR_FIELD_CLASS_NAME,
+  ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME,
+  ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+} from "@/components/org-editor-toolbar-style";
 import { TagColorPicker } from "@/components/tag-color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,12 @@ import {
 } from "@/components/ui/select";
 import { useUiText } from "@/i18n/use-ui-text";
 import {
+  getOrgEditorCanvasCssFontFamily,
   normalizeOrgEditorCanvasDimension,
   normalizeOrgEditorCanvasDimensions,
   ORG_EDITOR_CANVAS_FONTS,
+  resolveOrgEditorCanvasFontFamily,
+  resolveOrgEditorCanvasTypography,
 } from "@/lib/org-editor-canvas";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +53,7 @@ const toolDefinitions = [
   { icon: HiOutlineCursorArrowRays, tool: "select" as const },
   { icon: TbLetterT, tool: "text" as const },
   { icon: HiOutlineArrowLongRight, tool: "arrow" as const },
-  { icon: HiOutlineChatBubbleBottomCenterText, tool: "sticker" as const },
+  { icon: TbSticker, tool: "sticker" as const },
   { icon: HiOutlinePhoto, tool: "image" as const },
 ];
 
@@ -74,46 +78,46 @@ function AlignmentIcon({ alignment }: { alignment: OrgEditorHorizontalAlign }) {
 
 export function OrgEditorCanvasToolbar({
   activeTool,
-  onDelete,
-  onDuplicate,
-  onExport,
   onImage,
-  onOrder,
   onToolChange,
   onUpdate,
   selectedElements,
 }: {
   activeTool: OrgEditorCanvasTool;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  onExport: () => void;
   onImage: () => void;
-  onOrder: (direction: "back" | "front") => void;
   onToolChange: (tool: OrgEditorCanvasTool) => void;
   onUpdate: (update: (element: OrgEditorCanvasElement) => OrgEditorCanvasElement) => void;
   selectedElements: OrgEditorCanvasElement[];
 }) {
   const t = useUiText();
   const [alignmentOpen, setAlignmentOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const selected = selectedElements.length === 1 ? selectedElements[0] : null;
   const textElement = selected?.type === "text" || selected?.type === "sticker" ? selected : null;
+  const resolvedTextTypography = textElement
+    ? resolveOrgEditorCanvasTypography(textElement.typography)
+    : null;
 
   const updateTextTypography = (
     patch: Partial<Extract<OrgEditorCanvasElement, { type: "text" | "sticker" }>["typography"]>,
   ) =>
     onUpdate((element) =>
       element.type === "text" || element.type === "sticker"
-        ? { ...element, typography: { ...element.typography, ...patch } }
+        ? {
+            ...element,
+            typography: { ...resolveOrgEditorCanvasTypography(element.typography), ...patch },
+          }
         : element,
     );
 
   return (
     <div
-      className="flex max-w-[min(52rem,calc(100vw-1.5rem))] flex-col items-end gap-1"
+      className="flex max-w-[min(52rem,calc(100vw-1.5rem))] flex-col-reverse items-center gap-1"
       data-demo-id="org-editor-canvas-tools"
     >
-      <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-background/95 p-1 shadow-sm backdrop-blur">
+      <div
+        className={cn("flex items-center gap-1", ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME)}
+        data-demo-id="org-editor-canvas-tool-actions"
+      >
         {toolDefinitions.map(({ icon: Icon, tool }) => {
           const label = t(
             tool === "select"
@@ -131,7 +135,7 @@ export function OrgEditorCanvasToolbar({
               aria-label={label}
               aria-pressed={activeTool === tool}
               className={cn(
-                "size-8 p-0",
+                ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME,
                 activeTool === tool && "bg-accent-strong text-foreground",
               )}
               data-canvas-tool={tool}
@@ -148,45 +152,41 @@ export function OrgEditorCanvasToolbar({
             </Button>
           );
         })}
-        <Button
-          className="font-normal"
-          data-demo-id="org-editor-view-image-export-action"
-          onClick={onExport}
-          size="sm"
-          title={t("Export View image")}
-          type="button"
-          variant="ghost"
-        >
-          <HiOutlineArrowDownTray />
-          <span>{t("Export image")}</span>
-        </Button>
       </div>
 
-      {selectedElements.length > 0 && (
+      {selected && (
         <div
-          className="inline-flex max-w-[min(46rem,calc(100vw-1.5rem))] items-center gap-1 rounded-lg border border-border/80 bg-background/95 p-1 shadow-sm backdrop-blur"
+          className={cn(
+            "inline-flex max-w-[min(46rem,calc(100vw-1.5rem))] items-center gap-1",
+            ORG_EDITOR_TOOLBAR_SURFACE_CLASS_NAME,
+          )}
           data-demo-id="org-editor-canvas-properties"
         >
           {textElement && (
             <>
               <Select
                 onValueChange={(fontFamily) => updateTextTypography({ fontFamily })}
-                value={textElement.typography.fontFamily}
+                value={resolveOrgEditorCanvasFontFamily(textElement.typography.fontFamily)}
               >
-                <SelectTrigger aria-label={t("Font")} className="h-8 w-28 min-w-0 text-xs">
+                <SelectTrigger
+                  aria-label={t("Font")}
+                  className={cn(ORG_EDITOR_TOOLBAR_FIELD_CLASS_NAME, "w-28")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {ORG_EDITOR_CANVAS_FONTS.map((font) => (
                     <SelectItem key={font} value={font}>
-                      <span style={{ fontFamily: font }}>{font}</span>
+                      <span style={{ fontFamily: getOrgEditorCanvasCssFontFamily(font) }}>
+                        {font === "system-ui" ? t("System") : t("Georgia")}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Input
                 aria-label={t("Font size")}
-                className="h-8 w-16 text-xs"
+                className={cn(ORG_EDITOR_TOOLBAR_FIELD_CLASS_NAME, "w-16")}
                 max={200}
                 min={8}
                 onChange={(event) => {
@@ -198,21 +198,25 @@ export function OrgEditorCanvasToolbar({
                 type="number"
                 value={textElement.typography.fontSize}
               />
-              <Select
-                onValueChange={(value) =>
-                  updateTextTypography({ fontWeight: Number(value) as 400 | 500 | 700 })
+              <Button
+                aria-label={t("Bold")}
+                aria-pressed={resolvedTextTypography?.fontWeight === 700}
+                className={cn(
+                  ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME,
+                  resolvedTextTypography?.fontWeight === 700 && "bg-accent-strong text-foreground",
+                )}
+                data-canvas-bold-trigger
+                onClick={() =>
+                  updateTextTypography({
+                    fontWeight: resolvedTextTypography?.fontWeight === 700 ? 400 : 700,
+                  })
                 }
-                value={String(textElement.typography.fontWeight)}
+                title={t("Bold")}
+                type="button"
+                variant="ghost"
               >
-                <SelectTrigger aria-label={t("Font weight")} className="h-8 w-24 min-w-0 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="400">{t("Regular")}</SelectItem>
-                  <SelectItem value="500">{t("Medium")}</SelectItem>
-                  <SelectItem value="700">{t("Bold")}</SelectItem>
-                </SelectContent>
-              </Select>
+                <HiOutlineBold />
+              </Button>
               <TagColorPicker
                 allowNoColor={false}
                 label={t("Text color")}
@@ -238,7 +242,7 @@ export function OrgEditorCanvasToolbar({
                 <PopoverTrigger asChild>
                   <Button
                     aria-label={t("Alignment")}
-                    className="size-8 p-0"
+                    className={ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME}
                     data-canvas-alignment-trigger
                     title={`${t(getHorizontalAlignmentLabel(textElement.typography.horizontalAlign))} · ${t(getVerticalAlignmentLabel(textElement.typography.verticalAlign))}`}
                     type="button"
@@ -310,7 +314,7 @@ export function OrgEditorCanvasToolbar({
               />
               <Input
                 aria-label={t("Line width")}
-                className="h-8 w-16 text-xs"
+                className={cn(ORG_EDITOR_TOOLBAR_FIELD_CLASS_NAME, "w-16")}
                 max={24}
                 min={1}
                 onChange={(event) => {
@@ -326,7 +330,7 @@ export function OrgEditorCanvasToolbar({
                 value={selected.strokeWidth}
               />
               <Button
-                className="h-8 px-2 text-xs"
+                className={cn(ORG_EDITOR_TOOLBAR_BUTTON_CLASS_NAME, "px-2 text-xs")}
                 onClick={() =>
                   onUpdate((element) =>
                     element.type === "arrow"
@@ -354,7 +358,7 @@ export function OrgEditorCanvasToolbar({
                 >
                   <SelectTrigger
                     aria-label={t(endpoint === "start" ? "Arrow start marker" : "Arrow end marker")}
-                    className="h-8 w-24 min-w-0 text-xs"
+                    className={cn(ORG_EDITOR_TOOLBAR_FIELD_CLASS_NAME, "w-24")}
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -372,7 +376,7 @@ export function OrgEditorCanvasToolbar({
               <PopoverTrigger asChild>
                 <Button
                   aria-label={t("Geometry")}
-                  className="size-8 p-0"
+                  className={ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME}
                   data-canvas-geometry-trigger
                   title={t("Geometry")}
                   type="button"
@@ -451,67 +455,6 @@ export function OrgEditorCanvasToolbar({
               </PopoverContent>
             </Popover>
           )}
-
-          <Popover onOpenChange={setMoreOpen} open={moreOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                aria-label={t("More")}
-                className="size-8 p-0"
-                data-canvas-more-trigger
-                title={t("More")}
-                type="button"
-                variant="ghost"
-              >
-                <HiOutlineEllipsisHorizontal />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="grid w-48 gap-0.5 p-1">
-              {(
-                [
-                  ["back", "Send to back", false],
-                  ["front", "Bring to front", true],
-                ] as const
-              ).map(([direction, label, flipped]) => (
-                <Button
-                  className="h-8 justify-start px-2 font-normal"
-                  key={direction}
-                  onClick={() => {
-                    onOrder(direction);
-                    setMoreOpen(false);
-                  }}
-                  type="button"
-                  variant="ghost"
-                >
-                  <HiOutlineQueueList className={flipped ? "rotate-180" : undefined} />
-                  {t(label)}
-                </Button>
-              ))}
-              <Button
-                className="h-8 justify-start px-2 font-normal"
-                onClick={() => {
-                  onDuplicate();
-                  setMoreOpen(false);
-                }}
-                type="button"
-                variant="ghost"
-              >
-                <HiOutlineDocumentDuplicate />
-                {t("Duplicate")}
-              </Button>
-              <Button
-                className="h-8 justify-start px-2 font-normal text-destructive"
-                onClick={() => {
-                  onDelete();
-                  setMoreOpen(false);
-                }}
-                type="button"
-                variant="ghost"
-              >
-                <HiOutlineTrash />
-                {t("Delete")}
-              </Button>
-            </PopoverContent>
-          </Popover>
         </div>
       )}
     </div>

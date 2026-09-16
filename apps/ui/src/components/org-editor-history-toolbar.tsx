@@ -2,11 +2,9 @@
 
 import { HiOutlineArrowUturnLeft, HiOutlineArrowUturnRight } from "react-icons/hi2";
 
+import { ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME } from "@/components/org-editor-toolbar-style";
 import { Button } from "@/components/ui/button";
 import { useUiText } from "@/i18n/use-ui-text";
-
-const ACTION_CLASS_NAME =
-  "size-9 rounded-md border-0 bg-transparent shadow-none hover:bg-accent focus-visible:ring-inset";
 
 export function OrgEditorHistoryToolbar({
   canRedo,
@@ -24,7 +22,7 @@ export function OrgEditorHistoryToolbar({
     <div className="flex items-center gap-1" data-demo-id="org-editor-history-toolbar">
       <Button
         aria-label={t("Undo")}
-        className={ACTION_CLASS_NAME}
+        className={ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME}
         data-demo-id="org-editor-undo-button"
         disabled={!canUndo}
         onClick={onUndo}
@@ -36,7 +34,7 @@ export function OrgEditorHistoryToolbar({
       </Button>
       <Button
         aria-label={t("Redo")}
-        className={ACTION_CLASS_NAME}
+        className={ORG_EDITOR_TOOLBAR_ICON_BUTTON_CLASS_NAME}
         data-demo-id="org-editor-redo-button"
         disabled={!canRedo}
         onClick={onRedo}

@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 
+import type { OrgToolsState } from "@org-tools/types";
 import { expect, type Page } from "@playwright/test";
-import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
+import { openImportDialog, syntheticStatePath } from "./helpers.js";
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
@@ -65,6 +66,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     0, 0,
   ]);
   await expect(properties).toBeVisible();
+  await expect(properties).toHaveCSS("height", "48px");
   await page.keyboard.press("Escape");
   await expect(properties).toBeHidden();
 
@@ -163,7 +165,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     throw new Error("Created canvas identity is unavailable.");
   const createdText = canvas.locator(`[data-canvas-element-id="${createdTextId}"]`);
   const createdSticker = canvas.locator(`[data-canvas-element-id="${createdStickerId}"]`);
-  await expect(toolbar.locator('[data-demo-id="org-editor-view-image-export-action"]')).toHaveCSS(
+  await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toHaveCSS(
     "font-weight",
     "400",
   );
@@ -191,7 +193,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await createdText.dblclick();
   await expect(editor).toBeFocused();
   await editor.fill("Committed before an empty-canvas click");
-  await canvas.click({ position: { x: canvasBox.width / 2, y: canvasBox.height - 16 } });
+  await canvas.click({ position: { x: canvasBox.width - 24, y: canvasBox.height / 2 } });
   await expect(editor).toBeHidden();
   await expect(createdText).toHaveAttribute(
     "data-canvas-element-text",
@@ -290,12 +292,23 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(canvas.locator("[data-canvas-target-anchor]")).toHaveCount(0);
 
   await properties.getByLabel("Font", { exact: true }).click();
-  await page.getByRole("option", { name: "Montserrat", exact: true }).click();
-  await expect(createdText).toHaveAttribute("data-canvas-font-family", "Montserrat");
+  await expect(page.getByRole("option")).toHaveCount(2);
+  await page.getByRole("option", { name: "Georgia", exact: true }).click();
+  await expect(createdText).toHaveAttribute("data-canvas-font-family", "Georgia");
   await expect(createdText.locator('span[style*="font-family"]').first()).toHaveCSS(
     "font-family",
-    /Montserrat/,
+    /Georgia/,
   );
+  const boldButton = properties.getByRole("button", { name: "Bold", exact: true });
+  await expect(boldButton).toHaveAttribute("aria-pressed", "false");
+  await boldButton.click();
+  await expect(boldButton).toHaveAttribute("aria-pressed", "true");
+  await expect(createdText.locator('span[style*="font-family"]').first()).toHaveCSS(
+    "font-weight",
+    "700",
+  );
+  await boldButton.click();
+  await expect(boldButton).toHaveAttribute("aria-pressed", "false");
   await properties.getByRole("button", { name: "Alignment", exact: true }).click();
   await expect(page.locator("[data-canvas-alignment]")).toHaveCount(9);
   await page.locator('[data-canvas-alignment="bottom:right"]').click();
@@ -303,15 +316,15 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const cornerHandle = createdText.locator('[data-canvas-resize-handle="topRight"]');
   const cornerBeforeZoom = await cornerHandle.boundingBox();
   const viewportActions = page.locator('[data-demo-id="org-editor-viewport-actions"]');
-  await viewportActions.getByRole("button").first().click();
-  await viewportActions.getByRole("button").first().click();
+  await viewportActions.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await viewportActions.getByRole("button", { name: "Zoom in", exact: true }).click();
   const cornerAfterZoom = await cornerHandle.boundingBox();
   if (!cornerBeforeZoom || !cornerAfterZoom) {
     throw new Error("Corner resize geometry is unavailable.");
   }
   expect(Math.abs(cornerAfterZoom.width - cornerBeforeZoom.width)).toBeLessThan(0.25);
   expect(Math.abs(cornerAfterZoom.height - cornerBeforeZoom.height)).toBeLessThan(0.25);
-  await viewportActions.getByRole("button").nth(2).click();
+  await viewportActions.getByRole("button", { name: "Reset zoom", exact: true }).click();
 
   const textBeforeResize = await createdText.boundingBox();
   const rightResize = await createdText
@@ -456,8 +469,8 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   expect(textAfter.x - textBefore.x).toBeGreaterThan(24);
   expect(stickerAfter.x - stickerBefore.x).toBeGreaterThan(24);
   await page.keyboard.press("Control+z");
-  await properties.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("button", { name: "Send to back", exact: true }).click();
+  await createdText.click({ button: "right" });
+  await elementMenu.getByRole("menuitem", { name: "Send to back", exact: true }).click();
   await expect(createdText).toHaveAttribute("data-canvas-element-layer", "behindUnits");
   await expect(createdSticker).toHaveAttribute("data-canvas-element-layer", "behindUnits");
   await page.keyboard.press("Control+z");
@@ -568,9 +581,14 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await createdText.click();
   await createdSticker.click({ modifiers: [additiveSelectionModifier] });
   await expect(groupFrame).toBeVisible();
-  await toolbar.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
+  await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
   const dialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
   await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Font", { exact: true }).click();
+  await expect(page.getByRole("option")).toHaveCount(2);
+  await expect(page.getByRole("option", { name: "System", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Georgia", exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "System", exact: true }).click();
   const preview = dialog.getByAltText("View export preview", { exact: true });
   await expect(preview).toBeVisible();
   await expect(dialog.locator('[data-demo-id="org-editor-view-image-dimensions"]')).toHaveCount(0);
@@ -642,6 +660,11 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const unitDialog = page.locator('[data-demo-id="org-editor-export-dialog"]');
   await expect(unitDialog).toBeVisible();
   await unitDialog.getByRole("tab", { name: "Unit only", exact: true }).click();
+  await unitDialog.getByLabel("Font", { exact: true }).click();
+  await expect(page.getByRole("option")).toHaveCount(2);
+  await expect(page.getByRole("option", { name: "System", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Georgia", exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "System", exact: true }).click();
   const unitPreview = unitDialog.getByAltText("Unit export preview", { exact: true });
   await expect(unitPreview).toBeVisible();
   await expect(unitDialog.getByRole("button", { name: "Fit", exact: true })).toBeVisible();
@@ -705,9 +728,35 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   expect(
     await properties.evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
   ).toBe(true);
-  await expect(
-    properties.getByRole("button", { name: ruMessages.Ui.More, exact: true }),
-  ).toBeVisible();
+  await expect(properties.getByRole("button", { name: /More/u })).toHaveCount(0);
+
+  await page.locator('[data-demo-id="language-toggle"]').click();
+  await page.locator('[data-demo-id="language-dialog"] label:has(input[value="en"])').click();
+  const legacyState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const legacyElement = legacyState.organization.views
+    .flatMap((view) => view.structure.canvasElements)
+    .find((element) => element.type === "text");
+  if (legacyElement?.type !== "text") {
+    throw new Error("Legacy typography fixture is unavailable.");
+  }
+  legacyElement.typography.fontFamily = "Inter";
+  legacyElement.typography.fontWeight = 500;
+  const legacyDialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(legacyState)),
+    mimeType: "application/json",
+    name: "legacy-editor-typography.json",
+  });
+  await expect(legacyDialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
+    "4 Employees",
+  );
+  await legacyDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await expect(legacyDialog).toBeHidden();
+  const resolvedLegacyElement = page.locator(`[data-canvas-element-id="${legacyElement.id}"]`);
+  await expect(resolvedLegacyElement).toHaveAttribute("data-canvas-font-family", "system-ui");
+  await expect(resolvedLegacyElement.locator('span[style*="font-family"]').first()).toHaveCSS(
+    "font-weight",
+    "400",
+  );
 
   page.off("request", onRequest);
   expect(externalRequests).toEqual([]);

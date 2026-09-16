@@ -80,8 +80,10 @@ working directories only to identify this checkout's development processes. It d
 process environments or organization state, persist a process registry, log command lines, access
 the network, or remove runtime files. Graceful shutdown precedes any verified forceful termination.
 
-The Pages artifact contains HTML, CSS, JavaScript, locally bundled Noto UI families, and the
-export-only font choices. Language and theme selectors never download catalogs or fonts. It
+The Pages artifact contains HTML, CSS, JavaScript, and locally bundled Noto UI families. Editor
+annotations and Image export resolve only the local system sans-serif stack or Georgia with local
+Times/serif fallbacks; historical imported family names resolve to the same System stack. Language,
+theme, and Editor font selectors never download catalogs or fonts. It
 contains no SQLite code, state endpoint, organization fixture, secret, remote asset, or external
 request. `pnpm pages:check` and `pnpm public:check` scan these boundaries.
 

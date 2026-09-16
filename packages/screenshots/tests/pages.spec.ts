@@ -55,7 +55,8 @@ test("edits durable canvas tools and exports the complete View PNG", async ({ pa
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.locator('[data-demo-id="org-editor-canvas-tools"]')).toBeVisible();
-  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toBeVisible();
   const dialog = await openImportDialog(page, syntheticStatePath);
   await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await page.getByRole("tab", { name: "Editor", exact: true }).click();

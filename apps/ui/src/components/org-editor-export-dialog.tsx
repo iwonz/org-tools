@@ -63,6 +63,7 @@ import {
   validateExportFieldNames,
 } from "@/lib/export-format";
 import type { OrgEditorSourceIndex, OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
+import { getOrgEditorCanvasCssFontFamily } from "@/lib/org-editor-canvas";
 import type {
   OrgEditorExportScope,
   OrgEditorExportTab,
@@ -718,7 +719,11 @@ export function OrgEditorExportDialog({
                       <SelectContent>
                         {ORG_EDITOR_EXPORT_FONTS.map((font) => (
                           <SelectItem key={font.family} value={font.family}>
-                            <span style={{ fontFamily: font.family }}>{font.label}</span>
+                            <span
+                              style={{ fontFamily: getOrgEditorCanvasCssFontFamily(font.family) }}
+                            >
+                              {font.family === "system-ui" ? t("System") : t("Georgia")}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>

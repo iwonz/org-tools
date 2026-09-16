@@ -9,6 +9,7 @@ import {
   getOrgEditorCanvasDependentClosure,
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasElementBounds,
+  getOrgEditorCanvasElementFont,
   getOrgEditorCanvasFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorCanvasResizeBounds,
@@ -21,9 +22,12 @@ import {
   moveOrgEditorCanvasElement,
   normalizeOrgEditorCanvasDimension,
   normalizeOrgEditorCanvasDimensions,
+  ORG_EDITOR_CANVAS_FONTS,
   ORG_EDITOR_CANVAS_RESIZE_HANDLE_IDS,
   resizeOrgEditorCanvasRectElement,
   resolveOrgEditorCanvasElements,
+  resolveOrgEditorCanvasFontFamily,
+  resolveOrgEditorCanvasTypography,
   rotateOrgEditorCanvasRectElementAroundCenter,
   transformOrgEditorCanvasElements,
 } from "@/lib/org-editor-canvas";
@@ -32,13 +36,36 @@ import { createSpatialIndex } from "@/lib/org-editor-interaction";
 const uuid = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 
 describe("Org Editor canvas geometry", () => {
-  test("creates one canonical quoted font string for DOM measurement and PNG painting", () => {
+  test("shares current font stacks and resolves legacy typography for DOM and PNG", () => {
+    expect(ORG_EDITOR_CANVAS_FONTS).toEqual(["system-ui", "Georgia"]);
     expect(getOrgEditorCanvasFont("Montserrat", 500, 18)).toBe(
-      '500 18px "Montserrat", Arial, sans-serif',
+      '400 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     );
-    expect(getOrgEditorCanvasFont('Unsafe "family"', 700, 24)).toBe(
-      '700 24px "Unsafe family", Arial, sans-serif',
+    expect(getOrgEditorCanvasFont("Georgia", 700, 24)).toBe(
+      '700 24px Georgia, "Times New Roman", serif',
     );
+    expect(resolveOrgEditorCanvasFontFamily("Manrope")).toBe("system-ui");
+    expect(
+      resolveOrgEditorCanvasTypography({
+        color: "blue",
+        fontFamily: "Inter",
+        fontSize: 18,
+        fontWeight: 500,
+        horizontalAlign: "left",
+        verticalAlign: "top",
+      }),
+    ).toMatchObject({ fontFamily: "system-ui", fontWeight: 400 });
+    expect(
+      getOrgEditorCanvasElementFont({ fontFamily: "Inter", fontSize: 18, fontWeight: 500 }),
+    ).toBe('400 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif');
+    expect(createOrgEditorTextElement({ x: 0, y: 0 }).typography).toMatchObject({
+      fontFamily: "system-ui",
+      fontWeight: 400,
+    });
+    expect(createOrgEditorStickerElement({ x: 0, y: 0 }).typography).toMatchObject({
+      fontFamily: "system-ui",
+      fontWeight: 400,
+    });
   });
 
   test("rotates rectangular anchors and indexes exact bounds", () => {

@@ -273,7 +273,9 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 Arrange opaque Unit cards and representative Text, flat bordered Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
-the upper-right canvas toolbar. The selected annotation demonstrates compact grouped properties, a
+the bottom-centered canvas toolbar. View management stays top-left, canvas commands and Image export
+stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates compact
+System/Georgia properties, the Bold toggle, a
 thin Miro-like frame with four corner markers, all-edge resize, outside-corner rotation, and
 element-specific context actions without layer-plane commands.
 

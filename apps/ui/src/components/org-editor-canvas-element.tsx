@@ -11,7 +11,8 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useUiText } from "@/i18n/use-ui-text";
 import {
   getOrgEditorArrowControlPoints,
-  getOrgEditorCanvasFont,
+  getOrgEditorCanvasCssFontFamily,
+  getOrgEditorCanvasElementFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorCanvasTextLayout,
   isOrgEditorRectElement,
@@ -19,6 +20,7 @@ import {
   ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS,
   type OrgEditorCanvasRect,
   type OrgEditorCanvasResizeHandle,
+  resolveOrgEditorCanvasTypography,
 } from "@/lib/org-editor-canvas";
 import { employeeTagColorToHex, getStickerColorStyle } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
@@ -188,25 +190,19 @@ const CanvasText = ({
   element: Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>;
 }) => {
   const [, setFontRevision] = useState(0);
+  const typography = resolveOrgEditorCanvasTypography(element.typography);
+  const fontRequest = getOrgEditorCanvasElementFont(element.typography);
 
   useEffect(() => {
     if (!document.fonts) return;
     let cancelled = false;
-    void document.fonts
-      .load(
-        getOrgEditorCanvasFont(
-          element.typography.fontFamily,
-          element.typography.fontWeight,
-          element.typography.fontSize,
-        ),
-      )
-      .then(() => {
-        if (!cancelled) setFontRevision((revision) => revision + 1);
-      });
+    void document.fonts.load(fontRequest).then(() => {
+      if (!cancelled) setFontRevision((revision) => revision + 1);
+    });
     return () => {
       cancelled = true;
     };
-  }, [element.typography.fontFamily, element.typography.fontSize, element.typography.fontWeight]);
+  }, [fontRequest]);
 
   const lines = getCanvasTextLayout(element, element.text, element.height).lines;
 
@@ -218,11 +214,11 @@ const CanvasText = ({
           key={`${line.x}:${line.y}:${line.text}`}
           style={{
             color: employeeTagColorToHex(element.typography.color),
-            fontFamily: element.typography.fontFamily,
-            fontSize: element.typography.fontSize,
-            fontWeight: element.typography.fontWeight,
+            fontFamily: getOrgEditorCanvasCssFontFamily(typography.fontFamily),
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
             left: line.x,
-            lineHeight: `${Math.ceil(element.typography.fontSize * 1.25)}px`,
+            lineHeight: `${Math.ceil(typography.fontSize * 1.25)}px`,
             top: line.y,
           }}
         >
@@ -244,16 +240,12 @@ const getCanvasTextLayout = (
     height,
     measure: (value, typography) => {
       if (!context) return [...value].length * typography.fontSize * 0.55;
-      context.font = getOrgEditorCanvasFont(
-        typography.fontFamily,
-        typography.fontWeight,
-        typography.fontSize,
-      );
+      context.font = getOrgEditorCanvasElementFont(typography);
       return context.measureText(value).width;
     },
     padding: element.type === "sticker" ? 16 : 4,
     text,
-    typography: element.typography,
+    typography: resolveOrgEditorCanvasTypography(element.typography),
     width: element.width,
   });
 };
@@ -471,7 +463,7 @@ export function OrgEditorCanvasElementNode({
       data-canvas-element-type={element.type}
       data-canvas-font-family={
         element.type === "text" || element.type === "sticker"
-          ? element.typography.fontFamily
+          ? resolveOrgEditorCanvasTypography(element.typography).fontFamily
           : undefined
       }
       onContextMenu={(event) => onContextMenu(event, element)}
@@ -560,9 +552,9 @@ export function OrgEditorCanvasElementNode({
           ref={textEditorRef}
           style={{
             color: employeeTagColorToHex(element.typography.color),
-            fontFamily: element.typography.fontFamily,
+            fontFamily: getOrgEditorCanvasCssFontFamily(element.typography.fontFamily),
             fontSize: element.typography.fontSize,
-            fontWeight: element.typography.fontWeight,
+            fontWeight: resolveOrgEditorCanvasTypography(element.typography).fontWeight,
             height: draftLayout.contentHeight,
             lineHeight: `${draftLayout.lineHeight}px`,
             overflow: "hidden",

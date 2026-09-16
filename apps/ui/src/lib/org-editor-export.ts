@@ -58,6 +58,7 @@ import {
 } from "@/lib/org-editor";
 import {
   getOrgEditorArrowControlPoints,
+  getOrgEditorCanvasElementFont,
   getOrgEditorCanvasElementsBounds,
   getOrgEditorCanvasFont,
   getOrgEditorCanvasImagePlaceholderPoints,
@@ -67,6 +68,7 @@ import {
   ORG_EDITOR_EMPLOYEE_ANCHOR_IDS,
   ORG_EDITOR_RECT_ANCHOR_IDS,
   resolveOrgEditorCanvasElements,
+  resolveOrgEditorCanvasTypography,
 } from "@/lib/org-editor-canvas";
 import {
   employeeTagColorToHex,
@@ -184,16 +186,8 @@ type OrgEditorExportGradientLayer =
     };
 
 export const ORG_EDITOR_EXPORT_FONTS: OrgEditorExportFont[] = [
-  { family: "Inter", label: "Inter" },
-  { family: "Roboto", label: "Roboto" },
-  { family: "Open Sans", label: "Open Sans" },
-  { family: "Noto Sans", label: "Noto Sans" },
-  { family: "Source Sans 3", label: "Source Sans 3" },
-  { family: "IBM Plex Sans", label: "IBM Plex Sans" },
-  { family: "Montserrat", label: "Montserrat" },
-  { family: "Manrope", label: "Manrope" },
-  { family: "Nunito Sans", label: "Nunito Sans" },
-  { family: "PT Sans", label: "PT Sans" },
+  { family: "system-ui", label: "System" },
+  { family: "Georgia", label: "Georgia" },
 ];
 
 export const ORG_EDITOR_EXPORT_GRADIENTS: OrgEditorExportGradient[] = [
@@ -466,7 +460,7 @@ export const createDefaultOrgEditorImageExportSettings = (
   background: { type: "transparent" },
   density: 2,
   employeeFormat: ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT,
-  fontFamily: ORG_EDITOR_EXPORT_FONTS[0]?.family ?? "Inter",
+  fontFamily: ORG_EDITOR_EXPORT_FONTS[0]?.family ?? "system-ui",
   imageBossLabel,
   padding: 20,
   title: "",
@@ -720,17 +714,14 @@ const paintOrgEditorCanvasElement = ({
     return;
   }
 
-  context.font = getCanvasFont(
-    element.typography.fontFamily,
-    element.typography.fontWeight,
-    element.typography.fontSize,
-  );
+  const typography = resolveOrgEditorCanvasTypography(element.typography);
+  context.font = getOrgEditorCanvasElementFont(element.typography);
   const lines = layoutOrgEditorCanvasText({
     height: element.height,
     measure: (value) => context.measureText(value).width,
     padding: element.type === "sticker" ? 16 : 4,
     text: element.text,
-    typography: element.typography,
+    typography,
     width: element.width,
   });
   context.fillStyle = employeeTagColorToHex(element.typography.color);
@@ -1102,13 +1093,7 @@ const waitForCanvasFont = async ({
   ]);
   for (const element of canvasElements) {
     if (element.type === "image" || element.type === "arrow") continue;
-    fontRequests.add(
-      getCanvasFont(
-        element.typography.fontFamily,
-        element.typography.fontWeight,
-        element.typography.fontSize,
-      ),
-    );
+    fontRequests.add(getOrgEditorCanvasElementFont(element.typography));
   }
 
   await Promise.all([...fontRequests].map((fontRequest) => document.fonts.load(fontRequest)));

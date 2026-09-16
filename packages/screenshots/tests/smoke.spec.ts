@@ -40,7 +40,8 @@ test("edits durable canvas tools and exports the complete View PNG", async ({ pa
   await openBlankState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.locator('[data-demo-id="org-editor-canvas-tools"]')).toBeVisible();
-  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toBeVisible();
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await exerciseCanvasToolsAndViewExport(page);
@@ -869,7 +870,9 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
   );
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
-  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="org-editor-actions"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-search"]')).toHaveCount(0);
   await expect(page.locator('[data-demo-id="org-editor-focus-primary-unit-button"]')).toHaveCount(
     0,
   );
@@ -1401,6 +1404,8 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
 }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
+  await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="org-editor-search"]')).toHaveCount(0);
   await replaceWithSyntheticState(page);
 
   await page.getByRole("button", { name: "Import", exact: true }).click();
@@ -1927,6 +1932,8 @@ test("renders split Org Editor controls and reveals search to the left", async (
   const historyActions = page.locator('[data-demo-id="org-editor-history-actions"]');
   const topActions = page.locator('[data-demo-id="org-editor-actions"]');
   const viewportActions = page.locator('[data-demo-id="org-editor-viewport-actions"]');
+  const viewSurface = page.locator('[data-demo-id="org-editor-view-actions"]');
+  const toolSurface = page.locator('[data-demo-id="org-editor-canvas-tool-actions"]');
   const topStyle = await topActions.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return {
@@ -1961,10 +1968,47 @@ test("renders split Org Editor controls and reveals search to the left", async (
     columnGap: "4px",
     padding: "6px",
   });
-  expect(topStyle.boxShadow).toBe("none");
-  expect(viewportStyle.boxShadow).toBe("none");
+  const isShadowVisuallyEmpty = (boxShadow: string) =>
+    boxShadow === "none" ||
+    (boxShadow.match(/rgba?\([^)]+\)/gu) ?? []).every((color) => /,\s*0\)$/u.test(color));
+  expect(isShadowVisuallyEmpty(topStyle.boxShadow)).toBe(true);
+  expect(isShadowVisuallyEmpty(viewportStyle.boxShadow)).toBe(true);
   expect(topStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(viewportStyle.backgroundColor).toBe(topStyle.backgroundColor);
+  for (const surface of [viewSurface, topActions, viewportActions, toolSurface]) {
+    await expect(surface).toHaveCSS("height", "48px");
+    await expect(surface).toHaveCSS("border-width", "0px");
+    expect(
+      isShadowVisuallyEmpty(
+        await surface.evaluate((element) => window.getComputedStyle(element).boxShadow),
+      ),
+    ).toBe(true);
+  }
+  for (const button of [
+    viewSurface.getByRole("button").first(),
+    topActions.getByRole("button").first(),
+    viewportActions.getByRole("button").first(),
+    toolSurface.getByRole("button").first(),
+  ]) {
+    await expect(button).toHaveCSS("height", "36px");
+  }
+  const [initialCanvasBox, viewBox, topBox, viewportBox, toolBox] = await Promise.all([
+    canvas.boundingBox(),
+    viewSurface.boundingBox(),
+    topActions.boundingBox(),
+    viewportActions.boundingBox(),
+    toolSurface.boundingBox(),
+  ]);
+  expect(viewBox?.x).toBeCloseTo((initialCanvasBox?.x ?? 0) + 12, 0);
+  expect((topBox?.x ?? 0) + (topBox?.width ?? 0)).toBeCloseTo(
+    (initialCanvasBox?.x ?? 0) + (initialCanvasBox?.width ?? 0) - 12,
+    0,
+  );
+  expect(viewportBox?.x).toBeCloseTo((initialCanvasBox?.x ?? 0) + 12, 0);
+  expect((toolBox?.x ?? 0) + (toolBox?.width ?? 0) / 2).toBeCloseTo(
+    (initialCanvasBox?.x ?? 0) + (initialCanvasBox?.width ?? 0) / 2,
+    0,
+  );
   expect(await getBackgroundColor(canvas)).not.toBe("rgba(0, 0, 0, 0)");
   expect(await getBackgroundColor(canvas)).not.toBe(
     await getBackgroundColor(page.locator('[data-demo-id="app-shell"]')),
@@ -1981,8 +2025,13 @@ test("renders split Org Editor controls and reveals search to the left", async (
       (element) => element.firstElementChild?.getAttribute("data-demo-id") ?? null,
     ),
   ).toBe("org-editor-search");
-  expect((await historyActions.boundingBox())?.height).toBeCloseTo(
-    (await viewportActions.boundingBox())?.height ?? 0,
+  await expect(historyActions.locator("..")).toHaveAttribute(
+    "data-demo-id",
+    "org-editor-viewport-actions",
+  );
+  expect((await viewportActions.boundingBox())?.height).toBeCloseTo(48, 0);
+  expect((await historyActions.getByRole("button").first().boundingBox())?.height).toBeCloseTo(
+    36,
     0,
   );
   expect(
@@ -2033,7 +2082,7 @@ test("renders split Org Editor controls and reveals search to the left", async (
     await editorUnit.evaluate((element) => window.getComputedStyle(element).borderColor),
   ).not.toBe(restingBorderColor);
 
-  const zoomOutButton = viewportActions.getByRole("button").first();
+  const zoomOutButton = viewportActions.getByRole("button", { name: "Zoom out", exact: true });
   for (let index = 0; index < 5; index += 1) await zoomOutButton.click();
   const adaptiveDocumentGridSize = Number(await canvas.getAttribute("data-grid-size"));
   const adaptiveScreenGridSize = Number(await canvas.getAttribute("data-grid-screen-size"));
@@ -2051,7 +2100,10 @@ test("renders split Org Editor controls and reveals search to the left", async (
   expect(renderedGridSizes.every((size) => Math.abs(size - adaptiveScreenGridSize) <= 0.001)).toBe(
     true,
   );
-  await viewportActions.getByRole("button").nth(2).click();
+  await viewportActions.getByRole("button", { name: "Reset zoom", exact: true }).click();
+  await expect(
+    viewportActions.getByRole("button", { name: "Reset zoom", exact: true }),
+  ).toContainText("100%");
 
   await editorCommand.click();
   expect(
@@ -2106,7 +2158,7 @@ test("renders split Org Editor controls and reveals search to the left", async (
   expect(tooltipBox?.x ?? -1).toBeGreaterThanOrEqual(0);
   expect((tooltipBox?.x ?? 0) + (tooltipBox?.width ?? 0)).toBeLessThanOrEqual(1280);
   expect(Math.abs((viewActionsBox?.x ?? 0) - (canvasBox?.x ?? 0) - 18)).toBeLessThanOrEqual(1);
-  expect(historyActionsBox?.x ?? 0).toBeGreaterThan((viewActionsBox?.x ?? 0) + 40);
+  expect(Math.abs((historyActionsBox?.x ?? 0) - (viewActionsBox?.x ?? 0))).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
       (topActionsBox?.x ?? 0) +

@@ -27,6 +27,7 @@ import {
   getOrgEditorExportEmployeeTagRowCount,
   getOrgEditorExportEmployeeTags,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
+  ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
 } from "@/lib/org-editor-export";
 import { getTagColorCanvasStyle } from "@/lib/tag-color";
@@ -79,9 +80,14 @@ describe("Org Editor image export", () => {
 
   test("uses English defaults and filesystem-safe Unit names", () => {
     expect(createDefaultOrgEditorImageExportSettings()).toMatchObject({
+      fontFamily: "system-ui",
       imageBossLabel: "Manager",
       unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
     });
+    expect(ORG_EDITOR_EXPORT_FONTS).toEqual([
+      { family: "system-ui", label: "System" },
+      { family: "Georgia", label: "Georgia" },
+    ]);
     expect(createDefaultOrgEditorImageExportSettings("Localized manager").imageBossLabel).toBe(
       "Localized manager",
     );
