@@ -2,11 +2,69 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ORG_EDITOR_GRID_SIZE, snapOrgEditorPoint } from "@/lib/org-editor";
 import {
+  advanceEditorRenderWindow,
   createLatestFrameScheduler,
   createSpatialIndex,
+  getEditorViewportWorldRect,
   getOrgEditorEdgePanVelocity,
   getUnitPointerSelectionIntent,
 } from "@/lib/org-editor-interaction";
+
+describe("Editor buffered render window", () => {
+  const size = { height: 720, width: 1280 };
+  const viewport = { scale: 1, x: 0, y: 0 };
+
+  it("retains one query window while pan remains inside its screen-space overscan", () => {
+    const initial = advanceEditorRenderWindow({
+      current: null,
+      overscanScreenPixels: 420,
+      size,
+      viewport,
+    });
+    expect(initial).toEqual({
+      changed: true,
+      rect: { height: 1560, width: 2120, x: -420, y: -420 },
+    });
+
+    const inside = advanceEditorRenderWindow({
+      current: initial.rect,
+      overscanScreenPixels: 420,
+      size,
+      viewport: { ...viewport, x: 300 },
+    });
+    expect(inside).toEqual({ changed: false, rect: initial.rect });
+
+    const outside = advanceEditorRenderWindow({
+      current: initial.rect,
+      overscanScreenPixels: 420,
+      size,
+      viewport: { ...viewport, x: 421 },
+    });
+    expect(outside.changed).toBe(true);
+    expect(outside.rect.x).toBe(-841);
+  });
+
+  it("refreshes before zoom-out can expose content outside the buffer", () => {
+    const current = getEditorViewportWorldRect(viewport, size, 420);
+    expect(
+      advanceEditorRenderWindow({
+        current,
+        overscanScreenPixels: 420,
+        size,
+        viewport: { scale: 0.5, x: 0, y: 0 },
+      }).changed,
+    ).toBe(true);
+    expect(
+      advanceEditorRenderWindow({
+        current,
+        force: true,
+        overscanScreenPixels: 420,
+        size,
+        viewport,
+      }).changed,
+    ).toBe(true);
+  });
+});
 
 describe("latest Editor interaction frame", () => {
   it("replaces pending samples and flushes only the latest value", () => {

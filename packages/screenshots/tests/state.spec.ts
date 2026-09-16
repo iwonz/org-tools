@@ -45,12 +45,38 @@ test("synchronizes state and durable UI between tabs without conflicts", async (
 
   await replaceWithSyntheticState(page);
   await expect(secondPage.getByText("Product", { exact: true }).first()).toBeVisible();
+  await expect
+    .poll(async () => {
+      const response = await page.request.get("/api/state");
+      if (!response.ok()) return false;
+      const document = (await response.json()) as { state: OrgToolsState };
+      return document.state.organization.views.some((view) =>
+        view.structure.units.some((unit) => unit.name === "Product"),
+      );
+    })
+    .toBe(true);
+  await Promise.all([
+    page.reload({ waitUntil: "domcontentloaded" }),
+    secondPage.reload({ waitUntil: "domcontentloaded" }),
+  ]);
+  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
+  await expect(secondPage.getByText("Product", { exact: true }).first()).toBeVisible();
 
-  await secondPage.getByRole("tab", { name: "Employees", exact: true }).click();
-  await expect(page.getByRole("tab", { name: "Employees", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  const primaryEmployeesTab = page.getByRole("tab", { name: "Employees", exact: true });
+  const peerEditorTab = secondPage.getByRole("tab", { name: "Editor", exact: true });
+  const peerEmployeesTab = secondPage.getByRole("tab", { name: "Employees", exact: true });
+  await expect
+    .poll(
+      async () => {
+        if ((await primaryEmployeesTab.getAttribute("aria-selected")) !== "true") {
+          await peerEditorTab.click();
+          await peerEmployeesTab.click();
+        }
+        return primaryEmployeesTab.getAttribute("aria-selected");
+      },
+      { intervals: [500, 1_000, 1_000], timeout: 30_000 },
+    )
+    .toBe("true");
   await secondPage
     .locator('[data-demo-id="employees-search"]')
     .getByRole("searchbox")

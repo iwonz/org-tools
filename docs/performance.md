@@ -49,15 +49,21 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   emits one filter update and never depends on mounted rows.
 - Flatten the selected-Unit direct and descendant result groups once before rendering them through
   the ordinary Employee virtualizer; do not create virtual header rows or repeat count formatting.
-- Coalesce pan, zoom, and Unit, Employee, connection, or marquee drag samples through one
-  latest-value animation-frame scheduler. Edge-pan uses only the sampled pointer and canvas bounds;
-  it never walks the Unit collection per frame.
+- Coalesce pan, zoom, and Unit, Employee, connection, or marquee drag samples through latest-value
+  animation-frame schedulers. Pan and zoom write the world transform, adaptive grid, inverse-scale
+  control metrics, and isolated zoom label directly; they do not set React state for the complete
+  scene. Edge-pan uses only the sampled pointer and canvas bounds and never walks the Unit collection
+  per frame.
 - Keep viewport, Unit, connection, drop-target, and document-anchored marquee deltas in transient
   render previews; write the MobX document once after pointer release or wheel debounce, then run
   snapping, overlap resolution, history, and persistence. Cancellation restores the starting
   viewport without a durable write.
 - Query visible Unit and connection candidates through a geometry-keyed spatial index that is not
-  rebuilt for pointer samples.
+  rebuilt for pointer samples. Mounted membership uses a stable world rectangle with 420 screen
+  pixels of overscan and refreshes only before the visible viewport exits that rectangle, after a
+  canvas resize, or at viewport commit. Zoom-in may retain bounded extra nodes until commit but no
+  visible content is omitted. Memoized connection, Unit, and canvas-element nodes receive stable
+  indexed inputs; a gesture re-renders only selected owners, attachment dependents, and overlays.
 - Index committed canvas-element bounds and forward/reverse anchor dependencies beside Unit bounds.
   Snap gestures query only nearby Unit/element cells, derive Employee candidates from cached row
   offsets, and update only the affected dependency closure. Move, resize, rotation, endpoint,
@@ -79,12 +85,17 @@ measurement. DOM and PNG consume the same line rectangles and indivisible count 
   local to the open picker; shared light/dark/canvas tonal values are derived from one color
   calculation, and each included PNG row performs only indexed status and cached-color lookups.
 - Resolve Editor annotation typography through five bounded local stacks before DOM measurement or
-  PNG painting. Text and Sticker scan graphemes and normalized format runs linearly, prefer word
-  breaks with grapheme fallback, compute effective scale plus fragment/line/fill geometry once per
-  draft or document revision, and reuse it for bounds and painting. Bounded binary search fits Text
-  no lower than the 8 px floor; every rectangle and group frame retains four side targets. Arrow
-  endpoint updates project two controls in constant time through cached chord coordinates. Legacy
-  family names and weight 500 collapse to System/Regular without remote work.
+  PNG painting. One lazy measurement canvas and a 32,768-entry LRU cache each distinct local
+  font/grapheme width; unchanged element objects reuse a weakly held completed layout. Text and
+  Sticker scan graphemes and normalized format runs linearly, prefer word breaks with grapheme
+  fallback, and reuse authored glyph widths across effective-scale fitting passes. Local font
+  requests are deduplicated and invalidate the layout engine only when a newly requested bundled
+  font becomes ready. Active input records direct replacement ranges where available, coalesces the
+  latest draft through RAF, and retains the browser-mutated node for single-style long text instead
+  of rebuilding the span tree. The canonical cold layout remains shared with PNG. Bounded fitting
+  keeps Text no lower than the 8 px floor; every rectangle and group frame retains four side targets.
+  Arrow endpoint updates project two controls in constant time through cached chord coordinates.
+  Legacy family names and weight 500 collapse to System/Regular without remote work.
 - Keep the Unit Markdown renderer out of the main Editor bundle and mount it only while a note
   Preview is open. Closed notes are opaque bounded strings: canvas layout, spatial indexing, search,
   PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save
@@ -142,9 +153,14 @@ Generate the maintained large fixture outside the repository with `pnpm fixture:
 search, filters, Unit navigation, canvas selection, State and Employee Import, automatic SQLite writes,
 tab synchronization, Export, and UI-only updates. Treat blocking interaction, unbounded duplication,
 per-row network work, organization serialization during UI-only actions, or full Unit scans during
-pointer previews as regressions. The browser suite exercises 20,000 Employees and 4,000 Units,
-requires bounded spatial candidates, observes no state write during preview, and allows one final
-write for each completed pan or structural drag. The shared cross-View clipboard stores only the
+pointer previews as regressions. The browser suite exercises 20,000 Employees, 4,000 expanded
+Units, 1,200 Text/Sticker/Arrow annotations, attachments, and a 60,000-character Text. Opt-in local
+numeric diagnostics verify that a buffered pan performs no stable Unit, annotation, or rich-text
+render work. After warm-up the scenario gates p95 frame intervals at 33 ms, individual gaps at 100
+ms, and p95 long-text input-to-next-frame latency at 50 ms. Diagnostics never contain organization
+content and are neither persisted nor transmitted. The suite also requires bounded spatial
+candidates, observes no state write during preview, and allows one final write for each completed
+pan or structural drag. The shared cross-View clipboard stores only the
 copied closure and resolved membership in current-tab memory, is sanitized on catalog changes, and
 is cleared on complete state replacement. Atomic Unit deletion computes its closure and dependent
 Live materialization once before exposing the valid final state to persistence.

@@ -20,6 +20,7 @@ import type {
 import { observer } from "mobx-react-lite";
 import {
   type CSSProperties,
+  memo,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
@@ -75,6 +76,7 @@ import {
   OrgEditorCanvasElementNode,
   OrgEditorCanvasGroupFrame,
   type OrgEditorCanvasTextDraft,
+  type OrgEditorCanvasTextMutation,
 } from "@/components/org-editor-canvas-element";
 import {
   type OrgEditorCanvasTool,
@@ -178,7 +180,6 @@ import {
   createOrgEditorImageElement,
   createOrgEditorStickerElement,
   createOrgEditorTextElement,
-  fitOrgEditorCanvasRichTextElement,
   getOrgEditorCanvasDependentClosure,
   getOrgEditorCanvasElementAnchorPoint,
   getOrgEditorCanvasElementBounds,
@@ -207,11 +208,22 @@ import {
 } from "@/lib/org-editor-canvas";
 import { loadOrgEditorCanvasImageFile } from "@/lib/org-editor-canvas-image";
 import {
+  advanceEditorRenderWindow,
   createLatestFrameScheduler,
   createSpatialIndex,
   getOrgEditorEdgePanVelocity,
   getUnitPointerSelectionIntent,
 } from "@/lib/org-editor-interaction";
+import {
+  getOrgEditorPerformanceDiagnostics,
+  recordOrgEditorPerformance,
+  resetOrgEditorPerformanceDiagnostics,
+  setOrgEditorPerformanceDiagnosticsEnabled,
+} from "@/lib/org-editor-performance";
+import {
+  loadOrgEditorCanvasFonts,
+  orgEditorRichTextLayoutEngine,
+} from "@/lib/org-editor-rich-text-layout";
 import { MAX_STATE_IMPORT_BYTES } from "@/lib/state-transfer";
 import {
   customTagColorSurfaceStyle,
@@ -228,6 +240,11 @@ type CanvasPoint = { x: number; y: number };
 type CanvasRect = { height: number; width: number; x: number; y: number };
 type ScreenPoint = { x: number; y: number };
 type AddEmployeesSourceSection = "employees" | "units";
+type CanvasRichTextInput = {
+  mutations?: readonly OrgEditorCanvasTextMutation[];
+  selection: { end: number; start: number };
+  text: string;
+};
 
 const EMPTY_EMPLOYEE_MAP = new Map<EmployeeId, Employee>();
 const EMPTY_SEARCH_DOCUMENT_MAP = new Map<EmployeeId, EmployeeSearchDocument>();
@@ -244,6 +261,9 @@ type OrgEditorConnectionEntry = {
   bounds: CanvasRect;
   parentUnit: OrgEditorUnit;
   unit: OrgEditorUnit;
+};
+type OrgEditorDistributionConnection = ReturnType<typeof createEditorDistributionConnection> & {
+  targetUnitId: OrgEditorUnitId;
 };
 type OrgEditorContextMenu =
   | {
@@ -391,15 +411,8 @@ const fitCanvasTextElementHeight = (
   resizeHandle: OrgEditorCanvasResizeHandle | null = null,
 ): OrgEditorCanvasElement => {
   if (element.type !== "text" && element.type !== "sticker") return element;
-  const context = document.createElement("canvas").getContext("2d");
-  const measure = (value: string, typography: OrgEditorInlineTypography) => {
-    if (!context) return [...value].length * typography.fontSize * 0.55;
-    context.font = getOrgEditorCanvasElementFont(typography);
-    return context.measureText(value).width;
-  };
-  return fitOrgEditorCanvasRichTextElement(
+  return orgEditorRichTextLayoutEngine.fit(
     element,
-    measure,
     resizeHandle ? getOrgEditorCanvasOppositeResizeAnchor(resizeHandle) : null,
   );
 };
@@ -666,6 +679,72 @@ const getOrgEditorConnectionPath = ({
 
   return `M ${parentX} ${parentY} C ${middleX} ${parentY}, ${middleX} ${unitY}, ${unitX} ${unitY}`;
 };
+
+const OrgEditorConnectionsLayer = memo(function OrgEditorConnectionsLayer({
+  connectionDragPath,
+  distributionConnections,
+  distributionStyle,
+  layoutMode,
+  visibleConnections,
+}: {
+  connectionDragPath: string | null;
+  distributionConnections: readonly OrgEditorDistributionConnection[];
+  distributionStyle: CSSProperties | undefined;
+  layoutMode: OrgEditorLayoutMode;
+  visibleConnections: readonly Pick<OrgEditorConnectionEntry, "parentUnit" | "unit">[];
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute left-0 top-0 h-[8000px] w-[8000px] overflow-visible"
+    >
+      {visibleConnections.map(({ parentUnit, unit }) => (
+        <path
+          className="stroke-border"
+          d={getOrgEditorConnectionPath({ layoutMode, parentUnit, unit })}
+          fill="none"
+          key={`${parentUnit.id}:${unit.id}`}
+          strokeWidth={2}
+        />
+      ))}
+      {distributionConnections.map((connection) => (
+        <g
+          className="editor-distribution-tone"
+          style={distributionStyle}
+          data-distribution-connection={connection.targetUnitId}
+          key={connection.targetUnitId}
+        >
+          <path
+            className="stroke-current"
+            d={connection.path}
+            fill="none"
+            strokeLinecap="round"
+            strokeWidth={2.5}
+          />
+          {connection.showEndpointMarker && (
+            <circle
+              className="fill-current stroke-card"
+              cx={connection.end.x}
+              cy={connection.end.y}
+              r={4}
+              strokeWidth={2}
+            />
+          )}
+        </g>
+      ))}
+      {connectionDragPath && (
+        <path
+          className="stroke-primary"
+          d={connectionDragPath}
+          fill="none"
+          strokeDasharray="8 8"
+          strokeLinecap="round"
+          strokeWidth={2.5}
+        />
+      )}
+    </svg>
+  );
+});
 
 function OrgEditorFloatingMenu({ children, point }: { children: ReactNode; point: ScreenPoint }) {
   return (
@@ -1211,6 +1290,7 @@ function OrgEditorNode({
   distributionUnitIdsByEmployeeId,
   placementUnitIdsByEmployeeId,
   employeeById,
+  geometryRevision: _geometryRevision,
   isConnectionDropTarget,
   isCanvasArrowToolActive,
   isEmployeeDropTarget,
@@ -1241,6 +1321,7 @@ function OrgEditorNode({
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   placementUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
+  geometryRevision: number;
   isConnectionDropTarget: boolean;
   isCanvasArrowToolActive: boolean;
   isEmployeeDropTarget: boolean;
@@ -1273,6 +1354,7 @@ function OrgEditorNode({
   unit: OrgEditorUnit;
   visibleWorldRect: CanvasRect;
 }) {
+  recordOrgEditorPerformance("unitRenders");
   const t = useUiText();
   const countText = useCountText();
   const selected = selectedItemKeySet.has(
@@ -1686,6 +1768,28 @@ function OrgEditorNode({
   );
 }
 
+const MemoizedOrgEditorNode = memo(
+  OrgEditorNode,
+  (previous: Parameters<typeof OrgEditorNode>[0], next: Parameters<typeof OrgEditorNode>[0]) =>
+    previous.unit === next.unit &&
+    previous.viewSettings === next.viewSettings &&
+    previous.distributionStyles === next.distributionStyles &&
+    previous.distributionEnabledUnitIds === next.distributionEnabledUnitIds &&
+    previous.distributionUnitIdsByEmployeeId === next.distributionUnitIdsByEmployeeId &&
+    previous.placementUnitIdsByEmployeeId === next.placementUnitIdsByEmployeeId &&
+    previous.employeeById === next.employeeById &&
+    previous.geometryRevision === next.geometryRevision &&
+    previous.isConnectionDropTarget === next.isConnectionDropTarget &&
+    previous.isCanvasArrowToolActive === next.isCanvasArrowToolActive &&
+    previous.isEmployeeDropTarget === next.isEmployeeDropTarget &&
+    previous.layoutMode === next.layoutMode &&
+    previous.selectedItemKeySet === next.selectedItemKeySet &&
+    previous.summary === next.summary &&
+    previous.tagSummary === next.tagSummary &&
+    previous.textDirection === next.textDirection &&
+    previous.visibleWorldRect === next.visibleWorldRect,
+);
+
 function AddEmployeesDialog({
   employeeSearchDocumentByEmployeeId,
   employeeUnitMembershipsByEmployeeId,
@@ -2039,6 +2143,8 @@ export const OrgStructureEditorTab = observer(() => {
     [viewSettings.distributedColor, viewSettings.undistributedColor],
   );
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const canvasWorldRef = useRef<HTMLDivElement | null>(null);
+  const viewportZoomLabelRef = useRef<HTMLSpanElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const lastEmployeeSelectionRef = useRef<{
@@ -2074,7 +2180,7 @@ export const OrgStructureEditorTab = observer(() => {
   } | null>(null);
   const { searchOpen, searchQuery } = store.editorUi;
   const [searchPinnedUnitId, setSearchPinnedUnitId] = useState<OrgEditorUnitId | null>(null);
-  const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
+  const canvasSizeRef = useRef(INITIAL_CANVAS_SIZE);
   const canvasTextFontRequestKey = useMemo(
     () =>
       [
@@ -2092,10 +2198,17 @@ export const OrgStructureEditorTab = observer(() => {
         .join("|"),
     [editor.canvasElements],
   );
-  const [renderViewport, setRenderViewport] = useState<OrgEditorCanvasViewport>(() => ({
-    ...editor.viewport,
-  }));
-  const renderViewportRef = useRef<OrgEditorCanvasViewport>(renderViewport);
+  const renderViewportRef = useRef<OrgEditorCanvasViewport>({ ...editor.viewport });
+  const [visibleWorldRect, setVisibleWorldRect] = useState<CanvasRect>(
+    () =>
+      advanceEditorRenderWindow({
+        current: null,
+        overscanScreenPixels: CANVAS_VIEWPORT_OVERSCAN_PX,
+        size: INITIAL_CANVAS_SIZE,
+        viewport: editor.viewport,
+      }).rect,
+  );
+  const renderWindowRef = useRef<CanvasRect>(visibleWorldRect);
   const pendingViewportRef = useRef<OrgEditorCanvasViewport | null>(null);
   const viewportFrameSchedulerRef = useRef<ReturnType<
     typeof createLatestFrameScheduler<OrgEditorCanvasViewport>
@@ -2106,6 +2219,14 @@ export const OrgStructureEditorTab = observer(() => {
   const selectionPreviewFrameSchedulerRef = useRef<ReturnType<
     typeof createLatestFrameScheduler<OrgEditorSelectedItem[]>
   > | null>(null);
+  const richTextInputFrameSchedulerRef = useRef<ReturnType<
+    typeof createLatestFrameScheduler<CanvasRichTextInput>
+  > | null>(null);
+  const pendingRichTextInputRef = useRef<CanvasRichTextInput | null>(null);
+  const richTextDraftRenderTimeoutRef = useRef<number | null>(null);
+  const applyCanvasRichTextEditingRef = useRef<(input: CanvasRichTextInput) => void>(
+    () => undefined,
+  );
   const wheelCommitTimeoutRef = useRef<number | null>(null);
   const pasteFallbackTimeoutRef = useRef<number | null>(null);
   const [unitDragDelta, setUnitDragDelta] = useState<CanvasPoint | null>(null);
@@ -2116,17 +2237,84 @@ export const OrgStructureEditorTab = observer(() => {
   const edgePanFrameIdRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const diagnosticsEnabled = new URLSearchParams(window.location.search).has("editorPerformance");
+    setOrgEditorPerformanceDiagnosticsEnabled(diagnosticsEnabled);
+    if (!diagnosticsEnabled) return;
+    resetOrgEditorPerformanceDiagnostics();
+    const diagnosticsWindow = window as typeof window & {
+      __ORG_TOOLS_EDITOR_PERFORMANCE__?: {
+        reset: typeof resetOrgEditorPerformanceDiagnostics;
+        snapshot: typeof getOrgEditorPerformanceDiagnostics;
+      };
+    };
+    diagnosticsWindow.__ORG_TOOLS_EDITOR_PERFORMANCE__ = {
+      reset: resetOrgEditorPerformanceDiagnostics,
+      snapshot: getOrgEditorPerformanceDiagnostics,
+    };
+    return () => {
+      delete diagnosticsWindow.__ORG_TOOLS_EDITOR_PERFORMANCE__;
+      setOrgEditorPerformanceDiagnosticsEnabled(false);
+    };
+  }, []);
+
+  const renderViewportToDom = useCallback(
+    (viewport: OrgEditorCanvasViewport, forceRenderWindow = false) => {
+      recordOrgEditorPerformance("viewportFrames");
+      renderViewportRef.current = viewport;
+      const canvas = canvasRef.current;
+      const world = canvasWorldRef.current;
+      const scale = Math.max(viewport.scale, MIN_CANVAS_SCALE);
+      const gridSize = getAdaptiveOrgEditorGridSize(scale);
+      const gridScreenSize = gridSize * scale;
+
+      if (canvas) {
+        canvas.style.backgroundPosition = `${viewport.x}px ${viewport.y}px`;
+        canvas.style.backgroundSize = `${gridScreenSize}px ${gridScreenSize}px`;
+        canvas.dataset.gridScreenSize = String(gridScreenSize);
+        canvas.dataset.gridSize = String(gridSize);
+        canvas.dataset.viewportX = String(viewport.x);
+        canvas.dataset.viewportY = String(viewport.y);
+      }
+      if (world) {
+        world.style.setProperty("--org-editor-canvas-ui-connector-offset", `${-10 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-connector-size", `${7 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-corner-offset", `${-4 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-corner-size", `${8 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-outline-offset", `${2 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-outline-width", `${1 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-rotate-offset", `${-22 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-rotate-size", `${18 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-side-offset", `${-6 / scale}px`);
+        world.style.setProperty("--org-editor-canvas-ui-side-size", `${12 / scale}px`);
+        world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${scale})`;
+      }
+      if (viewportZoomLabelRef.current) {
+        viewportZoomLabelRef.current.textContent = `${Math.round(scale * 100)}%`;
+      }
+
+      const nextWindow = advanceEditorRenderWindow({
+        current: renderWindowRef.current,
+        force: forceRenderWindow,
+        overscanScreenPixels: CANVAS_VIEWPORT_OVERSCAN_PX,
+        size: canvasSizeRef.current,
+        viewport,
+      });
+      if (nextWindow.changed) {
+        recordOrgEditorPerformance("viewportWindowInvalidations");
+        renderWindowRef.current = nextWindow.rect;
+        setVisibleWorldRect(nextWindow.rect);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
     let cancelled = false;
     const normalize = async () => {
-      if (document.fonts) {
-        await Promise.all(
-          canvasTextFontRequestKey
-            .split("|")
-            .filter(Boolean)
-            .map((request) => document.fonts.load(request)),
-        );
-      }
+      const fontRequests = canvasTextFontRequestKey.split("|").filter(Boolean);
+      const addedFontRequest = await loadOrgEditorCanvasFonts(fontRequests);
       if (cancelled) return;
+      if (addedFontRequest) orgEditorRichTextLayoutEngine.invalidateFonts();
       editor.normalizeCanvasTextGeometry(
         (element) =>
           fitCanvasTextElementHeight(element) as Extract<
@@ -2146,10 +2334,7 @@ export const OrgStructureEditorTab = observer(() => {
       cancelFrame: (frameId) => window.cancelAnimationFrame(frameId),
       onFrame: (viewport: OrgEditorCanvasViewport) => {
         pendingViewportRef.current = null;
-        renderViewportRef.current = viewport;
-        setRenderViewport((currentViewport) =>
-          areViewportsEqual(currentViewport, viewport) ? currentViewport : viewport,
-        );
+        renderViewportToDom(viewport);
       },
       requestFrame: (callback) => window.requestAnimationFrame(callback),
     });
@@ -2171,6 +2356,14 @@ export const OrgStructureEditorTab = observer(() => {
       onFrame: setSelectionPreview,
       requestFrame: (callback) => window.requestAnimationFrame(callback),
     });
+    richTextInputFrameSchedulerRef.current = createLatestFrameScheduler({
+      cancelFrame: (frameId) => window.cancelAnimationFrame(frameId),
+      onFrame: (input) => {
+        pendingRichTextInputRef.current = null;
+        applyCanvasRichTextEditingRef.current(input);
+      },
+      requestFrame: (callback) => window.requestAnimationFrame(callback),
+    });
 
     return () => {
       viewportFrameSchedulerRef.current?.cancel();
@@ -2181,6 +2374,13 @@ export const OrgStructureEditorTab = observer(() => {
       dragStateFrameSchedulerRef.current = null;
       selectionPreviewFrameSchedulerRef.current?.cancel();
       selectionPreviewFrameSchedulerRef.current = null;
+      richTextInputFrameSchedulerRef.current?.cancel();
+      richTextInputFrameSchedulerRef.current = null;
+      pendingRichTextInputRef.current = null;
+      if (richTextDraftRenderTimeoutRef.current !== null) {
+        window.clearTimeout(richTextDraftRenderTimeoutRef.current);
+        richTextDraftRenderTimeoutRef.current = null;
+      }
       if (wheelCommitTimeoutRef.current !== null) {
         window.clearTimeout(wheelCommitTimeoutRef.current);
         wheelCommitTimeoutRef.current = null;
@@ -2194,32 +2394,31 @@ export const OrgStructureEditorTab = observer(() => {
         edgePanFrameIdRef.current = null;
       }
     };
-  }, []);
+  }, [renderViewportToDom]);
 
-  const scheduleViewportPreview = useCallback((viewport: OrgEditorCanvasViewport) => {
-    pendingViewportRef.current = viewport;
-    const scheduler = viewportFrameSchedulerRef.current;
+  const scheduleViewportPreview = useCallback(
+    (viewport: OrgEditorCanvasViewport) => {
+      pendingViewportRef.current = viewport;
+      const scheduler = viewportFrameSchedulerRef.current;
 
-    if (scheduler) {
-      scheduler.schedule(viewport);
-      return;
-    }
+      if (scheduler) {
+        scheduler.schedule(viewport);
+        return;
+      }
 
-    renderViewportRef.current = viewport;
-    setRenderViewport(viewport);
-  }, []);
+      renderViewportToDom(viewport);
+    },
+    [renderViewportToDom],
+  );
 
   const commitViewport = useCallback(
     (viewport: OrgEditorCanvasViewport) => {
       viewportFrameSchedulerRef.current?.cancel();
       pendingViewportRef.current = null;
-      renderViewportRef.current = viewport;
-      setRenderViewport((currentViewport) =>
-        areViewportsEqual(currentViewport, viewport) ? currentViewport : viewport,
-      );
+      renderViewportToDom(viewport, true);
       if (!areViewportsEqual(editor.viewport, viewport)) editor.setViewport(viewport);
     },
-    [editor],
+    [editor, renderViewportToDom],
   );
 
   const scheduleUnitDragPreview = useCallback((delta: CanvasPoint) => {
@@ -2258,19 +2457,25 @@ export const OrgStructureEditorTab = observer(() => {
 
     viewportFrameSchedulerRef.current?.cancel();
     pendingViewportRef.current = null;
-    renderViewportRef.current = editor.viewport;
-    setRenderViewport((currentViewport) =>
-      areViewportsEqual(currentViewport, editor.viewport) ? currentViewport : editor.viewport,
-    );
-  }, [editor, editor.viewport]);
+    renderViewportToDom(editor.viewport, true);
+  }, [editor, editor.viewport, renderViewportToDom]);
   const selectedItemKeySet = useMemo(
     () => new Set((selectionPreview ?? editor.selectedItems).map(createOrgEditorSelectedItemKey)),
     [editor.selectedItems, selectionPreview],
   );
   const selectedUnitIds = editor.selectedUnitIds;
   const selectedCanvasElementIds = editor.selectedElementIds;
-  const selectedCanvasElements = editor.canvasElements.filter((element) =>
-    selectedCanvasElementIds.has(element.id),
+  const sourceCanvasElementById = useMemo(
+    () => new Map(editor.canvasElements.map((element) => [element.id, element] as const)),
+    [editor.canvasElements],
+  );
+  const selectedCanvasElements = useMemo(
+    () =>
+      [...selectedCanvasElementIds].flatMap((elementId) => {
+        const element = sourceCanvasElementById.get(elementId);
+        return element ? [element] : [];
+      }),
+    [selectedCanvasElementIds, sourceCanvasElementById],
   );
   const activeEditorStructure = units;
   const availableEmployees = activeEditorStructure?.allEmployees ?? [];
@@ -2321,7 +2526,11 @@ export const OrgStructureEditorTab = observer(() => {
       ),
     [distributionUnitIdsByEmployeeId, distributionModeUnitIdSet],
   );
-  useMemo(() => {
+  const employeeRowGeometryByUnitId = useMemo(() => {
+    const geometryByUnitId = new Map<
+      OrgEditorUnitId,
+      { heights: ReadonlyMap<EmployeeId, number>; orderedEmployeeIds: readonly EmployeeId[] }
+    >();
     for (const unit of displayUnits) {
       const availableWidth = Math.max(
         80,
@@ -2348,11 +2557,13 @@ export const OrgStructureEditorTab = observer(() => {
           ) ?? [];
         heights.set(employeeId, getOrgEditorEmployeeRowHeightForTagLabels(labels, availableWidth));
       }
-      setOrgEditorUnitEmployeeRowHeights(unit.id, heights, orderedEmployeeIds);
+      geometryByUnitId.set(unit.id, { heights, orderedEmployeeIds });
     }
+    return geometryByUnitId;
   }, [displayUnits, employeeById, format, viewSettings.groupByTag]);
-  const unitTagSummaryByUnitId = useMemo(() => {
+  const unitTagGeometry = useMemo(() => {
     const summaryByUnitId = new Map<OrgEditorUnitId, OrgEditorUnitTagSummary[]>();
+    const footerHeightByUnitId = new Map<OrgEditorUnitId, number>();
     for (const unit of displayUnits) {
       const summary = buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder);
       const footerHeight =
@@ -2360,10 +2571,21 @@ export const OrgStructureEditorTab = observer(() => {
           ? 0
           : getOrgEditorUnitTagFooterHeight(summary, getOrgEditorUnitWidth(unit) - 16);
       summaryByUnitId.set(unit.id, summary);
-      setOrgEditorUnitTagFooterHeight(unit.id, footerHeight);
+      footerHeightByUnitId.set(unit.id, footerHeight);
     }
-    return summaryByUnitId;
+    return { footerHeightByUnitId, summaryByUnitId };
   }, [displayUnits, employeeById, tagOrder, viewSettings.showTagCloud]);
+  const { summaryByUnitId: unitTagSummaryByUnitId } = unitTagGeometry;
+  const [unitGeometryRevision, setUnitGeometryRevision] = useState(0);
+  useLayoutEffect(() => {
+    for (const [unitId, geometry] of employeeRowGeometryByUnitId) {
+      setOrgEditorUnitEmployeeRowHeights(unitId, geometry.heights, geometry.orderedEmployeeIds);
+    }
+    for (const [unitId, height] of unitTagGeometry.footerHeightByUnitId) {
+      setOrgEditorUnitTagFooterHeight(unitId, height);
+    }
+    setUnitGeometryRevision((revision) => revision + 1);
+  }, [employeeRowGeometryByUnitId, unitTagGeometry]);
   const unitById = useMemo(
     () => new Map(displayUnits.map((unit) => [unit.id, unit] as const)),
     [displayUnits],
@@ -2677,16 +2899,14 @@ export const OrgStructureEditorTab = observer(() => {
 
     const updateCanvasSize = () => {
       const bounds = canvasElement.getBoundingClientRect();
-      setCanvasSize((currentSize) => {
-        const nextSize = {
-          height: Math.max(1, Math.round(bounds.height)),
-          width: Math.max(1, Math.round(bounds.width)),
-        };
-
-        return currentSize.height === nextSize.height && currentSize.width === nextSize.width
-          ? currentSize
-          : nextSize;
-      });
+      const nextSize = {
+        height: Math.max(1, Math.round(bounds.height)),
+        width: Math.max(1, Math.round(bounds.width)),
+      };
+      const currentSize = canvasSizeRef.current;
+      if (currentSize.height === nextSize.height && currentSize.width === nextSize.width) return;
+      canvasSizeRef.current = nextSize;
+      renderViewportToDom(renderViewportRef.current, true);
     };
 
     updateCanvasSize();
@@ -2700,18 +2920,7 @@ export const OrgStructureEditorTab = observer(() => {
     resizeObserver.observe(canvasElement);
 
     return () => resizeObserver.disconnect();
-  }, []);
-
-  const visibleWorldRect = useMemo<CanvasRect>(() => {
-    const scale = Math.max(renderViewport.scale, MIN_CANVAS_SCALE);
-
-    return {
-      height: (canvasSize.height + CANVAS_VIEWPORT_OVERSCAN_PX * 2) / scale,
-      width: (canvasSize.width + CANVAS_VIEWPORT_OVERSCAN_PX * 2) / scale,
-      x: (-renderViewport.x - CANVAS_VIEWPORT_OVERSCAN_PX) / scale,
-      y: (-renderViewport.y - CANVAS_VIEWPORT_OVERSCAN_PX) / scale,
-    };
-  }, [canvasSize.height, canvasSize.width, renderViewport]);
+  }, [renderViewportToDom]);
   const connectionDragUnitId = dragState?.type === "connection" ? dragState.unitId : null;
 
   const pinnedVisibleUnitIds = useMemo(() => {
@@ -2747,15 +2956,14 @@ export const OrgStructureEditorTab = observer(() => {
     return unitIds;
   }, [connectionDragUnitId, contextMenu, dragState, exportUnitId, searchPinnedUnitId]);
 
-  const unitSpatialIndex = useMemo(
-    () =>
-      createSpatialIndex(
-        displayUnits,
-        (unit) => getOrgEditorUnitBounds(unit),
-        ORG_EDITOR_SPATIAL_CELL_SIZE,
-      ),
-    [displayUnits],
-  );
+  const unitSpatialIndex = useMemo(() => {
+    void unitGeometryRevision;
+    return createSpatialIndex(
+      displayUnits,
+      (unit) => getOrgEditorUnitBounds(unit),
+      ORG_EDITOR_SPATIAL_CELL_SIZE,
+    );
+  }, [displayUnits, unitGeometryRevision]);
   const visibleUnitQuery = useMemo(
     () => unitSpatialIndex.query(visibleWorldRect),
     [unitSpatialIndex, visibleWorldRect],
@@ -2801,6 +3009,7 @@ export const OrgStructureEditorTab = observer(() => {
       ref: OrgEditorAnchorRef,
       positionByUnitId?: ReadonlyMap<OrgEditorUnitId, CanvasPoint>,
     ): CanvasPoint | null => {
+      void unitGeometryRevision;
       if (ref.owner.type === "element") return null;
       const unit = unitById.get(ref.owner.unitId);
       if (!unit) return null;
@@ -2834,7 +3043,7 @@ export const OrgStructureEditorTab = observer(() => {
         y: employeeBounds.y + employeeBounds.height / 2,
       };
     },
-    [employeeById, unitById, viewSettings.groupByTag],
+    [employeeById, unitById, unitGeometryRevision, viewSettings.groupByTag],
   );
   const resolveExternalCanvasAnchor = useCallback(
     (ref: OrgEditorAnchorRef) => resolveExternalCanvasAnchorForPositions(ref),
@@ -2845,10 +3054,7 @@ export const OrgStructureEditorTab = observer(() => {
       resolveExternalCanvasAnchorForPositions(ref, unitPreviewPositionById),
     [resolveExternalCanvasAnchorForPositions, unitPreviewPositionById],
   );
-  const canvasElementById = useMemo(
-    () => new Map(editor.canvasElements.map((element) => [element.id, element] as const)),
-    [editor.canvasElements],
-  );
+  const canvasElementById = sourceCanvasElementById;
   const canvasElementOrderById = useMemo(
     () => new Map(editor.canvasElements.map((element, index) => [element.id, index] as const)),
     [editor.canvasElements],
@@ -3160,6 +3366,7 @@ export const OrgStructureEditorTab = observer(() => {
   }, [pinnedVisibleUnitIds, unitById, visibleUnitQuery.items, withUnitPreviewPosition]);
 
   const connectionEntries = useMemo(() => {
+    void unitGeometryRevision;
     const entries: OrgEditorConnectionEntry[] = [];
 
     for (const unit of displayUnits) {
@@ -3187,7 +3394,7 @@ export const OrgStructureEditorTab = observer(() => {
     }
 
     return entries;
-  }, [displayUnits, unitById]);
+  }, [displayUnits, unitById, unitGeometryRevision]);
   const connectionSpatialIndex = useMemo(
     () =>
       createSpatialIndex(connectionEntries, (entry) => entry.bounds, ORG_EDITOR_SPATIAL_CELL_SIZE),
@@ -4198,7 +4405,24 @@ export const OrgStructureEditorTab = observer(() => {
     });
   };
 
+  const cancelCanvasRichTextDraftRender = () => {
+    if (richTextDraftRenderTimeoutRef.current === null) return;
+    window.clearTimeout(richTextDraftRenderTimeoutRef.current);
+    richTextDraftRenderTimeoutRef.current = null;
+  };
+
+  const scheduleCanvasRichTextDraftRender = () => {
+    cancelCanvasRichTextDraftRender();
+    richTextDraftRenderTimeoutRef.current = window.setTimeout(() => {
+      richTextDraftRenderTimeoutRef.current = null;
+      const draft = editingCanvasRichTextDraftRef.current;
+      if (draft) setEditingCanvasRichTextDraft(draft);
+    }, 250);
+  };
+
   const finishCanvasTextEditing = () => {
+    richTextInputFrameSchedulerRef.current?.flush();
+    cancelCanvasRichTextDraftRender();
     const elementId = editingCanvasElementIdRef.current;
     const richTextDraft = editingCanvasRichTextDraftRef.current;
     editingCanvasPropertyInteractionRef.current = false;
@@ -4233,7 +4457,7 @@ export const OrgStructureEditorTab = observer(() => {
     finishCanvasTextEditing();
   };
 
-  const updateCanvasRichTextEditing = (text: string, selection: { end: number; start: number }) => {
+  const applyCanvasRichTextEditing = ({ mutations, selection, text }: CanvasRichTextInput) => {
     const elementId = editingCanvasElementIdRef.current;
     const draft = editingCanvasRichTextDraftRef.current;
     const element = editor.canvasElements.find(
@@ -4241,36 +4465,70 @@ export const OrgStructureEditorTab = observer(() => {
         candidate.id === elementId && (candidate.type === "text" || candidate.type === "sticker"),
     );
     if (!elementId || !draft || !element) return;
-    let prefixLength = 0;
-    while (
-      prefixLength < draft.text.length &&
-      prefixLength < text.length &&
-      draft.text[prefixLength] === text[prefixLength]
-    ) {
-      prefixLength += 1;
-    }
-    let suffixLength = 0;
-    while (
-      suffixLength < draft.text.length - prefixLength &&
-      suffixLength < text.length - prefixLength &&
-      draft.text[draft.text.length - 1 - suffixLength] === text[text.length - 1 - suffixLength]
-    ) {
-      suffixLength += 1;
-    }
     const base = resolveOrgEditorCanvasInlineTypography(
       getOrgEditorInlineTypography(element.typography),
     );
-    const styleIndex = Math.max(0, Math.min(draft.text.length - 1, draft.selection.start));
-    const result = replaceOrgEditorTextRange({
-      end: draft.text.length - suffixLength,
-      formatRuns: draft.formatRuns,
-      insertedText: text.slice(prefixLength, text.length - suffixLength),
-      insertedTypography:
-        draft.pendingTypography ?? getOrgEditorTextStyleAt(base, draft.formatRuns, styleIndex),
-      start: prefixLength,
-      text: draft.text,
-      typography: element.typography,
-    });
+    let result: ReturnType<typeof replaceOrgEditorTextRange>;
+    if (mutations && mutations.length > 0) {
+      if (draft.formatRuns.length === 0 && draft.pendingTypography === null) {
+        result = { formatRuns: [], selection: selection.end, text };
+      } else {
+        let currentText = draft.text;
+        let currentFormatRuns = draft.formatRuns;
+        for (const mutation of mutations) {
+          const styleIndex = Math.max(0, Math.min(currentText.length - 1, mutation.start));
+          const mutationResult = replaceOrgEditorTextRange({
+            end: mutation.end,
+            formatRuns: currentFormatRuns,
+            graphemeSafeRange: true,
+            insertedText: mutation.insertedText,
+            insertedTypography:
+              draft.pendingTypography ??
+              getOrgEditorTextStyleAt(base, currentFormatRuns, styleIndex),
+            start: mutation.start,
+            text: currentText,
+            typography: element.typography,
+          });
+          currentText = mutationResult.text;
+          currentFormatRuns = mutationResult.formatRuns;
+        }
+        if (currentText !== text) {
+          applyCanvasRichTextEditing({ selection, text });
+          return;
+        }
+        result = { formatRuns: currentFormatRuns, selection: selection.end, text: currentText };
+      }
+    } else {
+      let prefixLength = 0;
+      while (
+        prefixLength < draft.text.length &&
+        prefixLength < text.length &&
+        draft.text[prefixLength] === text[prefixLength]
+      ) {
+        prefixLength += 1;
+      }
+      let suffixLength = 0;
+      while (
+        suffixLength < draft.text.length - prefixLength &&
+        suffixLength < text.length - prefixLength &&
+        draft.text[draft.text.length - 1 - suffixLength] === text[text.length - 1 - suffixLength]
+      ) {
+        suffixLength += 1;
+      }
+      const replacedEnd = draft.text.length - suffixLength;
+      const insertedText = text.slice(prefixLength, text.length - suffixLength);
+      const styleIndex = Math.max(0, Math.min(draft.text.length - 1, draft.selection.start));
+      result = replaceOrgEditorTextRange({
+        end: replacedEnd,
+        formatRuns: draft.formatRuns,
+        insertedText,
+        insertedTypography:
+          draft.pendingTypography ?? getOrgEditorTextStyleAt(base, draft.formatRuns, styleIndex),
+        start: prefixLength,
+        text: draft.text,
+        typography: element.typography,
+      });
+    }
     const nextDraft: OrgEditorCanvasTextDraft = {
       ...draft,
       formatRuns: result.formatRuns,
@@ -4278,19 +4536,48 @@ export const OrgStructureEditorTab = observer(() => {
       text: result.text,
     };
     editingCanvasRichTextDraftRef.current = nextDraft;
-    setEditingCanvasRichTextDraft(nextDraft);
+    scheduleCanvasRichTextDraftRender();
+  };
+  applyCanvasRichTextEditingRef.current = applyCanvasRichTextEditing;
+
+  const updateCanvasRichTextEditing = (
+    text: string,
+    selection: { end: number; start: number },
+    mutation?: OrgEditorCanvasTextMutation,
+  ) => {
+    cancelCanvasRichTextDraftRender();
+    const pendingInput = pendingRichTextInputRef.current;
+    const input: CanvasRichTextInput = {
+      ...(mutation ? { mutations: [...(pendingInput?.mutations ?? []), mutation] } : {}),
+      selection,
+      text,
+    };
+    pendingRichTextInputRef.current = input;
+    const scheduler = richTextInputFrameSchedulerRef.current;
+    if (scheduler) scheduler.schedule(input);
+    else applyCanvasRichTextEditing(input);
   };
 
   const updateCanvasRichTextSelection = (selection: { end: number; start: number }) => {
+    const pendingInput = pendingRichTextInputRef.current;
+    if (pendingInput) {
+      cancelCanvasRichTextDraftRender();
+      const nextInput = { ...pendingInput, selection };
+      pendingRichTextInputRef.current = nextInput;
+      richTextInputFrameSchedulerRef.current?.schedule(nextInput);
+      return;
+    }
     const draft = editingCanvasRichTextDraftRef.current;
     if (!draft) return;
     if (draft.selection.start === selection.start && draft.selection.end === selection.end) return;
+    cancelCanvasRichTextDraftRender();
     const nextDraft = { ...draft, pendingTypography: null, selection };
     editingCanvasRichTextDraftRef.current = nextDraft;
     setEditingCanvasRichTextDraft(nextDraft);
   };
 
   const updateCanvasTextTypography = (patch: Partial<OrgEditorInlineTypography>) => {
+    richTextInputFrameSchedulerRef.current?.flush();
     const elementId = editingCanvasElementIdRef.current;
     const draft = editingCanvasRichTextDraftRef.current;
     const editingElement = editor.canvasElements.find(
@@ -4326,6 +4613,7 @@ export const OrgStructureEditorTab = observer(() => {
               pendingTypography: null,
             };
       editingCanvasRichTextDraftRef.current = nextDraft;
+      cancelCanvasRichTextDraftRender();
       setEditingCanvasRichTextDraft(nextDraft);
       return;
     }
@@ -4466,6 +4754,7 @@ export const OrgStructureEditorTab = observer(() => {
     }
     editingCanvasElementIdRef.current = elementId;
     editingCanvasPropertyInteractionRef.current = false;
+    cancelCanvasRichTextDraftRender();
     setEditingCanvasElementId(elementId);
     const draft: OrgEditorCanvasTextDraft = {
       formatRuns: element.formatRuns,
@@ -4830,8 +5119,9 @@ export const OrgStructureEditorTab = observer(() => {
         employeeDragSourceUnitIds ?? undefined,
       )
     : null;
-  const canvasGridSize = getAdaptiveOrgEditorGridSize(renderViewport.scale);
-  const canvasGridScreenSize = canvasGridSize * renderViewport.scale;
+  const renderedViewport = renderViewportRef.current;
+  const canvasGridSize = getAdaptiveOrgEditorGridSize(renderedViewport.scale);
+  const canvasGridScreenSize = canvasGridSize * renderedViewport.scale;
   const renderCanvasElementLayer = (layer: OrgEditorCanvasElement["layer"]) =>
     visibleCanvasElements
       .filter((element) => element.layer === layer)
@@ -4882,8 +5172,8 @@ export const OrgStructureEditorTab = observer(() => {
           data-grid-screen-size={canvasGridScreenSize}
           data-grid-size={canvasGridSize}
           data-spatial-candidate-count={visibleUnitQuery.candidateCount}
-          data-viewport-x={renderViewport.x}
-          data-viewport-y={renderViewport.y}
+          data-viewport-x={renderedViewport.x}
+          data-viewport-y={renderedViewport.y}
           onAuxClick={(event) => event.preventDefault()}
           onContextMenu={handleCanvasContextMenu}
           onPointerLeave={() => setCanvasAnchorHoverScreenPoint(null)}
@@ -4900,7 +5190,7 @@ export const OrgStructureEditorTab = observer(() => {
               linear-gradient(to bottom, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px)
             `
                 : "none",
-            backgroundPosition: `${renderViewport.x}px ${renderViewport.y}px`,
+            backgroundPosition: `${renderedViewport.x}px ${renderedViewport.y}px`,
             backgroundSize: `${canvasGridScreenSize}px ${canvasGridScreenSize}px`,
           }}
         >
@@ -4909,79 +5199,34 @@ export const OrgStructureEditorTab = observer(() => {
             data-org-editor-rendered-unit-count={visibleUnits.length}
             data-org-editor-total-unit-count={editor.units.length}
             dir="ltr"
+            ref={canvasWorldRef}
             style={
               {
-                "--org-editor-canvas-ui-connector-offset": `${-10 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-connector-size": `${7 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-corner-offset": `${-4 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-corner-size": `${8 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-outline-offset": `${2 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-outline-width": `${1 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-rotate-offset": `${-22 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-rotate-size": `${18 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-side-offset": `${-6 / renderViewport.scale}px`,
-                "--org-editor-canvas-ui-side-size": `${12 / renderViewport.scale}px`,
-                transform: `translate(${renderViewport.x}px, ${renderViewport.y}px) scale(${renderViewport.scale})`,
+                "--org-editor-canvas-ui-connector-offset": `${-10 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-connector-size": `${7 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-corner-offset": `${-4 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-corner-size": `${8 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-outline-offset": `${2 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-outline-width": `${1 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-rotate-offset": `${-22 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-rotate-size": `${18 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-side-offset": `${-6 / renderedViewport.scale}px`,
+                "--org-editor-canvas-ui-side-size": `${12 / renderedViewport.scale}px`,
+                transform: `translate(${renderedViewport.x}px, ${renderedViewport.y}px) scale(${renderedViewport.scale})`,
                 transformOrigin: "0 0",
               } as CSSProperties
             }
           >
-            <svg
-              aria-hidden="true"
-              className="pointer-events-none absolute left-0 top-0 h-[8000px] w-[8000px] overflow-visible"
-            >
-              {visibleConnectionUnits.map(({ parentUnit, unit }) => (
-                <path
-                  className="stroke-border"
-                  d={getOrgEditorConnectionPath({
-                    layoutMode: editor.layoutMode,
-                    parentUnit,
-                    unit,
-                  })}
-                  fill="none"
-                  key={`${parentUnit.id}:${unit.id}`}
-                  strokeWidth={2}
-                />
-              ))}
-              {distributionConnections.map((connection) => (
-                <g
-                  className="editor-distribution-tone"
-                  style={distributionStyles.assigned}
-                  data-distribution-connection={connection.targetUnitId}
-                  key={connection.targetUnitId}
-                >
-                  <path
-                    className="stroke-current"
-                    d={connection.path}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeWidth={2.5}
-                  />
-                  {connection.showEndpointMarker && (
-                    <circle
-                      className="fill-current stroke-card"
-                      cx={connection.end.x}
-                      cy={connection.end.y}
-                      r={4}
-                      strokeWidth={2}
-                    />
-                  )}
-                </g>
-              ))}
-              {connectionDragPath && (
-                <path
-                  className="stroke-primary"
-                  d={connectionDragPath}
-                  fill="none"
-                  strokeDasharray="8 8"
-                  strokeLinecap="round"
-                  strokeWidth={2.5}
-                />
-              )}
-            </svg>
+            <OrgEditorConnectionsLayer
+              connectionDragPath={connectionDragPath}
+              distributionConnections={distributionConnections}
+              distributionStyle={distributionStyles.assigned}
+              layoutMode={editor.layoutMode}
+              visibleConnections={visibleConnectionUnits}
+            />
             {renderCanvasElementLayer("behindUnits")}
             {visibleUnits.map((unit) => (
-              <OrgEditorNode
+              <MemoizedOrgEditorNode
                 viewSettings={viewSettings}
                 distributionStyles={distributionStyles}
                 distributionEnabledUnitIds={distributionModeUnitIdSet}
@@ -4992,6 +5237,7 @@ export const OrgStructureEditorTab = observer(() => {
                     : ordinaryUnitIdsByEmployeeId
                 }
                 employeeById={employeeById}
+                geometryRevision={unitGeometryRevision}
                 isConnectionDropTarget={connectionDropTargetUnit?.id === unit.id}
                 isCanvasArrowToolActive={activeCanvasTool === "arrow"}
                 isEmployeeDropTarget={employeeDropTargetUnit?.id === unit.id}
@@ -5573,7 +5819,7 @@ export const OrgStructureEditorTab = observer(() => {
                 title={t("Reset zoom")}
               >
                 <HiOutlineMagnifyingGlass />
-                {Math.round(renderViewport.scale * 100)}%
+                <span ref={viewportZoomLabelRef}>{Math.round(renderedViewport.scale * 100)}%</span>
               </OrgEditorToolbarButton>
               <OrgEditorToolbarButton
                 ariaLabel={t("Focus the primary Unit")}

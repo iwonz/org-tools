@@ -300,6 +300,23 @@ describe("Org Editor canvas geometry", () => {
       },
     ]);
     expect(
+      replaceOrgEditorTextRange({
+        end: text.length - 1,
+        formatRuns: formatted,
+        graphemeSafeRange: true,
+        insertedText: "ok",
+        insertedTypography: {
+          color: "rose",
+          fontFamily: "Georgia",
+          fontSize: 24,
+          fontWeight: 400,
+        },
+        start: 1,
+        text,
+        typography: element.typography,
+      }),
+    ).toEqual(inserted);
+    expect(
       normalizeOrgEditorTextFormatRuns(inserted.text, element.typography, inserted.formatRuns),
     ).toEqual(inserted.formatRuns);
   });

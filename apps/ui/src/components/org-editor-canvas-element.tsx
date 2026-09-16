@@ -9,16 +9,22 @@ import type {
   OrgEditorTypography,
 } from "@org-tools/types";
 import Image from "next/image";
-import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useUiText } from "@/i18n/use-ui-text";
 import {
   getOrgEditorArrowControlPoints,
   getOrgEditorCanvasCssFontFamily,
-  getOrgEditorCanvasElementFont,
   getOrgEditorCanvasImagePlaceholderPoints,
   getOrgEditorInlineTypography,
-  getOrgEditorRichTextLayout,
   getOrgEditorTextFillRects,
   getOrgEditorTextGraphemes,
   getOrgEditorTextStyleAt,
@@ -26,9 +32,12 @@ import {
   ORG_EDITOR_CANVAS_ROTATE_HANDLE_IDS,
   type OrgEditorCanvasRect,
   type OrgEditorCanvasResizeHandle,
+  type OrgEditorRichTextLayout,
   resolveOrgEditorCanvasInlineTypography,
   resolveOrgEditorCanvasTypography,
 } from "@/lib/org-editor-canvas";
+import { recordOrgEditorPerformance } from "@/lib/org-editor-performance";
+import { orgEditorRichTextLayoutEngine } from "@/lib/org-editor-rich-text-layout";
 import { employeeTagColorToHex, getStickerColorStyle } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 
@@ -49,10 +58,29 @@ export type OrgEditorCanvasTextDraft = {
   text: string;
 };
 
+export type OrgEditorCanvasTextMutation = {
+  end: number;
+  insertedText: string;
+  start: number;
+};
+
 const getContentEditableSelection = (root: HTMLElement) => {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return null;
   const offsetOf = (node: Node, offset: number) => {
+    const segment = (node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>(
+      "[data-text-start]",
+    );
+    if (segment && root.contains(segment)) {
+      const segmentStart = Number.parseInt(segment.dataset.textStart ?? "", 10);
+      if (Number.isFinite(segmentStart)) {
+        if (node instanceof Text && node.parentNode === segment) return segmentStart + offset;
+        const localPrefix = document.createRange();
+        localPrefix.selectNodeContents(segment);
+        localPrefix.setEnd(node, offset);
+        return segmentStart + localPrefix.toString().length;
+      }
+    }
     const prefix = document.createRange();
     prefix.selectNodeContents(root);
     prefix.setEnd(node, offset);
@@ -257,29 +285,7 @@ const CanvasText = ({
 }: {
   element: Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>;
 }) => {
-  const [, setFontRevision] = useState(0);
-  const fontRequests = [element.typography, ...element.formatRuns.map((run) => run.typography)].map(
-    getOrgEditorCanvasElementFont,
-  );
-  const fontRequestKey = [...new Set(fontRequests)].sort().join("|");
-
-  useEffect(() => {
-    if (!document.fonts) return;
-    let cancelled = false;
-    void Promise.all(
-      fontRequestKey
-        .split("|")
-        .filter(Boolean)
-        .map((request) => document.fonts.load(request)),
-    ).then(() => {
-      if (!cancelled) setFontRevision((revision) => revision + 1);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [fontRequestKey]);
-
-  const layout = getCanvasRichTextLayout(element);
+  const layout = orgEditorRichTextLayoutEngine.getLayout(element);
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-visible">
       {element.type === "text" &&
@@ -319,37 +325,6 @@ const CanvasText = ({
       )}
     </div>
   );
-};
-
-const getCanvasMeasureContext = () =>
-  typeof document === "undefined" ? null : document.createElement("canvas").getContext("2d");
-
-type CanvasRichTextLayoutElement =
-  | Pick<
-      Extract<OrgEditorCanvasElement, { type: "text" }>,
-      "autoWidth" | "formatRuns" | "height" | "text" | "type" | "typography" | "width"
-    >
-  | Pick<
-      Extract<OrgEditorCanvasElement, { type: "sticker" }>,
-      "formatRuns" | "height" | "text" | "type" | "typography" | "width"
-    >;
-
-const getCanvasRichTextLayout = (element: CanvasRichTextLayoutElement) => {
-  const context = getCanvasMeasureContext();
-  return getOrgEditorRichTextLayout({
-    autoWidth: element.type === "text" && element.autoWidth,
-    formatRuns: element.formatRuns,
-    height: element.height,
-    measure: (value, fragmentTypography) => {
-      if (!context) return [...value].length * fragmentTypography.fontSize * 0.55;
-      context.font = getOrgEditorCanvasElementFont(fragmentTypography);
-      return context.measureText(value).width;
-    },
-    mode: element.type,
-    text: element.text,
-    typography: element.typography,
-    width: element.width,
-  });
 };
 
 const getRichTextDraftSegments = (
@@ -394,6 +369,7 @@ const getRichTextDraftSegments = (
 function CanvasRichTextEditor({
   draft,
   element,
+  layout,
   onDraftTextChange,
   onEditingFocus,
   onFinishEditing,
@@ -402,8 +378,13 @@ function CanvasRichTextEditor({
 }: {
   draft: OrgEditorCanvasTextDraft;
   element: Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>;
+  layout: OrgEditorRichTextLayout;
   onDraftTextChange?:
-    | ((text: string, selection: { end: number; start: number }) => void)
+    | ((
+        text: string,
+        selection: { end: number; start: number },
+        mutation?: OrgEditorCanvasTextMutation,
+      ) => void)
     | undefined;
   onEditingFocus?: (() => void) | undefined;
   onFinishEditing?: (() => void) | undefined;
@@ -414,9 +395,11 @@ function CanvasRichTextEditor({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const composingRef = useRef(false);
   const propertyInteractionRef = useRef(false);
+  const lastPublishedTextRef = useRef<string | null>(null);
+  const pendingMutationRef = useRef<OrgEditorCanvasTextMutation | null>(null);
+  const renderedStyleSignatureRef = useRef<string | null>(null);
   const selectionRef = useRef(draft.selection);
   selectionRef.current = draft.selection;
-  const autoWidth = element.type === "text" ? element.autoWidth : false;
   const typography = useMemo<OrgEditorTypography>(
     () => ({
       color: element.typography.color,
@@ -435,35 +418,31 @@ function CanvasRichTextEditor({
       element.typography.verticalAlign,
     ],
   );
-  const layout = useMemo(
-    () =>
-      getCanvasRichTextLayout({
-        ...(element.type === "text" ? { autoWidth } : {}),
-        formatRuns: draft.formatRuns,
-        height: element.height,
-        text: draft.text,
-        type: element.type,
-        typography,
-        width: element.width,
-      } as CanvasRichTextLayoutElement),
-    [
-      draft.formatRuns,
-      draft.text,
-      element.height,
-      element.type,
-      autoWidth,
-      typography,
-      element.width,
-    ],
-  );
   const segments = useMemo(
     () => getRichTextDraftSegments(typography, draft.formatRuns, draft.text, layout.effectiveScale),
     [draft.formatRuns, draft.text, layout.effectiveScale, typography],
+  );
+  const segmentStyleSignature = useMemo(
+    () =>
+      segments
+        .map(
+          (segment) =>
+            `${segment.typography.color}:${segment.typography.fontFamily}:${segment.typography.fontSize}:${segment.typography.fontWeight}`,
+        )
+        .join("|"),
+    [segments],
   );
 
   useLayoutEffect(() => {
     const root = editorRef.current;
     if (!root) return;
+    if (
+      segments.length <= 1 &&
+      renderedStyleSignatureRef.current === segmentStyleSignature &&
+      (lastPublishedTextRef.current === draft.text || document.activeElement === root)
+    ) {
+      return;
+    }
     const shouldRestoreSelection =
       document.activeElement === root ||
       propertyInteractionRef.current ||
@@ -486,11 +465,13 @@ function CanvasRichTextEditor({
         root.append(span);
       }
     }
+    lastPublishedTextRef.current = draft.text;
+    renderedStyleSignatureRef.current = segmentStyleSignature;
     if (shouldRestoreSelection) {
       root.focus({ preventScroll: true });
       restoreContentEditableSelection(root, selectionRef.current);
     }
-  }, [segments]);
+  }, [draft.text, segmentStyleSignature, segments]);
 
   useEffect(() => {
     const root = editorRef.current;
@@ -509,8 +490,17 @@ function CanvasRichTextEditor({
     const root = editorRef.current;
     if (!root) return;
     const selection = getContentEditableSelection(root) ?? draft.selection;
-    const innerText = root.innerText.replace(/\r\n?/gu, "\n");
-    onDraftTextChange?.(root.textContent ? innerText : "", selection);
+    const mutation = pendingMutationRef.current ?? undefined;
+    pendingMutationRef.current = null;
+    const previousText = lastPublishedTextRef.current;
+    const nextText =
+      mutation && previousText !== null
+        ? `${previousText.slice(0, mutation.start)}${mutation.insertedText}${previousText.slice(mutation.end)}`
+        : root.textContent
+          ? root.innerText.replace(/\r\n?/gu, "\n")
+          : "";
+    lastPublishedTextRef.current = nextText;
+    onDraftTextChange?.(nextText, selection, mutation);
   };
 
   useEffect(() => {
@@ -582,6 +572,7 @@ function CanvasRichTextEditor({
       }}
       onCompositionEnd={() => {
         composingRef.current = false;
+        pendingMutationRef.current = null;
         publishText();
       }}
       onCompositionStart={() => {
@@ -589,6 +580,18 @@ function CanvasRichTextEditor({
       }}
       onInput={() => {
         if (!composingRef.current) publishText();
+      }}
+      onBeforeInput={(event) => {
+        if (composingRef.current) return;
+        const selection = editorRef.current ? getContentEditableSelection(editorRef.current) : null;
+        if (!selection) return;
+        const input = event.nativeEvent as InputEvent;
+        const insertedText =
+          input.data ??
+          (input.inputType === "insertParagraph" || input.inputType === "insertLineBreak"
+            ? "\n"
+            : null);
+        pendingMutationRef.current = insertedText === null ? null : { ...selection, insertedText };
       }}
       onFocus={onEditingFocus}
       onKeyDown={(event) => {
@@ -601,17 +604,23 @@ function CanvasRichTextEditor({
       onKeyUp={publishSelection}
       onPaste={(event) => {
         event.preventDefault();
+        const editor = editorRef.current;
+        const editSelection = editor ? getContentEditableSelection(editor) : null;
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) return;
         const range = selection.getRangeAt(0);
         if (!editorRef.current?.contains(range.commonAncestorContainer)) return;
         range.deleteContents();
-        const textNode = document.createTextNode(event.clipboardData.getData("text/plain"));
+        const pastedText = event.clipboardData.getData("text/plain");
+        const textNode = document.createTextNode(pastedText);
         range.insertNode(textNode);
         range.setStartAfter(textNode);
         range.collapse(true);
         selection.removeAllRanges();
         selection.addRange(range);
+        pendingMutationRef.current = editSelection
+          ? { ...editSelection, insertedText: pastedText }
+          : null;
         publishText();
       }}
       onPointerDown={(event) => {
@@ -651,7 +660,7 @@ const RectHandles = ({
   return <CanvasPerimeterTransformHandles onHandlePointerDown={onHandlePointerDown} />;
 };
 
-export function OrgEditorCanvasElementNode({
+function OrgEditorCanvasElementNodeComponent({
   editingRichTextDraft,
   element,
   imageUnavailableLabel,
@@ -678,7 +687,11 @@ export function OrgEditorCanvasElementNode({
     element: OrgEditorCanvasElement,
     handle: OrgEditorCanvasElementHandle,
   ) => void;
-  onEditingRichTextChange?: (text: string, selection: { end: number; start: number }) => void;
+  onEditingRichTextChange?: (
+    text: string,
+    selection: { end: number; start: number },
+    mutation?: OrgEditorCanvasTextMutation,
+  ) => void;
   onEditingSelectionChange?: (selection: { end: number; start: number }) => void;
   onEditingFocus?: (() => void) | undefined;
   onFinishEditing?: () => void;
@@ -686,12 +699,13 @@ export function OrgEditorCanvasElementNode({
   shouldKeepEditingOnBlur?: (() => boolean) | undefined;
   showHandles?: boolean;
 }) {
+  recordOrgEditorPerformance("canvasElementRenders");
   const t = useUiText();
   const [imageFailed, setImageFailed] = useState(false);
   const imageDataUrl = element.type === "image" ? element.dataUrl : null;
   const richDraftLayout =
     (element.type === "text" || element.type === "sticker") && editingRichTextDraft
-      ? getCanvasRichTextLayout({
+      ? orgEditorRichTextLayoutEngine.getLayout({
           ...element,
           formatRuns: editingRichTextDraft.formatRuns,
           text: editingRichTextDraft.text,
@@ -961,6 +975,7 @@ export function OrgEditorCanvasElementNode({
           element={
             displayedElement as Extract<OrgEditorCanvasElement, { type: "sticker" | "text" }>
           }
+          layout={richDraftLayout as OrgEditorRichTextLayout}
           onDraftTextChange={onEditingRichTextChange}
           onEditingFocus={onEditingFocus}
           onFinishEditing={onFinishEditing}
@@ -978,3 +993,16 @@ export function OrgEditorCanvasElementNode({
     </fieldset>
   );
 }
+
+export const OrgEditorCanvasElementNode = memo(
+  OrgEditorCanvasElementNodeComponent,
+  (
+    previous: Parameters<typeof OrgEditorCanvasElementNodeComponent>[0],
+    next: Parameters<typeof OrgEditorCanvasElementNodeComponent>[0],
+  ) =>
+    previous.element === next.element &&
+    previous.editingRichTextDraft === next.editingRichTextDraft &&
+    previous.imageUnavailableLabel === next.imageUnavailableLabel &&
+    previous.isSelected === next.isSelected &&
+    previous.showHandles === next.showHandles,
+);

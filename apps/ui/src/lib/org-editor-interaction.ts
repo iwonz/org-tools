@@ -5,6 +5,53 @@ export type SpatialRect = {
   y: number;
 };
 
+export type EditorViewport = { scale: number; x: number; y: number };
+export type EditorViewportSize = { height: number; width: number };
+
+export const getEditorViewportWorldRect = (
+  viewport: EditorViewport,
+  size: EditorViewportSize,
+  overscanScreenPixels = 0,
+): SpatialRect => {
+  const scale = Math.max(0.000_001, viewport.scale);
+  return {
+    height: (size.height + overscanScreenPixels * 2) / scale,
+    width: (size.width + overscanScreenPixels * 2) / scale,
+    x: (-viewport.x - overscanScreenPixels) / scale,
+    y: (-viewport.y - overscanScreenPixels) / scale,
+  };
+};
+
+const spatialRectContains = (outer: SpatialRect, inner: SpatialRect) =>
+  inner.x >= outer.x &&
+  inner.y >= outer.y &&
+  inner.x + inner.width <= outer.x + outer.width &&
+  inner.y + inner.height <= outer.y + outer.height;
+
+/** Keeps a stable overscanned query window until the visible viewport leaves it. */
+export const advanceEditorRenderWindow = ({
+  current,
+  force = false,
+  overscanScreenPixels,
+  size,
+  viewport,
+}: {
+  current: SpatialRect | null;
+  force?: boolean;
+  overscanScreenPixels: number;
+  size: EditorViewportSize;
+  viewport: EditorViewport;
+}): { changed: boolean; rect: SpatialRect } => {
+  const visible = getEditorViewportWorldRect(viewport, size);
+  if (!force && current && spatialRectContains(current, visible)) {
+    return { changed: false, rect: current };
+  }
+  return {
+    changed: true,
+    rect: getEditorViewportWorldRect(viewport, size, overscanScreenPixels),
+  };
+};
+
 const rectsIntersect = (first: SpatialRect, second: SpatialRect) =>
   first.x <= second.x + second.width &&
   first.x + first.width >= second.x &&

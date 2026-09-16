@@ -855,6 +855,9 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.getByRole("option", { name: "System", exact: true }).click();
   const unitPreview = unitDialog.getByAltText("Unit export preview", { exact: true });
   await expect(unitPreview).toBeVisible();
+  await expect
+    .poll(() => unitPreview.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
   await expect(unitDialog.getByRole("button", { name: "Fit", exact: true })).toBeVisible();
   const scopedImage = await unitPreview.evaluate((image: HTMLImageElement) => {
     const canvas = document.createElement("canvas");

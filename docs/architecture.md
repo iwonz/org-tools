@@ -326,11 +326,23 @@ intersection. Logical side surfaces mirror around the LTR world in Arabic while 
 centered. The
 Editor keeps pointer and wheel previews outside the MobX structure document. The canvas uses
 clipping rather than a browser scroll container, so navigation remains exclusively represented by
-the View viewport. One animation-frame
-scheduler presents the latest viewport or Unit delta, while pointer release or wheel debounce
-performs the single snapped command and persistence observation. A geometry-keyed spatial index
-limits Unit and connection rendering to the visible world rectangle and is rebuilt only when
-document geometry changes.
+the View viewport. A transient viewport controller applies the latest pan or zoom sample directly to
+the world transform, adaptive grid, inverse-scale interaction metrics, and isolated zoom label once
+per animation frame. The large React scene observes only a 420-screen-pixel buffered render window;
+it refreshes mounted membership when the visible rectangle leaves that window, the canvas resizes,
+or navigation commits. Pointer release or wheel debounce performs the single viewport persistence
+observation. Unit, connection, and canvas-element layers are memoized around stable indexed inputs,
+so text drafts and unrelated gesture previews cannot invalidate stable cards. A geometry-keyed
+spatial index limits Unit and connection rendering to the buffered world rectangle and is rebuilt
+only when document geometry changes.
+
+Text and Sticker DOM rendering share one runtime rich-text layout engine. It owns one lazy canvas
+measurement context, a bounded 32,768-entry glyph-width LRU, weakly cached element layouts, and one
+deduplicated loader per bundled font request. Auto-fit reuses authored glyph widths across fitting
+passes. Active contenteditable input records exact insertion ranges when the browser supplies them,
+falls back to complete-text comparison for other mutations, and coalesces draft publication through
+one animation-frame scheduler. Plain long-text input keeps the browser-mutated text node instead of
+replacing the complete span tree; completed edits still enter View history once.
 Editor and PNG Employee summaries union each Unit's own IDs with all descendants. IDs repeated in
 ancestors remain included in the current subtree; bosses follow ordinary deduplication. The shared
 Units model's deepEmployeeIds union drives hierarchy selectors and export sources unchanged.

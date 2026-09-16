@@ -12,6 +12,12 @@ export async function pointerMoveTag(page: Page, handle: Locator, target: Locato
   await page.mouse.down();
   await page.mouse.move(destination.x + 100, destination.y + y, { steps: 8 });
   await expect(page.locator('[data-demo-id="tag-catalog-drag-preview"]')).toBeVisible();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      }),
+  );
   await page.mouse.up();
 }
 

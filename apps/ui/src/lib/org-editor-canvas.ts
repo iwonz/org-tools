@@ -1491,6 +1491,7 @@ export const applyOrgEditorTextFormat = ({
 export const replaceOrgEditorTextRange = ({
   end,
   formatRuns,
+  graphemeSafeRange = false,
   insertedText,
   insertedTypography,
   start,
@@ -1499,13 +1500,19 @@ export const replaceOrgEditorTextRange = ({
 }: {
   end: number;
   formatRuns: readonly OrgEditorTextFormatRun[];
+  graphemeSafeRange?: boolean;
   insertedText: string;
   insertedTypography: OrgEditorInlineTypography;
   start: number;
   text: string;
   typography: OrgEditorTypography;
 }) => {
-  const range = normalizeTextRange(text, start, end);
+  const range = graphemeSafeRange
+    ? {
+        end: Math.max(0, Math.min(text.length, Math.max(start, end))),
+        start: Math.max(0, Math.min(text.length, Math.min(start, end))),
+      }
+    : normalizeTextRange(text, start, end);
   const nextText = `${text.slice(0, range.start)}${insertedText}${text.slice(range.end)}`;
   const base = resolveOrgEditorCanvasInlineTypography(getOrgEditorInlineTypography(typography));
   const chunks: Array<{ end: number; start: number; typography: OrgEditorInlineTypography }> = [];
@@ -1655,12 +1662,16 @@ export const getOrgEditorRichTextLayout = ({
 }): OrgEditorRichTextLayout => {
   const base = resolveOrgEditorCanvasInlineTypography(getOrgEditorInlineTypography(typography));
   const graphemes = getOrgEditorTextGraphemes(text);
-  const authored = graphemes.map((grapheme) => ({
-    ...grapheme,
-    typography: resolveOrgEditorCanvasInlineTypography(
+  const authored = graphemes.map((grapheme) => {
+    const fragmentTypography = resolveOrgEditorCanvasInlineTypography(
       getOrgEditorTextStyleAt(base, formatRuns, grapheme.start),
-    ),
-  }));
+    );
+    return {
+      ...grapheme,
+      authoredWidth: grapheme.text === "\n" ? 0 : measure(grapheme.text, fragmentTypography),
+      typography: fragmentTypography,
+    };
+  });
   let paragraphWidth = 0;
   let maximumParagraphWidth = 0;
   for (const grapheme of authored) {
@@ -1668,7 +1679,7 @@ export const getOrgEditorRichTextLayout = ({
       maximumParagraphWidth = Math.max(maximumParagraphWidth, paragraphWidth);
       paragraphWidth = 0;
     } else {
-      paragraphWidth += measure(grapheme.text, grapheme.typography);
+      paragraphWidth += grapheme.authoredWidth;
     }
   }
   maximumParagraphWidth = Math.max(maximumParagraphWidth, paragraphWidth);
@@ -1687,7 +1698,17 @@ export const getOrgEditorRichTextLayout = ({
           Math.max(ORG_EDITOR_CANVAS_MIN_TEXT_WIDTH, Math.round(width)),
         );
   let availableWidth = Math.max(1, targetWidth - padding * 2);
+  const linesByScale = new Map<
+    number,
+    Array<{
+      fragments: OrgEditorRichTextFragment[];
+      height: number;
+      width: number;
+    }>
+  >();
   const createLines = (scale: number) => {
+    const cached = linesByScale.get(scale);
+    if (cached) return cached;
     const measured = authored.map((grapheme) => {
       const fragmentTypography = {
         ...grapheme.typography,
@@ -1697,7 +1718,7 @@ export const getOrgEditorRichTextLayout = ({
         ...grapheme,
         height: Math.ceil(fragmentTypography.fontSize * 1.25),
         typography: fragmentTypography,
-        width: grapheme.text === "\n" ? 0 : measure(grapheme.text, fragmentTypography),
+        width: grapheme.authoredWidth * scale,
       };
     });
     const rawLines: Array<{
@@ -1778,6 +1799,7 @@ export const getOrgEditorRichTextLayout = ({
     }
     flushToken();
     if (current.fragments.length > 0 || rawLines.length === 0 || text.endsWith("\n")) finishLine();
+    linesByScale.set(scale, rawLines);
     return rawLines;
   };
 
@@ -1804,17 +1826,21 @@ export const getOrgEditorRichTextLayout = ({
         ? ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_HEIGHT
         : requestedHeight;
   let effectiveScale = 1;
-  if (
-    mode === "text" &&
-    autoWidth &&
-    contentHeightAt(minimumScale) > heightLimit &&
-    targetWidth < ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH
-  ) {
-    targetWidth = ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH;
-    availableWidth = targetWidth - padding * 2;
-  }
-  if (mode === "text" && contentHeightAt(1) > heightLimit) {
-    if (contentHeightAt(minimumScale) <= heightLimit) {
+  if (mode === "text") {
+    let minimumContentHeight = contentHeightAt(minimumScale);
+    if (
+      autoWidth &&
+      minimumContentHeight > heightLimit &&
+      targetWidth < ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH
+    ) {
+      targetWidth = ORG_EDITOR_CANVAS_TEXT_AUTO_MAX_WIDTH;
+      availableWidth = targetWidth - padding * 2;
+      linesByScale.clear();
+      minimumContentHeight = contentHeightAt(minimumScale);
+    }
+    if (minimumContentHeight > heightLimit) {
+      effectiveScale = minimumScale;
+    } else if (contentHeightAt(1) > heightLimit) {
       let lower = minimumScale;
       let upper = 1;
       for (let iteration = 0; iteration < 14; iteration += 1) {
@@ -1823,8 +1849,6 @@ export const getOrgEditorRichTextLayout = ({
         else upper = candidate;
       }
       effectiveScale = lower;
-    } else {
-      effectiveScale = minimumScale;
     }
   }
   const rawLines = createLines(effectiveScale);

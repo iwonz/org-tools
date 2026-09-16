@@ -2765,9 +2765,13 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
 });
 
 test("coalesces large Editor previews and commits each gesture once", async ({ page }) => {
+  test.setTimeout(180_000);
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await openBlankState(page);
+  const diagnosticsUrl = new URL(page.url());
+  diagnosticsUrl.searchParams.set("editorPerformance", "1");
+  await page.goto(diagnosticsUrl.toString(), { waitUntil: "domcontentloaded" });
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
   const systemView = state.organization.views.find((view) => view.kind === "system");
   const timestamp = "2026-08-31T12:00:00.000Z";
@@ -2797,7 +2801,87 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     username: `employee-${index + 1}`,
   }));
   if (!systemView) throw new Error("System View is unavailable.");
-  systemView.structure.canvasElements = [];
+  const typography = {
+    color: "#334155" as const,
+    fontFamily: "system-ui",
+    fontSize: 18,
+    fontWeight: 400 as const,
+    horizontalAlign: "left" as const,
+    verticalAlign: "top" as const,
+  };
+  systemView.structure.canvasElements = [
+    ...Array.from({ length: 400 }, (_, index) => ({
+      attachment:
+        index % 20 === 0
+          ? {
+              offset: { x: 72, y: 0 },
+              sourceAnchorId: "center" as const,
+              target: {
+                anchorId: "center" as const,
+                owner: { type: "unit" as const, unitId: unitId(index) },
+              },
+            }
+          : null,
+      autoWidth: true,
+      fillColor: "amber" as const,
+      fillMode: "none" as const,
+      formatRuns: [],
+      height: 32,
+      id: uuid("5001", index + 1),
+      layer: "aboveUnits" as const,
+      rotation: 0,
+      text:
+        index === 0
+          ? "Long performance text ".repeat(3_000).slice(0, 60_000)
+          : `Performance text ${index + 1}`,
+      typography,
+      type: "text" as const,
+      width: 48,
+      x: (index % 50) * 360 + 48,
+      y: Math.floor(index / 50) * 240 + 48,
+    })),
+    ...Array.from({ length: 400 }, (_, index) => ({
+      attachment: null,
+      backgroundColor: index % 2 === 0 ? ("amber" as const) : ("blue" as const),
+      formatRuns: [],
+      height: 168,
+      id: uuid("5002", index + 1),
+      layer: "aboveUnits" as const,
+      rotation: 0,
+      text: `Performance note ${index + 1}`,
+      typography: {
+        ...typography,
+        fontSize: 20,
+        horizontalAlign: "center" as const,
+        verticalAlign: "middle" as const,
+      },
+      type: "sticker" as const,
+      width: 220,
+      x: (index % 50) * 360 + 120,
+      y: Math.floor(index / 50) * 240 + 300,
+    })),
+    ...Array.from({ length: 400 }, (_, index) => {
+      const start = {
+        x: (index % 50) * 360 + 280,
+        y: Math.floor(index / 50) * 240 + 110,
+      };
+      const end = { x: start.x + 120, y: start.y + 80 };
+      return {
+        dash: "solid" as const,
+        end: { attachment: null, ...end },
+        endControl: { x: -40, y: 0 },
+        endMarker: "arrow" as const,
+        id: uuid("5003", index + 1),
+        layer: "behindUnits" as const,
+        start: { attachment: null, ...start },
+        startControl: { x: 40, y: 0 },
+        startMarker: "none" as const,
+        strokeColor: "#334155" as const,
+        strokeWidth: 2,
+        type: "arrow" as const,
+      };
+    }),
+  ];
   systemView.structure.units = Array.from({ length: 4_000 }, (_, index) => {
     const firstEmployeeIndex = index * 5;
     const employeeIds = Array.from({ length: 5 }, (_, offset) =>
@@ -2851,13 +2935,91 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   await expect
     .poll(async () => Number(await canvas.getAttribute("data-spatial-candidate-count")))
     .toBeLessThan(200);
-  await page.waitForTimeout(800);
+  const longTextElement = canvas.locator(
+    '[data-canvas-element-id="00000000-0000-5001-8000-000000000001"]',
+  );
+  await expect(longTextElement).toBeVisible();
+  await expect
+    .poll(() =>
+      longTextElement.evaluate((element: HTMLElement) => Number.parseFloat(element.style.width)),
+    )
+    .toBe(480);
+  await expect
+    .poll(async () => {
+      const response = await page.request.get("/api/state");
+      const document = (await response.json()) as { state: OrgToolsState };
+      const persistedLongText = document.state.organization.views
+        .flatMap((view) => view.structure.canvasElements)
+        .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
+      return persistedLongText?.type === "text" ? persistedLongText.width : null;
+    })
+    .toBe(480);
+  await page.waitForTimeout(2_000);
+  const performanceCdp = await page.context().newCDPSession(page);
+  await performanceCdp.send("HeapProfiler.collectGarbage");
+  await performanceCdp.detach();
 
-  const writes: Array<{ scope?: string }> = [];
+  const resetPerformanceDiagnostics = () =>
+    page.evaluate(() => {
+      const diagnostics = (
+        window as typeof window & {
+          __ORG_TOOLS_EDITOR_PERFORMANCE__?: { reset: () => void };
+        }
+      ).__ORG_TOOLS_EDITOR_PERFORMANCE__;
+      if (!diagnostics) throw new Error("Editor performance diagnostics are unavailable.");
+      diagnostics.reset();
+    });
+  const readPerformanceDiagnostics = () =>
+    page.evaluate(() => {
+      const diagnostics = (
+        window as typeof window & {
+          __ORG_TOOLS_EDITOR_PERFORMANCE__?: {
+            snapshot: () => Record<string, number>;
+          };
+        }
+      ).__ORG_TOOLS_EDITOR_PERFORMANCE__;
+      if (!diagnostics) throw new Error("Editor performance diagnostics are unavailable.");
+      return diagnostics.snapshot();
+    });
+  const startFrameSampling = () =>
+    page.evaluate(() => {
+      const sampleWindow = window as typeof window & {
+        __ORG_TOOLS_EDITOR_FRAME_SAMPLES__?: number[];
+        __ORG_TOOLS_EDITOR_FRAME_SAMPLING__?: boolean;
+      };
+      sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLES__ = [];
+      sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLING__ = true;
+      let previous: number | null = null;
+      const sample = (time: number) => {
+        if (previous !== null)
+          sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLES__?.push(time - previous);
+        previous = time;
+        if (sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLING__) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+  const stopFrameSampling = () =>
+    page.evaluate(() => {
+      const sampleWindow = window as typeof window & {
+        __ORG_TOOLS_EDITOR_FRAME_SAMPLES__?: number[];
+        __ORG_TOOLS_EDITOR_FRAME_SAMPLING__?: boolean;
+      };
+      sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLING__ = false;
+      return sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLES__ ?? [];
+    });
+
+  const writes: Array<{ longTextLength?: number; scope?: string }> = [];
   const onRequest = (request: Request) => {
     if (request.method() !== "PUT" || !request.url().endsWith("/api/state")) return;
-    const payload = request.postDataJSON();
-    if (payload && typeof payload === "object") writes.push(payload as { scope?: string });
+    const payload = request.postDataJSON() as { scope?: string; state?: OrgToolsState } | null;
+    if (!payload || typeof payload !== "object") return;
+    const longText = payload.state?.organization.views
+      .flatMap((view) => view.structure.canvasElements)
+      .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
+    writes.push({
+      ...(longText?.type === "text" ? { longTextLength: longText.text.length } : {}),
+      ...(payload.scope ? { scope: payload.scope } : {}),
+    });
   };
   page.on("request", onRequest);
 
@@ -2867,11 +3029,25 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     x: canvasBox.x + canvasBox.width - 80,
     y: canvasBox.y + canvasBox.height - 80,
   };
+  await resetPerformanceDiagnostics();
+  await startFrameSampling();
   await page.mouse.move(panStart.x, panStart.y);
   await page.mouse.down({ button: "middle" });
   await page.mouse.move(panStart.x + 48, panStart.y + 24, { steps: 20 });
   await page.waitForTimeout(500);
   expect(writes).toEqual([]);
+  const panPreviewDiagnostics = await readPerformanceDiagnostics();
+  expect(panPreviewDiagnostics.viewportFrames).toBeGreaterThan(0);
+  expect(panPreviewDiagnostics.viewportWindowInvalidations).toBe(0);
+  expect(panPreviewDiagnostics.richTextLayoutComputations).toBe(0);
+  expect(panPreviewDiagnostics.unitRenders).toBe(0);
+  expect(panPreviewDiagnostics.canvasElementRenders).toBe(0);
+  const frameSamples = await stopFrameSampling();
+  const sortedFrameSamples = [...frameSamples].sort((first, second) => first - second);
+  const frameP95 = sortedFrameSamples[Math.floor((sortedFrameSamples.length - 1) * 0.95)] ?? 0;
+  expect(frameSamples.length).toBeGreaterThan(10);
+  expect(frameP95).toBeLessThanOrEqual(33);
+  expect(Math.max(...frameSamples)).toBeLessThanOrEqual(100);
   await page.mouse.up({ button: "middle" });
   await expect.poll(() => writes.filter((write) => write.scope === "ui").length).toBe(1);
 
@@ -2888,7 +3064,9 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   await page.waitForTimeout(500);
   expect(writes.filter((write) => write.scope === "all")).toEqual([]);
   await page.mouse.up();
-  await expect.poll(() => writes.filter((write) => write.scope === "all").length).toBe(1);
+  await expect
+    .poll(() => writes.filter((write) => write.scope === "all"))
+    .toEqual([{ longTextLength: 60_000, scope: "all" }]);
   const committedPosition = await firstUnit.evaluate((element) => {
     const unit = element as HTMLElement;
     return { x: Number.parseFloat(unit.style.left), y: Number.parseFloat(unit.style.top) };
@@ -2896,7 +3074,101 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
   expect(Math.abs(committedPosition.x % 24)).toBe(0);
   expect(Math.abs(committedPosition.y % 24)).toBe(0);
   expect(Number(await canvas.getAttribute("data-spatial-candidate-count"))).toBeLessThan(200);
+
+  writes.length = 0;
+  await longTextElement.dblclick({ force: true });
+  const richTextEditor = longTextElement.getByRole("textbox");
+  await expect(richTextEditor).toBeFocused();
+  await richTextEditor.press("End");
+  await page.keyboard.type("w");
+  await richTextEditor.press("Backspace");
+  await page.waitForTimeout(350);
+  await expect
+    .poll(() => richTextEditor.evaluate((element) => element.textContent?.length))
+    .toBe(60_000);
+  await richTextEditor.evaluate((element) => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    const textNode = element.querySelector("span:last-child")?.lastChild;
+    if (textNode instanceof Text) range.setStart(textNode, textNode.length);
+    else {
+      range.selectNodeContents(element);
+      range.collapse(false);
+    }
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  });
+  await richTextEditor.evaluate((element) => {
+    const latencyWindow = window as typeof window & {
+      __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
+      __ORG_TOOLS_EDITOR_INPUT_LENGTHS__?: number[];
+    };
+    latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LATENCIES__ = [];
+    latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LENGTHS__ = [];
+    element.addEventListener(
+      "input",
+      () => {
+        latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LENGTHS__?.push(element.textContent?.length ?? -1);
+        const start = performance.now();
+        requestAnimationFrame(() => {
+          latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LATENCIES__?.push(performance.now() - start);
+        });
+      },
+      { signal: AbortSignal.timeout(5_000) },
+    );
+  });
+  const inputSample = "abcdefghij".repeat(4);
+  for (const character of inputSample) {
+    await page.keyboard.insertText(character);
+    await page.waitForTimeout(24);
+  }
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __ORG_TOOLS_EDITOR_INPUT_LENGTHS__?: number[];
+          }
+        ).__ORG_TOOLS_EDITOR_INPUT_LENGTHS__ ?? [],
+    ),
+  ).toEqual(Array.from({ length: inputSample.length }, (_, index) => 60_001 + index));
+  await expect
+    .poll(() => richTextEditor.evaluate((element) => element.textContent?.length))
+    .toBe(60_000 + inputSample.length);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
+            }
+          ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__?.length ?? 0,
+      ),
+    )
+    .toBe(inputSample.length);
+  const inputLatencies = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
+        }
+      ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__ ?? [],
+  );
+  const sortedInputLatencies = [...inputLatencies].sort((first, second) => first - second);
+  const inputP95 = sortedInputLatencies[Math.floor((sortedInputLatencies.length - 1) * 0.95)] ?? 0;
+  expect(inputP95).toBeLessThanOrEqual(50);
+  const textCommitResponsePromise = page.waitForResponse(
+    (response) => response.request().method() === "PUT" && response.url().endsWith("/api/state"),
+  );
+  await richTextEditor.press("Escape");
+  await expect
+    .poll(() => writes.filter((write) => write.scope === "all"))
+    .toEqual([{ longTextLength: 60_040, scope: "all" }]);
+  expect((await textCommitResponsePromise).ok()).toBe(true);
   page.off("request", onRequest);
+  await resetServerState(page);
   await assertLocalRequests();
 });
 

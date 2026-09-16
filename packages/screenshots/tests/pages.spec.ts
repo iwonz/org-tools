@@ -8,6 +8,7 @@ import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" }
 import zhMessages from "../../../apps/ui/messages/zh.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
+import { exerciseLargeEditorPerformance } from "./editor-performance-workflow.js";
 import {
   createDistributionStateFile,
   localeStorageKey,
@@ -61,6 +62,11 @@ test("edits durable canvas tools and exports the complete View PNG", async ({ pa
   await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await exerciseCanvasToolsAndViewExport(page);
+});
+
+test("coalesces large Editor previews and commits each gesture once", async ({ page }) => {
+  test.setTimeout(180_000);
+  await exerciseLargeEditorPerformance(page, "pages");
 });
 
 const useEnglish = (key: string) => window.localStorage.setItem(key, "en");
