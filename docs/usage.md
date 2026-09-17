@@ -128,7 +128,8 @@ control.
   attached annotations, while a multi-Employee drop remains an ordinary Unit drop. A thin dashed
   outline surrounds the complete open-position row on the canvas and in Editor PNG output without
   changing its geometry; selection and drop feedback temporarily take visual priority while keeping
-  the outline visible with semantic color.
+  the outline visible with semantic color. Employee and open-position surfaces have a compact four
+  logical pixel interval only between adjacent rows; the first and last rows add no outer interval.
   The bottom-center tools row provides Select, Text, Arrow, Sticker, and embedded Image, including in
   an empty View. Arrow uses one Bezier curve with a free start and filled triangular end marker;
   Image uses a rounded-square photo glyph. Choosing a creation tool clears the current canvas selection; a plain element click selects
@@ -175,7 +176,8 @@ control.
   the totals. Canvas, PNG, Units, and hierarchy selection trees share this meaning.
   Unit cards keep the same opaque background
   when hovered or selected, with selection indicated only by the signal border. PNG output mirrors
-  the live Unit header, roster spacing, centered avatars, boss marker, variable row heights,
+  the live Unit header, four-pixel interior-only roster spacing, centered avatars, boss marker,
+  variable row heights,
   direct-membership Tag summary footer, persistent distribution row tones, and hierarchy connections
   while retaining a light export palette and configurable output styling. Unit-only and subtree
   images determine distribution status from the complete active View, including assignments outside

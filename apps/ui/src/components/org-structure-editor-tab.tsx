@@ -168,6 +168,7 @@ import {
   getOrgEditorVisibleEmployeeIds,
   isPointInsideRect,
   ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
+  ORG_EDITOR_EMPLOYEE_ROW_GAP,
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
@@ -1565,7 +1566,11 @@ function OrgEditorNode({
       {shouldRenderEmployeeList && (
         <div
           className={cn("p-2", shouldVirtualizeEmployees ? "relative" : "grid")}
-          style={shouldVirtualizeEmployees ? { height: employeeListHeight } : undefined}
+          style={
+            shouldVirtualizeEmployees
+              ? { height: employeeListHeight }
+              : { rowGap: ORG_EDITOR_EMPLOYEE_ROW_GAP }
+          }
         >
           {visibleRows.length === 0 ? (
             unit.liveFilter !== null ? (

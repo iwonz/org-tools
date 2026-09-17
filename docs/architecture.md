@@ -57,7 +57,10 @@ precedence.
 Employee and open-position rows form one discriminated, prefix-offset layout for sorting,
 virtualization, hit testing, side anchors, DOM, and PNG. Boss Employees remain first; position Tags
 affect grouping without changing Employee counts or the Unit Tag cloud. Live Units require an empty
-position array. View clone and Unit Paste preserve backgrounds, regenerate position IDs, and remap
+position array. The layout inserts exactly four logical pixels between adjacent row surfaces and no
+row gap before the first or after the last surface; Unit height, hierarchy placement, anchors, DOM,
+and PNG all consume those same offsets. View clone and Unit Paste preserve backgrounds, regenerate
+position IDs, and remap
 attachments; replacement rekeys the owner to an Employee occurrence in one history command, while
 deletion detaches at the last resolved world point.
 

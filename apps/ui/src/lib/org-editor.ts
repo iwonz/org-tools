@@ -28,6 +28,7 @@ export const ORG_EDITOR_EMPLOYEE_CONTENT_RIGHT_PADDING = 4;
 export const ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE = 12;
 export const ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT = 16;
 export const ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS = 6;
+export const ORG_EDITOR_EMPLOYEE_ROW_GAP = 4;
 export const ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING = 8;
 export const ORG_EDITOR_EMPLOYEE_TAG_STYLE = {
   fontSize: 9,
@@ -569,6 +570,17 @@ export type OrgEditorEmployeeRowLayout = {
   totalHeight: number;
 };
 
+export const getOrgEditorEmployeeRowStackLayout = (heights: readonly number[]) => {
+  const offsets: number[] = [];
+  let totalHeight = 0;
+  for (const [index, height] of heights.entries()) {
+    if (index > 0) totalHeight += ORG_EDITOR_EMPLOYEE_ROW_GAP;
+    offsets.push(totalHeight);
+    totalHeight += height;
+  }
+  return { offsets, totalHeight };
+};
+
 export const getOrgEditorEmployeeRowLayout = (
   unit: Pick<
     OrgEditorUnit,
@@ -595,12 +607,7 @@ export const getOrgEditorEmployeeRowLayout = (
     : [...orderedRows];
   const heightByRowKey = source?.heightByRowKey;
   const heights = rows.map((row) => heightByRowKey?.get(row.key) ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT);
-  const offsets: number[] = [];
-  let totalHeight = 0;
-  for (const height of heights) {
-    offsets.push(totalHeight);
-    totalHeight += height;
-  }
+  const { offsets, totalHeight } = getOrgEditorEmployeeRowStackLayout(heights);
   return { heights, offsets, rows, totalHeight };
 };
 
@@ -671,7 +678,7 @@ export const getOrgEditorUnitHeightForEmployeeRows = ({
     collapsed ? ORG_EDITOR_UNIT_COLLAPSED_HEIGHT : ORG_EDITOR_UNIT_MIN_HEIGHT,
     ORG_EDITOR_UNIT_HEADER_HEIGHT +
       ORG_EDITOR_UNIT_VERTICAL_PADDING +
-      employeeRowHeights.reduce((sum, height) => sum + height, 0),
+      getOrgEditorEmployeeRowStackLayout(employeeRowHeights).totalHeight,
   );
 };
 

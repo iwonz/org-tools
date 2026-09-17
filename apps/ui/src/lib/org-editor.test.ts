@@ -10,6 +10,7 @@ import {
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
+  getOrgEditorEmployeeRowStackLayout,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorEmployeeVisualGeometry,
   getOrgEditorOrderedUnitRows,
@@ -18,6 +19,7 @@ import {
   getOrgEditorUnitTagFooterChipWidth,
   getOrgEditorUnitTagFooterHeight,
   layoutOrgEditorUnits,
+  ORG_EDITOR_EMPLOYEE_ROW_GAP,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_GRID_MIN_SCREEN_SIZE,
   ORG_EDITOR_GRID_SIZE,
@@ -178,6 +180,19 @@ describe("Org Editor Employee summaries", () => {
 });
 
 describe("Org Editor variable Employee geometry", () => {
+  test("adds spacing only between visible rows", () => {
+    expect(ORG_EDITOR_EMPLOYEE_ROW_GAP).toBe(4);
+    expect(getOrgEditorEmployeeRowStackLayout([])).toEqual({ offsets: [], totalHeight: 0 });
+    expect(getOrgEditorEmployeeRowStackLayout([48])).toEqual({
+      offsets: [0],
+      totalHeight: 48,
+    });
+    expect(getOrgEditorEmployeeRowStackLayout([48, 76, 48])).toEqual({
+      offsets: [0, 52, 132],
+      totalHeight: 180,
+    });
+  });
+
   test("keeps card content on one shared visual grid", () => {
     expect(ORG_EDITOR_EMPLOYEE_TAG_STYLE).toEqual({
       fontSize: 9,
@@ -234,10 +249,12 @@ describe("Org Editor variable Employee geometry", () => {
 
     const layout = getOrgEditorEmployeeRowLayout(unit);
     expect(firstHeight).toBeGreaterThan(48);
-    expect(layout.offsets).toEqual([0, firstHeight]);
-    expect(layout.totalHeight).toBe(firstHeight + 48);
+    expect(layout.offsets).toEqual([0, firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP]);
+    expect(layout.totalHeight).toBe(firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP + 48);
     expect(findOrgEditorEmployeeRowIndex(layout, firstHeight + 1)).toBe(1);
-    expect(getOrgEditorEmployeeBounds(unit, 1).y).toBe(unit.y + 72 + 8 + firstHeight);
+    expect(getOrgEditorEmployeeBounds(unit, 1).y).toBe(
+      unit.y + 72 + 8 + firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP,
+    );
     expect(getOrgEditorUnitHeight(unit)).toBeGreaterThan(120);
   });
 
@@ -289,8 +306,8 @@ describe("Org Editor mixed Unit rows", () => {
     );
     expect(getOrgEditorEmployeeRowLayout(unit)).toMatchObject({
       heights: [48, 76, 48, 48],
-      offsets: [0, 48, 124, 172],
-      totalHeight: 220,
+      offsets: [0, 52, 132, 184],
+      totalHeight: 232,
     });
 
     unit.collapsed = true;

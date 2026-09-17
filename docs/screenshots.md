@@ -277,7 +277,9 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 Arrange opaque Unit cards and representative rich Text, flat bordered Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
 the bottom-centered canvas toolbar, including a synthetic colored open-position row whose complete
-dashed outline distinguishes the vacancy from Employee rows in a manual Unit and Editor PNG.
+dashed outline distinguishes the vacancy from Employee rows in a manual Unit and Editor PNG. The
+mixed roster demonstrates the shared four-pixel interval between adjacent surfaces without an extra
+row interval above the first or below the last card.
 View management stays top-left, canvas commands and Image export
 stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates the
 five local fonts, partial Text/Sticker typography, line fill, bounded two-axis Text auto-fit, the Bold
@@ -595,7 +597,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   lifecycle actions stay disabled, and View controls show no hover or native tooltip.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
-  heights, content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
+  heights, exactly four logical pixels between adjacent Employee/open-position surfaces with no
+  outer row gap, content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
   row tones and optional open-position tonal backgrounds resolved from the complete active View,
   transparent vacancies, and connection endpoints without card overlap, membership-type labels,
   placement overlays, or transient editing chrome.

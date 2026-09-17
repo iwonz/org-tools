@@ -31,6 +31,7 @@ import {
   buildOrgEditorUnitTagSummary,
   createOrgEditorUnitTagFooterLayout,
   getOrgEditorEmployeePosition,
+  getOrgEditorEmployeeRowStackLayout,
   getOrgEditorEmployeeRowSurfaceBounds,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorEmployeeVisualGeometry,
@@ -1417,12 +1418,7 @@ export const createOrgEditorImageExportResult = async ({
     const employeeRowHeights = employeeTagLayouts.map((layout) =>
       getOrgEditorExportEmployeeRowHeightForTagLayout(layout),
     );
-    const employeeRowOffsets: number[] = [];
-    let rowOffset = 0;
-    for (const height of employeeRowHeights) {
-      employeeRowOffsets.push(rowOffset);
-      rowOffset += height;
-    }
+    const { offsets: employeeRowOffsets } = getOrgEditorEmployeeRowStackLayout(employeeRowHeights);
 
     const tagSummaries = viewSettings.showTagCloud
       ? buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder)

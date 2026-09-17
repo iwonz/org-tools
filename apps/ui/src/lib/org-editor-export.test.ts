@@ -6,6 +6,7 @@ import {
   getOrgEditorUnitBounds,
   getOrgEditorUnitHeightForEmployeeRows,
   ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
+  ORG_EDITOR_EMPLOYEE_ROW_GAP,
   ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
@@ -130,7 +131,7 @@ describe("Org Editor image export", () => {
       ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
     const taggedOutline = getOrgEditorExportOpenPositionRowOutline({
       employeeRowHeight: taggedHeight,
-      employeeRowOffset: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+      employeeRowOffset: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT + ORG_EDITOR_EMPLOYEE_ROW_GAP,
       unit,
     });
 
@@ -150,7 +151,9 @@ describe("Org Editor image export", () => {
     });
     expect(taggedOutline.bounds.height).toBe(taggedHeight - 1);
     expect(taggedOutline.bounds.width).toBe(defaultOutline.bounds.width);
-    expect(taggedOutline.bounds.y).toBe(defaultOutline.bounds.y + ORG_EDITOR_EMPLOYEE_ROW_HEIGHT);
+    expect(taggedOutline.bounds.y).toBe(
+      defaultOutline.bounds.y + ORG_EDITOR_EMPLOYEE_ROW_HEIGHT + ORG_EDITOR_EMPLOYEE_ROW_GAP,
+    );
   });
 
   test("resolves optional open-position backgrounds through the shared tonal palette", () => {
@@ -302,7 +305,7 @@ describe("Org Editor image export", () => {
         collapsed: false,
         employeeRowHeights: [76, 48],
       }),
-    ).toBe(212);
+    ).toBe(216);
     expect(getOrgEditorUnitBounds({ ...unit, noteMarkdown: "# Private note" })).toEqual(
       getOrgEditorUnitBounds(unit),
     );
@@ -356,11 +359,11 @@ describe("Org Editor image export", () => {
         employeeById: new Map(),
         layoutMode: "topDown",
         parentUnit: unit,
-        parentUnitHeight: 212,
+        parentUnitHeight: 216,
         unit: child,
         unitHeight: 136,
       }),
-    ).toBe("M 188 212 C 188 256, 540 256, 540 300");
+    ).toBe("M 188 216 C 188 258, 540 258, 540 300");
   });
 
   test("reports exact density and clamps by both pixel area and canvas side", () => {

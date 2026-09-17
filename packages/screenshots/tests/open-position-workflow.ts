@@ -1,6 +1,34 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
 import { applyColorPickerDraft, expectUsedColorPalette } from "./helpers.js";
+
+const expectUnitRowSpacing = async (unit: Locator, expectedCount: number) => {
+  const rows = unit.locator(
+    "[data-org-editor-employee-row-container], [data-org-editor-open-position-row-container]",
+  );
+  await expect(rows).toHaveCount(expectedCount);
+  const geometry = await rows.evaluateAll((elements) => {
+    const rects = elements.map((element) => element.getBoundingClientRect());
+    const stack = elements[0]?.parentElement;
+    if (!stack) throw new Error("Editor row stack is unavailable.");
+    const stackRect = stack.getBoundingClientRect();
+    const style = getComputedStyle(stack);
+    return {
+      bottomInset:
+        stackRect.bottom -
+        Number.parseFloat(style.paddingBottom || "0") -
+        (rects.at(-1)?.bottom ?? stackRect.bottom),
+      gaps: rects.slice(1).map((rect, index) => rect.top - (rects[index]?.bottom ?? rect.top)),
+      topInset:
+        (rects[0]?.top ?? stackRect.top) -
+        stackRect.top -
+        Number.parseFloat(style.paddingTop || "0"),
+    };
+  });
+  expect(geometry.topInset).toBeCloseTo(0, 4);
+  expect(geometry.bottomInset).toBeCloseTo(0, 4);
+  for (const gap of geometry.gaps) expect(gap).toBeCloseTo(4, 4);
+};
 
 export async function exerciseOpenPositions(page: Page) {
   const productUnit = page.locator(
@@ -18,6 +46,7 @@ export async function exerciseOpenPositions(page: Page) {
   await expect(position).toContainText("Remote");
   await expect(position).toContainText("Oct 1");
   await expect(position.locator("[data-org-editor-open-position-avatar]")).toBeVisible();
+  await expectUnitRowSpacing(productUnit, 3);
   await expect(positionContainer).toHaveAttribute("data-open-position-background", "amber");
   const restingBackgroundColor = await positionContainer.evaluate(
     (element) => getComputedStyle(element).backgroundColor,
@@ -94,9 +123,11 @@ export async function exerciseOpenPositions(page: Page) {
   await productUnit.click({ button: "right", position: { x: 80, y: 24 } });
   await page.getByRole("menuitem", { name: "Collapse", exact: true }).click();
   await expect(position).toHaveCount(0);
+  await expectUnitRowSpacing(productUnit, 1);
   await productUnit.click({ button: "right", position: { x: 80, y: 24 } });
   await page.getByRole("menuitem", { name: "Expand", exact: true }).click();
   await expect(position).toContainText("Senior Product Engineer");
+  await expectUnitRowSpacing(productUnit, 3);
 
   await position.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();

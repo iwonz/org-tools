@@ -45,7 +45,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   without rebuilding or rescanning the active View for each preview.
 - Virtualize discriminated Employee/open-position Unit rows, Unit-aware pickers, filter options,
   Analytics rows, and event dialogs. Stable row keys share cached measured heights and prefix
-  offsets; open-position anchor and drop hit testing resolves one indexed row instead of scanning a
+  offsets. The prefix sum includes one four-pixel gap before every row after the first, so DOM,
+  virtual windows, hit testing, anchors, Unit bounds, hierarchy placement, and PNG reuse one O(n)
+  geometry pass without per-row margins or measurements. Open-position anchor and drop hit testing
+  resolves one indexed row instead of scanning a
   roster. An optional open-position background is one O(1) tonal-style lookup on an already-mounted
   row and adds no geometry invalidation, scan, index, or subscription; Employee-only projections
   continue to consume the existing assignment indexes.
