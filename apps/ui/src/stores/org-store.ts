@@ -55,6 +55,7 @@ import {
   parseOrgToolsState,
 } from "@/lib/org-file";
 import { normalizeSearchValue } from "@/lib/search-index";
+import { collectUsedEmployeeTagColors } from "@/lib/tag-color";
 import { moveCatalogTag } from "@/lib/tag-order";
 import type {
   ExportFieldDropPlacement,
@@ -292,6 +293,14 @@ export class OrgStore {
           : [];
       }),
     ];
+  }
+
+  get usedTagColors() {
+    const viewSources = this.orgViews.views.flatMap((view) => {
+      const editor = this.orgViews.editorByViewId.get(view.id);
+      return editor ? [editor] : [];
+    });
+    return collectUsedEmployeeTagColors(this.tagDefinitions, viewSources);
   }
 
   get units() {

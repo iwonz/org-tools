@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
-import { applyColorPickerDraft } from "./helpers.js";
+import { applyColorPickerDraft, expectUsedColorPalette } from "./helpers.js";
 
 export async function exerciseOpenPositions(page: Page) {
   const productUnit = page.locator(
@@ -104,6 +104,7 @@ export async function exerciseOpenPositions(page: Page) {
   const backgroundControl = dialog.locator('[data-demo-id="org-editor-open-position-background"]');
   await expect(backgroundControl).toContainText("Amber");
   await backgroundControl.getByRole("button", { name: "Background color", exact: true }).click();
+  await expectUsedColorPalette(page);
   await applyColorPickerDraft(page, { color: "Blue", opacity: 40 });
   await dialog.locator('[data-demo-id="org-editor-open-position-title"]').fill("Staff Engineer");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();

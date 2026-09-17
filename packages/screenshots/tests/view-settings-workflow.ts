@@ -1,6 +1,11 @@
 import type { Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
-import { applyColorPickerDraft, createDistributionStateFile, openImportDialog } from "./helpers.js";
+import {
+  applyColorPickerDraft,
+  createDistributionStateFile,
+  expectUsedColorPalette,
+  openImportDialog,
+} from "./helpers.js";
 import { exportState } from "./refined-editor-workflow.js";
 
 export async function exerciseViewSettings(page: Page) {
@@ -61,6 +66,7 @@ export async function exerciseViewSettings(page: Page) {
   const distributed = dialog.getByRole("button", { name: "Distributed", exact: true });
   await distributed.click();
   const picker = page.locator('[data-demo-id="tag-color-dropdown"]');
+  await expectUsedColorPalette(page);
   await expect(picker.getByRole("option", { name: "No color", exact: true })).toHaveCount(0);
   const palette = picker.getByRole("slider", { name: "Choose custom color" });
   const bounds = await palette.boundingBox();
@@ -109,7 +115,13 @@ export async function exerciseViewSettings(page: Page) {
       .evaluate((marker) => getComputedStyle(marker).fill),
   ).toBe(lightPathColor);
   await dialog.getByRole("button", { name: "Not distributed", exact: true }).click();
-  await applyColorPickerDraft(page, { color: "Rose" });
+  const usedColors = await expectUsedColorPalette(page, ["#334155"]);
+  await usedColors.locator('[data-tag-color-used="#334155"]').click();
+  expect(await writes()).toBe(1);
+  await expect(picker.getByRole("spinbutton", { name: "Opacity (%)", exact: true })).toHaveValue(
+    "100",
+  );
+  await applyColorPickerDraft(page);
   await expect.poll(writes).toBe(2);
   await expect.poll(nameColors).toEqual(normalNameColors);
   await page.keyboard.press("Escape");
@@ -249,7 +261,7 @@ export async function exerciseViewSettings(page: Page) {
     groupByTag: true,
     showTagCloud: false,
     distributedColor: "#7c3aed66",
-    undistributedColor: "rose",
+    undistributedColor: "#334155",
   });
 
   const peer = await page.context().newPage();

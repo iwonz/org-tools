@@ -222,7 +222,10 @@ history, collaborative cursors, or remote synchronization.
   against the composited light or dark surface. Flat catalog rows expose Eye, Color, Edit, and Delete
   in that order. The row-level modal color Popover owns its nested scroll lock and one local draft
   containing HSV, exact HTML Keyword/HEX/RGB/RGBA input, and a synchronized zero-through-hundred
-  opacity value. One wrapping listbox contains the optional No color chip and eight named chips.
+  opacity value. A MobX-computed, non-persistent color index visits global Tags and every View in
+  stable order only while a picker is open, without cloning State. It deduplicates resolved RGBA and
+  exposes configured values as compact checkerboard-backed Used colors swatches. One wrapping
+  listbox contains the optional No color chip and eight named chips.
   Only Apply emits the canonical nullable color once; Cancel, Escape, outside dismissal, invalid
   input, and unchanged Apply emit nothing. Edit is a separate rename-only modal. Eye resolves the
   current `tagId` into a virtualized full Employee-card list.

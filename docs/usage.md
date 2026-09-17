@@ -60,9 +60,12 @@ control.
   deletion. Its flat rows expose Eye, Color, Edit, and Delete: Eye opens current full Employee cards,
   Edit opens a rename-only modal, and Color opens the picker directly. The picker keeps a full custom
   palette, a synchronized opacity slider and percentage field, exact HTML Keyword, HEX, RGB, or RGBA
-  entry, and one compact wrapping set of localized named chips plus No color. Color and opacity remain
-  a local preview until **Apply**; **Cancel**, Escape, outside dismissal, invalid input, and unchanged
-  Apply make no change. Keyword, HEX, and RGB preserve the draft opacity, while RGBA updates both.
+  entry, one compact wrapping set of localized named chips plus No color, and compact **Used colors**
+  swatches collected from global Tags and every View. Used swatches preserve exact alpha, include
+  inactive Views, and disappear when their last configured use is removed; no separate recent-color
+  history is stored. Color and opacity remain a local preview until **Apply**; **Cancel**, Escape,
+  outside dismissal, invalid input, and unchanged Apply make no change. Keyword, HEX, and RGB preserve
+  the draft opacity, while RGBA updates both.
   Named colors at 100% retain their semantic name, opaque arbitrary choices use canonical `#rrggbb`,
   and lower opacity uses canonical `#rrggbbaa`; a zero-percent configured color remains distinct from
   No color. Semi-transparent fills keep their real alpha and an opaque readable foreground in both
@@ -127,7 +130,8 @@ control.
   changing its geometry; selection and drop feedback temporarily take visual priority while keeping
   the outline visible with semantic color.
   The bottom-center tools row provides Select, Text, Arrow, Sticker, and embedded Image, including in
-  an empty View. Choosing a creation tool clears the current canvas selection; a plain element click selects
+  an empty View. Arrow uses one Bezier curve with a free start and filled triangular end marker;
+  Image uses a rounded-square photo glyph. Choosing a creation tool clears the current canvas selection; a plain element click selects
   only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens Back,
   Front, Duplicate, and Delete instead of Unit or layer-plane commands; these commands are absent
   from the properties row. Text and Sticker offer **System**, **Georgia**, **Bebas Neue**, **Lobster**,

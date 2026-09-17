@@ -265,6 +265,10 @@ for (const [locale, messages] of [
     await tagColorTrigger.click();
     const tagColorDropdown = page.locator('[data-demo-id="tag-color-dropdown"]');
     await expect(tagColorDropdown).toContainText(messages.Ui["Full color palette"]);
+    await expect(tagColorDropdown).toContainText(messages.Ui["Used colors"]);
+    await expect(
+      tagColorDropdown.getByRole("listbox", { name: messages.Ui["Used colors"], exact: true }),
+    ).toBeVisible();
     await expect(tagColorDropdown).toContainText(messages.Ui["Exact color"]);
     await expect(tagColorDropdown.getByLabel(messages.Ui["Color format"])).toBeVisible();
     await expect(tagColorDropdown.getByLabel(messages.Ui["Color value"])).toBeVisible();

@@ -37,7 +37,9 @@ the full Tag color palette, independent opacity control, and exact HTML Keyword,
 parser run locally and persist only semantic names or canonical lowercase six- or eight-digit HEX
 without contacting a palette, color, or asset service. Color and opacity stay in Popover memory until
 Apply; Cancel, Escape, outside dismissal, invalid input, and unchanged Apply discard the draft without
-changing state. Zero-percent color remains a configured eight-digit value distinct from No color.
+changing state. Used colors are derived locally from current global Tags and all current View
+documents only while needed; they are not a persisted history and never include clipboard or
+Image-export draft data. Zero-percent color remains a configured eight-digit value distinct from No color.
 Bundled language flags never create network requests. Dragging a field never transmits or
 persists organization data. Custom Views contain references to the same global Employee catalog and
 never duplicate profile or avatar payloads. Organization records are never

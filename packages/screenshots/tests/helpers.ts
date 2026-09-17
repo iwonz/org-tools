@@ -59,6 +59,75 @@ export async function createDistributionStateFile(
     name: "distribution-state.json",
   };
 }
+
+export async function createUsedColorsStateFile(): Promise<ImportFilePayload> {
+  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const systemView = state.organization.views.find((view) => view.kind === "system");
+  if (!systemView) throw new Error("System View is unavailable.");
+  const viewId = "70000000-0000-4000-8000-000000000001";
+  state.organization.views.push({
+    createdAt: "2026-09-17T12:00:00.000Z",
+    id: viewId,
+    kind: "custom",
+    name: "Inactive palette",
+    structure: {
+      canvasElements: [
+        {
+          dash: "solid",
+          end: { attachment: null, x: 180, y: 100 },
+          endControl: { x: -26, y: 0 },
+          endMarker: "arrow",
+          id: "70000000-0000-4000-8000-000000000002",
+          layer: "aboveUnits",
+          start: { attachment: null, x: 60, y: 100 },
+          startControl: { x: 26, y: 0 },
+          startMarker: "none",
+          strokeColor: "#12345600",
+          strokeWidth: 2,
+          type: "arrow",
+        },
+      ],
+      layoutMode: systemView.structure.layoutMode,
+      settings: {
+        distributedColor: "#abcdef80",
+        groupByTag: true,
+        showTagCloud: true,
+        undistributedColor: "#3b82f6ff",
+      },
+      units: [],
+    },
+    updatedAt: "2026-09-17T12:00:00.000Z",
+  });
+  state.ui.editor.views.push({
+    distributionModeUnitIds: [],
+    selectedItems: [],
+    viewId,
+    viewport: { scale: 1, x: 0, y: 0 },
+  });
+  return {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "used-colors-state.json",
+  };
+}
+
+export async function expectUsedColorPalette(page: Page, appearances: string[] = []) {
+  const section = page.locator('[data-demo-id="tag-color-used-colors"]');
+  await expect(section).toBeVisible();
+  await expect(section.getByRole("option").first()).toBeVisible();
+  for (const appearance of appearances) {
+    await expect(section.locator(`[data-tag-color-used="${appearance}"]`)).toHaveCount(1);
+  }
+  expect(
+    await section.getByRole("option").evaluateAll((options) =>
+      options.every((option) => {
+        const bounds = option.getBoundingClientRect();
+        return bounds.width === 28 && bounds.height === 28;
+      }),
+    ),
+  ).toBe(true);
+  return section;
+}
 const emptyEmployeeFilters = () => ({
   birthday: null,
   customFields: [],
@@ -150,6 +219,7 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
   state.organization.employees = [];
   state.organization.employeeFieldDefinitions = [];
   state.organization.tags = [];
+  state.organization.views = [systemView];
   state.ui.activeTab = "orgEditor";
   state.ui.analytics = { filters: emptyEmployeeFilters(), query: "" };
   state.ui.calendar = { monthIndex: 6, year: 2026 };

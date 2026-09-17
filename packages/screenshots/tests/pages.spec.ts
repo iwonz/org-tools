@@ -19,6 +19,7 @@ import {
 import { exerciseOpenPositions } from "./open-position-workflow.js";
 import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
+import { exerciseUsedColorsAndToolIcons } from "./used-colors-workflow.js";
 import { exerciseViewSettings } from "./view-settings-workflow.js";
 
 test("synchronizes global Tag order and Unit grouping with scrollable presets", async ({
@@ -64,6 +65,12 @@ test("edits durable canvas tools and exports the complete View PNG", async ({ pa
   await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await exerciseCanvasToolsAndViewExport(page);
+});
+
+test("reuses colors from every View and renders refined Editor tool icons", async ({ page }) => {
+  await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await exerciseUsedColorsAndToolIcons(page, "pages");
 });
 
 test("manages View-local open positions and replaces one with an Employee", async ({ page }) => {

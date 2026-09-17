@@ -197,11 +197,13 @@ Capabilities: Dedicated modal, Rename, Validation, Explicit save.
 [![Quick Tag color](screenshots/feature-employees-tag-color.png)](screenshots/feature-employees-tag-color.png)
 
 Open Color directly from a flat catalog row, use the full palette or an exact HTML Keyword, HEX,
-RGB, or RGBA value, choose opacity independently, choose a compact named chip, or reset the color.
-Nested Select content remains above the Popover; Apply commits the complete draft once while Cancel
-and dismissal discard it.
+RGB, or RGBA value, reuse an alpha-aware color configured in any View, choose opacity independently,
+choose a compact named chip, or reset the color. Used colors render as compact checkerboard-backed
+swatches. Nested Select content remains above the Popover; Apply commits the complete draft once
+while Cancel and dismissal discard it.
 
-Capabilities: Quick color, Exact formats, Opacity, Full palette, Compact presets, Atomic apply.
+Capabilities: Quick color, Used colors, Exact formats, Opacity, Full palette, Compact presets,
+Atomic apply.
 
 ### Employees with a Tag
 
@@ -571,9 +573,10 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
 - Confirm Tag rows are padding-free and have no row-level hover effect while exposing Eye, Color,
   Edit, and Delete in order. Rename uses a dedicated modal; quick Color shows its palette, exact
-  typed format Select above the Popover, synchronized opacity controls, wrapping named chips, Apply
-  and Cancel, and no marker dots or clipping. Verify no organization write occurs before Apply and
-  that real alpha plus opaque readable foregrounds match PNG; Eye uses full live Employee cards.
+  typed format Select above the Popover, synchronized opacity controls, all organization-wide Used
+  colors, wrapping named chips, Apply and Cancel, and no marker dots or clipping. Verify no
+  organization write occurs before Apply and that real alpha plus opaque readable foregrounds match
+  PNG; Eye uses full live Employee cards.
 - Confirm thematic icons precede text in buttons and tabs while disclosure, sorting, removal,
   status, and count affordances retain their semantic trailing positions.
 - Confirm Units always exposes hierarchy-name search for a nonempty structure, its path/search aligns to roster avatars, direct and
@@ -625,7 +628,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   Unit display switches control all manual/Live Units and PNG, default on, and support Undo/Redo.
   Distribution colors adapt rows, paths, and endpoint markers in both themes. Every Tag,
   distribution, open-position, Text, Sticker, and Arrow shared picker preserves opacity between
-  color choices, stays scrollable, restores focus, applies once, and cancels cleanly. Unit cards retain only the
+  color choices, exposes every distinct global and inactive-View Used color, stays scrollable,
+  restores focus, applies once, and cancels cleanly. The Arrow tool uses one Bezier curve with a
+  filled triangular end marker and Image uses the rounded photo glyph. Unit cards retain only the
   note action in their upper corner. Copying a View retains settings; Unit Paste uses target settings.
 - Confirm Editor Export exposes Image, JSON, and Template, and that Data Download exposes only JSON
   and Template. Russian uses its localized Template label consistently, JSON groups support naming

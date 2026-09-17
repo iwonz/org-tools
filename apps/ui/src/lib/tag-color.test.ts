@@ -1,6 +1,14 @@
 import type { EmployeeTagColor } from "@org-tools/types";
 import { describe, expect, it } from "vitest";
+import { createUuid } from "@/lib/employee-data";
+import { createDefaultOrgEditorState, createOrgEditorUnitFromScratch } from "@/lib/org-editor";
 import {
+  createOrgEditorArrowElement,
+  createOrgEditorStickerElement,
+  createOrgEditorTextElement,
+} from "@/lib/org-editor-canvas";
+import {
+  collectUsedEmployeeTagColors,
   customTagColorSurfaceStyle,
   decodeTagColorDraft,
   employeeTagColorToHex,
@@ -31,6 +39,91 @@ const COLORS: EmployeeTagColor[] = [
 ];
 
 describe("tagColorSurfaceClassName", () => {
+  it("collects every durable Tag and View color in stable appearance order", () => {
+    const text = createOrgEditorTextElement({ x: 0, y: 0 });
+    const sticker = createOrgEditorStickerElement({ x: 0, y: 0 });
+    const arrow = createOrgEditorArrowElement({ x: 0, y: 0 }, { x: 100, y: 100 });
+    const firstView = {
+      ...createDefaultOrgEditorState(),
+      canvasElements: [
+        {
+          ...text,
+          fillColor: "cyan" as const,
+          formatRuns: [
+            {
+              end: 1,
+              start: 0,
+              typography: { ...text.typography, color: "orange" as const },
+            },
+          ],
+          typography: { ...text.typography, color: "red" as const },
+        },
+        {
+          ...sticker,
+          backgroundColor: "rose" as const,
+          formatRuns: [
+            {
+              end: 1,
+              start: 0,
+              typography: { ...sticker.typography, color: "#123456ff" as const },
+            },
+          ],
+          typography: { ...sticker.typography, color: "teal" as const },
+        },
+        { ...arrow, strokeColor: "#123456" as const },
+      ],
+      settings: {
+        ...createDefaultOrgEditorState().settings,
+        distributedColor: "green" as const,
+        undistributedColor: "amber" as const,
+      },
+      units: [
+        createOrgEditorUnitFromScratch({
+          name: "Example Unit",
+          openPositions: [
+            {
+              backgroundColor: "#7c3aed00",
+              id: createUuid(),
+              tags: [],
+              title: "Open position",
+            },
+          ],
+          x: 0,
+          y: 0,
+        }),
+      ],
+    };
+    const inactiveView = {
+      ...createDefaultOrgEditorState(),
+      canvasElements: [
+        {
+          ...createOrgEditorArrowElement({ x: 0, y: 0 }, { x: 10, y: 10 }),
+          strokeColor: "#abcdef",
+        },
+      ],
+    };
+
+    expect(
+      collectUsedEmployeeTagColors(
+        [{ color: "blue" }, { color: "#3b82f6" }, { color: null }, { color: "#7c3aed80" }],
+        [firstView, inactiveView],
+      ),
+    ).toEqual([
+      "blue",
+      "#7c3aed80",
+      "green",
+      "amber",
+      "#7c3aed00",
+      "red",
+      "orange",
+      "cyan",
+      "teal",
+      "#123456ff",
+      "rose",
+      "#abcdef",
+    ]);
+  });
+
   it("returns a distinct background and readable foreground for every catalog color", () => {
     const classNames = COLORS.map((color) => tagColorSurfaceClassName(color));
 

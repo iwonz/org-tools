@@ -15,10 +15,9 @@ import {
   HiOutlineBars3CenterLeft,
   HiOutlineBold,
   HiOutlineCursorArrowRays,
-  HiOutlinePhoto,
 } from "react-icons/hi2";
 import { PiSticker } from "react-icons/pi";
-import { TbLetterT } from "react-icons/tb";
+import { TbLetterT, TbPhotoSquareRounded } from "react-icons/tb";
 
 import type { OrgEditorCanvasTextDraft } from "@/components/org-editor-canvas-element";
 import {
@@ -56,21 +55,26 @@ const toolDefinitions = [
   { icon: TbLetterT, tool: "text" as const },
   { icon: ArrowToolIcon, tool: "arrow" as const },
   { icon: PiSticker, tool: "sticker" as const },
-  { icon: HiOutlinePhoto, tool: "image" as const },
+  { icon: ImageToolIcon, tool: "image" as const },
 ];
 
 function ArrowToolIcon() {
   return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+    <svg aria-hidden="true" data-canvas-tool-icon="arrow-bezier" viewBox="0 0 24 24">
       <path
-        d="M3 17C7 6 15 5 20 12M16 11l4 1-1 4"
+        d="M3 17C7 6 14 5 19 11"
+        fill="none"
         stroke="currentColor"
         strokeLinecap="round"
-        strokeLinejoin="round"
         strokeWidth="1.8"
       />
+      <path d="m16.9 8.25 4.35 2.35-3.1 3.86z" fill="currentColor" />
     </svg>
   );
+}
+
+function ImageToolIcon() {
+  return <TbPhotoSquareRounded aria-hidden="true" data-canvas-tool-icon="image-rounded" />;
 }
 
 function ArrowMarkerIcon({ endpoint }: { endpoint: "end" | "start" }) {

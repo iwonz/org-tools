@@ -1,4 +1,9 @@
-import type { EmployeeTagColor, EmployeeTagColorName } from "@org-tools/types";
+import type {
+  EmployeeTagColor,
+  EmployeeTagColorName,
+  EmployeeTagDefinition,
+  OrgEditorState,
+} from "@org-tools/types";
 import type { CSSProperties } from "react";
 
 export const EMPLOYEE_TAG_COLOR_NAMES = [
@@ -327,6 +332,52 @@ export const employeeTagColorToHex = (color: EmployeeTagColor | null | undefined
   if (color && isCustomEmployeeTagColor(color)) return color;
   if (color && isEmployeeTagColorName(color)) return EMPLOYEE_TAG_COLOR_HEX[color];
   return DEFAULT_CUSTOM_TAG_COLOR;
+};
+
+export type UsedTagColorViewSource = Pick<OrgEditorState, "canvasElements" | "settings" | "units">;
+
+export const getEmployeeTagColorAppearanceKey = (color: EmployeeTagColor): `#${string}` => {
+  const resolved = employeeTagColorToHex(color);
+  return resolved.length === 9 && resolved.endsWith("ff")
+    ? (resolved.slice(0, 7) as `#${string}`)
+    : resolved;
+};
+
+/** Collects durable organization colors in stable first-use order without cloning View state. */
+export const collectUsedEmployeeTagColors = (
+  tagDefinitions: readonly Pick<EmployeeTagDefinition, "color">[],
+  viewSources: Iterable<UsedTagColorViewSource>,
+): EmployeeTagColor[] => {
+  const result: EmployeeTagColor[] = [];
+  const seen = new Set<string>();
+  const append = (color: EmployeeTagColor | null | undefined) => {
+    if (!color) return;
+    const appearance = getEmployeeTagColorAppearanceKey(color);
+    if (seen.has(appearance)) return;
+    seen.add(appearance);
+    result.push(color);
+  };
+
+  for (const definition of tagDefinitions) append(definition.color);
+  for (const view of viewSources) {
+    append(view.settings.distributedColor);
+    append(view.settings.undistributedColor);
+    for (const unit of view.units) {
+      for (const position of unit.openPositions) append(position.backgroundColor);
+    }
+    for (const element of view.canvasElements) {
+      if (element.type === "image") continue;
+      if (element.type === "arrow") {
+        append(element.strokeColor);
+        continue;
+      }
+      append(element.typography.color);
+      for (const run of element.formatRuns) append(run.typography.color);
+      append(element.type === "text" ? element.fillColor : element.backgroundColor);
+    }
+  }
+
+  return result;
 };
 
 export type StickerColorStyle = {

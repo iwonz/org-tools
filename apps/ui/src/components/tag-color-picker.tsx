@@ -1,6 +1,7 @@
 "use client";
 
 import type { EmployeeTagColor, EmployeeTagColorName } from "@org-tools/types";
+import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HiCheck, HiOutlineChevronDown, HiOutlineSwatch } from "react-icons/hi2";
@@ -24,6 +25,7 @@ import {
   employeeTagColorToHex,
   encodeTagColorDraft,
   formatTagColorInput,
+  getEmployeeTagColorAppearanceKey,
   hexToHsv,
   hsvToHex,
   isCustomEmployeeTagColor,
@@ -36,6 +38,7 @@ import {
   tagColorSurfaceClassName,
 } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
+import { useOrgStore } from "@/stores/org-store-context";
 
 const TAG_COLOR_MESSAGE_KEYS = {
   amber: "Amber",
@@ -102,7 +105,7 @@ function TagColorLabel({
   );
 }
 
-export function TagColorPicker({
+export const TagColorPicker = observer(function TagColorPicker({
   onChange,
   value,
   variant = "field",
@@ -117,6 +120,7 @@ export function TagColorPicker({
   value: EmployeeTagColor | null;
   variant?: "field" | "icon";
 }) {
+  const store = useOrgStore();
   const t = useUiText();
   const [open, setOpen] = useState(false);
   const [inputMode, setInputMode] = useState<TagColorInputMode>("hex");
@@ -136,6 +140,8 @@ export function TagColorPicker({
   const currentHex = employeeTagColorToHex(draft.baseColor).slice(0, 7) as `#${string}`;
   const hsv = hexToHsv(currentHex);
   const opacityPercent = tagColorOpacityByteToPercent(draft.opacityByte);
+  const usedColors = open ? store.usedTagColors : [];
+  const draftAppearance = draftValue ? getEmployeeTagColorAppearanceKey(draftValue) : null;
 
   const resetDraft = (color: EmployeeTagColor | null) => {
     const nextDraft = decodeTagColorDraft(color);
@@ -475,6 +481,61 @@ export function TagColorPicker({
             </p>
           )}
         </div>
+        {usedColors.length > 0 && (
+          <>
+            <div className="my-2 h-px bg-border/80" />
+            <div className="grid gap-2 px-1" data-demo-id="tag-color-used-colors">
+              <div className="text-xs font-medium text-muted-foreground">{t("Used colors")}</div>
+              <div aria-label={t("Used colors")} className="flex flex-wrap gap-1.5" role="listbox">
+                {usedColors.map((color) => {
+                  const decoded = decodeTagColorDraft(color);
+                  const appearance = getEmployeeTagColorAppearanceKey(color);
+                  const opacity = tagColorOpacityByteToPercent(decoded.opacityByte);
+                  const colorLabel =
+                    decoded.baseColor && !isCustomEmployeeTagColor(decoded.baseColor)
+                      ? t(TAG_COLOR_MESSAGE_KEYS[decoded.baseColor])
+                      : `${t("Custom color")} · ${employeeTagColorToHex(decoded.baseColor)}`;
+                  const accessibleLabel = `${colorLabel} · ${opacity}%`;
+                  const selected = draftAppearance === appearance;
+                  return (
+                    <button
+                      aria-label={accessibleLabel}
+                      aria-selected={selected}
+                      className="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md border border-border/80 outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+                      data-tag-color-used={appearance}
+                      key={appearance}
+                      onClick={() => previewDraft(decoded)}
+                      role="option"
+                      style={{
+                        background:
+                          "repeating-conic-gradient(#d4d4d8 0 25%, #fff 0 50%) 0 / 8px 8px",
+                      }}
+                      title={accessibleLabel}
+                      type="button"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0"
+                        style={{ backgroundColor: employeeTagColorToHex(color) }}
+                      />
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "absolute inset-0 flex items-center justify-center",
+                          !selected && "invisible",
+                        )}
+                      >
+                        <span className="inline-flex size-4 items-center justify-center rounded-sm bg-background/90 text-foreground shadow-sm">
+                          <HiCheck className="size-3.5" />
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
         <div className="my-2 h-px bg-border/80" />
         <div
           className="flex flex-wrap gap-1.5 px-1"
@@ -523,4 +584,4 @@ export function TagColorPicker({
       </PopoverContent>
     </Popover>
   );
-}
+});

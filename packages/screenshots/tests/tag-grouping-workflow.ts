@@ -2,7 +2,12 @@ import { readFile } from "node:fs/promises";
 import type { OrgToolsState } from "@org-tools/types";
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
-import { applyColorPickerDraft, openImportDialog, syntheticStatePath } from "./helpers.js";
+import {
+  applyColorPickerDraft,
+  expectUsedColorPalette,
+  openImportDialog,
+  syntheticStatePath,
+} from "./helpers.js";
 
 export async function pointerMoveTag(page: Page, handle: Locator, target: Locator, y = 4) {
   const source = await handle.boundingBox();
@@ -128,6 +133,7 @@ export async function exerciseTagGrouping(page: Page) {
   await page.setViewportSize({ width: 900, height: 480 });
   await tagRow(zulu).locator('[data-demo-id="tag-color-trigger"]').click();
   const picker = page.locator('[data-demo-id="tag-color-dropdown"]');
+  await expectUsedColorPalette(page);
   await expect(picker).toBeVisible();
   await picker.evaluate((element: HTMLElement) => {
     element.style.height = "180px";
