@@ -164,6 +164,11 @@ export const ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE = {
   fillStyle: "rgba(29, 29, 29, 0.1)",
   textStyle: "#1d1d1d",
 } as const;
+export const ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE = {
+  dash: [4, 3] as const,
+  lineWidth: 1,
+  strokeStyle: "rgba(71, 85, 105, 0.5)",
+} as const;
 const DEFAULT_TITLE_FONT_SIZE = 20;
 const ORG_EDITOR_EXPORT_AVATAR_LOAD_CONCURRENCY = 8;
 const ORG_EDITOR_EXPORT_DEFAULT_AVATAR_LOAD_LIMIT = 700;
@@ -173,6 +178,34 @@ export const ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT = 160;
 export const ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS = 8_000_000;
 export const ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT = "{fullName} {isBoss ? '· {isBoss}' : ''}";
 export const ORG_EDITOR_DEFAULT_BOSS_LABEL = "Manager";
+
+export const getOrgEditorExportOpenPositionRowOutline = ({
+  employeeRowHeight,
+  employeeRowOffset,
+  unit,
+}: {
+  employeeRowHeight: number;
+  employeeRowOffset: number;
+  unit: OrgEditorUnit;
+}) => {
+  const surfaceBounds = getOrgEditorEmployeeRowSurfaceBounds({
+    employeeRowHeight,
+    employeeRowOffset,
+    unit,
+  });
+  const inset = ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE.lineWidth / 2;
+
+  return {
+    ...ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE,
+    bounds: {
+      height: Math.max(0, surfaceBounds.height - inset * 2),
+      width: Math.max(0, surfaceBounds.width - inset * 2),
+      x: surfaceBounds.x + inset,
+      y: surfaceBounds.y + inset,
+    },
+    radius: Math.max(0, ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS - inset),
+  };
+};
 
 type OrgEditorExportGradientLayer =
   | {
@@ -1730,6 +1763,21 @@ export const createOrgEditorImageExportResult = async ({
         );
         context.fillStyle = distributionFillStyle;
         context.fill();
+      }
+
+      if (openPosition) {
+        const outline = getOrgEditorExportOpenPositionRowOutline({
+          employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+          employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
+          unit,
+        });
+        context.save();
+        drawRoundedRect(context, outline.bounds, outline.radius);
+        context.strokeStyle = outline.strokeStyle;
+        context.lineWidth = outline.lineWidth;
+        context.setLineDash([...outline.dash]);
+        context.stroke();
+        context.restore();
       }
 
       if (isBoss) {

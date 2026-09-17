@@ -273,7 +273,8 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 Arrange opaque Unit cards and representative rich Text, flat bordered Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
-the bottom-centered canvas toolbar, including a synthetic tagged open-position row in a manual Unit.
+the bottom-centered canvas toolbar, including a synthetic tagged open-position row whose complete
+dashed outline distinguishes the vacancy from Employee rows in a manual Unit and Editor PNG.
 View management stays top-left, canvas commands and Image export
 stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates the
 five local fonts, partial Text/Sticker typography, line fill, bounded two-axis Text auto-fit, the Bold

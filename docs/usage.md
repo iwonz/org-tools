@@ -115,7 +115,9 @@ control.
   data exports. Its context menu supports Edit, **Replace with Employee**, and Delete. Picker
   replacement adds the chosen Employee occurrence without removing other assignments; dropping one
   Employee from another manual Unit moves that occurrence and consumes the position. Both preserve
-  attached annotations, while a multi-Employee drop remains an ordinary Unit drop.
+  attached annotations, while a multi-Employee drop remains an ordinary Unit drop. A thin dashed
+  outline surrounds the complete open-position row on the canvas and in Editor PNG output without
+  changing its geometry; selection and drop feedback keep the outline visible with semantic color.
   The bottom-center tools row provides Select, Text, Arrow, Sticker, and embedded Image, including in
   an empty View. Choosing a creation tool clears the current canvas selection; a plain element click selects
   only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens Back,

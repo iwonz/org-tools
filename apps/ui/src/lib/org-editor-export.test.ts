@@ -6,6 +6,7 @@ import {
   getOrgEditorUnitBounds,
   getOrgEditorUnitHeightForEmployeeRows,
   ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
+  ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
@@ -28,9 +29,11 @@ import {
   getOrgEditorExportEmployeeTagRowCount,
   getOrgEditorExportEmployeeTags,
   getOrgEditorExportFontRequests,
+  getOrgEditorExportOpenPositionRowOutline,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
+  ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE,
 } from "@/lib/org-editor-export";
 import { getTagColorCanvasStyle } from "@/lib/tag-color";
 
@@ -107,6 +110,46 @@ describe("Org Editor image export", () => {
       "Aurora",
     ]);
     expect(createOrgEditorExportFileBaseName(unit)).toBe("Research-Development-Lab");
+  });
+
+  test("keeps the dashed open-position outline inside complete shared row bounds", () => {
+    const defaultSurface = getOrgEditorEmployeeRowSurfaceBounds({
+      employeeRowHeight: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+      employeeRowOffset: 0,
+      unit,
+    });
+    const defaultOutline = getOrgEditorExportOpenPositionRowOutline({
+      employeeRowHeight: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+      employeeRowOffset: 0,
+      unit,
+    });
+    const taggedHeight =
+      ORG_EDITOR_EMPLOYEE_ROW_HEIGHT +
+      ORG_EDITOR_EMPLOYEE_TAG_STYLE.height * 2 +
+      ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
+    const taggedOutline = getOrgEditorExportOpenPositionRowOutline({
+      employeeRowHeight: taggedHeight,
+      employeeRowOffset: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+      unit,
+    });
+
+    expect(ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE).toEqual({
+      dash: [4, 3],
+      lineWidth: 1,
+      strokeStyle: "rgba(71, 85, 105, 0.5)",
+    });
+    expect(defaultOutline).toMatchObject({
+      bounds: {
+        height: defaultSurface.height - 1,
+        width: defaultSurface.width - 1,
+        x: defaultSurface.x + 0.5,
+        y: defaultSurface.y + 0.5,
+      },
+      radius: ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS - 0.5,
+    });
+    expect(taggedOutline.bounds.height).toBe(taggedHeight - 1);
+    expect(taggedOutline.bounds.width).toBe(defaultOutline.bounds.width);
+    expect(taggedOutline.bounds.y).toBe(defaultOutline.bounds.y + ORG_EDITOR_EMPLOYEE_ROW_HEIGHT);
   });
 
   test("waits for every base and inline Text and Sticker font used by PNG", () => {

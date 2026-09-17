@@ -11,10 +11,80 @@ export async function exerciseOpenPositions(page: Page) {
   const attachedSticker = page.locator(
     '[data-canvas-element-id="dddddddd-dddd-4ddd-8ddd-dddddddddddd"]',
   );
+  const positionContainer = position.locator("..");
+  const positionOutline = positionContainer.locator("[data-org-editor-open-position-outline]");
   await expect(position).toContainText("Senior Product Engineer");
   await expect(position).toContainText("Remote");
   await expect(position).toContainText("Oct 1");
   await expect(position.locator("[data-org-editor-open-position-avatar]")).toBeVisible();
+  await expect(positionOutline).toBeVisible();
+  await expect(
+    productUnit.locator(
+      "[data-org-editor-employee-row-container] [data-org-editor-open-position-outline]",
+    ),
+  ).toHaveCount(0);
+  const restingOutlineStyle = await positionOutline.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      backgroundColor: style.backgroundColor,
+      borderColor: style.borderTopColor,
+      borderStyle: style.borderTopStyle,
+      borderWidth: style.borderTopWidth,
+      pointerEvents: style.pointerEvents,
+    };
+  });
+  expect(restingOutlineStyle).toMatchObject({
+    backgroundColor: "rgba(0, 0, 0, 0)",
+    borderStyle: "dashed",
+    borderWidth: "1px",
+    pointerEvents: "none",
+  });
+  const restingBounds = await positionContainer.boundingBox();
+  if (!restingBounds) throw new Error("Open-position row geometry is unavailable.");
+
+  await position.hover();
+  await expect(positionOutline).toHaveCSS("border-top-style", "dashed");
+  await position.focus();
+  await expect(position).toBeFocused();
+  expect(
+    await positionContainer.evaluate((element) => getComputedStyle(element).boxShadow),
+  ).not.toBe("none");
+  await position.click();
+  await expect(positionContainer).toHaveAttribute("data-selected", "true");
+  const selectedOutlineColor = await positionOutline.evaluate(
+    (element) => getComputedStyle(element).borderTopColor,
+  );
+  expect(selectedOutlineColor).not.toBe(restingOutlineStyle.borderColor);
+  const selectedBounds = await positionContainer.boundingBox();
+  expect(selectedBounds?.x).toBeCloseTo(restingBounds.x, 4);
+  expect(selectedBounds?.y).toBeCloseTo(restingBounds.y, 4);
+  expect(selectedBounds?.width).toBeCloseTo(restingBounds.width, 4);
+  expect(selectedBounds?.height).toBeCloseTo(restingBounds.height, 4);
+
+  const sourceEmployee = page.locator('[data-org-editor-employee-row][title="Jordan Reed"]');
+  const sourceBounds = await sourceEmployee.boundingBox();
+  const targetBounds = await position.boundingBox();
+  if (!sourceBounds || !targetBounds)
+    throw new Error("Open-position drop geometry is unavailable.");
+  await page.mouse.move(
+    sourceBounds.x + sourceBounds.width / 2,
+    sourceBounds.y + sourceBounds.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    targetBounds.x + targetBounds.width / 2,
+    targetBounds.y + targetBounds.height / 2,
+    { steps: 8 },
+  );
+  await expect(positionContainer).toHaveAttribute("data-open-position-drop-target", "true");
+  const dropOutlineColor = await positionOutline.evaluate(
+    (element) => getComputedStyle(element).borderTopColor,
+  );
+  expect(dropOutlineColor).not.toBe(restingOutlineStyle.borderColor);
+  await page.mouse.up();
+  await expect(position).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(position).toContainText("Senior Product Engineer");
   await expect(productUnit).toContainText("2 Employees · 4 Employees total");
 
   await productUnit.click({ button: "right", position: { x: 80, y: 24 } });

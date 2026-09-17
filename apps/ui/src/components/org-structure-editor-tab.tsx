@@ -1602,7 +1602,7 @@ function OrgEditorNode({
                 return (
                   <div
                     className={cn(
-                      "flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
+                      "relative flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
                       positionSelected && "bg-primary text-primary-foreground hover:bg-primary",
                       isDropTarget && "ring-2 ring-inset ring-signal bg-accent/70",
                     )}
@@ -1660,6 +1660,15 @@ function OrgEditorNode({
                         />
                       </span>
                     </button>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "pointer-events-none absolute inset-0 rounded-[inherit] border border-dashed border-muted-foreground/50",
+                        positionSelected && "border-primary-foreground/70",
+                        isDropTarget && "border-signal",
+                      )}
+                      data-org-editor-open-position-outline
+                    />
                   </div>
                 );
               }
