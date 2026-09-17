@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
-import { createDistributionStateFile, openImportDialog } from "./helpers.js";
+import { applyColorPickerDraft, createDistributionStateFile, openImportDialog } from "./helpers.js";
 import { exportState } from "./refined-editor-workflow.js";
 
 export async function exerciseViewSettings(page: Page) {
@@ -30,7 +30,6 @@ export async function exerciseViewSettings(page: Page) {
   await expect(page.locator("[data-distribution-connection] path")).toHaveCount(1);
   const rowColor = () =>
     assigned.locator("..").evaluate((element) => getComputedStyle(element).backgroundColor);
-  const originalColor = await rowColor();
   await gear.focus();
   await gear.press("Enter");
   await expect(dialog.getByRole("heading", { name: "Unit display" })).toBeVisible();
@@ -42,6 +41,8 @@ export async function exerciseViewSettings(page: Page) {
   await expect(footer).toBeHidden();
   expect(await card.evaluate((element) => element.clientHeight)).toBeLessThan(originalHeight);
   await expect(card.locator("[data-employee-tags-density]").first()).toBeVisible();
+  await expect.poll(rowColor).toBe("rgb(215, 245, 226)");
+  const originalColor = await rowColor();
 
   await page.evaluate(() => {
     const originalPost = BroadcastChannel.prototype.postMessage;
@@ -69,29 +70,33 @@ export async function exerciseViewSettings(page: Page) {
   await page.mouse.move(bounds.x + 90, bounds.y + 50, { steps: 5 });
   expect(await writes()).toBe(0);
   await page.mouse.up();
-  await expect.poll(writes).toBe(1);
+  expect(await writes()).toBe(0);
   await page.mouse.move(bounds.x + 40, bounds.y + 40);
   await page.mouse.down();
   await palette.dispatchEvent("pointercancel", { pointerId: 1 });
   await page.mouse.up();
-  await page.keyboard.press("Escape");
-  expect(await writes()).toBe(1);
+  await picker.getByRole("spinbutton", { name: "Opacity (%)", exact: true }).fill("40");
+  expect(await writes()).toBe(0);
+  await picker.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await writes()).toBe(0);
+  expect(await rowColor()).toBe(originalColor);
   await expect(distributed).toBeFocused();
   await distributed.click();
   const exact = picker.getByRole("textbox", { name: "Color value" });
   await exact.fill("invalid");
   await exact.press("Enter");
   await expect(exact).toHaveAttribute("aria-invalid", "true");
-  expect(await writes()).toBe(1);
+  await expect(picker.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
+  expect(await writes()).toBe(0);
   await exact.fill("#123456");
   await exact.press("Escape");
-  expect(await writes()).toBe(1);
+  expect(await writes()).toBe(0);
   await distributed.click();
   await exact.fill("#7c3aed");
-  await exact.press("Enter");
-  await expect.poll(writes).toBe(2);
-  await page.keyboard.press("Escape");
+  await applyColorPickerDraft(page, { opacity: 40 });
+  await expect.poll(writes).toBe(1);
   await expect.poll(rowColor).not.toBe(originalColor);
+  await expect.poll(rowColor).toBe("rgba(124, 58, 237, 0.4)");
   const pathColor = () =>
     page
       .locator("[data-distribution-connection] path")
@@ -104,8 +109,8 @@ export async function exerciseViewSettings(page: Page) {
       .evaluate((marker) => getComputedStyle(marker).fill),
   ).toBe(lightPathColor);
   await dialog.getByRole("button", { name: "Not distributed", exact: true }).click();
-  await picker.getByRole("option", { name: "Rose", exact: true }).click();
-  await expect.poll(writes).toBe(3);
+  await applyColorPickerDraft(page, { color: "Rose" });
+  await expect.poll(writes).toBe(2);
   await expect.poll(nameColors).toEqual(normalNameColors);
   await page.keyboard.press("Escape");
   await expect(gear).toBeFocused();
@@ -243,7 +248,7 @@ export async function exerciseViewSettings(page: Page) {
   expect(saved.organization.views[0]?.structure.settings).toEqual({
     groupByTag: true,
     showTagCloud: false,
-    distributedColor: "#7c3aed",
+    distributedColor: "#7c3aed66",
     undistributedColor: "rose",
   });
 
@@ -300,6 +305,10 @@ export async function exerciseViewSettings(page: Page) {
   await page.setViewportSize({ width: 700, height: 380 });
   await gear.click();
   await dialog.getByRole("button", { name: "Not distributed", exact: true }).click();
+  await picker.evaluate((element: HTMLElement) => {
+    element.style.height = "180px";
+    element.style.maxHeight = "180px";
+  });
   await picker.hover();
   await page.mouse.wheel(0, 1200);
   await expect.poll(() => picker.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);

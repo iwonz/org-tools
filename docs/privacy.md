@@ -33,9 +33,12 @@ inferring one. Employee UUID creation, duplicate-key normalization, custom Templ
 optional MD5 or SHA-256 output all run locally. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
-the full Tag color palette and exact HTML Keyword, HEX, RGB, or RGBA parser run locally and persist
-only canonical lowercase six- or eight-digit HEX without contacting a palette, color, or asset
-service. Palette gestures commit only their final valid color; invalid or canceled drafts are discarded without changing state. Bundled language flags never create network requests. Dragging a field never transmits or
+the full Tag color palette, independent opacity control, and exact HTML Keyword, HEX, RGB, or RGBA
+parser run locally and persist only semantic names or canonical lowercase six- or eight-digit HEX
+without contacting a palette, color, or asset service. Color and opacity stay in Popover memory until
+Apply; Cancel, Escape, outside dismissal, invalid input, and unchanged Apply discard the draft without
+changing state. Zero-percent color remains a configured eight-digit value distinct from No color.
+Bundled language flags never create network requests. Dragging a field never transmits or
 persists organization data. Custom Views contain references to the same global Employee catalog and
 never duplicate profile or avatar payloads. Organization records are never
 copied to browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs;

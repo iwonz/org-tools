@@ -10,6 +10,7 @@ import { expect, test } from "./browser-test.js";
 import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
 import { exerciseLargeEditorPerformance } from "./editor-performance-workflow.js";
 import {
+  applyColorPickerDraft,
   createDistributionStateFile,
   localeStorageKey,
   openImportDialog,
@@ -354,7 +355,10 @@ test("runs the complete state editor at the repository base path without APIs or
   const colorValue = colorDropdown.getByLabel("Color value");
   await colorValue.fill("rgba(124, 58, 237, .5)");
   await colorValue.press("Enter");
-  await page.keyboard.press("Escape");
+  await expect(
+    colorDropdown.getByRole("spinbutton", { name: "Opacity (%)", exact: true }),
+  ).toHaveValue("50");
+  await applyColorPickerDraft(page);
   const customColor = await tagRow
     .locator('[data-tag-color-surface][data-tag-color^="#"]')
     .getAttribute("data-tag-color");

@@ -2,7 +2,9 @@ import type { EmployeeTagColor } from "@org-tools/types";
 import { describe, expect, it } from "vitest";
 import {
   customTagColorSurfaceStyle,
+  decodeTagColorDraft,
   employeeTagColorToHex,
+  encodeTagColorDraft,
   formatTagColorInput,
   getStickerColorStyle,
   getTagColorCanvasStyle,
@@ -12,6 +14,8 @@ import {
   normalizeCustomEmployeeTagColor,
   parseTagColorInput,
   tagColorInputPlaceholder,
+  tagColorOpacityByteToPercent,
+  tagColorOpacityPercentToByte,
   tagColorSurfaceClassName,
 } from "@/lib/tag-color";
 
@@ -53,6 +57,30 @@ describe("tagColorSurfaceClassName", () => {
     expect(isCustomEmployeeTagColor("#7C3AED")).toBe(false);
   });
 
+  it("round-trips named, custom, null, and alpha color drafts", () => {
+    expect(decodeTagColorDraft(null)).toEqual({ baseColor: null, opacityByte: 255 });
+    expect(decodeTagColorDraft("blue")).toEqual({ baseColor: "blue", opacityByte: 255 });
+    expect(decodeTagColorDraft("#7c3aed")).toEqual({
+      baseColor: "#7c3aed",
+      opacityByte: 255,
+    });
+    expect(decodeTagColorDraft("#3b82f666")).toEqual({
+      baseColor: "blue",
+      opacityByte: 102,
+    });
+    expect(encodeTagColorDraft({ baseColor: "blue", opacityByte: 255 })).toBe("blue");
+    expect(encodeTagColorDraft({ baseColor: "#7c3aed", opacityByte: 255 })).toBe("#7c3aed");
+    expect(encodeTagColorDraft({ baseColor: "blue", opacityByte: 102 })).toBe("#3b82f666");
+    expect(encodeTagColorDraft({ baseColor: "blue", opacityByte: 0 })).toBe("#3b82f600");
+  });
+
+  it("maps integer opacity percentages to canonical alpha bytes", () => {
+    expect(tagColorOpacityPercentToByte(40)).toBe(102);
+    expect(tagColorOpacityByteToPercent(102)).toBe(40);
+    expect(tagColorOpacityPercentToByte(-1)).toBe(0);
+    expect(tagColorOpacityPercentToByte(101)).toBe(255);
+  });
+
   it("normalizes each exact input mode to canonical HEX", () => {
     expect(parseTagColorInput("keyword", "rebeccapurple")).toBe("#663399");
     expect(parseTagColorInput("keyword", "RED")).toBe("#ff0000");
@@ -92,6 +120,14 @@ describe("tagColorSurfaceClassName", () => {
     expect(customTagColorSurfaceStyle("#7c3aed80")).not.toEqual(
       customTagColorSurfaceStyle("#7c3aed"),
     );
+    expect(customTagColorSurfaceStyle("#7c3aed66")).toMatchObject({
+      "--tag-custom-fill": "#7c3aed66",
+      "--tag-custom-fill-active": expect.stringMatching(/^#[0-9a-f]{6}66$/u),
+      "--tag-custom-fill-dark": "#7c3aed66",
+      "--tag-custom-fill-hover": expect.stringMatching(/^#[0-9a-f]{6}66$/u),
+      "--tag-custom-foreground": expect.stringMatching(/^#[0-9a-f]{6}$/u),
+      "--tag-custom-foreground-dark": expect.stringMatching(/^#[0-9a-f]{6}$/u),
+    });
   });
 
   it("round-trips palette values through HSV without changing canonical output", () => {
@@ -110,6 +146,7 @@ describe("tagColorSurfaceClassName", () => {
     expect(getTagColorCanvasStyle("blue").fillStyle).toMatch(/^#[0-9a-f]{6}$/u);
     expect(getTagColorCanvasStyle("#7c3aed")).not.toEqual(getTagColorCanvasStyle(null));
     expect(getTagColorCanvasStyle("#7c3aed80")).not.toEqual(getTagColorCanvasStyle("#7c3aed"));
+    expect(getTagColorCanvasStyle("#7c3aed66").fillStyle).toBe("#7c3aed66");
   });
 
   it("derives deterministic shared flat Sticker colors", () => {

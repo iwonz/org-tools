@@ -58,11 +58,15 @@ control.
   model** defines stored Value fields or derived Template fields with optional MD5/SHA-256 output;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
   deletion. Its flat rows expose Eye, Color, Edit, and Delete: Eye opens current full Employee cards,
-  Edit opens a rename-only modal, and Color opens the picker directly. The picker keeps a full custom palette first,
-  exact HTML Keyword, HEX, RGB, or RGBA entry next, and localized named presets plus No color below;
-  arbitrary choices are stored as canonical `#rrggbb` or `#rrggbbaa` values and use readable tonal
-  fills in both themes and PNG output. Palette and hue changes commit once after a completed gesture;
-  invalid or canceled exact input does not change the Tag. Gender is
+  Edit opens a rename-only modal, and Color opens the picker directly. The picker keeps a full custom
+  palette, a synchronized opacity slider and percentage field, exact HTML Keyword, HEX, RGB, or RGBA
+  entry, and one compact wrapping set of localized named chips plus No color. Color and opacity remain
+  a local preview until **Apply**; **Cancel**, Escape, outside dismissal, invalid input, and unchanged
+  Apply make no change. Keyword, HEX, and RGB preserve the draft opacity, while RGBA updates both.
+  Named colors at 100% retain their semantic name, opaque arbitrary choices use canonical `#rrggbb`,
+  and lower opacity uses canonical `#rrggbbaa`; a zero-percent configured color remains distinct from
+  No color. Semi-transparent fills keep their real alpha and an opaque readable foreground in both
+  themes and matching PNG output. Gender is
   a native-radio segmented switcher. Birthday
   keeps Day, Month, and Year selects inside one compound field;
   Tag filters preserve the catalog order and provide normalized label search plus **Select all** and **Deselect all** for
@@ -103,15 +107,15 @@ control.
   last, and the boss always remains first. Turning grouping off gives one alphabetical list after
   the boss. Turning the cloud off removes the footer and its height from both Editor and PNG while
   retaining Employee Tags. **Distribution mode** settings choose **Distributed** and **Not
-  distributed** colors through the existing palette and exact color input. Green and amber are the
-  defaults; the distributed color also controls placement lines and endpoint markers. Employee names
+  distributed** colors through the shared palette, exact input, and opacity draft. Green and amber
+  are the defaults; the distributed color also controls placement lines and endpoint markers. Employee names
   keep the normal theme text color for both distribution statuses, including selected rows. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
   Manual Unit context menus also provide **Add open position**. An open position is a View-local
   employee-shaped row with a neutral avatar, editable title, the shared dated Tag picker, and a
-  **Background color** control that accepts the bundled named/custom palette or **No background**.
-  The tonal background covers the complete row beneath its dashed vacancy outline and appears in
+  **Background color** control that accepts the bundled named/custom palette, independent opacity,
+  or **No background**. The alpha-preserving background covers the complete row beneath its dashed vacancy outline and appears in
   Editor PNG. It is hidden by collapse and participates in Group by tag and canvas side attachments,
   but does not
   appear in Employees, Analytics, Calendar, distribution, Employee totals, Tag-cloud counts, or

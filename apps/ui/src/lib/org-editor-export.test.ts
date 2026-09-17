@@ -161,6 +161,10 @@ describe("Org Editor image export", () => {
     expect(getOrgEditorExportOpenPositionRowBackground("#7c3aed80")).toEqual(
       getTagColorCanvasStyle("#7c3aed80"),
     );
+    expect(getOrgEditorExportOpenPositionRowBackground("#7c3aed66")).toEqual({
+      fillStyle: "#7c3aed66",
+      textStyle: expect.stringMatching(/^#[0-9a-f]{6}$/u),
+    });
   });
 
   test("waits for every base and inline Text and Sticker font used by PNG", () => {
@@ -329,6 +333,12 @@ describe("Org Editor image export", () => {
     expect(
       getOrgEditorExportEmployeeRowFillStyle({ otherUnitCount: 0, status: "sourceOnly" }, settings),
     ).toBe(getTagColorCanvasStyle(settings.undistributedColor).fillStyle);
+    expect(
+      getOrgEditorExportEmployeeRowFillStyle(
+        { otherUnitCount: 0, status: "sourceOnly" },
+        { ...settings, undistributedColor: "#7c3aed66" },
+      ),
+    ).toBe("#7c3aed66");
   });
 
   test("anchors hierarchy connections to rendered card heights", () => {

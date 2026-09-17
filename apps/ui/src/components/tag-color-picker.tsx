@@ -2,8 +2,10 @@
 
 import type { EmployeeTagColor, EmployeeTagColorName } from "@org-tools/types";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { HiCheck, HiOutlineChevronDown, HiOutlineSwatch } from "react-icons/hi2";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -17,15 +19,20 @@ import type { UiTextKey } from "@/i18n/messages";
 import { useUiText } from "@/i18n/use-ui-text";
 import {
   customTagColorSurfaceStyle,
+  decodeTagColorDraft,
   EMPLOYEE_TAG_COLOR_NAMES,
   employeeTagColorToHex,
+  encodeTagColorDraft,
   formatTagColorInput,
   hexToHsv,
   hsvToHex,
   isCustomEmployeeTagColor,
   parseTagColorInput,
+  type TagColorDraft,
   type TagColorInputMode,
   tagColorInputPlaceholder,
+  tagColorOpacityByteToPercent,
+  tagColorOpacityPercentToByte,
   tagColorSurfaceClassName,
 } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
@@ -44,24 +51,38 @@ const TAG_COLOR_MESSAGE_KEYS = {
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
+const parseOpacityInput = (value: string) => {
+  if (!/^(?:0|[1-9]\d?|100)$/u.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
+};
+
 function TagColorLabel({
   color,
   emptyLabel,
+  showOpacity = true,
+  showSelectionSlot = false,
+  selected = false,
 }: {
   color: EmployeeTagColor | null;
   emptyLabel?: string | undefined;
+  selected?: boolean;
+  showOpacity?: boolean;
+  showSelectionSlot?: boolean;
 }) {
   const t = useUiText();
+  const decoded = decodeTagColorDraft(color);
+  const opacity = tagColorOpacityByteToPercent(decoded.opacityByte);
   const label = color
-    ? isCustomEmployeeTagColor(color)
-      ? `${t("Custom color")} · ${color}`
-      : t(TAG_COLOR_MESSAGE_KEYS[color])
+    ? decoded.baseColor && !isCustomEmployeeTagColor(decoded.baseColor)
+      ? `${t(TAG_COLOR_MESSAGE_KEYS[decoded.baseColor])}${showOpacity && opacity < 100 ? ` · ${opacity}%` : ""}`
+      : `${t("Custom color")} · ${employeeTagColorToHex(decoded.baseColor)}${showOpacity && opacity < 100 ? ` · ${opacity}%` : ""}`
     : (emptyLabel ?? t("No color"));
 
   return (
     <span
       className={cn(
-        "inline-flex min-w-0 max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
+        "inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-medium",
         tagColorSurfaceClassName(color),
       )}
       data-tag-color={color ?? "none"}
@@ -69,6 +90,14 @@ function TagColorLabel({
       style={customTagColorSurfaceStyle(color)}
     >
       <span className="truncate">{label}</span>
+      {showSelectionSlot && (
+        <span
+          aria-hidden="true"
+          className="inline-flex size-3 shrink-0 items-center justify-center"
+        >
+          {selected && <HiCheck className="size-3" />}
+        </span>
+      )}
     </span>
   );
 }
@@ -90,63 +119,112 @@ export function TagColorPicker({
 }) {
   const t = useUiText();
   const [open, setOpen] = useState(false);
-  const canceledRef = useRef(false);
   const [inputMode, setInputMode] = useState<TagColorInputMode>("hex");
+  const inputModeRef = useRef<TagColorInputMode>("hex");
+  const initialDraft = decodeTagColorDraft(value);
+  const [draft, setDraft] = useState<TagColorDraft>(initialDraft);
   const [inputValue, setInputValue] = useState(() => formatTagColorInput("hex", value));
   const [inputInvalid, setInputInvalid] = useState(false);
-  const [draftColor, setDraftColor] = useState<EmployeeTagColor | null>(value);
-  const draftColorRef = useRef<EmployeeTagColor | null>(value);
-  const lastCommittedRef = useRef<EmployeeTagColor | null>(value);
-  const currentHex = employeeTagColorToHex(draftColor);
+  const [opacityInput, setOpacityInput] = useState(() =>
+    String(tagColorOpacityByteToPercent(initialDraft.opacityByte)),
+  );
+  const [opacityInvalid, setOpacityInvalid] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const gestureStartDraftRef = useRef<TagColorDraft | null>(null);
+  const draftValue = encodeTagColorDraft(draft);
+  const displayValue = open ? draftValue : value;
+  const currentHex = employeeTagColorToHex(draft.baseColor).slice(0, 7) as `#${string}`;
   const hsv = hexToHsv(currentHex);
+  const opacityPercent = tagColorOpacityByteToPercent(draft.opacityByte);
 
-  useEffect(() => {
-    draftColorRef.current = value;
-    lastCommittedRef.current = value;
-    setDraftColor(value);
-    setInputValue(formatTagColorInput(inputMode, value));
+  const resetDraft = (color: EmployeeTagColor | null) => {
+    const nextDraft = decodeTagColorDraft(color);
+    setDraft(nextDraft);
+    setInputValue(formatTagColorInput(inputModeRef.current, color));
     setInputInvalid(false);
-  }, [inputMode, value]);
-
-  const previewColor = (color: EmployeeTagColor | null) => {
-    draftColorRef.current = color;
-    setDraftColor(color);
-    setInputValue(formatTagColorInput(inputMode, color));
-    setInputInvalid(false);
+    setOpacityInput(String(tagColorOpacityByteToPercent(nextDraft.opacityByte)));
+    setOpacityInvalid(false);
+    gestureStartDraftRef.current = null;
   };
 
-  const commitColor = (color: EmployeeTagColor | null) => {
-    if (canceledRef.current) return;
-    previewColor(color);
-    if (lastCommittedRef.current === color) return;
-    lastCommittedRef.current = color;
-    onChange(color);
+  useEffect(() => {
+    const nextDraft = decodeTagColorDraft(value);
+    setDraft(nextDraft);
+    setInputValue(formatTagColorInput(inputModeRef.current, value));
+    setInputInvalid(false);
+    setOpacityInput(String(tagColorOpacityByteToPercent(nextDraft.opacityByte)));
+    setOpacityInvalid(false);
+    gestureStartDraftRef.current = null;
+  }, [value]);
+
+  const previewDraft = (nextDraft: TagColorDraft) => {
+    const nextValue = encodeTagColorDraft(nextDraft);
+    setDraft(nextDraft);
+    setInputValue(formatTagColorInput(inputModeRef.current, nextValue));
+    setInputInvalid(false);
+    setOpacityInput(String(tagColorOpacityByteToPercent(nextDraft.opacityByte)));
+    setOpacityInvalid(false);
+  };
+
+  const previewBaseColor = (baseColor: TagColorDraft["baseColor"]) =>
+    previewDraft({ ...draft, baseColor });
+
+  const previewOpacity = (percent: number) => {
+    const opacityByte = tagColorOpacityPercentToByte(percent);
+    const nextDraft = { ...draft, opacityByte };
+    setDraft(nextDraft);
+    setOpacityInput(String(percent));
+    setOpacityInvalid(false);
+    if (inputModeRef.current === "rgba") {
+      setInputValue(formatTagColorInput("rgba", encodeTagColorDraft(nextDraft)));
+      setInputInvalid(false);
+    }
+  };
+
+  const restoreGestureDraft = () => {
+    const startDraft = gestureStartDraftRef.current;
+    gestureStartDraftRef.current = null;
+    if (startDraft) previewDraft(startDraft);
   };
 
   const updateSaturationAndValue = (clientX: number, clientY: number, element: HTMLElement) => {
     const bounds = element.getBoundingClientRect();
-    if (bounds.width <= 0 || bounds.height <= 0) return null;
-    const color = hsvToHex({
-      hue: hsv.hue,
-      saturation: clamp((clientX - bounds.left) / bounds.width, 0, 1),
-      value: clamp(1 - (clientY - bounds.top) / bounds.height, 0, 1),
-    });
-    previewColor(color);
-    return color;
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    previewBaseColor(
+      hsvToHex({
+        hue: hsv.hue,
+        saturation: clamp((clientX - bounds.left) / bounds.width, 0, 1),
+        value: clamp(1 - (clientY - bounds.top) / bounds.height, 0, 1),
+      }),
+    );
+  };
+
+  const applyDraft = () => {
+    if (inputInvalid || opacityInvalid) return;
+    const nextValue = encodeTagColorDraft(draft);
+    const currentDraft = decodeTagColorDraft(value);
+    const unchanged =
+      draft.baseColor === currentDraft.baseColor && draft.opacityByte === currentDraft.opacityByte;
+    if (!unchanged && nextValue !== value) onChange(nextValue);
+    setOpen(false);
+  };
+
+  const cancelDraft = () => {
+    resetDraft(value);
+    setOpen(false);
   };
 
   return (
     <Popover
       modal
       onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
         if (nextOpen) {
-          canceledRef.current = false;
-          previewColor(value);
-          lastCommittedRef.current = value;
+          resetDraft(value);
+          setOpen(true);
           return;
         }
-        previewColor(value);
+        resetDraft(value);
+        setOpen(false);
       }}
       open={open}
     >
@@ -157,6 +235,7 @@ export function TagColorPicker({
             aria-label={label ?? t("Choose Tag color")}
             className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent/65 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
             data-demo-id="tag-color-trigger"
+            ref={triggerRef}
             title={label ?? t("Choose Tag color")}
             type="button"
           >
@@ -168,28 +247,48 @@ export function TagColorPicker({
             aria-label={label ?? t("Choose Tag color")}
             className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-start outline-none transition-colors hover:bg-accent/45 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
             data-demo-id="tag-color-trigger"
+            ref={triggerRef}
             type="button"
           >
-            <TagColorLabel color={value} emptyLabel={noColorLabel} />
+            <TagColorLabel color={displayValue} emptyLabel={noColorLabel} />
             <HiOutlineChevronDown className="size-4 shrink-0 text-muted-foreground" />
           </button>
         )}
       </PopoverTrigger>
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            className="pointer-events-auto fixed inset-0 z-[59]"
+            data-demo-id="tag-color-dismiss-layer"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              cancelDraft();
+            }}
+          />,
+          document.body,
+        )}
       <PopoverContent
-        onEscapeKeyDown={() => {
-          canceledRef.current = true;
-          previewColor(value);
-        }}
         align="start"
         className="max-h-[min(36rem,var(--radix-popover-content-available-height))] w-[min(19rem,var(--radix-popover-content-available-width))] overflow-y-auto p-2"
         data-demo-id="tag-color-dropdown"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          triggerRef.current?.focus();
+        }}
+        onEscapeKeyDown={() => resetDraft(value)}
       >
         <div className="grid gap-2 p-1" data-demo-id="tag-color-full-palette">
           <div className="flex items-center justify-between gap-3 px-1">
             <span className="text-xs font-medium text-muted-foreground">
               {t("Full color palette")}
             </span>
-            <code className="text-xs text-muted-foreground">{currentHex}</code>
+            <code className="text-xs text-muted-foreground">
+              {draftValue === null
+                ? (noColorLabel ?? t("No color"))
+                : employeeTagColorToHex(draftValue)}
+            </code>
           </div>
           <div
             aria-label={t("Choose custom color")}
@@ -207,8 +306,7 @@ export function TagColorPicker({
               else if (event.key === "ArrowDown") next.value -= step;
               else return;
               event.preventDefault();
-              canceledRef.current = false;
-              previewColor(
+              previewBaseColor(
                 hsvToHex({
                   ...next,
                   saturation: clamp(next.saturation, 0, 1),
@@ -216,15 +314,9 @@ export function TagColorPicker({
                 }),
               );
             }}
-            onPointerCancel={() => {
-              canceledRef.current = true;
-              previewColor(value);
-            }}
-            onKeyUp={(event) => {
-              if (event.key.startsWith("Arrow")) commitColor(draftColorRef.current);
-            }}
+            onPointerCancel={restoreGestureDraft}
             onPointerDown={(event) => {
-              canceledRef.current = false;
+              gestureStartDraftRef.current = draft;
               event.currentTarget.setPointerCapture(event.pointerId);
               updateSaturationAndValue(event.clientX, event.clientY, event.currentTarget);
             }}
@@ -234,13 +326,9 @@ export function TagColorPicker({
             }}
             onPointerUp={(event) => {
               if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-              const color = updateSaturationAndValue(
-                event.clientX,
-                event.clientY,
-                event.currentTarget,
-              );
+              updateSaturationAndValue(event.clientX, event.clientY, event.currentTarget);
               event.currentTarget.releasePointerCapture(event.pointerId);
-              if (color) commitColor(color);
+              gestureStartDraftRef.current = null;
             }}
             role="slider"
             style={{
@@ -263,36 +351,84 @@ export function TagColorPicker({
             className="tag-color-hue h-4 w-full cursor-pointer appearance-none bg-transparent"
             max={359}
             min={0}
-            onBlur={() => commitColor(draftColorRef.current)}
             onChange={(event) =>
-              previewColor(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
+              previewBaseColor(hsvToHex({ ...hsv, hue: Number(event.currentTarget.value) }))
             }
+            onPointerCancel={restoreGestureDraft}
             onPointerDown={() => {
-              canceledRef.current = false;
+              gestureStartDraftRef.current = draft;
             }}
-            onPointerCancel={() => {
-              canceledRef.current = true;
-              previewColor(value);
+            onPointerUp={() => {
+              gestureStartDraftRef.current = null;
             }}
-            onKeyDown={(event) => {
-              if (event.key.startsWith("Arrow") || event.key === "Home" || event.key === "End")
-                canceledRef.current = false;
-            }}
-            onKeyUp={(event) => {
-              if (event.key.startsWith("Arrow") || event.key === "Home" || event.key === "End")
-                commitColor(draftColorRef.current);
-            }}
-            onPointerUp={() => commitColor(draftColorRef.current)}
             type="range"
             value={Math.round(hsv.hue)}
           />
+        </div>
+        <div className="my-2 h-px bg-border/80" />
+        <div className="grid gap-2 px-1" data-demo-id="tag-color-opacity-control">
+          <div className="text-xs font-medium text-muted-foreground">{t("Opacity")}</div>
+          <div className="grid grid-cols-[minmax(0,1fr)_4.75rem] items-center gap-2">
+            <input
+              aria-label={t("Opacity")}
+              className="tag-color-opacity h-4 w-full cursor-pointer appearance-none disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={draft.baseColor === null}
+              max={100}
+              min={0}
+              onChange={(event) => previewOpacity(Number(event.currentTarget.value))}
+              style={{
+                background: `linear-gradient(to right, transparent, ${currentHex}), repeating-conic-gradient(#d4d4d8 0 25%, #fff 0 50%) 0 / 8px 8px`,
+              }}
+              type="range"
+              value={opacityPercent}
+            />
+            <div className="relative">
+              <Input
+                aria-invalid={opacityInvalid}
+                aria-label={`${t("Opacity")} (%)`}
+                className="h-9 pe-7"
+                disabled={draft.baseColor === null}
+                inputMode="numeric"
+                max={100}
+                min={0}
+                onChange={(event) => {
+                  const nextValue = event.currentTarget.value;
+                  const parsed = parseOpacityInput(nextValue);
+                  setOpacityInput(nextValue);
+                  setOpacityInvalid(parsed === null);
+                  if (parsed !== null) {
+                    const nextDraft = {
+                      ...draft,
+                      opacityByte: tagColorOpacityPercentToByte(parsed),
+                    };
+                    setDraft(nextDraft);
+                    if (inputModeRef.current === "rgba") {
+                      setInputValue(formatTagColorInput("rgba", encodeTagColorDraft(nextDraft)));
+                      setInputInvalid(false);
+                    }
+                  }
+                }}
+                step={1}
+                type="number"
+                value={opacityInput}
+              />
+              <span className="pointer-events-none absolute inset-y-0 end-2 flex items-center text-xs text-muted-foreground">
+                %
+              </span>
+            </div>
+          </div>
         </div>
         <div className="my-2 h-px bg-border/80" />
         <div className="grid gap-2 px-1 pb-1" data-demo-id="tag-color-exact-input">
           <div className="text-xs font-medium text-muted-foreground">{t("Exact color")}</div>
           <div className="grid grid-cols-[minmax(7.5rem,0.8fr)_minmax(0,1.2fr)] gap-2">
             <Select
-              onValueChange={(mode: TagColorInputMode) => setInputMode(mode)}
+              onValueChange={(mode: TagColorInputMode) => {
+                inputModeRef.current = mode;
+                setInputMode(mode);
+                setInputValue(formatTagColorInput(mode, draftValue));
+                setInputInvalid(false);
+              }}
               value={inputMode}
             >
               <SelectTrigger aria-label={t("Color format")} className="min-w-0">
@@ -309,25 +445,22 @@ export function TagColorPicker({
               aria-invalid={inputInvalid}
               aria-label={t("Color value")}
               onChange={(event) => {
-                canceledRef.current = false;
                 const nextValue = event.currentTarget.value;
                 const parsed = parseTagColorInput(inputMode, nextValue);
                 setInputValue(nextValue);
                 setInputInvalid(parsed === null);
-                if (parsed) {
-                  draftColorRef.current = parsed;
-                  setDraftColor(parsed);
-                }
-              }}
-              onBlur={() => {
-                const parsed = parseTagColorInput(inputMode, inputValue);
-                if (parsed) commitColor(parsed);
+                if (!parsed) return;
+                const parsedDraft = decodeTagColorDraft(parsed);
+                const nextDraft =
+                  inputMode === "rgba"
+                    ? parsedDraft
+                    : { ...parsedDraft, opacityByte: draft.opacityByte };
+                setDraft(nextDraft);
+                setOpacityInput(String(tagColorOpacityByteToPercent(nextDraft.opacityByte)));
+                setOpacityInvalid(false);
               }}
               onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                event.preventDefault();
-                const parsed = parseTagColorInput(inputMode, inputValue);
-                if (parsed) commitColor(parsed);
+                if (event.key === "Enter") event.preventDefault();
               }}
               placeholder={tagColorInputPlaceholder(inputMode)}
               spellCheck={false}
@@ -343,27 +476,49 @@ export function TagColorPicker({
           )}
         </div>
         <div className="my-2 h-px bg-border/80" />
-        <div className="grid gap-0.5" role="listbox">
-          {[...(allowNoColor ? [null] : []), ...EMPLOYEE_TAG_COLOR_NAMES].map((color) => {
-            const selected = draftColor === color;
+        <div
+          className="flex flex-wrap gap-1.5 px-1"
+          data-demo-id="tag-color-presets"
+          role="listbox"
+        >
+          {[...(allowNoColor ? [null] : []), ...EMPLOYEE_TAG_COLOR_NAMES].map((baseColor) => {
+            const selected = draft.baseColor === baseColor;
+            const optionValue =
+              baseColor === null
+                ? null
+                : encodeTagColorDraft({ ...draft, baseColor: baseColor as EmployeeTagColorName });
             return (
               <button
                 aria-selected={selected}
-                className="flex min-h-9 cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5 text-start outline-none transition-colors hover:bg-accent/65 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40"
-                key={color ?? "none"}
-                onClick={() => {
-                  canceledRef.current = false;
-                  commitColor(color);
-                  setOpen(false);
-                }}
+                className="min-w-0 cursor-pointer rounded-md text-start outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                key={baseColor ?? "none"}
+                onClick={() => previewBaseColor(baseColor as EmployeeTagColorName | null)}
                 role="option"
                 type="button"
               >
-                <TagColorLabel color={color} emptyLabel={noColorLabel} />
-                {selected && <HiCheck className="size-4 shrink-0 text-signal" />}
+                <TagColorLabel
+                  color={optionValue}
+                  emptyLabel={noColorLabel}
+                  selected={selected}
+                  showOpacity={false}
+                  showSelectionSlot
+                />
               </button>
             );
           })}
+        </div>
+        <div className="mt-3 flex justify-end gap-2 border-t border-border/80 px-1 pt-3">
+          <Button onClick={cancelDraft} size="sm" type="button" variant="ghost">
+            {t("Cancel")}
+          </Button>
+          <Button
+            disabled={inputInvalid || opacityInvalid}
+            onClick={applyDraft}
+            size="sm"
+            type="button"
+          >
+            {t("Apply")}
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

@@ -50,9 +50,10 @@ Employee Tags remain visible. No group headings or duplicate rows are introduced
 
 Manual Units also own required `openPositions`. These View-local UUID records contain a normalized
 title, a required nullable named/custom background color, and dated or undated assignments to the
-global Tag catalog, but never create an Employee. The existing tonal color resolver paints a
-configured background over the complete shared row bounds in DOM and PNG; `null` keeps the surface
-transparent, and transient selection or drop feedback takes precedence.
+global Tag catalog, but never create an Employee. The shared color resolver paints a configured
+background over the complete shared row bounds in DOM and PNG, preserving an eight-digit color's
+actual alpha; `null` keeps the surface unconfigured, and transient selection or drop feedback takes
+precedence.
 Employee and open-position rows form one discriminated, prefix-offset layout for sorting,
 virtualization, hit testing, side anchors, DOM, and PNG. Boss Employees remain first; position Tags
 affect grouping without changing Employee counts or the Unit Tag cloud. Live Units require an empty
@@ -216,11 +217,15 @@ history, collaborative cursors, or remote synchronization.
   cancellation, closure, search changes, and catalog replacement discard the preview. Filtered moves
   insert relative to the target in the full catalog.
 - Shared Tag color helpers keep named palette classes static and derive bounded light/dark and canvas
-  fill/foreground pairs for named, custom, alpha, and neutral values. Flat catalog rows expose Eye,
-  Color, Edit, and Delete in that order. The row-level modal color Popover owns its nested scroll lock and transient HSV selection plus
-  exact HTML Keyword, HEX, RGB, or RGBA input; pointer gestures commit once on completion, exact input
-  commits on Enter or blur, and cancel or invalid input does not mutate the Tag. Edit is a separate
-  rename-only modal. Eye resolves the current `tagId` into a virtualized full Employee-card list.
+  fill/foreground pairs for named, custom, alpha, and neutral values. Non-opaque custom colors retain
+  their real alpha in resting, hover, and active fills while their opaque foreground is selected
+  against the composited light or dark surface. Flat catalog rows expose Eye, Color, Edit, and Delete
+  in that order. The row-level modal color Popover owns its nested scroll lock and one local draft
+  containing HSV, exact HTML Keyword/HEX/RGB/RGBA input, and a synchronized zero-through-hundred
+  opacity value. One wrapping listbox contains the optional No color chip and eight named chips.
+  Only Apply emits the canonical nullable color once; Cancel, Escape, outside dismissal, invalid
+  input, and unchanged Apply emit nothing. Edit is a separate rename-only modal. Eye resolves the
+  current `tagId` into a virtualized full Employee-card list.
 - `OrgViewsStore` owns View lifecycle, normalized names, document revisions, per-View editor state,
   and one transient tab-local clipboard shared by every View. Copy captures resolved membership and
   related canvas annotations; cross-View Paste regenerates Unit and canvas-element IDs, remaps

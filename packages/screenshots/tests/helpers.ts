@@ -24,6 +24,21 @@ export const productTabs = [
 
 export const localeStorageKey = "org-tools-locale";
 
+export async function applyColorPickerDraft(
+  page: Page,
+  { color, opacity }: { color?: string; opacity?: number } = {},
+) {
+  const picker = page.locator('[data-demo-id="tag-color-dropdown"]');
+  if (color) await picker.getByRole("option", { name: color, exact: true }).click();
+  if (opacity !== undefined) {
+    await picker
+      .getByRole("spinbutton", { name: "Opacity (%)", exact: true })
+      .fill(String(opacity));
+  }
+  await picker.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(picker).toBeHidden();
+}
+
 export async function createDistributionStateFile(
   targetCollapsed = true,
 ): Promise<ImportFilePayload> {

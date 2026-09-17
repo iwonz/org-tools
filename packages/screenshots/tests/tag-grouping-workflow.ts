@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { OrgToolsState } from "@org-tools/types";
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
-import { openImportDialog, syntheticStatePath } from "./helpers.js";
+import { applyColorPickerDraft, openImportDialog, syntheticStatePath } from "./helpers.js";
 
 export async function pointerMoveTag(page: Page, handle: Locator, target: Locator, y = 4) {
   const source = await handle.boundingBox();
@@ -129,6 +129,16 @@ export async function exerciseTagGrouping(page: Page) {
   await tagRow(zulu).locator('[data-demo-id="tag-color-trigger"]').click();
   const picker = page.locator('[data-demo-id="tag-color-dropdown"]');
   await expect(picker).toBeVisible();
+  await picker.evaluate((element: HTMLElement) => {
+    element.style.height = "180px";
+    element.style.maxHeight = "180px";
+  });
+  const constrainedPickerSize = await picker.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(constrainedPickerSize.clientHeight).toBeLessThanOrEqual(180);
+  expect(constrainedPickerSize.scrollHeight).toBeGreaterThan(constrainedPickerSize.clientHeight);
   const backgroundScroll = await catalog.evaluate((element) => ({
     top: element.scrollTop,
     page: window.scrollY,
@@ -136,12 +146,15 @@ export async function exerciseTagGrouping(page: Page) {
   await picker.hover();
   await page.mouse.wheel(0, 640);
   await expect.poll(() => picker.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await picker.getByRole("option", { name: "Teal", exact: true }).click();
-  await expect(picker).toBeHidden();
+  await applyColorPickerDraft(page, { color: "Teal" });
   expect(
     await catalog.evaluate((element) => ({ top: element.scrollTop, page: window.scrollY })),
   ).toEqual(backgroundScroll);
   await tagRow(zulu).locator('[data-demo-id="tag-color-trigger"]').click();
+  await picker.evaluate((element: HTMLElement) => {
+    element.style.height = "180px";
+    element.style.maxHeight = "180px";
+  });
   await picker.hover();
   for (let sample = 0; sample < 12; sample += 1) await page.mouse.wheel(0, 24);
   await expect.poll(() => picker.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);

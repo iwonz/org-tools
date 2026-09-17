@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
+import { applyColorPickerDraft } from "./helpers.js";
 
 export async function exerciseOpenPositions(page: Page) {
   const productUnit = page.locator(
@@ -103,21 +104,22 @@ export async function exerciseOpenPositions(page: Page) {
   const backgroundControl = dialog.locator('[data-demo-id="org-editor-open-position-background"]');
   await expect(backgroundControl).toContainText("Amber");
   await backgroundControl.getByRole("button", { name: "Background color", exact: true }).click();
-  await page
-    .locator('[data-demo-id="tag-color-dropdown"]')
-    .getByRole("option", { name: "Blue", exact: true })
-    .click();
+  await applyColorPickerDraft(page, { color: "Blue", opacity: 40 });
   await dialog.locator('[data-demo-id="org-editor-open-position-title"]').fill("Staff Engineer");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(position).toContainText("Staff Engineer");
-  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "#3b82f666");
+  await expect(positionContainer).toHaveAttribute("data-selected", "true");
+  await sourceEmployee.click();
+  await expect(positionContainer).toHaveAttribute("data-selected", "false");
+  await expect(positionContainer).toHaveCSS("background-color", "rgba(59, 130, 246, 0.4)");
 
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(position).toContainText("Senior Product Engineer");
   await expect(positionContainer).toHaveAttribute("data-open-position-background", "amber");
   await page.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(position).toContainText("Staff Engineer");
-  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "#3b82f666");
 
   await position.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
@@ -126,14 +128,11 @@ export async function exerciseOpenPositions(page: Page) {
     .locator('[data-demo-id="org-editor-open-position-background"]')
     .getByRole("button", { name: "Background color", exact: true })
     .click();
-  await page
-    .locator('[data-demo-id="tag-color-dropdown"]')
-    .getByRole("option", { name: "No background", exact: true })
-    .click();
+  await applyColorPickerDraft(page, { color: "No background" });
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(positionContainer).toHaveAttribute("data-open-position-background", "none");
   await page.getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "#3b82f666");
 
   await position.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
@@ -142,12 +141,11 @@ export async function exerciseOpenPositions(page: Page) {
     .locator('[data-demo-id="org-editor-open-position-background"]')
     .getByRole("button", { name: "Background color", exact: true })
     .click();
-  await page
-    .locator('[data-demo-id="tag-color-dropdown"]')
-    .getByRole("option", { name: "Rose", exact: true })
-    .click();
+  const colorPicker = page.locator('[data-demo-id="tag-color-dropdown"]');
+  await colorPicker.getByRole("option", { name: "Rose", exact: true }).click();
+  await colorPicker.getByRole("button", { name: "Cancel", exact: true }).click();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "#3b82f666");
 
   await productUnit.click({ button: "right", position: { x: 80, y: 24 } });
   await page.getByRole("menuitem", { name: "Add open position", exact: true }).click();

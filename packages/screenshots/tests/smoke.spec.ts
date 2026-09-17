@@ -8,6 +8,7 @@ import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" }
 import { expect, test } from "./browser-test.js";
 import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
 import {
+  applyColorPickerDraft,
   createDistributionStateFile,
   expectLocalRequestsOnly,
   openBlankState,
@@ -3714,20 +3715,35 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await colorTrigger.click();
   const palette = page.locator('[data-demo-id="tag-color-dropdown"]');
   const fullPalette = palette.locator('[data-demo-id="tag-color-full-palette"]');
+  const opacityControl = palette.locator('[data-demo-id="tag-color-opacity-control"]');
+  const exactInput = palette.locator('[data-demo-id="tag-color-exact-input"]');
+  const presets = palette.locator('[data-demo-id="tag-color-presets"]');
   await expect(fullPalette).toBeVisible();
-  await expect(palette.locator('[data-demo-id="tag-color-exact-input"]')).toBeVisible();
-  await expect(palette.getByRole("option")).toHaveCount(9);
-  const [fullPaletteBox, firstPresetBox] = await Promise.all([
-    fullPalette.boundingBox(),
-    palette.getByRole("option").first().boundingBox(),
-  ]);
-  expect(fullPaletteBox).not.toBeNull();
-  expect(firstPresetBox).not.toBeNull();
-  expect((fullPaletteBox?.y ?? 0) + (fullPaletteBox?.height ?? 0)).toBeLessThanOrEqual(
-    firstPresetBox?.y ?? 0,
+  await expect(opacityControl).toBeVisible();
+  await expect(exactInput).toBeVisible();
+  await expect(presets.getByRole("option")).toHaveCount(9);
+  const [fullPaletteBox, opacityBox, exactBox, firstPresetBox, secondPresetBox] = await Promise.all(
+    [
+      fullPalette.boundingBox(),
+      opacityControl.boundingBox(),
+      exactInput.boundingBox(),
+      presets.getByRole("option").first().boundingBox(),
+      presets.getByRole("option").nth(1).boundingBox(),
+    ],
   );
+  expect(fullPaletteBox).not.toBeNull();
+  expect(opacityBox).not.toBeNull();
+  expect(exactBox).not.toBeNull();
+  expect(firstPresetBox).not.toBeNull();
+  expect(secondPresetBox).not.toBeNull();
+  expect((fullPaletteBox?.y ?? 0) + (fullPaletteBox?.height ?? 0)).toBeLessThanOrEqual(
+    opacityBox?.y ?? 0,
+  );
+  expect((opacityBox?.y ?? 0) + (opacityBox?.height ?? 0)).toBeLessThanOrEqual(exactBox?.y ?? 0);
+  expect((exactBox?.y ?? 0) + (exactBox?.height ?? 0)).toBeLessThanOrEqual(firstPresetBox?.y ?? 0);
+  expect(firstPresetBox?.y).toBeCloseTo(secondPresetBox?.y ?? 0, 0);
   await expectFilledTagSurface(
-    palette
+    presets
       .getByRole("option", { name: "Orange", exact: true })
       .locator("[data-tag-color-surface]"),
   );
@@ -3739,44 +3755,91 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await page.getByRole("option", { name: "HTML Keyword", exact: true }).click();
   await colorValue.fill("aliceblue");
   await colorValue.press("Enter");
+  await expect(tagRow.locator('[data-tag-color="#7c3aed"]')).toBeVisible();
+  await applyColorPickerDraft(page);
   await expect(tagRow.locator('[data-tag-color="#f0f8ff"]')).toBeVisible();
+  await colorTrigger.click();
   await colorFormat.click();
   await page.getByRole("option", { name: "HEX", exact: true }).click();
   await colorValue.fill("#0F8");
   await colorValue.press("Enter");
+  await applyColorPickerDraft(page);
   await expect(tagRow.locator('[data-tag-color="#00ff88"]')).toBeVisible();
+  await colorTrigger.click();
   await colorFormat.click();
   await page.getByRole("option", { name: "RGB", exact: true }).click();
   await colorValue.fill("rgb(12, 34, 56)");
   await colorValue.press("Enter");
+  await applyColorPickerDraft(page);
   await expect(tagRow.locator('[data-tag-color="#0c2238"]')).toBeVisible();
+  await colorTrigger.click();
   await colorValue.fill("rgb(999, 34, 56)");
   await expect(palette.getByText("Enter a valid RGB color.", { exact: true })).toBeVisible();
   await expect(tagRow.locator('[data-tag-color="#0c2238"]')).toBeVisible();
+  await expect(palette.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
   await colorFormat.click();
   await page.getByRole("option", { name: "RGBA", exact: true }).click();
   await colorValue.fill("rgba(124, 58, 237, .5)");
   await colorValue.press("Enter");
+  await expect(palette.getByRole("spinbutton", { name: "Opacity (%)", exact: true })).toHaveValue(
+    "50",
+  );
+  await expect(tagRow.locator('[data-tag-color="#0c2238"]')).toBeVisible();
+  await applyColorPickerDraft(page);
   await expect(tagRow.locator('[data-tag-color="#7c3aed80"]')).toBeVisible();
+  await expect(tagRow.locator('[data-tag-color="#7c3aed80"]')).toHaveCSS(
+    "background-color",
+    "rgba(124, 58, 237, 0.5)",
+  );
 
+  await colorTrigger.click();
   await palette.getByRole("option", { name: "Orange", exact: true }).click();
+  await applyColorPickerDraft(page);
+  await expect(tagRow.locator('[data-tag-color="#f9731680"]')).toBeVisible();
+  await colorTrigger.click();
+  await applyColorPickerDraft(page, { color: "Orange", opacity: 100 });
   await expect(tagRow.locator('[data-tag-color="orange"]')).toBeVisible();
   await colorTrigger.click();
+  await applyColorPickerDraft(page, { color: "Orange", opacity: 0 });
+  await expect(tagRow.locator('[data-tag-color="#f9731600"]')).toHaveCSS(
+    "background-color",
+    "rgba(249, 115, 22, 0)",
+  );
+  await colorTrigger.click();
   await palette.getByRole("option", { name: "No color", exact: true }).click();
+  await expect(palette.getByRole("slider", { name: "Opacity", exact: true })).toBeDisabled();
+  await expect(
+    palette.getByRole("spinbutton", { name: "Opacity (%)", exact: true }),
+  ).toBeDisabled();
+  await palette.getByRole("option", { name: "Orange", exact: true }).click();
+  await expect(palette.getByRole("spinbutton", { name: "Opacity (%)", exact: true })).toHaveValue(
+    "0",
+  );
+  await palette.getByRole("option", { name: "No color", exact: true }).click();
+  await palette.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(tagRow.locator('[data-tag-color="none"]')).toBeVisible();
   await colorTrigger.click();
   await palette.getByRole("slider", { name: "Choose custom color" }).click({
     position: { x: 210, y: 34 },
   });
+  await expect(tagRow.locator('[data-tag-color="none"]')).toBeVisible();
+  await applyColorPickerDraft(page);
   const customSurface = tagRow.locator('[data-tag-color^="#"]');
   await expect(customSurface).toBeVisible();
   const customColor = await customSurface.getAttribute("data-tag-color");
   expect(customColor).toMatch(/^#[0-9a-f]{6}$/u);
   await expectFilledTagSurface(customSurface);
-  await page.keyboard.press("Escape");
   await colorTrigger.click();
   await palette.getByLabel("Hue").fill("12");
   await page.keyboard.press("Escape");
+  await expect(tagRow.locator(`[data-tag-color="${customColor}"]`)).toBeVisible();
+  await colorTrigger.click();
+  await palette.getByRole("spinbutton", { name: "Opacity (%)", exact: true }).fill("17");
+  await page
+    .locator('[data-demo-id="tag-color-dismiss-layer"]')
+    .click({ position: { x: 2, y: 2 } });
+  await expect(palette).toBeHidden();
+  await expect(colorTrigger).toBeFocused();
   await expect(tagRow.locator(`[data-tag-color="${customColor}"]`)).toBeVisible();
   await tagRow.getByRole("button", { name: "View Employees with this Tag", exact: true }).click();
   const tagEmployees = page.getByRole("dialog", { name: /Employees with Tag/u });

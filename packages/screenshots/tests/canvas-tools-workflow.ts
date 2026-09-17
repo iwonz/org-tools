@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import type { OrgToolsState } from "@org-tools/types";
 import { expect, type Page } from "@playwright/test";
-import { openImportDialog, syntheticStatePath } from "./helpers.js";
+import { applyColorPickerDraft, openImportDialog, syntheticStatePath } from "./helpers.js";
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
@@ -89,6 +89,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     "none",
   );
   const createdStickerNode = stickerElements.last();
+  await properties.getByRole("button", { name: "Sticker color", exact: true }).click();
+  await applyColorPickerDraft(page, { color: "Orange", opacity: 40 });
+  await expect(createdStickerNode.locator("[data-canvas-sticker-paper]")).toHaveCSS(
+    "background-color",
+    "rgba(249, 115, 22, 0.4)",
+  );
   const stickerHeightBeforeDraft = Number.parseFloat(
     await createdStickerNode.evaluate((element: HTMLElement) => element.style.height),
   );
@@ -126,7 +132,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(editor).toBeVisible();
   await properties.getByRole("button", { name: "Text color", exact: true }).click();
   await expect(activeRichEditor).toBeVisible();
-  await page.getByRole("option", { name: "Rose", exact: true }).click();
+  await applyColorPickerDraft(page, { color: "Rose", opacity: 40 });
   await expect(editor).toBeVisible();
   await expect(editor.locator('span[style*="font-family"]').first()).toHaveCSS(
     "font-family",
@@ -136,7 +142,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(editor.locator('span[style*="font-size: 26px"]').first()).toBeVisible();
   await expect(editor.locator('span[style*="color"]').first()).toHaveCSS(
     "color",
-    "rgb(244, 63, 94)",
+    "rgba(244, 63, 94, 0.4)",
   );
   const overflowStickerText = Array.from({ length: 12 }, (_, index) => `Line ${index + 1}`).join(
     "\n",
@@ -198,6 +204,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(startMarkerButton).toHaveAttribute("aria-pressed", "true");
   await expect(endMarkerButton).toHaveAttribute("aria-pressed", "false");
   await expect(properties.getByRole("combobox", { name: "Arrow start marker" })).toHaveCount(0);
+  await properties.getByRole("button", { name: "Arrow color", exact: true }).click();
+  await applyColorPickerDraft(page, { color: "Teal", opacity: 40 });
+  await expect(arrowElements.last().locator("svg > path").nth(1)).toHaveAttribute(
+    "stroke",
+    "#14b8a666",
+  );
 
   await page.evaluate((bytes) => {
     const data = Uint8Array.from(atob(bytes), (character) => character.charCodeAt(0));
@@ -428,12 +440,16 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.getByRole("option", { name: "Lobster", exact: true }).click();
   await properties.getByLabel("Font size", { exact: true }).fill("24");
   await properties.getByRole("button", { name: "Text color", exact: true }).click();
-  await page.getByRole("option", { name: "Blue", exact: true }).click();
+  await applyColorPickerDraft(page, { color: "Blue", opacity: 40 });
   await expect(editor.locator('span[style*="font-family"]').first()).toHaveCSS(
     "font-family",
     /Lobster/,
   );
   await expect(editor.locator('span[style*="font-size: 24px"]').first()).toBeVisible();
+  await expect(editor.locator('span[style*="color"]').first()).toHaveCSS(
+    "color",
+    "rgba(59, 130, 246, 0.4)",
+  );
   await editor.press("Home");
   for (let index = 0; index < 5; index += 1) await editor.press("Shift+ArrowRight");
   await boldButton.click();
@@ -468,6 +484,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await properties.getByLabel("Text background", { exact: true }).click();
   await page.getByRole("option", { name: "Line background", exact: true }).click();
   await expect(createdText.locator('[data-canvas-text-fill="lines"]')).toHaveCount(1);
+  await properties.getByRole("button", { name: "Background color", exact: true }).click();
+  await applyColorPickerDraft(page, { color: "Amber", opacity: 40 });
+  await expect(createdText.locator('[data-canvas-text-fill="lines"]').first()).toHaveCSS(
+    "background-color",
+    "rgba(245, 158, 11, 0.4)",
+  );
 
   const textBeforeMove = await createdText.boundingBox();
   if (!textBeforeMove) throw new Error("Text move geometry is unavailable.");

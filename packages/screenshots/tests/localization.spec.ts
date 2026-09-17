@@ -269,6 +269,19 @@ for (const [locale, messages] of [
     await expect(tagColorDropdown.getByLabel(messages.Ui["Color format"])).toBeVisible();
     await expect(tagColorDropdown.getByLabel(messages.Ui["Color value"])).toBeVisible();
     await expect(tagColorDropdown.getByLabel(messages.Ui.Hue)).toBeVisible();
+    await expect(tagColorDropdown.getByLabel(messages.Ui.Opacity, { exact: true })).toBeVisible();
+    await expect(
+      tagColorDropdown.getByRole("spinbutton", {
+        name: `${messages.Ui.Opacity} (%)`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      tagColorDropdown.getByRole("button", { name: messages.Ui.Apply, exact: true }),
+    ).toBeVisible();
+    await expect(
+      tagColorDropdown.getByRole("button", { name: messages.Ui.Cancel, exact: true }),
+    ).toBeVisible();
     await expect(
       tagColorDropdown.getByRole("option", { name: messages.Ui["No color"], exact: true }),
     ).toBeVisible();

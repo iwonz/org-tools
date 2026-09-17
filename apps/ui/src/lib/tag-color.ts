@@ -66,6 +66,11 @@ type Rgba = { alpha: number; blue: number; green: number; red: number };
 type Rgb = Omit<Rgba, "alpha">;
 export type Hsv = { hue: number; saturation: number; value: number };
 
+export type TagColorDraft = {
+  baseColor: EmployeeTagColorName | `#${string}` | null;
+  opacityByte: number;
+};
+
 const parseHex = (hex: string): Rgba | null => {
   if (!CUSTOM_TAG_COLOR_PATTERN.test(hex)) return null;
   return {
@@ -87,6 +92,42 @@ const rgbToHex = ({ blue, green, red }: Rgb): `#${string}` =>
 const rgbaToHex = ({ alpha, ...rgb }: Rgba): `#${string}` => {
   const opaque = rgbToHex(rgb);
   return alpha >= 1 ? opaque : `${opaque}${channelToHex(alpha * 255)}`;
+};
+
+const opacityByteFromHex = (hex: `#${string}`) =>
+  hex.length === 9 ? Number.parseInt(hex.slice(7, 9), 16) : 255;
+
+const findNamedColorByHex = (hex: `#${string}`): EmployeeTagColorName | null =>
+  EMPLOYEE_TAG_COLOR_NAMES.find((name) => EMPLOYEE_TAG_COLOR_HEX[name] === hex) ?? null;
+
+export const tagColorOpacityPercentToByte = (percent: number) =>
+  Math.round((Math.min(100, Math.max(0, percent)) / 100) * 255);
+
+export const tagColorOpacityByteToPercent = (byte: number) =>
+  Math.round((Math.min(255, Math.max(0, byte)) / 255) * 100);
+
+export const decodeTagColorDraft = (color: EmployeeTagColor | null): TagColorDraft => {
+  if (color === null) return { baseColor: null, opacityByte: 255 };
+  if (isEmployeeTagColorName(color)) return { baseColor: color, opacityByte: 255 };
+  const normalized = normalizeCustomEmployeeTagColor(color);
+  if (!normalized) return { baseColor: DEFAULT_CUSTOM_TAG_COLOR, opacityByte: 255 };
+  const baseHex = normalized.slice(0, 7) as `#${string}`;
+  const opacityByte = opacityByteFromHex(normalized);
+  return {
+    baseColor: opacityByte < 255 ? (findNamedColorByHex(baseHex) ?? baseHex) : baseHex,
+    opacityByte,
+  };
+};
+
+export const encodeTagColorDraft = ({
+  baseColor,
+  opacityByte,
+}: TagColorDraft): EmployeeTagColor | null => {
+  if (baseColor === null) return null;
+  const boundedOpacity = Math.round(Math.min(255, Math.max(0, opacityByte)));
+  if (boundedOpacity === 255) return baseColor;
+  const baseHex = employeeTagColorToHex(baseColor).slice(0, 7);
+  return `${baseHex}${channelToHex(boundedOpacity)}` as `#${string}`;
 };
 
 const parseFunctionalColor = (value: string, includeAlpha: boolean): Rgba | null => {
@@ -201,6 +242,21 @@ const getTagColorTonalPalette = (color: EmployeeTagColor) => {
   const white = { blue: 255, green: 255, red: 255 };
   const nearBlack = { blue: 23, green: 23, red: 23 };
   const rgb = { blue: parsed.blue, green: parsed.green, red: parsed.red };
+  if (parsed.alpha < 1) {
+    const lightComposite = mix(rgb, white, parsed.alpha);
+    const darkComposite = mix(rgb, nearBlack, parsed.alpha);
+    const lightText = contrast(nearBlack, lightComposite) >= 4.5 ? nearBlack : white;
+    const darkText = contrast(white, darkComposite) >= 4.5 ? white : nearBlack;
+    return {
+      alpha: parsed.alpha,
+      canvasText: rgbToHex(lightText),
+      darkFill: rgbaToHex(parsed),
+      darkText: rgbToHex(darkText),
+      lightFill: rgbaToHex(parsed),
+      lightText: rgbToHex(lightText),
+      rgb,
+    };
+  }
   const lightRgb = mix(rgb, white, parsed.alpha);
   const darkRgb = mix(rgb, nearBlack, parsed.alpha);
   const lightFill = mix(lightRgb, white, 0.18);
@@ -209,6 +265,7 @@ const getTagColorTonalPalette = (color: EmployeeTagColor) => {
   const tintedLight = mix(darkRgb, white, 0.68);
 
   return {
+    alpha: parsed.alpha,
     canvasText: rgbToHex(
       contrast(mix(lightRgb, nearBlack, 0.3), lightFill) >= 4.5
         ? mix(lightRgb, nearBlack, 0.3)
@@ -230,6 +287,30 @@ export const customTagColorSurfaceStyle = (
   if (!palette) return undefined;
   const white = { blue: 255, green: 255, red: 255 };
   const nearBlack = { blue: 23, green: 23, red: 23 };
+  if (palette.alpha < 1) {
+    return {
+      "--tag-custom-fill": palette.lightFill,
+      "--tag-custom-fill-active": rgbaToHex({
+        ...mix(palette.rgb, white, 0.82),
+        alpha: palette.alpha,
+      }),
+      "--tag-custom-fill-hover": rgbaToHex({
+        ...mix(palette.rgb, white, 0.9),
+        alpha: palette.alpha,
+      }),
+      "--tag-custom-foreground": palette.lightText,
+      "--tag-custom-fill-dark": palette.darkFill,
+      "--tag-custom-fill-active-dark": rgbaToHex({
+        ...mix(palette.rgb, nearBlack, 0.82),
+        alpha: palette.alpha,
+      }),
+      "--tag-custom-fill-hover-dark": rgbaToHex({
+        ...mix(palette.rgb, nearBlack, 0.9),
+        alpha: palette.alpha,
+      }),
+      "--tag-custom-foreground-dark": palette.darkText,
+    } as CSSProperties;
+  }
   return {
     "--tag-custom-fill": palette.lightFill,
     "--tag-custom-fill-active": rgbToHex(mix(palette.rgb, white, 0.3)),
