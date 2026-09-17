@@ -364,6 +364,7 @@
               "noteMarkdown": "",
               "openPositions": [
                 {
+                  "backgroundColor": "amber",
                   "id": "abababab-abab-4aba-8aba-abababababab",
                   "tags": [
                     {

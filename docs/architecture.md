@@ -49,13 +49,16 @@ sequence. Hidden Tag clouds contribute zero footer height to every geometry cons
 Employee Tags remain visible. No group headings or duplicate rows are introduced.
 
 Manual Units also own required `openPositions`. These View-local UUID records contain a normalized
-title and dated or undated assignments to the global Tag catalog, but never create an Employee.
+title, a required nullable named/custom background color, and dated or undated assignments to the
+global Tag catalog, but never create an Employee. The existing tonal color resolver paints a
+configured background over the complete shared row bounds in DOM and PNG; `null` keeps the surface
+transparent, and transient selection or drop feedback takes precedence.
 Employee and open-position rows form one discriminated, prefix-offset layout for sorting,
 virtualization, hit testing, side anchors, DOM, and PNG. Boss Employees remain first; position Tags
 affect grouping without changing Employee counts or the Unit Tag cloud. Live Units require an empty
-position array. View clone and Unit Paste regenerate position IDs and remap attachments; replacement
-rekeys the owner to an Employee occurrence in one history command, while deletion detaches at the
-last resolved world point.
+position array. View clone and Unit Paste preserve backgrounds, regenerate position IDs, and remap
+attachments; replacement rekeys the owner to an Employee occurrence in one history command, while
+deletion detaches at the last resolved world point.
 
 Each View also owns a required ordered `structure.canvasElements` discriminated union for Text,
 Sticker, embedded Image, and cubic Arrow content. Rectangular tools share bounds, rotation, layer,

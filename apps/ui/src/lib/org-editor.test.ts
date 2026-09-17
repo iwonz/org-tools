@@ -268,8 +268,9 @@ describe("Org Editor mixed Unit rows", () => {
       employeeIds: ["member", "boss"],
       id: "mixed-rows",
       openPositions: [
-        { id: "position-b", tags: [], title: "Gamma Role" },
+        { backgroundColor: null, id: "position-b", tags: [], title: "Gamma Role" },
         {
+          backgroundColor: "blue",
           id: "position-a",
           tags: [{ date: null, tagId: "tag-first" }],
           title: "Alpha Role",
@@ -302,6 +303,7 @@ describe("Org Editor mixed Unit rows", () => {
       id: "position-exclusions",
       openPositions: [
         {
+          backgroundColor: null,
           id: "position",
           tags: [{ date: null, tagId: "position-tag" }],
           title: "Future role",

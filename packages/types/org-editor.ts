@@ -174,6 +174,7 @@ export type OrgEditorEmployeePosition = {
 };
 
 export type OrgEditorOpenPosition = {
+  backgroundColor: EmployeeTagColor | null;
   id: OrgEditorOpenPositionId;
   tags: EmployeeTagAssignment[];
   title: string;

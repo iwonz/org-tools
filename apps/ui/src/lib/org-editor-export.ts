@@ -207,6 +207,10 @@ export const getOrgEditorExportOpenPositionRowOutline = ({
   };
 };
 
+export const getOrgEditorExportOpenPositionRowBackground = (
+  backgroundColor: EmployeeTagColor | null,
+) => (backgroundColor === null ? null : getTagColorCanvasStyle(backgroundColor));
+
 type OrgEditorExportGradientLayer =
   | {
       from: [number, number];
@@ -1751,17 +1755,23 @@ export const createOrgEditorImageExportResult = async ({
         distributionPresentation,
         viewSettings,
       );
+      const rowSurfaceBounds = getOrgEditorEmployeeRowSurfaceBounds({
+        employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+        employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
+        unit,
+      });
       if (distributionFillStyle) {
-        drawRoundedRect(
-          context,
-          getOrgEditorEmployeeRowSurfaceBounds({
-            employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
-            employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
-            unit,
-          }),
-          ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
-        );
+        drawRoundedRect(context, rowSurfaceBounds, ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS);
         context.fillStyle = distributionFillStyle;
+        context.fill();
+      }
+
+      const openPositionBackground = openPosition
+        ? getOrgEditorExportOpenPositionRowBackground(openPosition.backgroundColor)
+        : null;
+      if (openPositionBackground) {
+        drawRoundedRect(context, rowSurfaceBounds, ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS);
+        context.fillStyle = openPositionBackground.fillStyle;
         context.fill();
       }
 
@@ -1826,7 +1836,7 @@ export const createOrgEditorImageExportResult = async ({
 
       context.textAlign = "start";
       context.textBaseline = "alphabetic";
-      context.fillStyle = "#0f172a";
+      context.fillStyle = openPositionBackground?.textStyle ?? "#0f172a";
       context.font = getCanvasFont(settings.fontFamily, 400, ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE);
       drawTrimmedText(
         context,

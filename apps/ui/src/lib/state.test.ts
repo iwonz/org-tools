@@ -169,6 +169,7 @@ describe("OrgToolsState", () => {
     const tag = store.tagDefinitions[0];
     if (!tag) throw new Error("Expected a Tag.");
     const openPositionId = store.mainOrgEditor.addOpenPosition(unitId, {
+      backgroundColor: "#7c3aed",
       tags: [{ date: "2026-10-01", tagId: tag.id }],
       title: "Platform Engineer",
     });
@@ -188,6 +189,30 @@ describe("OrgToolsState", () => {
     store.mainOrgEditor.setSelectedItems([{ openPositionId, type: "openPosition", unitId }]);
     const state = store.createOrgToolsState();
     expect(parseOrgToolsState(state)).toEqual(state);
+
+    const precedingPositionShape = structuredClone(state) as unknown as {
+      organization: {
+        views: Array<{
+          structure: { units: Array<{ openPositions: Array<Record<string, unknown>> }> };
+        }>;
+      };
+    };
+    delete precedingPositionShape.organization.views[0]?.structure.units[0]?.openPositions[0]
+      ?.backgroundColor;
+    expect(() => parseOrgToolsState(precedingPositionShape)).toThrow("invalid View structure");
+
+    const invalidColor = structuredClone(state) as unknown as {
+      organization: {
+        views: Array<{
+          structure: { units: Array<{ openPositions: Array<Record<string, unknown>> }> };
+        }>;
+      };
+    };
+    const invalidColorPosition =
+      invalidColor.organization.views[0]?.structure.units[0]?.openPositions[0];
+    if (!invalidColorPosition) throw new Error("Expected a persisted position.");
+    invalidColorPosition.backgroundColor = "not-a-color";
+    expect(() => parseOrgToolsState(invalidColor)).toThrow("invalid View structure");
 
     const preceding = structuredClone(state) as unknown as {
       organization: { views: Array<{ structure: { units: Array<Record<string, unknown>> } }> };
@@ -742,6 +767,7 @@ describe("OrgToolsState", () => {
     const tag = store.tagDefinitions[0];
     if (!tag) throw new Error("Expected a Tag definition.");
     const openPositionId = store.mainOrgEditor.addOpenPosition(unitId, {
+      backgroundColor: null,
       tags: [{ date: "2026-10-01", tagId: tag.id }],
       title: "Platform Engineer",
     });

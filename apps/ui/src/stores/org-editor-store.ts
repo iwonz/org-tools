@@ -2,6 +2,7 @@ import type {
   EmployeeId,
   EmployeeLiveFilterRule,
   EmployeeTagAssignment,
+  EmployeeTagColor,
   OrgEditorAnchorRef,
   OrgEditorCanvasElement,
   OrgEditorCanvasElementId,
@@ -598,6 +599,7 @@ const areOpenPositionsEqual = (
     const secondPosition = secondPositions[index];
     return (
       secondPosition !== undefined &&
+      position.backgroundColor === secondPosition.backgroundColor &&
       position.id === secondPosition.id &&
       position.title === secondPosition.title &&
       JSON.stringify(position.tags) === JSON.stringify(secondPosition.tags)
@@ -1765,13 +1767,18 @@ export class OrgEditorStore {
 
   addOpenPosition(
     unitId: OrgEditorUnitId,
-    input: { tags: EmployeeTagAssignment[]; title: string },
+    input: {
+      backgroundColor: EmployeeTagColor | null;
+      tags: EmployeeTagAssignment[];
+      title: string;
+    },
   ): OrgEditorOpenPositionId | null {
     const title = normalizeOrgEditorOpenPositionTitle(input.title);
     if (!title) throw new LocalizedError(uiMessage("Enter an open position title."));
     const unit = this.units.find((candidate) => candidate.id === unitId);
     if (!unit || unit.liveFilter !== null) return null;
     const openPosition: OrgEditorOpenPosition = {
+      backgroundColor: input.backgroundColor,
       id: createUuid(),
       tags: input.tags.map((tag) => ({ ...tag })),
       title,
@@ -1796,7 +1803,11 @@ export class OrgEditorStore {
   updateOpenPosition(
     unitId: OrgEditorUnitId,
     openPositionId: OrgEditorOpenPositionId,
-    input: { tags: EmployeeTagAssignment[]; title: string },
+    input: {
+      backgroundColor: EmployeeTagColor | null;
+      tags: EmployeeTagAssignment[];
+      title: string;
+    },
   ): void {
     const title = normalizeOrgEditorOpenPositionTitle(input.title);
     if (!title) throw new LocalizedError(uiMessage("Enter an open position title."));
@@ -1815,7 +1826,12 @@ export class OrgEditorStore {
               ...candidate,
               openPositions: candidate.openPositions.map((position) =>
                 position.id === openPositionId
-                  ? { ...position, tags: input.tags.map((tag) => ({ ...tag })), title }
+                  ? {
+                      ...position,
+                      backgroundColor: input.backgroundColor,
+                      tags: input.tags.map((tag) => ({ ...tag })),
+                      title,
+                    }
                   : position,
               ),
               updatedAt: new Date().toISOString(),

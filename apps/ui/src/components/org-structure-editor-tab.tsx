@@ -103,6 +103,7 @@ import {
   UnitSearchInput,
 } from "@/components/search-controls";
 import { SourceEmptyState, TopLevelEmptyState } from "@/components/source-empty-state";
+import { TagColorPicker } from "@/components/tag-color-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1599,18 +1600,26 @@ function OrgEditorNode({
                 );
                 const tags = openPositionTagsById.get(openPosition.id) ?? [];
                 const isDropTarget = employeeDropTargetOpenPositionId === openPosition.id;
+                const showPersistentBackground =
+                  openPosition.backgroundColor !== null && !positionSelected && !isDropTarget;
                 return (
                   <div
                     className={cn(
                       "relative flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
+                      showPersistentBackground &&
+                        tagColorSurfaceClassName(openPosition.backgroundColor),
                       positionSelected && "bg-primary text-primary-foreground hover:bg-primary",
                       isDropTarget && "ring-2 ring-inset ring-signal bg-accent/70",
                     )}
                     data-org-editor-open-position-row-container
+                    data-open-position-background={openPosition.backgroundColor ?? "none"}
                     data-open-position-drop-target={isDropTarget ? "true" : undefined}
                     data-selected={positionSelected ? "true" : "false"}
                     key={`${unit.id}:${openPosition.id}`}
                     style={{
+                      ...(showPersistentBackground
+                        ? customTagColorSurfaceStyle(openPosition.backgroundColor)
+                        : undefined),
                       borderRadius: ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
                       height: employeeRowLayout.heights[employeeIndex],
                       ...(shouldVirtualizeEmployees
@@ -2266,6 +2275,7 @@ function OpenPositionDialog({
 }) {
   const t = useUiText();
   const store = useOrgStore();
+  const [backgroundColor, setBackgroundColor] = useState(openPosition?.backgroundColor ?? null);
   const [title, setTitle] = useState(openPosition?.title ?? t("Open position"));
   const [tags, setTags] = useState<EmployeeTag[]>(() => {
     const definitionById = new Map(store.tagDefinitions.map((tag) => [tag.id, tag] as const));
@@ -2290,11 +2300,16 @@ function OpenPositionDialog({
     });
     if (openPosition) {
       store.orgEditor.updateOpenPosition(unitId, openPosition.id, {
+        backgroundColor,
         tags: assignments,
         title: normalizedTitle,
       });
     } else {
-      store.orgEditor.addOpenPosition(unitId, { tags: assignments, title: normalizedTitle });
+      store.orgEditor.addOpenPosition(unitId, {
+        backgroundColor,
+        tags: assignments,
+        title: normalizedTitle,
+      });
     }
     onOpenChange(false);
   };
@@ -2321,6 +2336,16 @@ function OpenPositionDialog({
               value={title}
             />
           </label>
+          <div className="grid gap-1.5 text-sm" data-demo-id="org-editor-open-position-background">
+            <span>{t("Background color")}</span>
+            <TagColorPicker
+              allowNoColor
+              label={t("Background color")}
+              noColorLabel={t("No background")}
+              onChange={setBackgroundColor}
+              value={backgroundColor}
+            />
+          </div>
           <EmployeeTagPickerPanel
             autoFocus={false}
             className="w-full p-0"

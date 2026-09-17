@@ -22,6 +22,7 @@ describe("OrgViewsStore shared clipboard", () => {
     const employeeId = createUuid();
     const rootId = source.addUnit({ employeeIds: [employeeId], name: "Root", x: 0, y: 0 });
     const openPositionId = source.addOpenPosition(rootId, {
+      backgroundColor: "rose",
       tags: [{ date: "2026-10-01", tagId: "tag-role" }],
       title: "Platform Engineer",
     });
@@ -83,6 +84,7 @@ describe("OrgViewsStore shared clipboard", () => {
     expect(pastedRoot?.employeeIds).toEqual([employeeId]);
     expect(pastedRoot?.openPositions).toMatchObject([
       {
+        backgroundColor: "rose",
         tags: [{ date: "2026-10-01", tagId: "tag-role" }],
         title: "Platform Engineer",
       },

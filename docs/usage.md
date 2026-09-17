@@ -109,15 +109,19 @@ control.
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
   Manual Unit context menus also provide **Add open position**. An open position is a View-local
-  employee-shaped row with a neutral avatar, editable title, and the shared dated Tag picker. It is
-  hidden by collapse and participates in Group by tag and canvas side attachments, but does not
+  employee-shaped row with a neutral avatar, editable title, the shared dated Tag picker, and a
+  **Background color** control that accepts the bundled named/custom palette or **No background**.
+  The tonal background covers the complete row beneath its dashed vacancy outline and appears in
+  Editor PNG. It is hidden by collapse and participates in Group by tag and canvas side attachments,
+  but does not
   appear in Employees, Analytics, Calendar, distribution, Employee totals, Tag-cloud counts, or
   data exports. Its context menu supports Edit, **Replace with Employee**, and Delete. Picker
   replacement adds the chosen Employee occurrence without removing other assignments; dropping one
   Employee from another manual Unit moves that occurrence and consumes the position. Both preserve
   attached annotations, while a multi-Employee drop remains an ordinary Unit drop. A thin dashed
   outline surrounds the complete open-position row on the canvas and in Editor PNG output without
-  changing its geometry; selection and drop feedback keep the outline visible with semantic color.
+  changing its geometry; selection and drop feedback temporarily take visual priority while keeping
+  the outline visible with semantic color.
   The bottom-center tools row provides Select, Text, Arrow, Sticker, and embedded Image, including in
   an empty View. Choosing a creation tool clears the current canvas selection; a plain element click selects
   only that element, while Ctrl/Cmd builds an explicit group. Right-clicking an element opens Back,

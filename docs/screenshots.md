@@ -273,7 +273,7 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 
 Arrange opaque Unit cards and representative rich Text, flat bordered Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
-the bottom-centered canvas toolbar, including a synthetic tagged open-position row whose complete
+the bottom-centered canvas toolbar, including a synthetic colored open-position row whose complete
 dashed outline distinguishes the vacancy from Employee rows in a manual Unit and Editor PNG.
 View management stays top-left, canvas commands and Image export
 stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates the
@@ -591,8 +591,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
   and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
   heights, content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
-  row tones resolved from the complete active View, and connection endpoints without card overlap,
-  membership-type labels, placement overlays, or transient editing chrome.
+  row tones and optional open-position tonal backgrounds resolved from the complete active View,
+  transparent vacancies, and connection endpoints without card overlap, membership-type labels,
+  placement overlays, or transient editing chrome.
 - Confirm Unit, Employee, connection, and marquee drags keep moving through smooth bounded edge-pan,
   retain document-anchored previews, and commit no more than one viewport and one structural update.
 - Confirm deleting nested and overlapping Unit selections produces no diagnostics after reload and

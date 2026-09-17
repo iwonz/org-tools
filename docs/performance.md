@@ -46,7 +46,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Virtualize discriminated Employee/open-position Unit rows, Unit-aware pickers, filter options,
   Analytics rows, and event dialogs. Stable row keys share cached measured heights and prefix
   offsets; open-position anchor and drop hit testing resolves one indexed row instead of scanning a
-  roster, while Employee-only projections continue to consume the existing assignment indexes.
+  roster. An optional open-position background is one O(1) tonal-style lookup on an already-mounted
+  row and adds no geometry invalidation, scan, index, or subscription; Employee-only projections
+  continue to consume the existing assignment indexes.
 - Tag-filter search preserves the catalog array order and normalizes labels for matching. Its
   virtualized visible result derives from a deferred transient query; search-scoped bulk selection
   emits one filter update and never depends on mounted rows.

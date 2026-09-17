@@ -29,6 +29,7 @@ import {
   getOrgEditorExportEmployeeTagRowCount,
   getOrgEditorExportEmployeeTags,
   getOrgEditorExportFontRequests,
+  getOrgEditorExportOpenPositionRowBackground,
   getOrgEditorExportOpenPositionRowOutline,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_EXPORT_FONTS,
@@ -150,6 +151,16 @@ describe("Org Editor image export", () => {
     expect(taggedOutline.bounds.height).toBe(taggedHeight - 1);
     expect(taggedOutline.bounds.width).toBe(defaultOutline.bounds.width);
     expect(taggedOutline.bounds.y).toBe(defaultOutline.bounds.y + ORG_EDITOR_EMPLOYEE_ROW_HEIGHT);
+  });
+
+  test("resolves optional open-position backgrounds through the shared tonal palette", () => {
+    expect(getOrgEditorExportOpenPositionRowBackground(null)).toBeNull();
+    expect(getOrgEditorExportOpenPositionRowBackground("blue")).toEqual(
+      getTagColorCanvasStyle("blue"),
+    );
+    expect(getOrgEditorExportOpenPositionRowBackground("#7c3aed80")).toEqual(
+      getTagColorCanvasStyle("#7c3aed80"),
+    );
   });
 
   test("waits for every base and inline Text and Sticker font used by PNG", () => {
@@ -380,12 +391,13 @@ describe("Org Editor image export", () => {
 
 describe("Org Editor structured export scope", () => {
   test("limits Employees and Unit assignments to the selected Unit or subtree", () => {
-    const root = {
+    const root: OrgEditorUnit = {
       ...unit,
       employeeIds: [employee.id],
       noteMarkdown: "# Private note",
       openPositions: [
         {
+          backgroundColor: "teal",
           id: "00000000-0000-4000-8000-000000000014",
           tags: [{ date: "2026-10-01", tagId: "tag-role" }],
           title: "Platform Engineer",

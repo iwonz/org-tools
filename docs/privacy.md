@@ -43,11 +43,12 @@ remote avatars are never fetched. Crop encoding prefers WebP and falls back only
 local PNG canvas encoder; neither path uploads the source or result. Profile and email navigation
 require direct user actions and referrer protection.
 
-Open positions remain inside their owning View and Unit. Their titles and global Tag references use
-the same complete State, loopback SQLite, and in-memory BroadcastChannel boundaries as the rest of
-the Editor document. They are deliberately excluded from Employee-oriented projections and exports;
-replacement does not copy position Tags onto an Employee and introduces no new storage or network
-path.
+Open positions remain inside their owning View and Unit. Their titles, nullable named/custom
+background colors, and global Tag references use the same complete State, loopback SQLite, and
+in-memory BroadcastChannel boundaries as the rest of the Editor document. The bundled color picker
+and tonal rendering perform no remote lookup. Positions are deliberately excluded from Employee-
+oriented projections and exports; replacement copies neither position Tags nor its background onto
+an Employee and introduces no new storage or network path.
 
 Editor canvas Images are accepted only from an explicit local file choice or an image clipboard
 paste. PNG, JPEG, and WebP headers, bytes, and intrinsic dimensions are validated before commit;

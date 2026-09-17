@@ -525,7 +525,8 @@ const normalizeOpenPositions = (value: unknown): OrgEditorOpenPosition[] | null 
   for (const position of value) {
     if (
       !isRecord(position) ||
-      !hasExactKeys(position, ["id", "tags", "title"]) ||
+      !hasExactKeys(position, ["backgroundColor", "id", "tags", "title"]) ||
+      !(position.backgroundColor === null || isOrgEditorCanvasColor(position.backgroundColor)) ||
       !isUuid(position.id) ||
       !isString(position.title) ||
       !normalizeOrgEditorOpenPositionTitle(position.title) ||
@@ -535,7 +536,12 @@ const normalizeOpenPositions = (value: unknown): OrgEditorOpenPosition[] | null 
     }
     const tags = normalizeTagAssignments(position.tags);
     if (!tags) return null;
-    positions.push({ id: position.id, tags, title: position.title });
+    positions.push({
+      backgroundColor: position.backgroundColor,
+      id: position.id,
+      tags,
+      title: position.title,
+    });
   }
   return positions;
 };

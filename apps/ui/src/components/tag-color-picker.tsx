@@ -44,13 +44,19 @@ const TAG_COLOR_MESSAGE_KEYS = {
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
-function TagColorLabel({ color }: { color: EmployeeTagColor | null }) {
+function TagColorLabel({
+  color,
+  emptyLabel,
+}: {
+  color: EmployeeTagColor | null;
+  emptyLabel?: string | undefined;
+}) {
   const t = useUiText();
   const label = color
     ? isCustomEmployeeTagColor(color)
       ? `${t("Custom color")} · ${color}`
       : t(TAG_COLOR_MESSAGE_KEYS[color])
-    : t("No color");
+    : (emptyLabel ?? t("No color"));
 
   return (
     <span
@@ -73,9 +79,11 @@ export function TagColorPicker({
   variant = "field",
   label,
   allowNoColor = true,
+  noColorLabel,
 }: {
   onChange: (color: EmployeeTagColor | null) => void;
   label?: string;
+  noColorLabel?: string | undefined;
   allowNoColor?: boolean;
   value: EmployeeTagColor | null;
   variant?: "field" | "icon";
@@ -162,7 +170,7 @@ export function TagColorPicker({
             data-demo-id="tag-color-trigger"
             type="button"
           >
-            <TagColorLabel color={value} />
+            <TagColorLabel color={value} emptyLabel={noColorLabel} />
             <HiOutlineChevronDown className="size-4 shrink-0 text-muted-foreground" />
           </button>
         )}
@@ -351,7 +359,7 @@ export function TagColorPicker({
                 role="option"
                 type="button"
               >
-                <TagColorLabel color={color} />
+                <TagColorLabel color={color} emptyLabel={noColorLabel} />
                 {selected && <HiCheck className="size-4 shrink-0 text-signal" />}
               </button>
             );

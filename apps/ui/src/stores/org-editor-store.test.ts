@@ -131,12 +131,14 @@ describe("OrgEditorStore open positions", () => {
     store.clearHistory();
 
     const openPositionId = store.addOpenPosition(unitId, {
+      backgroundColor: "blue",
       tags: [{ date: "2026-10-01", tagId: "tag-platform" }],
       title: "  Platform   Engineer  ",
     });
     expect(openPositionId).not.toBeNull();
     expect(store.units[0]?.openPositions).toEqual([
       {
+        backgroundColor: "blue",
         id: openPositionId,
         tags: [{ date: "2026-10-01", tagId: "tag-platform" }],
         title: "Platform Engineer",
@@ -146,14 +148,18 @@ describe("OrgEditorStore open positions", () => {
 
     if (!openPositionId) return;
     store.updateOpenPosition(unitId, openPositionId, {
+      backgroundColor: "#7c3aed",
       tags: [],
       title: "Senior Platform Engineer",
     });
     expect(store.units[0]?.openPositions[0]?.title).toBe("Senior Platform Engineer");
+    expect(store.units[0]?.openPositions[0]?.backgroundColor).toBe("#7c3aed");
     store.undo();
     expect(store.units[0]?.openPositions[0]?.title).toBe("Platform Engineer");
+    expect(store.units[0]?.openPositions[0]?.backgroundColor).toBe("blue");
     store.redo();
     expect(store.units[0]?.openPositions[0]?.title).toBe("Senior Platform Engineer");
+    expect(store.units[0]?.openPositions[0]?.backgroundColor).toBe("#7c3aed");
 
     store.deleteOpenPosition(unitId, openPositionId);
     expect(store.units[0]?.openPositions).toEqual([]);
@@ -171,6 +177,7 @@ describe("OrgEditorStore open positions", () => {
     });
     const targetUnitId = store.addUnit({ name: "Target", x: 480, y: 0 });
     const pickerPositionId = store.addOpenPosition(targetUnitId, {
+      backgroundColor: null,
       tags: [],
       title: "Picker role",
     });
@@ -211,6 +218,7 @@ describe("OrgEditorStore open positions", () => {
     );
 
     const dragPositionId = store.addOpenPosition(targetUnitId, {
+      backgroundColor: null,
       tags: [],
       title: "Dragged role",
     });
@@ -231,6 +239,7 @@ describe("OrgEditorStore open positions", () => {
     ).toBe(false);
 
     const deletedPositionId = store.addOpenPosition(targetUnitId, {
+      backgroundColor: null,
       tags: [],
       title: "Deleted role",
     });
@@ -259,7 +268,11 @@ describe("OrgEditorStore open positions", () => {
   test("does not create a standalone clipboard payload for a selected position", () => {
     const store = new OrgEditorStore();
     const unitId = store.addUnit({ name: "Platform", x: 0, y: 0 });
-    const openPositionId = store.addOpenPosition(unitId, { tags: [], title: "Role" });
+    const openPositionId = store.addOpenPosition(unitId, {
+      backgroundColor: null,
+      tags: [],
+      title: "Role",
+    });
     if (!openPositionId) throw new Error("Expected a position.");
     store.setSelectedItems([{ openPositionId, type: "openPosition", unitId }]);
     store.copySelected();

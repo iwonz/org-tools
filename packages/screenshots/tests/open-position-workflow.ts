@@ -17,6 +17,11 @@ export async function exerciseOpenPositions(page: Page) {
   await expect(position).toContainText("Remote");
   await expect(position).toContainText("Oct 1");
   await expect(position.locator("[data-org-editor-open-position-avatar]")).toBeVisible();
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "amber");
+  const restingBackgroundColor = await positionContainer.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  expect(restingBackgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   await expect(positionOutline).toBeVisible();
   await expect(
     productUnit.locator(
@@ -51,10 +56,11 @@ export async function exerciseOpenPositions(page: Page) {
   ).not.toBe("none");
   await position.click();
   await expect(positionContainer).toHaveAttribute("data-selected", "true");
-  const selectedOutlineColor = await positionOutline.evaluate(
-    (element) => getComputedStyle(element).borderTopColor,
-  );
-  expect(selectedOutlineColor).not.toBe(restingOutlineStyle.borderColor);
+  await expect(positionOutline).toHaveClass(/border-primary-foreground\/70/u);
+  expect(
+    await positionContainer.evaluate((element) => getComputedStyle(element).backgroundColor),
+  ).not.toBe(restingBackgroundColor);
+  await expect(positionOutline).toHaveCSS("border-top-style", "dashed");
   const selectedBounds = await positionContainer.boundingBox();
   expect(selectedBounds?.x).toBeCloseTo(restingBounds.x, 4);
   expect(selectedBounds?.y).toBeCloseTo(restingBounds.y, 4);
@@ -77,10 +83,7 @@ export async function exerciseOpenPositions(page: Page) {
     { steps: 8 },
   );
   await expect(positionContainer).toHaveAttribute("data-open-position-drop-target", "true");
-  const dropOutlineColor = await positionOutline.evaluate(
-    (element) => getComputedStyle(element).borderTopColor,
-  );
-  expect(dropOutlineColor).not.toBe(restingOutlineStyle.borderColor);
+  await expect(positionOutline).toHaveClass(/border-signal/u);
   await page.mouse.up();
   await expect(position).toHaveCount(0);
   await page.getByRole("button", { name: "Undo", exact: true }).click();
@@ -97,14 +100,54 @@ export async function exerciseOpenPositions(page: Page) {
   await position.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   let dialog = page.getByRole("dialog");
+  const backgroundControl = dialog.locator('[data-demo-id="org-editor-open-position-background"]');
+  await expect(backgroundControl).toContainText("Amber");
+  await backgroundControl.getByRole("button", { name: "Background color", exact: true }).click();
+  await page
+    .locator('[data-demo-id="tag-color-dropdown"]')
+    .getByRole("option", { name: "Blue", exact: true })
+    .click();
   await dialog.locator('[data-demo-id="org-editor-open-position-title"]').fill("Staff Engineer");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(position).toContainText("Staff Engineer");
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
 
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(position).toContainText("Senior Product Engineer");
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "amber");
   await page.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(position).toContainText("Staff Engineer");
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
+
+  await position.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .locator('[data-demo-id="org-editor-open-position-background"]')
+    .getByRole("button", { name: "Background color", exact: true })
+    .click();
+  await page
+    .locator('[data-demo-id="tag-color-dropdown"]')
+    .getByRole("option", { name: "No background", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "none");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
+
+  await position.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .locator('[data-demo-id="org-editor-open-position-background"]')
+    .getByRole("button", { name: "Background color", exact: true })
+    .click();
+  await page
+    .locator('[data-demo-id="tag-color-dropdown"]')
+    .getByRole("option", { name: "Rose", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(positionContainer).toHaveAttribute("data-open-position-background", "blue");
 
   await productUnit.click({ button: "right", position: { x: 80, y: 24 } });
   await page.getByRole("menuitem", { name: "Add open position", exact: true }).click();
@@ -112,11 +155,15 @@ export async function exerciseOpenPositions(page: Page) {
   await expect(dialog.locator('[data-demo-id="org-editor-open-position-title"]')).toHaveValue(
     "Open position",
   );
+  await expect(
+    dialog.locator('[data-demo-id="org-editor-open-position-background"]'),
+  ).toContainText("No background");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(productUnit.locator("[data-org-editor-open-position-row]")).toHaveCount(2);
   const added = productUnit
     .locator("[data-org-editor-open-position-row]")
     .filter({ hasText: "Open position" });
+  await expect(added.locator("..")).toHaveAttribute("data-open-position-background", "none");
   await added.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   await expect(productUnit.locator("[data-org-editor-open-position-row]")).toHaveCount(1);
