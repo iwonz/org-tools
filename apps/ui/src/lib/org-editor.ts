@@ -5,6 +5,8 @@ import type {
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
+  OrgEditorOpenPosition,
+  OrgEditorOpenPositionId,
   OrgEditorSelectedItem,
   OrgEditorState,
   OrgEditorUnit,
@@ -86,6 +88,14 @@ export type OrgEditorUnitTagSummary = {
   label: string;
   tagId: TagId;
 };
+
+export type OrgEditorUnitRow =
+  | { employeeId: EmployeeId; key: string; type: "employee" }
+  | { key: string; openPosition: OrgEditorOpenPosition; type: "openPosition" };
+
+export const createOrgEditorEmployeeRowKey = (employeeId: EmployeeId) => `employee:${employeeId}`;
+export const createOrgEditorOpenPositionRowKey = (openPositionId: OrgEditorOpenPositionId) =>
+  `openPosition:${openPositionId}`;
 
 export type OrgEditorUnitTagFooterLine = {
   id: string;
@@ -279,9 +289,12 @@ export const normalizeOrgEditorUnitNoteMarkdown = (value: string): string | null
   return normalized.trim() ? normalized : "";
 };
 
+export const normalizeOrgEditorOpenPositionTitle = (value: string) =>
+  value.normalize("NFKC").trim().replace(/\s+/gu, " ");
+
 const employeeRowLayoutSourceByUnitId = new Map<
   OrgEditorUnitId,
-  { heightByEmployeeId: ReadonlyMap<EmployeeId, number>; orderedEmployeeIds: readonly EmployeeId[] }
+  { heightByRowKey: ReadonlyMap<string, number>; orderedRows: readonly OrgEditorUnitRow[] }
 >();
 const tagFooterHeightByUnitId = new Map<OrgEditorUnitId, number>();
 
@@ -524,38 +537,71 @@ export const setOrgEditorUnitEmployeeRowHeights = (
   orderedEmployeeIds: readonly EmployeeId[],
 ): void => {
   employeeRowLayoutSourceByUnitId.set(unitId, {
-    heightByEmployeeId: new Map(heights),
-    orderedEmployeeIds: [...orderedEmployeeIds],
+    heightByRowKey: new Map(
+      [...heights].map(([employeeId, height]) => [
+        createOrgEditorEmployeeRowKey(employeeId),
+        height,
+      ]),
+    ),
+    orderedRows: orderedEmployeeIds.map((employeeId) => ({
+      employeeId,
+      key: createOrgEditorEmployeeRowKey(employeeId),
+      type: "employee" as const,
+    })),
+  });
+};
+
+export const setOrgEditorUnitRowHeights = (
+  unitId: OrgEditorUnitId,
+  heights: ReadonlyMap<string, number>,
+  orderedRows: readonly OrgEditorUnitRow[],
+): void => {
+  employeeRowLayoutSourceByUnitId.set(unitId, {
+    heightByRowKey: new Map(heights),
+    orderedRows: [...orderedRows],
   });
 };
 
 export type OrgEditorEmployeeRowLayout = {
   heights: number[];
   offsets: number[];
+  rows: OrgEditorUnitRow[];
   totalHeight: number;
 };
 
 export const getOrgEditorEmployeeRowLayout = (
-  unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds" | "id">,
+  unit: Pick<
+    OrgEditorUnit,
+    "bossEmployeeId" | "collapsed" | "employeeIds" | "id" | "openPositions"
+  >,
 ): OrgEditorEmployeeRowLayout => {
   const source = employeeRowLayoutSourceByUnitId.get(unit.id);
-  const orderedEmployeeIds = source?.orderedEmployeeIds ?? unit.employeeIds;
-  const visibleEmployeeIds = unit.collapsed
-    ? unit.bossEmployeeId && orderedEmployeeIds.includes(unit.bossEmployeeId)
-      ? [unit.bossEmployeeId]
-      : []
-    : orderedEmployeeIds;
-  const heightByEmployeeId = source?.heightByEmployeeId;
-  const heights = visibleEmployeeIds.map(
-    (employeeId) => heightByEmployeeId?.get(employeeId) ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
-  );
+  const orderedRows = source?.orderedRows ?? [
+    ...unit.employeeIds.map((employeeId) => ({
+      employeeId,
+      key: createOrgEditorEmployeeRowKey(employeeId),
+      type: "employee" as const,
+    })),
+    ...unit.openPositions.map((openPosition) => ({
+      key: createOrgEditorOpenPositionRowKey(openPosition.id),
+      openPosition,
+      type: "openPosition" as const,
+    })),
+  ];
+  const rows = unit.collapsed
+    ? orderedRows
+        .filter((row) => row.type === "employee" && row.employeeId === unit.bossEmployeeId)
+        .slice(0, 1)
+    : [...orderedRows];
+  const heightByRowKey = source?.heightByRowKey;
+  const heights = rows.map((row) => heightByRowKey?.get(row.key) ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT);
   const offsets: number[] = [];
   let totalHeight = 0;
   for (const height of heights) {
     offsets.push(totalHeight);
     totalHeight += height;
   }
-  return { heights, offsets, totalHeight };
+  return { heights, offsets, rows, totalHeight };
 };
 
 export const findOrgEditorEmployeeRowIndex = (
@@ -597,15 +643,17 @@ export const createOrgEditorSelectedItemKey = (item: OrgEditorSelectedItem) =>
     ? `unit:${item.unitId}`
     : item.type === "employee"
       ? `employee:${item.unitId}:${item.employeeId}`
-      : `element:${item.elementId}`;
+      : item.type === "openPosition"
+        ? `openPosition:${item.unitId}:${item.openPositionId}`
+        : `element:${item.elementId}`;
 
 export const getOrgEditorUnitWidth = (unit: Pick<OrgEditorUnit, "name">) =>
   Math.max(ORG_EDITOR_UNIT_MIN_WIDTH, 124 + getOrgEditorUnitDisplayName(unit).length * 9);
 
 export const getOrgEditorUnitVisibleEmployeeCount = (
-  unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds">,
+  unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds" | "openPositions">,
 ) => {
-  if (!unit.collapsed) return Math.max(1, unit.employeeIds.length);
+  if (!unit.collapsed) return Math.max(1, unit.employeeIds.length + unit.openPositions.length);
 
   return unit.bossEmployeeId !== null && unit.employeeIds.includes(unit.bossEmployeeId) ? 1 : 0;
 };
@@ -628,7 +676,10 @@ export const getOrgEditorUnitHeightForEmployeeRows = ({
 };
 
 export const getOrgEditorUnitHeight = (
-  unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds" | "id">,
+  unit: Pick<
+    OrgEditorUnit,
+    "bossEmployeeId" | "collapsed" | "employeeIds" | "id" | "openPositions"
+  >,
 ) => {
   const rowLayout = getOrgEditorEmployeeRowLayout(unit);
   return (
@@ -662,6 +713,8 @@ export const getOrgEditorEmployeeBounds = (unit: OrgEditorUnit, employeeIndex: n
     (getOrgEditorEmployeeRowLayout(unit).offsets[employeeIndex] ??
       employeeIndex * ORG_EDITOR_EMPLOYEE_ROW_HEIGHT),
 });
+
+export const getOrgEditorUnitRowBounds = getOrgEditorEmployeeBounds;
 
 type MeasuredOrgEditorLayoutTree = {
   placements: Array<{
@@ -1003,6 +1056,54 @@ export const getOrgEditorOrderedEmployeeIds = (
     groupByTag,
   });
 
+export const getOrgEditorOrderedUnitRows = (
+  unit: OrgEditorUnit,
+  employeeById: ReadonlyMap<EmployeeId, Employee>,
+  groupByTag: boolean,
+  tagOrder: readonly TagId[] = [],
+): OrgEditorUnitRow[] => {
+  const tagRankById = new Map(tagOrder.map((tagId, index) => [tagId, index]));
+  const rows: OrgEditorUnitRow[] = [
+    ...unit.employeeIds.map((employeeId) => ({
+      employeeId,
+      key: createOrgEditorEmployeeRowKey(employeeId),
+      type: "employee" as const,
+    })),
+    ...unit.openPositions.map((openPosition) => ({
+      key: createOrgEditorOpenPositionRowKey(openPosition.id),
+      openPosition,
+      type: "openPosition" as const,
+    })),
+  ];
+  const priority = (row: OrgEditorUnitRow) => {
+    if (!groupByTag) return Number.MAX_SAFE_INTEGER;
+    if (row.type === "employee") {
+      return employeeById.get(row.employeeId)?.tagPriority ?? Number.MAX_SAFE_INTEGER;
+    }
+    return row.openPosition.tags.reduce(
+      (best, assignment) => Math.min(best, tagRankById.get(assignment.tagId) ?? best),
+      Number.MAX_SAFE_INTEGER,
+    );
+  };
+  const label = (row: OrgEditorUnitRow) =>
+    row.type === "employee"
+      ? (employeeById.get(row.employeeId)?.fullName ?? "")
+      : row.openPosition.title;
+  const id = (row: OrgEditorUnitRow) =>
+    row.type === "employee" ? row.employeeId : row.openPosition.id;
+
+  return rows.sort((first, second) => {
+    if (first.type === "employee" && first.employeeId === unit.bossEmployeeId) return -1;
+    if (second.type === "employee" && second.employeeId === unit.bossEmployeeId) return 1;
+    const priorityDifference = priority(first) - priority(second);
+    if (priorityDifference !== 0) return priorityDifference;
+    return (
+      label(first).localeCompare(label(second), "en-US", { numeric: true, sensitivity: "base" }) ||
+      id(first).localeCompare(id(second), "en-US", { numeric: true, sensitivity: "base" })
+    );
+  });
+};
+
 export const getOrgEditorEmployeePosition = (
   unit: Pick<OrgEditorUnit, "employeePositions">,
   employeeId: EmployeeId,
@@ -1022,6 +1123,20 @@ export const getOrgEditorVisibleEmployeeIds = (
   return orderedEmployeeIds.filter((employeeId) => employeeId === unit.bossEmployeeId).slice(0, 1);
 };
 
+export const getOrgEditorVisibleUnitRows = (
+  unit: OrgEditorUnit,
+  employeeById: ReadonlyMap<EmployeeId, Employee>,
+  groupByTag: boolean,
+  tagOrder: readonly TagId[] = [],
+) => {
+  const rows = getOrgEditorOrderedUnitRows(unit, employeeById, groupByTag, tagOrder);
+  return unit.collapsed
+    ? rows
+        .filter((row) => row.type === "employee" && row.employeeId === unit.bossEmployeeId)
+        .slice(0, 1)
+    : rows;
+};
+
 export const createOrgEditorUnitFromScratch = ({
   bossEmployeeId = null,
   collapsed = false,
@@ -1031,6 +1146,7 @@ export const createOrgEditorUnitFromScratch = ({
   liveFilter = null,
   name,
   noteMarkdown = "",
+  openPositions = [],
   order = 0,
   parentId = null,
   x,
@@ -1044,6 +1160,7 @@ export const createOrgEditorUnitFromScratch = ({
   liveFilter?: OrgEditorUnit["liveFilter"];
   name: string;
   noteMarkdown?: string;
+  openPositions?: OrgEditorOpenPosition[];
   order?: number;
   parentId?: OrgEditorUnitId | null;
   x: number;
@@ -1076,6 +1193,14 @@ export const createOrgEditorUnitFromScratch = ({
     liveFilter,
     name,
     noteMarkdown: normalizeOrgEditorUnitNoteMarkdown(noteMarkdown) ?? "",
+    openPositions:
+      liveFilter === null
+        ? openPositions.map((position) => ({
+            ...position,
+            tags: position.tags.map((tag) => ({ ...tag })),
+            title: normalizeOrgEditorOpenPositionTitle(position.title),
+          }))
+        : [],
     order,
     parentId,
     updatedAt: now,

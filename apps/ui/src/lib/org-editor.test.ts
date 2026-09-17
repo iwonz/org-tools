@@ -12,6 +12,7 @@ import {
   getOrgEditorEmployeeRowLayout,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorEmployeeVisualGeometry,
+  getOrgEditorOrderedUnitRows,
   getOrgEditorUnitHeight,
   getOrgEditorUnitHeightForEmployeeRows,
   getOrgEditorUnitTagFooterChipWidth,
@@ -25,6 +26,7 @@ import {
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
   type OrgEditorUnitEmployeeSummary,
   setOrgEditorUnitEmployeeRowHeights,
+  setOrgEditorUnitRowHeights,
   setOrgEditorUnitTagFooterHeight,
   snapOrgEditorCoordinate,
 } from "@/lib/org-editor";
@@ -77,6 +79,7 @@ const createUnit = (unit: Partial<OrgEditorUnit> & Pick<OrgEditorUnit, "id">): O
   liveFilter: null,
   name: unit.id,
   noteMarkdown: "",
+  openPositions: [],
   order: 0,
   parentId: null,
   updatedAt: "2026-07-31T00:00:00.000Z",
@@ -249,6 +252,73 @@ describe("Org Editor variable Employee geometry", () => {
     expect(layout.offsets.at(-1)).toBe(layout.totalHeight - 48);
     expect(findOrgEditorEmployeeRowIndex(layout, layout.totalHeight - 1)).toBe(19_999);
     expect(getOrgEditorUnitHeight(unit)).toBeGreaterThan(layout.totalHeight);
+  });
+});
+
+describe("Org Editor mixed Unit rows", () => {
+  test("orders Employees and open positions together while keeping the boss first", () => {
+    const employee = (id: string, fullName: string, tagPriority: number | null): Employee =>
+      ({ fullName, id, tagPriority }) as Employee;
+    const employees = new Map([
+      ["boss", employee("boss", "Zed Boss", null)],
+      ["member", employee("member", "Beta Member", 1)],
+    ]);
+    const unit = createUnit({
+      bossEmployeeId: "boss",
+      employeeIds: ["member", "boss"],
+      id: "mixed-rows",
+      openPositions: [
+        { id: "position-b", tags: [], title: "Gamma Role" },
+        {
+          id: "position-a",
+          tags: [{ date: null, tagId: "tag-first" }],
+          title: "Alpha Role",
+        },
+      ],
+    });
+
+    const rows = getOrgEditorOrderedUnitRows(unit, employees, true, ["tag-first"]);
+    expect(
+      rows.map((row) => (row.type === "employee" ? row.employeeId : row.openPosition.id)),
+    ).toEqual(["boss", "position-a", "member", "position-b"]);
+    setOrgEditorUnitRowHeights(
+      unit.id,
+      new Map(rows.map((row, index) => [row.key, index === 1 ? 76 : 48])),
+      rows,
+    );
+    expect(getOrgEditorEmployeeRowLayout(unit)).toMatchObject({
+      heights: [48, 76, 48, 48],
+      offsets: [0, 48, 124, 172],
+      totalHeight: 220,
+    });
+
+    unit.collapsed = true;
+    expect(getOrgEditorEmployeeRowLayout(unit).rows).toEqual([rows[0]]);
+  });
+
+  test("does not include open positions in Employee summaries or Tag-cloud counts", () => {
+    const unit = createUnit({
+      employeeIds: ["employee"],
+      id: "position-exclusions",
+      openPositions: [
+        {
+          id: "position",
+          tags: [{ date: null, tagId: "position-tag" }],
+          title: "Future role",
+        },
+      ],
+    });
+    const employee = {
+      id: "employee",
+      tags: [{ color: "blue", date: null, label: "Employee tag", tagId: "employee-tag" }],
+    } as Employee;
+    expect(buildOrgEditorUnitEmployeeSummaryById([unit]).get(unit.id)?.directCount).toBe(1);
+    expect(
+      buildOrgEditorUnitTagSummary(unit, new Map([[employee.id, employee]]), [
+        "position-tag",
+        "employee-tag",
+      ]).map((tag) => tag.tagId),
+    ).toEqual(["employee-tag"]);
   });
 });
 

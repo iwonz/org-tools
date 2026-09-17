@@ -1026,6 +1026,8 @@ const anchorOwnerKey = (ref: OrgEditorAnchorRef) => {
       return `unit:${ref.owner.unitId}`;
     case "employee":
       return `employee:${ref.owner.unitId}:${ref.owner.employeeId}`;
+    case "openPosition":
+      return `openPosition:${ref.owner.unitId}:${ref.owner.openPositionId}`;
     case "element":
       return `element:${ref.owner.elementId}`;
   }
@@ -1306,6 +1308,7 @@ export const remapOrgEditorAnchorRef = (
   unitIdMap: ReadonlyMap<string, string>,
   elementIdMap: ReadonlyMap<string, string>,
   preserveExternal: boolean,
+  openPositionIdMap: ReadonlyMap<string, string> = new Map(),
 ): OrgEditorAnchorRef | null => {
   if (ref.owner.type === "unit") {
     const unitId = unitIdMap.get(ref.owner.unitId);
@@ -1319,6 +1322,15 @@ export const remapOrgEditorAnchorRef = (
     const unitId = unitIdMap.get(ref.owner.unitId);
     return unitId
       ? { ...ref, owner: { ...ref.owner, unitId } }
+      : preserveExternal
+        ? cloneOrgEditorAnchorRef(ref)
+        : null;
+  }
+  if (ref.owner.type === "openPosition") {
+    const unitId = unitIdMap.get(ref.owner.unitId);
+    const openPositionId = openPositionIdMap.get(ref.owner.openPositionId);
+    return unitId && openPositionId
+      ? { ...ref, owner: { openPositionId, type: "openPosition", unitId } }
       : preserveExternal
         ? cloneOrgEditorAnchorRef(ref)
         : null;

@@ -1453,6 +1453,7 @@ export class OrgStore {
     const target = this.tagDefinitions.find((tag) => tag.id === tagId);
     if (!target) return;
     this.orgViews.materializeClipboardLiveUnits((rule) => rule.selectedTags.includes(tagId));
+    this.orgViews.purgeClipboardOpenPositionTag(tagId);
     this.tagDefinitions = this.tagDefinitions.filter((tag) => tag.id !== tagId);
     this.organizationEmployees = this.organizationEmployees.map((employee) => ({
       ...employee,
@@ -1472,19 +1473,32 @@ export class OrgStore {
     };
     this.orgViews.forEachEditor((editor, viewId) => {
       const nextUnits = editor.units.map((unit) => {
-        if (!unit.liveFilter?.selectedTags.includes(tagId)) return unit;
+        const openPositions = unit.openPositions.map((position) => ({
+          ...position,
+          tags: position.tags.filter((tag) => tag.tagId !== tagId),
+        }));
+        const positionsChanged = openPositions.some(
+          (position, index) => position.tags.length !== unit.openPositions[index]?.tags.length,
+        );
+        if (!unit.liveFilter?.selectedTags.includes(tagId)) {
+          return positionsChanged
+            ? { ...unit, openPositions, updatedAt: new Date().toISOString() }
+            : unit;
+        }
         const liveFilter = {
           ...unit.liveFilter,
           selectedTags: unit.liveFilter.selectedTags.filter((id) => id !== tagId),
         };
         return hasEmployeeLiveFilterCriteria(liveFilter)
-          ? { ...unit, liveFilter }
+          ? { ...unit, liveFilter, openPositions, updatedAt: new Date().toISOString() }
           : {
               ...unit,
               bossEmployeeId: null,
               employeeIds: [],
               employeePositions: [],
               liveFilter: null,
+              openPositions,
+              updatedAt: new Date().toISOString(),
             };
       });
       if (nextUnits.some((unit, index) => unit !== editor.units[index])) {

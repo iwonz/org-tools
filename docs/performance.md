@@ -43,7 +43,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   deterministic bounded ring layout, and keeps pan/zoom outside state. Image export receives the
   same complete memoized index and enabled-Unit set, so Unit-only and subtree status remains correct
   without rebuilding or rescanning the active View for each preview.
-- Virtualize Employee lists, Unit-aware pickers, filter options, Analytics rows, and event dialogs.
+- Virtualize discriminated Employee/open-position Unit rows, Unit-aware pickers, filter options,
+  Analytics rows, and event dialogs. Stable row keys share cached measured heights and prefix
+  offsets; open-position anchor and drop hit testing resolves one indexed row instead of scanning a
+  roster, while Employee-only projections continue to consume the existing assignment indexes.
 - Tag-filter search preserves the catalog array order and normalizes labels for matching. Its
   virtualized visible result derives from a deferred transient query; search-scoped bulk selection
   emits one filter update and never depends on mounted rows.
@@ -65,7 +68,7 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   visible content is omitted. Memoized connection, Unit, and canvas-element nodes receive stable
   indexed inputs; a gesture re-renders only selected owners, attachment dependents, and overlays.
 - Index committed canvas-element bounds and forward/reverse anchor dependencies beside Unit bounds.
-  Snap gestures query only nearby Unit/element cells, derive Employee candidates from cached row
+  Snap gestures query only nearby Unit/element cells, derive Employee or open-position candidates from cached row
   offsets, and update only the affected dependency closure. Move, resize, rotation, endpoint,
   Bezier, anchor, and text drafts use the latest-value frame scheduler; only pointer release or edit
   completion mutates the View document once. Four visible corner handles, four transparent side

@@ -160,6 +160,7 @@ const createLargeEditorState = async (): Promise<OrgToolsState> => {
       liveFilter: null,
       name: `Unit ${String(index + 1).padStart(4, "0")}`,
       noteMarkdown: "",
+      openPositions: [],
       order: index,
       parentId: null,
       updatedAt: timestamp,

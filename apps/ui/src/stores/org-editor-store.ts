@@ -1,6 +1,7 @@
 import type {
   EmployeeId,
   EmployeeLiveFilterRule,
+  EmployeeTagAssignment,
   OrgEditorAnchorRef,
   OrgEditorCanvasElement,
   OrgEditorCanvasElementId,
@@ -8,6 +9,8 @@ import type {
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
+  OrgEditorOpenPosition,
+  OrgEditorOpenPositionId,
   OrgEditorRectAnchorId,
   OrgEditorSelectedItem,
   OrgEditorState,
@@ -30,11 +33,13 @@ import {
   createOrgEditorSelectedItemKey,
   createOrgEditorUnitFromScratch,
   getOrgEditorEmployeeBounds,
+  getOrgEditorEmployeeRowLayout,
   getOrgEditorUnitBounds,
   getOrgEditorUnitDescendantIds,
   getOrgEditorUnitHeight,
   getOrgEditorUnitWidth,
   layoutOrgEditorUnits,
+  normalizeOrgEditorOpenPositionTitle,
   normalizeOrgEditorUnitNoteMarkdown,
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
@@ -191,6 +196,12 @@ const cloneUnit = (unit: OrgEditorUnit): OrgEditorUnit => ({
     ...employeePosition,
   })),
   liveFilter: unit.liveFilter ? cloneEmployeeLiveFilterRule(unit.liveFilter) : null,
+  openPositions: unit.liveFilter
+    ? []
+    : unit.openPositions.map((position) => ({
+        ...position,
+        tags: position.tags.map((tag) => ({ ...tag })),
+      })),
   order: Number.isFinite(unit.order) ? unit.order : 0,
 });
 
@@ -202,6 +213,7 @@ const remapCanvasElementForPaste = (
   elementIdMap: ReadonlyMap<string, string>,
   preserveExternal: boolean,
   offset: OrgEditorCanvasPoint,
+  openPositionIdMap: ReadonlyMap<string, string> = new Map(),
 ): OrgEditorCanvasElement => {
   const moved = moveOrgEditorCanvasElement(source, offset, (target) =>
     target.owner.type === "element"
@@ -217,6 +229,7 @@ const remapCanvasElementForPaste = (
         unitIdMap,
         elementIdMap,
         preserveExternal,
+        openPositionIdMap,
       );
       return {
         ...endpoint,
@@ -231,6 +244,7 @@ const remapCanvasElementForPaste = (
     unitIdMap,
     elementIdMap,
     preserveExternal,
+    openPositionIdMap,
   );
   return {
     ...moved,
@@ -323,7 +337,9 @@ const filterSelectedItemsForUnits = (
     const unit = unitById.get(item.unitId);
     if (!unit) return false;
     if (item.type === "unit") return true;
-
+    if (item.type === "openPosition") {
+      return unit.openPositions.some((position) => position.id === item.openPositionId);
+    }
     return unit.liveFilter !== null || unit.employeeIds.includes(item.employeeId);
   });
 };
@@ -364,6 +380,55 @@ const rekeyCanvasElementEmployee = (
         ...attachment.target,
         owner: { ...owner, employeeId: nextEmployeeId },
       },
+    } as Attachment;
+  };
+  if (element.type === "arrow") {
+    return {
+      ...element,
+      end: { ...element.end, attachment: rekeyAttachment(element.end.attachment) },
+      start: { ...element.start, attachment: rekeyAttachment(element.start.attachment) },
+    };
+  }
+  return { ...element, attachment: rekeyAttachment(element.attachment) };
+};
+
+const rekeyCanvasElementOpenPosition = (
+  source: OrgEditorCanvasElement,
+  unitId: OrgEditorUnitId,
+  openPositionId: OrgEditorOpenPositionId,
+  employeeId: EmployeeId,
+  resolvePreviousAnchor: (ref: OrgEditorAnchorRef) => OrgEditorCanvasPoint | null,
+  resolveNextAnchor: (ref: OrgEditorAnchorRef) => OrgEditorCanvasPoint | null,
+) => {
+  const element = cloneOrgEditorCanvasElement(source);
+  const rekeyAttachment = <
+    Attachment extends { offset: OrgEditorCanvasPoint; target: OrgEditorAnchorRef } | null,
+  >(
+    attachment: Attachment,
+  ): Attachment => {
+    if (
+      attachment?.target.owner.type !== "openPosition" ||
+      attachment.target.owner.unitId !== unitId ||
+      attachment.target.owner.openPositionId !== openPositionId
+    ) {
+      return attachment;
+    }
+    const previousAnchor = resolvePreviousAnchor(attachment.target);
+    const target: OrgEditorAnchorRef = {
+      ...attachment.target,
+      owner: { employeeId, type: "employee", unitId },
+    };
+    const nextAnchor = resolveNextAnchor(target);
+    return {
+      ...attachment,
+      offset:
+        previousAnchor && nextAnchor
+          ? {
+              x: attachment.offset.x + previousAnchor.x - nextAnchor.x,
+              y: attachment.offset.y + previousAnchor.y - nextAnchor.y,
+            }
+          : { ...attachment.offset },
+      target,
     } as Attachment;
   };
   if (element.type === "arrow") {
@@ -524,6 +589,21 @@ const areEmployeePositionsEqual = (
   });
 };
 
+const areOpenPositionsEqual = (
+  firstPositions: OrgEditorOpenPosition[],
+  secondPositions: OrgEditorOpenPosition[],
+) =>
+  firstPositions.length === secondPositions.length &&
+  firstPositions.every((position, index) => {
+    const secondPosition = secondPositions[index];
+    return (
+      secondPosition !== undefined &&
+      position.id === secondPosition.id &&
+      position.title === secondPosition.title &&
+      JSON.stringify(position.tags) === JSON.stringify(secondPosition.tags)
+    );
+  });
+
 const areUnitsEqual = (firstUnits: OrgEditorUnit[], secondUnits: OrgEditorUnit[]) => {
   if (firstUnits.length !== secondUnits.length) return false;
 
@@ -545,7 +625,8 @@ const areUnitsEqual = (firstUnits: OrgEditorUnit[], secondUnits: OrgEditorUnit[]
       firstUnit.updatedAt === secondUnit.updatedAt &&
       JSON.stringify(firstUnit.liveFilter) === JSON.stringify(secondUnit.liveFilter) &&
       areEmployeeIdsEqual(firstUnit.employeeIds, secondUnit.employeeIds) &&
-      areEmployeePositionsEqual(firstUnit.employeePositions, secondUnit.employeePositions)
+      areEmployeePositionsEqual(firstUnit.employeePositions, secondUnit.employeePositions) &&
+      areOpenPositionsEqual(firstUnit.openPositions, secondUnit.openPositions)
     );
   });
 };
@@ -691,15 +772,24 @@ export class OrgEditorStore {
       );
     }
     if (!ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.includes(ref.anchorId as never)) return null;
-    const employeeIndex = this.getUnitEmployeeIds(unit.id).indexOf(owner.employeeId);
-    if (employeeIndex < 0) return null;
+    const rowLayout = getOrgEditorEmployeeRowLayout(
+      unit.liveFilter === null
+        ? unit
+        : { ...unit, employeeIds: this.getUnitEmployeeIds(unit.id), openPositions: [] },
+    );
+    const rowIndex = rowLayout.rows.findIndex((row) =>
+      owner.type === "employee"
+        ? row.type === "employee" && row.employeeId === owner.employeeId
+        : row.type === "openPosition" && row.openPosition.id === owner.openPositionId,
+    );
+    if (rowIndex < 0) return null;
     if (unit.collapsed) {
       return {
         x: ref.anchorId === "leftCenter" ? unitBounds.x : unitBounds.x + unitBounds.width,
         y: unitBounds.y + unitBounds.height / 2,
       };
     }
-    const employeeBounds = getOrgEditorEmployeeBounds(unit, employeeIndex);
+    const employeeBounds = getOrgEditorEmployeeBounds(unit, rowIndex);
     return {
       x: ref.anchorId === "leftCenter" ? employeeBounds.x : employeeBounds.x + employeeBounds.width,
       y: employeeBounds.y + employeeBounds.height / 2,
@@ -1269,6 +1359,7 @@ export class OrgEditorStore {
     id,
     liveFilter = null,
     name,
+    openPositions = [],
     order,
     parentId = null,
     x,
@@ -1281,6 +1372,7 @@ export class OrgEditorStore {
     id?: OrgEditorUnitId;
     liveFilter?: EmployeeLiveFilterRule | null;
     name: string;
+    openPositions?: OrgEditorOpenPosition[];
     order?: number;
     parentId?: OrgEditorUnitId | null;
     x: number;
@@ -1296,6 +1388,7 @@ export class OrgEditorStore {
         ...(id === undefined ? {} : { id }),
         liveFilter,
         name,
+        openPositions,
         order:
           order ??
           this.units.reduce(
@@ -1403,6 +1496,17 @@ export class OrgEditorStore {
     }
 
     this.runCommand("Edit Unit", () => {
+      const removedOpenPositionIds =
+        normalizedConfiguration.membershipMode === "live"
+          ? new Set(currentUnit.openPositions.map((position) => position.id))
+          : new Set<OrgEditorOpenPositionId>();
+      const resolvedCanvasElements =
+        removedOpenPositionIds.size > 0
+          ? resolveOrgEditorCanvasElements({
+              elements: this.canvasElements,
+              resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
+            })
+          : null;
       const now = new Date().toISOString();
       const employeeIds =
         normalizedConfiguration.membershipMode === "manual"
@@ -1430,10 +1534,26 @@ export class OrgEditorStore {
                   ? cloneEmployeeLiveFilterRule(normalizedConfiguration.liveFilter)
                   : null,
               name: normalizedConfiguration.name,
+              openPositions:
+                normalizedConfiguration.membershipMode === "live" ? [] : unit.openPositions,
               updatedAt: now,
             }
           : unit,
       );
+      if (resolvedCanvasElements) {
+        this.canvasElements = this.canvasElements.map((element) =>
+          detachOrgEditorCanvasElementTargets(
+            resolvedCanvasElements.get(element.id)?.element ?? element,
+            (target) =>
+              target.owner.type === "openPosition" &&
+              target.owner.unitId === unitId &&
+              removedOpenPositionIds.has(target.owner.openPositionId),
+          ),
+        );
+        this.selectedItems = this.selectedItems.filter(
+          (item) => item.type !== "openPosition" || item.unitId !== unitId,
+        );
+      }
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
     });
   }
@@ -1640,6 +1760,185 @@ export class OrgEditorStore {
       if (changed) {
         this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
       }
+    });
+  }
+
+  addOpenPosition(
+    unitId: OrgEditorUnitId,
+    input: { tags: EmployeeTagAssignment[]; title: string },
+  ): OrgEditorOpenPositionId | null {
+    const title = normalizeOrgEditorOpenPositionTitle(input.title);
+    if (!title) throw new LocalizedError(uiMessage("Enter an open position title."));
+    const unit = this.units.find((candidate) => candidate.id === unitId);
+    if (!unit || unit.liveFilter !== null) return null;
+    const openPosition: OrgEditorOpenPosition = {
+      id: createUuid(),
+      tags: input.tags.map((tag) => ({ ...tag })),
+      title,
+    };
+    return this.runCommand("Add open position", () => {
+      this.units = this.units.map((candidate) =>
+        candidate.id === unitId
+          ? {
+              ...candidate,
+              collapsed: false,
+              openPositions: [...candidate.openPositions, openPosition],
+              updatedAt: new Date().toISOString(),
+            }
+          : candidate,
+      );
+      this.selectedItems = [{ openPositionId: openPosition.id, type: "openPosition", unitId }];
+      this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
+      return openPosition.id;
+    });
+  }
+
+  updateOpenPosition(
+    unitId: OrgEditorUnitId,
+    openPositionId: OrgEditorOpenPositionId,
+    input: { tags: EmployeeTagAssignment[]; title: string },
+  ): void {
+    const title = normalizeOrgEditorOpenPositionTitle(input.title);
+    if (!title) throw new LocalizedError(uiMessage("Enter an open position title."));
+    const unit = this.units.find((candidate) => candidate.id === unitId);
+    if (
+      !unit ||
+      unit.liveFilter !== null ||
+      !unit.openPositions.some((position) => position.id === openPositionId)
+    ) {
+      return;
+    }
+    this.runCommand("Edit open position", () => {
+      this.units = this.units.map((candidate) =>
+        candidate.id === unitId
+          ? {
+              ...candidate,
+              openPositions: candidate.openPositions.map((position) =>
+                position.id === openPositionId
+                  ? { ...position, tags: input.tags.map((tag) => ({ ...tag })), title }
+                  : position,
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : candidate,
+      );
+      this.selectedItems = [{ openPositionId, type: "openPosition", unitId }];
+      this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
+    });
+  }
+
+  deleteOpenPosition(unitId: OrgEditorUnitId, openPositionId: OrgEditorOpenPositionId): void {
+    const unit = this.units.find((candidate) => candidate.id === unitId);
+    if (!unit?.openPositions.some((position) => position.id === openPositionId)) return;
+    this.runCommand("Delete open position", () => {
+      const resolvedCanvasElements = resolveOrgEditorCanvasElements({
+        elements: this.canvasElements,
+        resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
+      });
+      this.units = this.units.map((candidate) =>
+        candidate.id === unitId
+          ? {
+              ...candidate,
+              openPositions: candidate.openPositions.filter(
+                (position) => position.id !== openPositionId,
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : candidate,
+      );
+      this.canvasElements = this.canvasElements.map((element) =>
+        detachOrgEditorCanvasElementTargets(
+          resolvedCanvasElements.get(element.id)?.element ?? element,
+          (target) =>
+            target.owner.type === "openPosition" &&
+            target.owner.unitId === unitId &&
+            target.owner.openPositionId === openPositionId,
+        ),
+      );
+      this.selectedItems = this.selectedItems.filter(
+        (item) =>
+          item.type !== "openPosition" ||
+          item.unitId !== unitId ||
+          item.openPositionId !== openPositionId,
+      );
+      this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
+    });
+  }
+
+  replaceOpenPositionWithEmployee(
+    unitId: OrgEditorUnitId,
+    openPositionId: OrgEditorOpenPositionId,
+    employeeId: EmployeeId,
+  ): void {
+    this.replaceOpenPosition(unitId, openPositionId, employeeId, null);
+  }
+
+  moveEmployeeToOpenPosition(
+    item: Extract<OrgEditorSelectedItem, { type: "employee" }>,
+    unitId: OrgEditorUnitId,
+    openPositionId: OrgEditorOpenPositionId,
+  ): void {
+    if (item.unitId === unitId) return;
+    this.replaceOpenPosition(unitId, openPositionId, item.employeeId, item);
+  }
+
+  private replaceOpenPosition(
+    unitId: OrgEditorUnitId,
+    openPositionId: OrgEditorOpenPositionId,
+    employeeId: EmployeeId,
+    movedItem: Extract<OrgEditorSelectedItem, { type: "employee" }> | null,
+  ): void {
+    const targetUnit = this.units.find((unit) => unit.id === unitId);
+    const sourceUnit = movedItem ? this.units.find((unit) => unit.id === movedItem.unitId) : null;
+    if (
+      !targetUnit ||
+      targetUnit.liveFilter !== null ||
+      !targetUnit.openPositions.some((position) => position.id === openPositionId) ||
+      (movedItem && (!sourceUnit || sourceUnit.liveFilter !== null))
+    ) {
+      return;
+    }
+    const previousAnchorById = new Map(
+      ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.flatMap((anchorId) => {
+        const ref: OrgEditorAnchorRef = {
+          anchorId,
+          owner: { openPositionId, type: "openPosition", unitId },
+        };
+        const point = this.resolveExternalCanvasAnchor(ref);
+        return point ? [[anchorId, point] as const] : [];
+      }),
+    );
+    this.runCommand("Replace open position", () => {
+      if (movedItem) this.moveEmployeesToUnit([movedItem], unitId);
+      else this.addEmployeesToUnit(unitId, [employeeId]);
+      this.units = this.units.map((unit) =>
+        unit.id === unitId
+          ? {
+              ...unit,
+              openPositions: unit.openPositions.filter(
+                (position) => position.id !== openPositionId,
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : unit,
+      );
+      this.canvasElements = this.canvasElements.map((element) =>
+        rekeyCanvasElementOpenPosition(
+          element,
+          unitId,
+          openPositionId,
+          employeeId,
+          (ref) =>
+            previousAnchorById.get(
+              ref.anchorId as (typeof ORG_EDITOR_EMPLOYEE_ANCHOR_IDS)[number],
+            ) ?? null,
+          (ref) => this.resolveExternalCanvasAnchor(ref),
+        ),
+      );
+      this.selectedItems = [{ employeeId, type: "employee", unitId }];
+      this.realignRootSubtrees(
+        getRootUnitIdsForUnitIds(this.units, [unitId, ...(movedItem ? [movedItem.unitId] : [])]),
+      );
     });
   }
 
@@ -1970,6 +2269,11 @@ export class OrgEditorStore {
           item.type === "employee" ? [`${item.unitId}:${item.employeeId}`] : [],
         ),
       );
+      const deletedOpenPositionOccurrences = new Set(
+        this.selectedItems.flatMap((item) =>
+          item.type === "openPosition" ? [`${item.unitId}:${item.openPositionId}`] : [],
+        ),
+      );
       const resolvedEmployeeIdsByUnitId = new Map(
         this.units.map((unit) => [unit.id, [...this.getUnitEmployeeIds(unit.id)]] as const),
       );
@@ -1994,7 +2298,20 @@ export class OrgEditorStore {
       }
 
       const removableEmployeesByUnitId = new Map<OrgEditorUnitId, Set<EmployeeId>>();
+      const removableOpenPositionsByUnitId = new Map<
+        OrgEditorUnitId,
+        Set<OrgEditorOpenPositionId>
+      >();
       for (const item of this.selectedItems) {
+        if (item.type === "openPosition" && !deletedUnitIds.has(item.unitId)) {
+          const openPositionIds =
+            removableOpenPositionsByUnitId.get(item.unitId) ?? new Set<OrgEditorOpenPositionId>();
+          openPositionIds.add(item.openPositionId);
+          removableOpenPositionsByUnitId.set(item.unitId, openPositionIds);
+          const rootUnitId = getRootUnitId(this.units, item.unitId);
+          if (rootUnitId) affectedRootUnitIds.add(rootUnitId);
+          continue;
+        }
         if (item.type !== "employee" || deletedUnitIds.has(item.unitId)) continue;
         if (this.units.find((unit) => unit.id === item.unitId)?.liveFilter !== null) continue;
 
@@ -2011,6 +2328,7 @@ export class OrgEditorStore {
         .filter((unit) => !deletedUnitIds.has(unit.id))
         .map((unit) => {
           const removableEmployeeIds = removableEmployeesByUnitId.get(unit.id);
+          const removableOpenPositionIds = removableOpenPositionsByUnitId.get(unit.id);
           const materializeLiveUnit = Boolean(
             unit.liveFilter?.selectedUnitIds.some((unitId) => deletedUnitIds.has(unitId)),
           );
@@ -2018,7 +2336,9 @@ export class OrgEditorStore {
             ? (resolvedEmployeeIdsByUnitId.get(unit.id) ?? [])
             : unit.employeeIds;
 
-          if (!removableEmployeeIds && !materializeLiveUnit) return unit;
+          if (!removableEmployeeIds && !removableOpenPositionIds && !materializeLiveUnit) {
+            return unit;
+          }
 
           return {
             ...unit,
@@ -2037,6 +2357,9 @@ export class OrgEditorStore {
                 !removableEmployeeIds?.has(employeePosition.employeeId),
             ),
             liveFilter: materializeLiveUnit ? null : unit.liveFilter,
+            openPositions: unit.openPositions.filter(
+              (position) => !removableOpenPositionIds?.has(position.id),
+            ),
             updatedAt: now,
           };
         });
@@ -2050,10 +2373,14 @@ export class OrgEditorStore {
                 return selectedElementIds.has(target.owner.elementId);
               }
               if (target.owner.type === "unit") return deletedUnitIds.has(target.owner.unitId);
-              return (
-                deletedUnitIds.has(target.owner.unitId) ||
-                deletedEmployeeOccurrences.has(`${target.owner.unitId}:${target.owner.employeeId}`)
-              );
+              if (deletedUnitIds.has(target.owner.unitId)) return true;
+              return target.owner.type === "employee"
+                ? deletedEmployeeOccurrences.has(
+                    `${target.owner.unitId}:${target.owner.employeeId}`,
+                  )
+                : deletedOpenPositionOccurrences.has(
+                    `${target.owner.unitId}:${target.owner.openPositionId}`,
+                  );
             },
           ),
         );
@@ -2091,6 +2418,9 @@ export class OrgEditorStore {
       for (const employeeId of this.getUnitEmployeeIds(unitId)) {
         scopedOwnerKeys.add(`employee:${unitId}:${employeeId}`);
       }
+      for (const position of unitsById.get(unitId)?.openPositions ?? []) {
+        scopedOwnerKeys.add(`openPosition:${unitId}:${position.id}`);
+      }
     }
     const copiedElementIds = getOrgEditorScopedCanvasElementIds({
       elements: this.canvasElements,
@@ -2103,6 +2433,10 @@ export class OrgEditorStore {
       elements: this.canvasElements,
       resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
     });
+
+    if (copiedUnitIds.size === 0 && selectedEmployeeIds.size === 0 && copiedElementIds.size === 0) {
+      return;
+    }
 
     this.setClipboard({
       canvasElements: this.canvasElements
@@ -2130,6 +2464,7 @@ export class OrgEditorStore {
 
       const pastedUnits: OrgEditorUnit[] = [];
       const unitIdMap = new Map<OrgEditorUnitId, OrgEditorUnitId>();
+      const openPositionIdMap = new Map<OrgEditorOpenPositionId, OrgEditorOpenPositionId>();
       const isCrossViewPaste =
         this.clipboard.sourceViewId !== null && this.clipboard.sourceViewId !== this.viewId;
       const unitBounds = this.clipboard.units.map(getOrgEditorUnitBounds);
@@ -2153,6 +2488,9 @@ export class OrgEditorStore {
 
       for (const unit of this.clipboard.units) {
         unitIdMap.set(unit.id, createOrgEditorUnitFromScratch({ name: unit.name, x: 0, y: 0 }).id);
+        for (const position of unit.openPositions) {
+          openPositionIdMap.set(position.id, createUuid());
+        }
       }
       const elementIdMap = new Map(
         this.clipboard.canvasElements.map((element) => [element.id, createUuid()] as const),
@@ -2204,6 +2542,11 @@ export class OrgEditorStore {
                   ),
                 }
               : null,
+          openPositions: unit.openPositions.map((position) => ({
+            ...position,
+            id: openPositionIdMap.get(position.id) ?? createUuid(),
+            tags: position.tags.map((tag) => ({ ...tag })),
+          })),
           parentId: nextParentId,
           updatedAt: new Date().toISOString(),
           x: unit.x + offset.x,
@@ -2236,7 +2579,14 @@ export class OrgEditorStore {
       });
 
       const pastedElements = this.clipboard.canvasElements.map((element) =>
-        remapCanvasElementForPaste(element, unitIdMap, elementIdMap, !isCrossViewPaste, offset),
+        remapCanvasElementForPaste(
+          element,
+          unitIdMap,
+          elementIdMap,
+          !isCrossViewPaste,
+          offset,
+          openPositionIdMap,
+        ),
       );
 
       this.units = [...this.units, ...positionedPastedUnits];

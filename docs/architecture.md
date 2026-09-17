@@ -48,10 +48,19 @@ the boss. DOM, PNG, virtual row offsets, selection, reveal, and distribution anc
 sequence. Hidden Tag clouds contribute zero footer height to every geometry consumer and PNG;
 Employee Tags remain visible. No group headings or duplicate rows are introduced.
 
+Manual Units also own required `openPositions`. These View-local UUID records contain a normalized
+title and dated or undated assignments to the global Tag catalog, but never create an Employee.
+Employee and open-position rows form one discriminated, prefix-offset layout for sorting,
+virtualization, hit testing, side anchors, DOM, and PNG. Boss Employees remain first; position Tags
+affect grouping without changing Employee counts or the Unit Tag cloud. Live Units require an empty
+position array. View clone and Unit Paste regenerate position IDs and remap attachments; replacement
+rekeys the owner to an Employee occurrence in one history command, while deletion detaches at the
+last resolved world point.
+
 Each View also owns a required ordered `structure.canvasElements` discriminated union for Text,
 Sticker, embedded Image, and cubic Arrow content. Rectangular tools share bounds, rotation, layer,
 typography, and optional attachment state; Arrow endpoints use the same anchor references. One
-anchor registry resolves Unit corners/sides/center, Employee row sides, rectangular tool anchors,
+anchor registry resolves Unit corners/sides/center, Employee and open-position row sides, rectangular tool anchors,
 and Arrow start/middle/end. References are same-View, acyclic, and preserve fallback world geometry.
 The array order is z-order inside `behindUnits` and `aboveUnits`; canvas elements participate in
 View-local history, cloning, persistence, live-tab synchronization, and complete State transfer.

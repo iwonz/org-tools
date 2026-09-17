@@ -21,6 +21,11 @@ describe("OrgViewsStore shared clipboard", () => {
     if (!source) return;
     const employeeId = createUuid();
     const rootId = source.addUnit({ employeeIds: [employeeId], name: "Root", x: 0, y: 0 });
+    const openPositionId = source.addOpenPosition(rootId, {
+      tags: [{ date: "2026-10-01", tagId: "tag-role" }],
+      title: "Platform Engineer",
+    });
+    if (!openPositionId) throw new Error("Expected an open position.");
     source.setUnitNoteMarkdown(rootId, "# Source note");
     source.setViewSettings({ groupByTag: false });
     const childId = source.addUnit({
@@ -38,7 +43,11 @@ describe("OrgViewsStore shared clipboard", () => {
         sourceAnchorId: "leftCenter" as const,
         target: {
           anchorId: "rightCenter" as const,
-          owner: { type: "unit" as const, unitId: rootId },
+          owner: {
+            openPositionId,
+            type: "openPosition" as const,
+            unitId: rootId,
+          },
         },
       },
     };
@@ -72,6 +81,13 @@ describe("OrgViewsStore shared clipboard", () => {
     const pastedRoot = target.units.find((unit) => unit.parentId === null);
     const pastedChild = target.units.find((unit) => unit.parentId !== null);
     expect(pastedRoot?.employeeIds).toEqual([employeeId]);
+    expect(pastedRoot?.openPositions).toMatchObject([
+      {
+        tags: [{ date: "2026-10-01", tagId: "tag-role" }],
+        title: "Platform Engineer",
+      },
+    ]);
+    expect(pastedRoot?.openPositions[0]?.id).not.toBe(openPositionId);
     expect(pastedRoot?.noteMarkdown).toBe("# Source note");
     expect(target.settings.groupByTag).toBe(true);
     expect(pastedRoot).not.toHaveProperty("groupByTag");
@@ -81,7 +97,8 @@ describe("OrgViewsStore shared clipboard", () => {
     const pastedText = target.canvasElements.find((element) => element.type === "text");
     expect(pastedSticker?.id).not.toBe(sticker.id);
     expect(pastedSticker?.type === "sticker" && pastedSticker.attachment?.target.owner).toEqual({
-      type: "unit",
+      openPositionId: pastedRoot?.openPositions[0]?.id,
+      type: "openPosition",
       unitId: pastedRoot?.id,
     });
     expect(pastedText?.id).not.toBe(text.id);

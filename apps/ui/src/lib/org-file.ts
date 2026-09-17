@@ -17,6 +17,7 @@ import type {
   OrgEditorEmployeePosition,
   OrgEditorInlineTypography,
   OrgEditorLayoutMode,
+  OrgEditorOpenPosition,
   OrgEditorSelectedItem,
   OrgEditorTextFormatRun,
   OrgEditorTypography,
@@ -51,7 +52,11 @@ import {
 import { createEmployeeIdentityKey, isEmployeeId } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
-import { createDefaultOrgEditorState, normalizeOrgEditorUnitNoteMarkdown } from "@/lib/org-editor";
+import {
+  createDefaultOrgEditorState,
+  normalizeOrgEditorOpenPositionTitle,
+  normalizeOrgEditorUnitNoteMarkdown,
+} from "@/lib/org-editor";
 import {
   hasOrgEditorCanvasElementDependencyCycle,
   isFiniteOrgEditorCanvasNumber,
@@ -514,6 +519,27 @@ const normalizeEmployeePositions = (value: unknown): OrgEditorEmployeePosition[]
   return positions;
 };
 
+const normalizeOpenPositions = (value: unknown): OrgEditorOpenPosition[] | null => {
+  if (!Array.isArray(value)) return null;
+  const positions: OrgEditorOpenPosition[] = [];
+  for (const position of value) {
+    if (
+      !isRecord(position) ||
+      !hasExactKeys(position, ["id", "tags", "title"]) ||
+      !isUuid(position.id) ||
+      !isString(position.title) ||
+      !normalizeOrgEditorOpenPositionTitle(position.title) ||
+      position.title !== normalizeOrgEditorOpenPositionTitle(position.title)
+    ) {
+      return null;
+    }
+    const tags = normalizeTagAssignments(position.tags);
+    if (!tags) return null;
+    positions.push({ id: position.id, tags, title: position.title });
+  }
+  return positions;
+};
+
 const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
   if (
     !isRecord(value) ||
@@ -527,6 +553,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
       "liveFilter",
       "name",
       "noteMarkdown",
+      "openPositions",
       "order",
       "parentId",
       "updatedAt",
@@ -551,12 +578,13 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     return null;
   }
   const employeePositions = normalizeEmployeePositions(value.employeePositions);
-  if (!employeePositions) return null;
+  const openPositions = normalizeOpenPositions(value.openPositions);
+  if (!employeePositions || !openPositions) return null;
   const noteMarkdown = normalizeOrgEditorUnitNoteMarkdown(value.noteMarkdown);
   if (noteMarkdown === null || noteMarkdown !== value.noteMarkdown) return null;
   const liveFilter = value.liveFilter === null ? null : normalizeLiveFilterRule(value.liveFilter);
   if (value.liveFilter !== null && !liveFilter) return null;
-  if (liveFilter && value.employeeIds.length > 0) return null;
+  if (liveFilter && (value.employeeIds.length > 0 || openPositions.length > 0)) return null;
   return {
     bossEmployeeId: value.bossEmployeeId,
     collapsed: value.collapsed,
@@ -567,6 +595,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     liveFilter,
     name: value.name.trim(),
     noteMarkdown,
+    openPositions,
     order: value.order as number,
     parentId: value.parentId,
     updatedAt: value.updatedAt,
@@ -594,6 +623,17 @@ const normalizeSelectedItem = (value: unknown): OrgEditorSelectedItem | null => 
     isEmployeeId(value.employeeId)
   ) {
     return { employeeId: value.employeeId, type: "employee", unitId: value.unitId };
+  }
+  if (
+    value.type === "openPosition" &&
+    hasExactKeys(value, ["openPositionId", "type", "unitId"]) &&
+    isUuid(value.openPositionId)
+  ) {
+    return {
+      openPositionId: value.openPositionId,
+      type: "openPosition",
+      unitId: value.unitId,
+    };
   }
   return null;
 };
@@ -938,6 +978,18 @@ const normalizeCanvasAnchorOwner = (value: unknown): OrgEditorAnchorOwner | null
     isUuid(value.unitId)
   ) {
     return { employeeId: value.employeeId, type: "employee", unitId: value.unitId };
+  }
+  if (
+    value.type === "openPosition" &&
+    hasExactKeys(value, ["openPositionId", "type", "unitId"]) &&
+    isUuid(value.openPositionId) &&
+    isUuid(value.unitId)
+  ) {
+    return {
+      openPositionId: value.openPositionId,
+      type: "openPosition",
+      unitId: value.unitId,
+    };
   }
   if (
     value.type === "element" &&
@@ -1380,6 +1432,7 @@ const validateStateGraph = (state: OrgToolsState): void => {
   assertUniqueIds(customNameKeys, "State has duplicate custom View names.");
   const allUnitIds: UnitId[] = [];
   const unitIdsByViewId = new Map<ViewId, Set<UnitId>>();
+  const unitsByViewId = new Map<ViewId, Map<UnitId, OrgEditorUnit>>();
   const elementIdsByViewId = new Map<ViewId, Set<string>>();
   const systemFilters = [
     state.ui.analytics.filters,
@@ -1392,16 +1445,21 @@ const validateStateGraph = (state: OrgToolsState): void => {
     const units = view.structure.units;
     const unitIds = new Set(units.map((unit) => unit.id));
     const unitById = new Map(units.map((unit) => [unit.id, unit] as const));
+    const openPositionIds = units.flatMap((unit) =>
+      unit.openPositions.map((position) => position.id),
+    );
     const canvasElements = view.structure.canvasElements;
     const elementById = new Map(canvasElements.map((element) => [element.id, element] as const));
     const elementIds = new Set(elementById.keys());
     unitIdsByViewId.set(view.id, unitIds);
+    unitsByViewId.set(view.id, unitById);
     elementIdsByViewId.set(view.id, elementIds);
     allUnitIds.push(...unitIds);
     assertUniqueIds(
       canvasElements.map((element) => element.id),
       "State has duplicate canvas element IDs inside a View.",
     );
+    assertUniqueIds(openPositionIds, "State has duplicate open position IDs inside a View.");
     const validateAnchorRef = (ref: OrgEditorAnchorRef) => {
       if (ref.owner.type === "unit") {
         if (!unitIds.has(ref.owner.unitId))
@@ -1424,6 +1482,17 @@ const validateStateGraph = (state: OrgToolsState): void => {
         }
         if (!(ORG_EDITOR_EMPLOYEE_ANCHOR_IDS as readonly string[]).includes(ref.anchorId)) {
           throw new Error("Canvas Employee anchor is invalid.");
+        }
+        return;
+      }
+      if (ref.owner.type === "openPosition") {
+        const owner = ref.owner;
+        const ownerUnit = unitById.get(owner.unitId);
+        if (!ownerUnit?.openPositions.some((position) => position.id === owner.openPositionId)) {
+          throw new Error("Canvas anchor references a missing open position.");
+        }
+        if (!(ORG_EDITOR_EMPLOYEE_ANCHOR_IDS as readonly string[]).includes(ref.anchorId)) {
+          throw new Error("Canvas open position anchor is invalid.");
         }
         return;
       }
@@ -1460,6 +1529,11 @@ const validateStateGraph = (state: OrgToolsState): void => {
       if (referenced.some((employeeId) => !employeeIds.has(employeeId))) {
         throw new Error(`Unit "${unit.name}" references a missing Employee.`);
       }
+      for (const openPosition of unit.openPositions) {
+        if (openPosition.tags.some((tag) => !tagIds.has(tag.tagId))) {
+          throw new Error(`Unit "${unit.name}" open position references a missing Tag.`);
+        }
+      }
       if (!unit.liveFilter) {
         if (positionIds.some((employeeId) => !unit.employeeIds.includes(employeeId))) {
           throw new Error(`Unit "${unit.name}" has a position without an Employee assignment.`);
@@ -1468,6 +1542,9 @@ const validateStateGraph = (state: OrgToolsState): void => {
           throw new Error(`Unit "${unit.name}" has an unassigned boss.`);
         }
       } else {
+        if (unit.openPositions.length > 0) {
+          throw new Error(`Live Unit "${unit.name}" contains an open position.`);
+        }
         allFilters.push(unit.liveFilter);
         if (!hasEmployeeLiveFilterCriteria(unit.liveFilter)) {
           throw new Error(`Live Unit "${unit.name}" has an empty filter rule.`);
@@ -1554,6 +1631,12 @@ const validateStateGraph = (state: OrgToolsState): void => {
       if (!viewUnitIds.has(item.unitId)) throw new Error("Editor selects a missing Unit.");
       if (item.type === "employee" && !employeeIds.has(item.employeeId)) {
         throw new Error("Editor selects a missing Employee.");
+      }
+      if (item.type === "openPosition") {
+        const unit = unitsByViewId.get(viewUi.viewId)?.get(item.unitId);
+        if (!unit?.openPositions.some((position) => position.id === item.openPositionId)) {
+          throw new Error("Editor selects a missing open position.");
+        }
       }
     }
   }

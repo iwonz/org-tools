@@ -3,6 +3,7 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTagDefinition,
   OrgEditorCanvasElement,
   OrgEditorLayoutMode,
   OrgEditorUnit,
@@ -79,6 +80,7 @@ export function OrgEditorViewImageExportDialog({
   onOpenChange,
   open,
   tagOrder,
+  tagDefinitions,
   units,
   viewName,
   viewSettings,
@@ -91,6 +93,7 @@ export function OrgEditorViewImageExportDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   tagOrder: readonly TagId[];
+  tagDefinitions: readonly EmployeeTagDefinition[];
   units: OrgEditorUnit[];
   viewName: string;
   viewSettings: OrgEditorViewSettings;
@@ -159,6 +162,7 @@ export function OrgEditorViewImageExportDialog({
         scope: "view",
         settings,
         tagOrder,
+        tagDefinitions,
         units,
         viewSettings,
         ...(maxCanvasPixels === ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS
@@ -175,6 +179,7 @@ export function OrgEditorViewImageExportDialog({
       locale,
       settings,
       tagOrder,
+      tagDefinitions,
       units,
       viewSettings,
     ],

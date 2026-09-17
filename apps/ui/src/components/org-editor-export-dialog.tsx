@@ -3,6 +3,7 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTagDefinition,
   OrgEditorCanvasElement,
   OrgEditorLayoutMode,
   OrgEditorUnit,
@@ -108,6 +109,7 @@ type OrgEditorExportDialogProps = {
   open: boolean;
   sourceIndex: OrgEditorSourceIndex;
   tagOrder: readonly TagId[];
+  tagDefinitions: readonly EmployeeTagDefinition[];
   unit: OrgEditorUnit | null;
   units: OrgEditorUnit[];
 };
@@ -151,6 +153,7 @@ export function OrgEditorExportDialog({
   open,
   sourceIndex,
   tagOrder,
+  tagDefinitions,
   unit,
   units,
 }: OrgEditorExportDialogProps) {
@@ -358,6 +361,7 @@ export function OrgEditorExportDialog({
       scope,
       settings: imageSettings,
       tagOrder,
+      tagDefinitions,
       units,
     })
       .then(({ blob, plan }) => {
@@ -396,6 +400,7 @@ export function OrgEditorExportDialog({
     open,
     scope,
     tagOrder,
+    tagDefinitions,
     viewSettings,
     unit,
     units,
@@ -441,6 +446,7 @@ export function OrgEditorExportDialog({
       scope,
       settings: imageSettings,
       tagOrder,
+      tagDefinitions,
       units,
     });
   };

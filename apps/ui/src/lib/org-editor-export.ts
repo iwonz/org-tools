@@ -1,7 +1,9 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTag,
   EmployeeTagColor,
+  EmployeeTagDefinition,
   OrgEditorAnchorRef,
   OrgEditorCanvasElement,
   OrgEditorLayoutMode,
@@ -38,7 +40,7 @@ import {
   getOrgEditorUnitDisplayName,
   getOrgEditorUnitHeightForEmployeeRows,
   getOrgEditorUnitTagFooterHeight,
-  getOrgEditorVisibleEmployeeIds,
+  getOrgEditorVisibleUnitRows,
   ORG_EDITOR_EMPLOYEE_AVATAR_SIZE,
   ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE,
   ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
@@ -53,6 +55,7 @@ import {
   ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
   type OrgEditorUnitEmployeeSummary,
+  type OrgEditorUnitRow,
   type OrgEditorUnitTagSummary,
   sortOrgEditorEmployeeIds,
 } from "@/lib/org-editor";
@@ -137,7 +140,7 @@ export type OrgEditorTemplateRow = {
 
 type OrgEditorImageUnitRenderData = {
   employeeDistributionPresentations: Array<EditorEmployeeDistributionPresentation | null>;
-  employeeIds: EmployeeId[];
+  rows: OrgEditorUnitRow[];
   employeeRowHeights: number[];
   employeeRowOffsets: number[];
   employeeTagLayouts: OrgEditorExportEmployeeTagLayout[];
@@ -780,7 +783,7 @@ const getOrgEditorExportUnitHeight = (
 ) =>
   getOrgEditorUnitHeightForEmployeeRows({
     collapsed: unit.collapsed,
-    employeeRowHeights: getOrgEditorVisibleEmployeeIds(unit, employeeById, false).map(
+    employeeRowHeights: getOrgEditorVisibleUnitRows(unit, employeeById, false).map(
       () => ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
     ),
   });
@@ -874,13 +877,17 @@ const drawOrgEditorBossBadge = (
 };
 
 export const getOrgEditorExportEmployeeTagLabels = (employee: Employee, locale: string) => {
+  return getOrgEditorExportTagLabels(employee.tags, locale);
+};
+
+const getOrgEditorExportTagLabels = (tags: readonly EmployeeTag[], locale: string) => {
   const formatter = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
     year: "numeric",
   });
-  return employee.tags.map((tag) =>
+  return tags.map((tag) =>
     tag.date ? `${tag.label} · ${formatter.format(new Date(`${tag.date}T00:00:00Z`))}` : tag.label,
   );
 };
@@ -896,6 +903,17 @@ export const getOrgEditorExportEmployeeTags = (
 ): OrgEditorExportEmployeeTag[] => {
   const labels = getOrgEditorExportEmployeeTagLabels(employee, locale);
   return employee.tags.map((tag, index) => ({
+    color: tag.color ?? null,
+    label: labels[index] ?? tag.label,
+  }));
+};
+
+const getOrgEditorExportTags = (
+  tags: readonly EmployeeTag[],
+  locale: string,
+): OrgEditorExportEmployeeTag[] => {
+  const labels = getOrgEditorExportTagLabels(tags, locale);
+  return tags.map((tag, index) => ({
     color: tag.color ?? null,
     label: labels[index] ?? tag.label,
   }));
@@ -1289,6 +1307,7 @@ export const createOrgEditorImageExportResult = async ({
   rootUnit,
   scope,
   settings,
+  tagDefinitions = [],
   tagOrder = [],
   units,
 }: {
@@ -1305,6 +1324,7 @@ export const createOrgEditorImageExportResult = async ({
   rootUnit: OrgEditorUnit | null;
   scope: OrgEditorExportScope | "view";
   settings: OrgEditorImageExportSettings;
+  tagDefinitions?: readonly EmployeeTagDefinition[];
   tagOrder?: readonly TagId[];
   units: OrgEditorUnit[];
 }) => {
@@ -1326,27 +1346,36 @@ export const createOrgEditorImageExportResult = async ({
   const imageUnits =
     scope === "view" ? units : rootUnit ? getOrgEditorExportUnits({ rootUnit, scope, units }) : [];
   const employeeSummaryByUnitId = buildOrgEditorUnitEmployeeSummaryById(units);
+  const tagDefinitionById = new Map(tagDefinitions.map((tag) => [tag.id, tag] as const));
   const imageUnitRenderData = imageUnits.map((unit) => {
-    const employeeIds = getOrgEditorVisibleEmployeeIds(unit, employeeById, viewSettings.groupByTag);
-    const employeeDistributionPresentations = employeeIds.map((employeeId) =>
-      getEditorEmployeeDistributionPresentation({
-        distributionEnabledUnitIds,
-        employeeId,
-        sourceUnitId: unit.id,
-        unitIdsByEmployeeId: distributionUnitIdsByEmployeeId,
-      }),
+    const rows = getOrgEditorVisibleUnitRows(unit, employeeById, viewSettings.groupByTag, tagOrder);
+    const employeeDistributionPresentations = rows.map((row) =>
+      row.type === "employee"
+        ? getEditorEmployeeDistributionPresentation({
+            distributionEnabledUnitIds,
+            employeeId: row.employeeId,
+            sourceUnitId: unit.id,
+            unitIdsByEmployeeId: distributionUnitIdsByEmployeeId,
+          })
+        : null,
     );
     const width = getOrgEditorUnitBounds(unit).width;
     const availableTagWidth = getOrgEditorEmployeeTextMaxWidth(width);
-    const employeeTagLayouts = employeeIds.map((employeeId) => {
-      const employee = employeeById.get(employeeId);
-      return employee
-        ? createOrgEditorExportEmployeeTagLayout(
-            getOrgEditorExportEmployeeTags(employee, locale),
-            availableTagWidth,
-            (text) => measureContext.measureText(text).width,
-          )
-        : { chips: [], height: 0, rowCount: 0 };
+    const employeeTagLayouts = rows.map((row) => {
+      const tags =
+        row.type === "employee"
+          ? (employeeById.get(row.employeeId)?.tags ?? [])
+          : row.openPosition.tags.flatMap((assignment) => {
+              const definition = tagDefinitionById.get(assignment.tagId);
+              return definition
+                ? [{ ...definition, date: assignment.date } satisfies EmployeeTag]
+                : [];
+            });
+      return createOrgEditorExportEmployeeTagLayout(
+        getOrgEditorExportTags(tags, locale),
+        availableTagWidth,
+        (text) => measureContext.measureText(text).width,
+      );
     });
     const employeeRowHeights = employeeTagLayouts.map((layout) =>
       getOrgEditorExportEmployeeRowHeightForTagLayout(layout),
@@ -1366,7 +1395,6 @@ export const createOrgEditorImageExportResult = async ({
       : getOrgEditorUnitTagFooterHeight(tagSummaries, width - 16);
     return {
       employeeDistributionPresentations,
-      employeeIds,
       employeeRowHeights,
       employeeRowOffsets,
       employeeTagLayouts,
@@ -1376,6 +1404,7 @@ export const createOrgEditorImageExportResult = async ({
           collapsed: unit.collapsed,
           employeeRowHeights,
         }) + footerHeight,
+      rows,
       tagSummaries,
       unit,
       width,
@@ -1390,9 +1419,13 @@ export const createOrgEditorImageExportResult = async ({
       : getOrgEditorScopedCanvasElementIds({
           elements: canvasElements,
           ownerKeys: new Set(
-            imageUnitRenderData.flatMap(({ employeeIds, unit }) => [
+            imageUnitRenderData.flatMap(({ rows, unit }) => [
               `unit:${unit.id}`,
-              ...employeeIds.map((employeeId) => `employee:${unit.id}:${employeeId}`),
+              ...rows.map((row) =>
+                row.type === "employee"
+                  ? `employee:${unit.id}:${row.employeeId}`
+                  : `openPosition:${unit.id}:${row.openPosition.id}`,
+              ),
             ]),
           ),
         });
@@ -1415,7 +1448,12 @@ export const createOrgEditorImageExportResult = async ({
         return getOrgEditorRectAnchorPoint(bounds, ref.anchorId as never);
       }
       if (!ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.includes(ref.anchorId as never)) return null;
-      const employeeIndex = unitData.employeeIds.indexOf(ref.owner.employeeId);
+      const owner = ref.owner;
+      const employeeIndex = unitData.rows.findIndex((row) =>
+        owner.type === "employee"
+          ? row.type === "employee" && row.employeeId === owner.employeeId
+          : row.type === "openPosition" && row.openPosition.id === owner.openPositionId,
+      );
       if (employeeIndex < 0) return null;
       if (unitData.unit.collapsed) {
         return {
@@ -1486,8 +1524,10 @@ export const createOrgEditorImageExportResult = async ({
     throw new Error("Canvas is not available in this browser.");
   }
 
-  for (const { employeeIds, unit } of imageUnitRenderData) {
-    for (const employeeId of employeeIds) {
+  for (const { rows, unit } of imageUnitRenderData) {
+    for (const row of rows) {
+      if (row.type !== "employee") continue;
+      const employeeId = row.employeeId;
       const avatarUrl = getEmployeeCanvasAvatarUrl(employeeById.get(employeeId));
 
       if (!avatarUrl) continue;
@@ -1565,12 +1605,12 @@ export const createOrgEditorImageExportResult = async ({
 
   for (const {
     employeeDistributionPresentations,
-    employeeIds,
     employeeRowHeights,
     employeeRowOffsets,
     employeeTagLayouts,
     footerHeight,
     height,
+    rows,
     tagSummaries,
     unit,
     width,
@@ -1642,8 +1682,9 @@ export const createOrgEditorImageExportResult = async ({
       summaryMaxWidth,
     );
 
-    for (const [employeeIndex, employeeId] of employeeIds.entries()) {
-      const employee = employeeById.get(employeeId);
+    for (const [employeeIndex, row] of rows.entries()) {
+      const employee = row.type === "employee" ? employeeById.get(row.employeeId) : undefined;
+      const openPosition = row.type === "openPosition" ? row.openPosition : null;
       const employeeGeometry = getOrgEditorExportEmployeeGeometry(
         unit,
         employeeRowOffsets[employeeIndex] ?? 0,
@@ -1651,21 +1692,26 @@ export const createOrgEditorImageExportResult = async ({
         employeeTagLayouts[employeeIndex]?.height ?? 0,
       );
       const { avatarX, avatarY } = employeeGeometry;
-      const isBoss = unit.bossEmployeeId === employeeId;
-      const avatarUrl = avatarUrlByEmployeeKey.get(`${unit.id}:${employeeId}`);
+      const isBoss = row.type === "employee" && unit.bossEmployeeId === row.employeeId;
+      const avatarUrl =
+        row.type === "employee"
+          ? avatarUrlByEmployeeKey.get(`${unit.id}:${row.employeeId}`)
+          : undefined;
       const avatarImage = avatarUrl ? (avatarImageByUrl.get(avatarUrl) ?? null) : null;
-      const employeeText = employee
-        ? renderOrgEditorTemplate({
-            bossLabel: settings.imageBossLabel.trim(),
-            employee,
-            format: settings.employeeFormat,
-            isBoss,
-            position: getEffectiveEmployeePosition(employee, unit),
-            unitName: getOrgEditorUnitDisplayName(unit),
-          })
-            .replace(/\s+/g, " ")
-            .trim()
-        : "Employee unavailable";
+      const employeeText = openPosition
+        ? openPosition.title
+        : employee
+          ? renderOrgEditorTemplate({
+              bossLabel: settings.imageBossLabel.trim(),
+              employee,
+              format: settings.employeeFormat,
+              isBoss,
+              position: getEffectiveEmployeePosition(employee, unit),
+              unitName: getOrgEditorUnitDisplayName(unit),
+            })
+              .replace(/\s+/g, " ")
+              .trim()
+          : "Employee unavailable";
 
       const distributionPresentation = employeeDistributionPresentations[employeeIndex] ?? null;
       const distributionFillStyle = getOrgEditorExportEmployeeRowFillStyle(
@@ -1698,7 +1744,7 @@ export const createOrgEditorImageExportResult = async ({
       context.beginPath();
       context.arc(avatarX, avatarY, ORG_EDITOR_AVATAR_RADIUS, 0, Math.PI * 2);
       context.clip();
-      if (avatarImage) {
+      if (avatarImage && row.type === "employee") {
         context.drawImage(
           avatarImage,
           avatarX - ORG_EDITOR_AVATAR_RADIUS,
@@ -1713,7 +1759,11 @@ export const createOrgEditorImageExportResult = async ({
         context.font = getCanvasFont(settings.fontFamily, 700, 8);
         context.textAlign = "center";
         context.textBaseline = "middle";
-        context.fillText(employee ? getEmployeeInitials(employee) : "?", avatarX, avatarY + 0.5);
+        context.fillText(
+          openPosition ? "+" : employee ? getEmployeeInitials(employee) : "?",
+          avatarX,
+          avatarY + 0.5,
+        );
       }
       context.restore();
 
@@ -1721,7 +1771,9 @@ export const createOrgEditorImageExportResult = async ({
       context.arc(avatarX, avatarY, ORG_EDITOR_AVATAR_RADIUS, 0, Math.PI * 2);
       context.strokeStyle = "rgba(15, 23, 42, 0.2)";
       context.lineWidth = 1;
+      context.setLineDash(openPosition ? [2, 2] : []);
       context.stroke();
+      context.setLineDash([]);
       if (isBoss) drawOrgEditorBossBadge(context, avatarX, avatarY);
 
       context.textAlign = "start";
@@ -1735,7 +1787,7 @@ export const createOrgEditorImageExportResult = async ({
         employeeGeometry.textBaselineY,
         employeeGeometry.textMaxWidth,
       );
-      if (employee) {
+      if (employee || openPosition) {
         drawOrgEditorEmployeeTags({
           context,
           fontFamily: settings.fontFamily,

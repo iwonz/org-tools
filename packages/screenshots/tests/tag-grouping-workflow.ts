@@ -58,6 +58,7 @@ export async function exerciseTagGrouping(page: Page) {
   for (const unit of units) {
     unit.employeeIds = unit === product ? [boss.id, both.id, alphaEmployee.id, untagged.id] : [];
     unit.employeePositions = unit.employeeIds.map((employeeId) => ({ employeeId, position: null }));
+    for (const openPosition of unit.openPositions) openPosition.tags = [];
     unit.bossEmployeeId = unit === product ? boss.id : null;
     unit.liveFilter = null;
   }

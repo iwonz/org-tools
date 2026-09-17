@@ -17,6 +17,7 @@ import {
   resetServerState,
   syntheticStatePath,
 } from "./helpers.js";
+import { exerciseOpenPositions } from "./open-position-workflow.js";
 import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
 import { exerciseViewSettings } from "./view-settings-workflow.js";
@@ -45,6 +46,15 @@ test("edits durable canvas tools and exports the complete View PNG", async ({ pa
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await exerciseCanvasToolsAndViewExport(page);
+});
+
+test("manages View-local open positions and replaces one with an Employee", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await exerciseOpenPositions(page);
+  await assertLocalRequests();
 });
 
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
@@ -2901,6 +2911,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
       liveFilter: null,
       name: `Unit ${String(index + 1).padStart(4, "0")}`,
       noteMarkdown: "",
+      openPositions: [],
       order: index,
       parentId: null,
       updatedAt: timestamp,

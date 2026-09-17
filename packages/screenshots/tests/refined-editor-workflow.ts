@@ -78,6 +78,11 @@ export async function exerciseRefinedEditor(page: Page) {
   await expect(card("Product")).toContainText("1 Employee · 3 Employees total");
   await expect(card("Platform")).toContainText("2 Employees · 3 Employees total");
   await expect(card("Delivery")).toContainText("2 Employees");
+  await card("Live reference").click({ button: "right", position: { x: 70, y: 40 } });
+  await expect(page.getByRole("menuitem", { name: "Add open position", exact: true })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("Escape");
   const map = page.locator('[data-demo-id="employee-placement-dialog"]');
   for (const name of ["Product", "Live reference"]) {
     await action(name).click();

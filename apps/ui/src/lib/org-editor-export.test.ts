@@ -64,6 +64,7 @@ const unit: OrgEditorUnit = {
   liveFilter: null,
   name: "Research & Development / Lab",
   noteMarkdown: "",
+  openPositions: [],
   order: 0,
   parentId: null,
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -336,7 +337,18 @@ describe("Org Editor image export", () => {
 
 describe("Org Editor structured export scope", () => {
   test("limits Employees and Unit assignments to the selected Unit or subtree", () => {
-    const root = { ...unit, employeeIds: [employee.id], noteMarkdown: "# Private note" };
+    const root = {
+      ...unit,
+      employeeIds: [employee.id],
+      noteMarkdown: "# Private note",
+      openPositions: [
+        {
+          id: "00000000-0000-4000-8000-000000000014",
+          tags: [{ date: "2026-10-01", tagId: "tag-role" }],
+          title: "Platform Engineer",
+        },
+      ],
+    };
     const child: OrgEditorUnit = {
       ...unit,
       employeeIds: [employee.id],
@@ -369,5 +381,6 @@ describe("Org Editor structured export scope", () => {
       child.name,
     ]);
     expect(JSON.stringify(subtreeRows)).not.toContain("Private note");
+    expect(JSON.stringify(subtreeRows)).not.toContain("Platform Engineer");
   });
 });

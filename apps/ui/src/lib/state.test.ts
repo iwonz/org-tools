@@ -164,6 +164,94 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(unsafe)).toThrow();
   });
 
+  test("round-trips exact open positions and rejects preceding or dangling shapes atomically", () => {
+    const { store, unitId } = populatedStore();
+    const tag = store.tagDefinitions[0];
+    if (!tag) throw new Error("Expected a Tag.");
+    const openPositionId = store.mainOrgEditor.addOpenPosition(unitId, {
+      tags: [{ date: "2026-10-01", tagId: tag.id }],
+      title: "Platform Engineer",
+    });
+    if (!openPositionId) throw new Error("Expected an open position.");
+    const text = {
+      ...createOrgEditorTextElement({ x: 640, y: 120 }),
+      attachment: {
+        offset: { x: 24, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { openPositionId, type: "openPosition" as const, unitId },
+        },
+      },
+    };
+    store.mainOrgEditor.addCanvasElement(text);
+    store.mainOrgEditor.setSelectedItems([{ openPositionId, type: "openPosition", unitId }]);
+    const state = store.createOrgToolsState();
+    expect(parseOrgToolsState(state)).toEqual(state);
+
+    const preceding = structuredClone(state) as unknown as {
+      organization: { views: Array<{ structure: { units: Array<Record<string, unknown>> } }> };
+    };
+    delete preceding.organization.views[0]?.structure.units[0]?.openPositions;
+    expect(() => parseOrgToolsState(preceding)).toThrow("invalid View structure");
+
+    const duplicate = structuredClone(state);
+    const duplicateUnit = duplicate.organization.views[0]?.structure.units[0];
+    const position = duplicateUnit?.openPositions[0];
+    if (!duplicateUnit || !position) throw new Error("Expected a persisted position.");
+    duplicateUnit.openPositions.push(structuredClone(position));
+    expect(() => parseOrgToolsState(duplicate)).toThrow("duplicate open position IDs");
+
+    const blank = structuredClone(state);
+    const blankPosition = blank.organization.views[0]?.structure.units[0]?.openPositions[0];
+    if (!blankPosition) throw new Error("Expected a persisted position.");
+    blankPosition.title = " ";
+    expect(() => parseOrgToolsState(blank)).toThrow("invalid View structure");
+
+    const missingTag = structuredClone(state);
+    const missingTagPosition =
+      missingTag.organization.views[0]?.structure.units[0]?.openPositions[0];
+    if (!missingTagPosition) throw new Error("Expected a persisted position.");
+    missingTagPosition.tags[0] = { date: null, tagId: uuid(999) };
+    expect(() => parseOrgToolsState(missingTag)).toThrow("references a missing Tag");
+
+    const live = structuredClone(state);
+    const liveView = live.organization.views[0];
+    const liveUnit = liveView?.structure.units[0];
+    const liveViewUi = live.ui.editor.views[0];
+    if (!liveView || !liveUnit || !liveViewUi) throw new Error("Expected a View and Unit.");
+    liveView.structure.canvasElements = [];
+    liveViewUi.selectedItems = [];
+    liveUnit.bossEmployeeId = null;
+    liveUnit.employeeIds = [];
+    liveUnit.employeePositions = [];
+    liveUnit.liveFilter = {
+      ...createEmptyEmployeeLiveFilterRule(),
+      selectedTags: [tag.id],
+    };
+    expect(() => parseOrgToolsState(live)).toThrow("invalid View structure");
+
+    const danglingSelection = structuredClone(state);
+    const viewUi = danglingSelection.ui.editor.views[0];
+    if (!viewUi) throw new Error("Expected View UI.");
+    viewUi.selectedItems = [{ openPositionId: uuid(998), type: "openPosition", unitId }];
+    expect(() => parseOrgToolsState(danglingSelection)).toThrow("selects a missing open position");
+
+    const danglingAnchor = structuredClone(state);
+    const anchoredText = danglingAnchor.organization.views[0]?.structure.canvasElements.find(
+      (element) => element.id === text.id,
+    );
+    if (anchoredText?.type !== "text" || !anchoredText.attachment) {
+      throw new Error("Expected an attached Text element.");
+    }
+    anchoredText.attachment.target.owner = {
+      openPositionId: uuid(997),
+      type: "openPosition",
+      unitId,
+    };
+    expect(() => parseOrgToolsState(danglingAnchor)).toThrow("references a missing open position");
+  });
+
   test("normalizes preceding Text and Sticker shapes and rejects invalid rich ranges atomically", () => {
     const state = createBlankOrgToolsState();
     const structure = state.organization.views[0]?.structure;
@@ -650,9 +738,16 @@ describe("OrgToolsState", () => {
   });
 
   test("cascades Tag deletion through assignments and saved filters", () => {
-    const { store } = populatedStore();
+    const { store, unitId } = populatedStore();
     const tag = store.tagDefinitions[0];
     if (!tag) throw new Error("Expected a Tag definition.");
+    const openPositionId = store.mainOrgEditor.addOpenPosition(unitId, {
+      tags: [{ date: "2026-10-01", tagId: tag.id }],
+      title: "Platform Engineer",
+    });
+    if (!openPositionId) throw new Error("Expected an open position.");
+    store.mainOrgEditor.setSelectedItems([{ type: "unit", unitId }]);
+    store.mainOrgEditor.copySelected();
     store.setEmployeesUi("", {
       ...createEmptyEmployeeSearchFilters(),
       selectedTags: [tag.id],
@@ -678,6 +773,15 @@ describe("OrgToolsState", () => {
     expect(store.organizationEmployees[0]?.tags).toEqual([]);
     expect(store.employeesUi.filters.selectedTags).toEqual([]);
     expect(store.mainOrgEditor.units.find((unit) => unit.id === liveUnitId)?.liveFilter).toBeNull();
+    expect(
+      store.mainOrgEditor.units.find((unit) => unit.id === unitId)?.openPositions[0]?.tags,
+    ).toEqual([]);
+    expect(store.orgViews.clipboard?.units[0]?.openPositions[0]?.tags).toEqual([]);
+    expect(
+      store.orgViews.editorByViewId
+        .get(customViewId)
+        ?.units.flatMap((unit) => unit.openPositions)[0]?.tags,
+    ).toEqual([]);
     expect(
       store.orgViews.editorByViewId
         .get(customViewId)
@@ -717,6 +821,7 @@ describe("OrgToolsState", () => {
         liveFilter: rule([secondId]),
         name: "First",
         noteMarkdown: "",
+        openPositions: [],
         order: 0,
         parentId: null,
         updatedAt: now,
@@ -734,6 +839,7 @@ describe("OrgToolsState", () => {
         liveFilter: rule([firstId]),
         name: "Second",
         noteMarkdown: "",
+        openPositions: [],
         order: 1,
         parentId: null,
         updatedAt: now,

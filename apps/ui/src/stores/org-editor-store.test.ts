@@ -124,6 +124,149 @@ describe("OrgEditorStore grid geometry", () => {
   });
 });
 
+describe("OrgEditorStore open positions", () => {
+  test("creates, edits, deletes, and restores a tagged position as one command each", () => {
+    const store = new OrgEditorStore();
+    const unitId = store.addUnit({ name: "Platform", x: 0, y: 0 });
+    store.clearHistory();
+
+    const openPositionId = store.addOpenPosition(unitId, {
+      tags: [{ date: "2026-10-01", tagId: "tag-platform" }],
+      title: "  Platform   Engineer  ",
+    });
+    expect(openPositionId).not.toBeNull();
+    expect(store.units[0]?.openPositions).toEqual([
+      {
+        id: openPositionId,
+        tags: [{ date: "2026-10-01", tagId: "tag-platform" }],
+        title: "Platform Engineer",
+      },
+    ]);
+    expect(store.undoStack).toHaveLength(1);
+
+    if (!openPositionId) return;
+    store.updateOpenPosition(unitId, openPositionId, {
+      tags: [],
+      title: "Senior Platform Engineer",
+    });
+    expect(store.units[0]?.openPositions[0]?.title).toBe("Senior Platform Engineer");
+    store.undo();
+    expect(store.units[0]?.openPositions[0]?.title).toBe("Platform Engineer");
+    store.redo();
+    expect(store.units[0]?.openPositions[0]?.title).toBe("Senior Platform Engineer");
+
+    store.deleteOpenPosition(unitId, openPositionId);
+    expect(store.units[0]?.openPositions).toEqual([]);
+    store.undo();
+    expect(store.units[0]?.openPositions[0]?.id).toBe(openPositionId);
+  });
+
+  test("rekeys attachments for picker and drag replacement, then detaches on deletion", () => {
+    const store = new OrgEditorStore();
+    const sourceUnitId = store.addUnit({
+      employeeIds: ["employee-dragged"],
+      name: "Source",
+      x: 0,
+      y: 0,
+    });
+    const targetUnitId = store.addUnit({ name: "Target", x: 480, y: 0 });
+    const pickerPositionId = store.addOpenPosition(targetUnitId, {
+      tags: [],
+      title: "Picker role",
+    });
+    if (!pickerPositionId) throw new Error("Expected a picker position.");
+    const text = {
+      ...createOrgEditorTextElement({ x: 800, y: 120 }),
+      attachment: {
+        offset: { x: 24, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: {
+            openPositionId: pickerPositionId,
+            type: "openPosition" as const,
+            unitId: targetUnitId,
+          },
+        },
+      },
+    };
+    store.addCanvasElement(text);
+    store.replaceOpenPositionWithEmployee(targetUnitId, pickerPositionId, "employee-picked");
+    expect(store.units.find((unit) => unit.id === targetUnitId)?.employeeIds).toContain(
+      "employee-picked",
+    );
+    expect(
+      store.canvasElements[0]?.type === "text" && store.canvasElements[0].attachment?.target.owner,
+    ).toEqual({
+      employeeId: "employee-picked",
+      type: "employee",
+      unitId: targetUnitId,
+    });
+    expect(store.selectedItems).toEqual([
+      { employeeId: "employee-picked", type: "employee", unitId: targetUnitId },
+    ]);
+    store.undo();
+    expect(store.units.find((unit) => unit.id === targetUnitId)?.openPositions[0]?.id).toBe(
+      pickerPositionId,
+    );
+
+    const dragPositionId = store.addOpenPosition(targetUnitId, {
+      tags: [],
+      title: "Dragged role",
+    });
+    if (!dragPositionId) throw new Error("Expected a drag position.");
+    store.moveEmployeeToOpenPosition(
+      { employeeId: "employee-dragged", type: "employee", unitId: sourceUnitId },
+      targetUnitId,
+      dragPositionId,
+    );
+    expect(store.units.find((unit) => unit.id === sourceUnitId)?.employeeIds).toEqual([]);
+    expect(store.units.find((unit) => unit.id === targetUnitId)?.employeeIds).toContain(
+      "employee-dragged",
+    );
+    expect(
+      store.units
+        .find((unit) => unit.id === targetUnitId)
+        ?.openPositions.some((position) => position.id === dragPositionId),
+    ).toBe(false);
+
+    const deletedPositionId = store.addOpenPosition(targetUnitId, {
+      tags: [],
+      title: "Deleted role",
+    });
+    if (!deletedPositionId) throw new Error("Expected a deleted position.");
+    const sticker = {
+      ...createOrgEditorStickerElement({ x: 900, y: 240 }),
+      attachment: {
+        offset: { x: 12, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: {
+            openPositionId: deletedPositionId,
+            type: "openPosition" as const,
+            unitId: targetUnitId,
+          },
+        },
+      },
+    };
+    store.addCanvasElement(sticker);
+    store.deleteOpenPosition(targetUnitId, deletedPositionId);
+    const detached = store.canvasElements.find((element) => element.id === sticker.id);
+    expect(detached?.type === "sticker" && detached.attachment).toBeNull();
+  });
+
+  test("does not create a standalone clipboard payload for a selected position", () => {
+    const store = new OrgEditorStore();
+    const unitId = store.addUnit({ name: "Platform", x: 0, y: 0 });
+    const openPositionId = store.addOpenPosition(unitId, { tags: [], title: "Role" });
+    if (!openPositionId) throw new Error("Expected a position.");
+    store.setSelectedItems([{ openPositionId, type: "openPosition", unitId }]);
+    store.copySelected();
+    expect(store.clipboard).toBeNull();
+  });
+});
+
 describe("OrgEditorStore canvas layers", () => {
   test("moves selected elements across the Unit plane while preserving order and attachments", () => {
     let documentChanges = 0;

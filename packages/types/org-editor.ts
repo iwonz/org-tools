@@ -1,5 +1,10 @@
-import type { EmployeeTagColor } from "./employee.js";
-import type { EmployeeId, OrgEditorCanvasElementId, UnitId } from "./ids.js";
+import type { EmployeeTagAssignment, EmployeeTagColor } from "./employee.js";
+import type {
+  EmployeeId,
+  OrgEditorCanvasElementId,
+  OrgEditorOpenPositionId,
+  UnitId,
+} from "./ids.js";
 import type { EmployeeLiveFilterRule } from "./organization.js";
 
 export type OrgEditorUnitId = UnitId;
@@ -21,6 +26,11 @@ export type OrgEditorSelectedItem =
       type: "employee";
       unitId: OrgEditorUnitId;
       employeeId: EmployeeId;
+    }
+  | {
+      openPositionId: OrgEditorOpenPositionId;
+      type: "openPosition";
+      unitId: OrgEditorUnitId;
     }
   | {
       elementId: OrgEditorCanvasElementId;
@@ -49,6 +59,11 @@ export type OrgEditorArrowAnchorId = "end" | "middle" | "start";
 export type OrgEditorAnchorOwner =
   | { type: "unit"; unitId: OrgEditorUnitId }
   | { employeeId: EmployeeId; type: "employee"; unitId: OrgEditorUnitId }
+  | {
+      openPositionId: OrgEditorOpenPositionId;
+      type: "openPosition";
+      unitId: OrgEditorUnitId;
+    }
   | { elementId: OrgEditorCanvasElementId; type: "element" };
 
 export type OrgEditorAnchorRef = {
@@ -158,6 +173,12 @@ export type OrgEditorEmployeePosition = {
   position: string | null;
 };
 
+export type OrgEditorOpenPosition = {
+  id: OrgEditorOpenPositionId;
+  tags: EmployeeTagAssignment[];
+  title: string;
+};
+
 /** Unit persisted inside one organization View document. */
 export type OrgEditorUnit = {
   id: OrgEditorUnitId;
@@ -176,6 +197,7 @@ export type OrgEditorUnit = {
   employeePositions: OrgEditorEmployeePosition[];
   liveFilter: EmployeeLiveFilterRule | null;
   noteMarkdown: string;
+  openPositions: OrgEditorOpenPosition[];
   createdAt: string;
   updatedAt: string;
 };
