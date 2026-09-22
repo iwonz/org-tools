@@ -78,11 +78,21 @@ Team import and removes the Teams-only duplicate policy. Existing Teams match by
 ID and then normalized full path; missing paths become manual Teams. Imported assignments are
 additive and preserve unrelated membership.
 
-Existing custom Value fields appear as target options. **Create custom field** stages a Value field
+Existing stored custom fields appear as target options. Multi-option inputs are arrays whose entries
+resolve by option UUID or normalized label. Composite inputs are arrays of objects whose properties
+resolve by subfield UUID or configured name; their required cells, types, Option values, and
+per-Employee primary-key uniqueness are validated atomically. **Create custom field** stages an ordinary single-value Value field
 for the selected source path with its display name, unique token key, type, and options; its definition and all values are added
 only if the complete candidate passes strict validation. Template fields never accept imported
 values. Imported Tags contribute label and optional date only: missing normalized labels create
 neutral catalog entries, while colors always remain controlled by the current Tag catalog.
+
+Every current Value definition includes explicit `multiple` and `allowCustomOptions` booleans.
+Composite definitions use `kind: "composite"`, `required`, `primaryFieldId`, and ordered `fields`;
+each subfield has `id`, `name`, `valueType`, `required`, and `options`. Employee multi-option values
+are ordered unique option-UUID arrays. Composite values are ordered arrays of objects keyed by
+subfield UUID. Complete State Import rejects omitted mode flags, legacy scalar substitutes, unknown
+record keys, and every other obsolete shape.
 
 The virtualized review separates rows into **Will be added**, **Duplicates**, and **Will not be
 added**. New Employees use Add or Skip. Identity duplicates use a bulk choice—**Update data**,

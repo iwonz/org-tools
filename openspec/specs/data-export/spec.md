@@ -237,3 +237,10 @@ storage, or network behavior.
 #### Scenario: Bound filtered preview work
 - **WHEN** Template export contains 20,000 Employees and Remove empty lines is enabled
 - **THEN** the application derives complete line counts without constructing the complete output for preview and still bounds displayed text to 50 source rows and 128 KiB
+
+### Requirement: Advanced custom fields retain their output structure
+Structured JSON SHALL export multi-option values as label arrays and Composite values as ordered arrays of typed objects named by their configured subfields. Template output SHALL render multi-option labels in stored order and Composite records as deterministic JSON text. Missing advanced values SHALL emit null in JSON and empty text in Template output.
+
+#### Scenario: Export advanced values
+- **WHEN** selected Employees contain multi-option and Composite values
+- **THEN** preview, Copy, Download, and Editor JSON use the same complete typed representation

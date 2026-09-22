@@ -653,6 +653,12 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   icon-toggle Arrow markers, normalized curve preservation, Image selection without properties, two-step
   text Escape behavior, canvas scroll isolation, resting selection clearing, global Front/Back, and
   one compact non-overlapping property row.
+- Confirm one keyboard paste gesture creates one structure when both key and paste events fire,
+  the no-event fallback runs once, a late event cannot duplicate that fallback, consecutive
+  gestures remain independent, and image paste does not also paste the structural clipboard.
+- Confirm Employee model exposes accessible switches for Required, Multiple selection, and custom
+  options; Employee editing can commit a shared custom option and a dated Composite record without
+  adding either value to Employee cards or Editor PNG output.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,
   effective density, and clamping copy while Copy/Save remain unchanged.

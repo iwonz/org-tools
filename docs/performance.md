@@ -33,6 +33,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   Analytics, and filters reuse its derived recurring month-day key without duplicating Employee data.
 - Resolve custom Template dependencies once per definition graph and memoize derived Employee
   values by organization revision. Filter option discovery and output reuse the same cache.
+  Multi-option filters reuse resolved label arrays, Composite filters reuse only indexed primary
+  values, and Composite Calendar dates are flattened once during the same organization-index build.
 - Cache derived structures by View document revision and global Employee/Tag/field references.
   Materialize only the system View, active Editor View, and selected Download View at once.
 - Build the active View's direct `EmployeeId → UnitId[]` distribution index only when materialized

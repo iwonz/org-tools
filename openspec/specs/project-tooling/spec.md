@@ -630,3 +630,10 @@ row rhythm in current Editor frames.
 #### Scenario: Regenerate Editor evidence
 - **WHEN** the 59-frame gallery is generated twice from unchanged source and fixtures
 - **THEN** affected Editor and Image-export frames show the revised spacing and both SHA-256 manifests match
+
+### Requirement: Advanced fields and paste arbitration are regression tested
+Automated checks SHALL cover exact state parsing, definition and value validation, filters, Template and JSON output, mapped Import, Calendar indexing, accessible switches, custom-option commits, and keyboard paste event ordering while retaining the 20,000 Employee and 4,000 Unit target.
+
+#### Scenario: Run the publication checks
+- **WHEN** the full repository validation lifecycle runs
+- **THEN** advanced-field workflows and single-paste behavior pass in both server and browser-only runtimes without console, resource, localization, or privacy failures

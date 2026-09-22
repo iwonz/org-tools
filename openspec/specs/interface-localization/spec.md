@@ -262,3 +262,10 @@ copy in source code.
 #### Scenario: Use canvas tools in every locale
 - **WHEN** each supported locale opens the tools surface, contextual properties, image error, and full-View export dialog
 - **THEN** all visible and assistive copy is localized, non-empty, placeholder-compatible, and free of fallback keys
+
+### Requirement: Advanced Employee fields are localized completely
+All six bundled catalogs SHALL contain matching nonempty copy for multi-option settings, custom option creation, Composite schema editing, Composite Employee records, primary keys, validation, confirmation, Calendar labels, and accessible switch names. User-authored field, option, and record content SHALL remain verbatim.
+
+#### Scenario: Edit advanced fields in every locale
+- **WHEN** a user opens the Employee model and Employee dialog under any supported locale
+- **THEN** every owned label, action, error, placeholder, and accessibility name is localized

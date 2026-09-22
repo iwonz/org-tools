@@ -136,8 +136,12 @@ logical operation and invalidates the existing derived View caches.
 Tags are normalized shared catalog entities with stable UUIDs and an optional supplied semantic
 color name or canonical lowercase six- or eight-digit HEX color;
 Employee records store only `{ tagId, date }` assignments. Custom fields also have UUID identity and
-a unique ASCII token key. Value fields store typed values, while Template fields form an acyclic
-dependency graph and may hash their UTF-8 result with MD5 or SHA-256.
+a unique ASCII token key. Value fields store typed scalars or ordered unique Option UUID arrays.
+Extensible multi-option values stage new normalized choices in the Employee dialog and commit the
+definition plus Employee value in one store action. Composite definitions own ordered UUID-keyed
+primitive subfields and one required primary key; Employee values are ordered record arrays keyed by
+those subfield UUIDs. Template fields form an acyclic dependency graph and may hash their UTF-8
+result with MD5 or SHA-256.
 
 Avatar input is decoded from an explicit local PNG, JPEG, or WebP source. Canvas preparation and the
 512 by 512 crop request WebP first, accept a browser-selected PNG, and explicitly retry PNG when the
@@ -239,6 +243,11 @@ history, collaborative cursors, or remote synchronization.
   at their fallback geometry. Each View has one `OrgEditorStore` with isolated structure, history,
   selection, and viewport. Complete state replacement clears the clipboard, which is never
   persisted, broadcast, or written to the system clipboard.
+
+Editor keyboard paste assigns each key gesture a transient request ID. The browser paste event
+consumes that request and cancels its fallback; if no event arrives, one delayed fallback performs
+the structural paste. Recently completed fallbacks suppress the matching late event, while later
+request IDs remain independent.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - Unit note drafts stay outside every store until Save. The lazily imported Markdown renderer uses
   GitHub Flavored Markdown without raw HTML or image elements; safe links require an explicit click

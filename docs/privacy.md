@@ -30,7 +30,10 @@ into the system View; the source, bounded
 richest-record preview, virtualized source-to-target mapping, pending custom fields, and duplicate choices are discarded when the modal closes. Birthday
 validation is local and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without
 inferring one. Employee UUID creation, duplicate-key normalization, custom Template evaluation, and
-optional MD5 or SHA-256 output all run locally. Export
+optional MD5 or SHA-256 output all run locally. Multi-option catalogs, user-created choices,
+Composite schemas and records, their validation, and their derived Calendar events remain inside
+the same in-memory or loopback boundary. New custom options remain transient dialog data until the
+complete Employee save succeeds. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
 the full Tag color palette, independent opacity control, and exact HTML Keyword, HEX, RGB, or RGBA

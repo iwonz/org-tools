@@ -55,7 +55,10 @@ control.
   **Add Unit** is in the shared header.
 - **Employees** manages profiles, gender, complete birthdays, embedded avatar, typed custom fields,
   shared tags whose configured color is their tonal fill, contact fields, and Unit assignments with compound filters. **Employee
-  model** defines stored Value fields or derived Template fields with optional MD5/SHA-256 output;
+  model** defines stored Value fields, repeatable Composite fields, or derived Template fields with optional MD5/SHA-256 output.
+  Option values can allow multiple selections and, when configured, new shared choices created while editing an Employee.
+  Composite fields contain ordered typed subfields, exactly one required primary key that is unique within each Employee,
+  and zero or more records; every populated Composite date appears in Calendar. Advanced values remain absent from Employee cards and Editor PNG until a separate presentation is configured;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
   deletion. Its flat rows expose Eye, Color, Edit, and Delete: Eye opens current full Employee cards,
   Edit opens a rename-only modal, and Color opens the picker directly. The picker keeps a full custom
