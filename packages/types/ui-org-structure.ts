@@ -21,7 +21,7 @@ export type UiOrgStructure = {
 export type EmployeeSearchDocument = {
   birthday: string | null;
   birthdayKey: string | null;
-  customFieldValues: Map<EmployeeFieldId, string | null>;
+  customFieldValues: Map<EmployeeFieldId, string[]>;
   employeeId: EmployeeId;
   gender: EmployeeGender;
   positionLabelSet: Set<string>;
@@ -64,7 +64,7 @@ export type DatedTagEvent = {
   date: string;
   employee: Employee;
   label: string;
-  tagId: TagId;
+  source: { fieldId: EmployeeFieldId; kind: "composite" } | { kind: "tag"; tagId: TagId };
 };
 
 export type DatedTagGroup = {
@@ -72,7 +72,7 @@ export type DatedTagGroup = {
   events: DatedTagEvent[];
   label: string;
   normalizedLabel: string;
-  tagId: TagId;
+  source: { fieldId: EmployeeFieldId; kind: "composite" } | { kind: "tag"; tagId: TagId };
 };
 
 export type Unit = {

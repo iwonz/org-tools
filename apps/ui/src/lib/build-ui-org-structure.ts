@@ -17,7 +17,7 @@ import {
   createUnitSearchDocument,
   getPositionOptionsFromSearchDocuments,
 } from "@/lib/search-index";
-import { createTagOrderIndex, orderByTagCatalog } from "@/lib/tag-order";
+import { createTagOrderIndex } from "@/lib/tag-order";
 
 export const UI_UNIT_PATH_SEPARATOR = " · ";
 
@@ -82,7 +82,7 @@ export const createUiOrgStructure = ({
       events: DatedTagEvent[];
       label: string;
       normalizedLabel: string;
-      tagId: string;
+      source: DatedTagEvent["source"];
     }
   >();
   const bossEmployeeIds = new Set<EmployeeId>();
@@ -96,12 +96,12 @@ export const createUiOrgStructure = ({
     }
     for (const tag of employee.tags) {
       if (!tag.date || !tag.tagId) continue;
-      const event = {
+      const event: DatedTagEvent = {
         color: tag.color ?? null,
         date: tag.date,
         employee,
         label: tag.label,
-        tagId: tag.tagId,
+        source: { kind: "tag", tagId: tag.tagId },
       };
       const dateEvents = datedTagEventsByDate.get(tag.date) ?? [];
       dateEvents.push(event);
@@ -112,10 +112,58 @@ export const createUiOrgStructure = ({
         label: tag.label,
         normalizedLabel,
         color: tag.color ?? null,
-        tagId: tag.tagId,
+        source: { kind: "tag", tagId: tag.tagId },
       };
       group.events.push(event);
       datedTagGroupByNormalizedLabel.set(normalizedLabel, group);
+    }
+    for (const definition of customFieldDefinitions) {
+      if (definition.kind !== "composite") continue;
+      const value = employee.customFieldValues[definition.id];
+      if (!Array.isArray(value)) continue;
+      const primary = definition.fields.find((field) => field.id === definition.primaryFieldId);
+      if (!primary) continue;
+      for (const record of value) {
+        if (typeof record !== "object" || record === null || Array.isArray(record)) continue;
+        const primaryValue = record[primary.id];
+        const primaryLabel =
+          primary.valueType === "option"
+            ? primary.options.find((option) => option.id === primaryValue)?.label
+            : primaryValue === null || primaryValue === undefined
+              ? null
+              : String(primaryValue);
+        if (!primaryLabel) continue;
+        for (const dateField of definition.fields) {
+          if (dateField.valueType !== "date") continue;
+          const customDate = record[dateField.id];
+          if (typeof customDate !== "string") continue;
+          const [day, month, year] = customDate.split(".");
+          if (!day || !month || !year) continue;
+          const date = `${year}-${month}-${day}`;
+          const label = `${definition.name} · ${primaryLabel} · ${dateField.name}`;
+          const normalizedLabel = label.toLocaleLowerCase("en-US");
+          const groupKey = `composite:${definition.id}:${dateField.id}:${normalizedLabel}`;
+          const event: DatedTagEvent = {
+            color: null,
+            date,
+            employee,
+            label,
+            source: { fieldId: definition.id, kind: "composite" },
+          };
+          const dateEvents = datedTagEventsByDate.get(date) ?? [];
+          dateEvents.push(event);
+          datedTagEventsByDate.set(date, dateEvents);
+          const group = datedTagGroupByNormalizedLabel.get(groupKey) ?? {
+            color: null,
+            events: [] as DatedTagEvent[],
+            label,
+            normalizedLabel: groupKey,
+            source: { fieldId: definition.id, kind: "composite" } as const,
+          };
+          group.events.push(event);
+          datedTagGroupByNormalizedLabel.set(groupKey, group);
+        }
+      }
     }
     if (employee.unitPositions.some((unitPosition) => unitPosition.isBoss)) {
       bossEmployeeIds.add(employee.id);
@@ -129,27 +177,46 @@ export const createUiOrgStructure = ({
   for (const [date, events] of datedTagEventsByDate) {
     datedTagEventsByDate.set(
       date,
-      orderByTagCatalog(
-        [...events].sort((first, second) =>
-          compareEmployeesByName(first.employee, second.employee),
-        ),
-        tagOrderById,
-        (event) => event.tagId,
-      ),
+      [...events].sort((first, second) => {
+        const firstRank =
+          first.source.kind === "tag"
+            ? (tagOrderById.get(first.source.tagId) ?? Number.MAX_SAFE_INTEGER - 1)
+            : Number.MAX_SAFE_INTEGER;
+        const secondRank =
+          second.source.kind === "tag"
+            ? (tagOrderById.get(second.source.tagId) ?? Number.MAX_SAFE_INTEGER - 1)
+            : Number.MAX_SAFE_INTEGER;
+        return (
+          firstRank - secondRank ||
+          first.label.localeCompare(second.label, "en", { numeric: true, sensitivity: "base" }) ||
+          compareEmployeesByName(first.employee, second.employee)
+        );
+      }),
     );
   }
-  const datedTagGroups = orderByTagCatalog(
-    [...datedTagGroupByNormalizedLabel.values()],
-    tagOrderById,
-    (group) => group.tagId,
-  ).map((group) => ({
-    ...group,
-    events: [...group.events].sort(
-      (first, second) =>
-        first.date.localeCompare(second.date) ||
-        compareEmployeesByName(first.employee, second.employee),
-    ),
-  }));
+  const datedTagGroups = [...datedTagGroupByNormalizedLabel.values()]
+    .sort((first, second) => {
+      const firstRank =
+        first.source.kind === "tag"
+          ? (tagOrderById.get(first.source.tagId) ?? Number.MAX_SAFE_INTEGER - 1)
+          : Number.MAX_SAFE_INTEGER;
+      const secondRank =
+        second.source.kind === "tag"
+          ? (tagOrderById.get(second.source.tagId) ?? Number.MAX_SAFE_INTEGER - 1)
+          : Number.MAX_SAFE_INTEGER;
+      return (
+        firstRank - secondRank ||
+        first.label.localeCompare(second.label, "en", { numeric: true, sensitivity: "base" })
+      );
+    })
+    .map((group) => ({
+      ...group,
+      events: [...group.events].sort(
+        (first, second) =>
+          first.date.localeCompare(second.date) ||
+          compareEmployeesByName(first.employee, second.employee),
+      ),
+    }));
 
   return {
     allEmployees,
@@ -171,8 +238,9 @@ export const createUiOrgStructure = ({
         customFieldDefinitions.map((definition) => {
           const values = new Set<string>();
           for (const document of employeeSearchDocuments) {
-            const value = document.customFieldValues.get(definition.id);
-            if (value !== null && value !== undefined) values.add(value);
+            for (const value of document.customFieldValues.get(definition.id) ?? []) {
+              values.add(value);
+            }
           }
           return [
             definition.id,

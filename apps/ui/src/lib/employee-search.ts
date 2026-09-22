@@ -152,9 +152,9 @@ export const employeeSearchDocumentMatches = ({
   }
 
   for (const filter of filters.customFields) {
-    const value = document.customFieldValues.get(filter.fieldId) ?? null;
-    const matchesValue = value !== null && filter.selectedValues.includes(value);
-    const matchesUnset = value === null && filter.includeUnset;
+    const values = document.customFieldValues.get(filter.fieldId) ?? [];
+    const matchesValue = values.some((value) => filter.selectedValues.includes(value));
+    const matchesUnset = values.length === 0 && filter.includeUnset;
     if (!matchesValue && !matchesUnset) return false;
   }
 

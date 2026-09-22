@@ -274,20 +274,25 @@ function CalendarDayDialogList({
               style={{ transform: `translateY(${virtualRow.start}px)` }}
             >
               {row.kind === "header" ? (
-                row.normalizedLabel ? (
+                row.historyKey ? (
                   <button
                     className="flex w-full items-center gap-2 bg-muted/35 px-3.5 py-2.5 text-start text-sm font-semibold outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                     data-demo-id="calendar-day-tag-heading"
-                    onClick={() => onTagClick(row.normalizedLabel as string)}
+                    onClick={() => onTagClick(row.historyKey as string)}
                     type="button"
                   >
                     <HiOutlineTag className="size-4" />
                     {row.label}
                   </button>
-                ) : (
+                ) : row.key === "birthdays" ? (
                   <h3 className="flex items-center gap-2 bg-muted/35 px-3.5 py-2.5 text-sm font-semibold">
                     <HiOutlineUserGroup className="size-4" />
                     {t("Birthdays")}
+                  </h3>
+                ) : (
+                  <h3 className="flex items-center gap-2 bg-muted/35 px-3.5 py-2.5 text-sm font-semibold">
+                    <HiOutlineCalendarDays className="size-4" />
+                    {row.label}
                   </h3>
                 )
               ) : (
@@ -388,14 +393,23 @@ export const CalendarTab = observer(() => {
                 data-color={group.color ?? "none"}
                 data-demo-id="calendar-dated-tag-group"
                 data-tag-color-surface
-                key={group.tagId}
-                onClick={() => setDialogTagKey(group.normalizedLabel)}
+                disabled={group.source.kind === "composite"}
+                key={`${group.source.kind}:${
+                  group.source.kind === "tag" ? group.source.tagId : group.normalizedLabel
+                }`}
+                onClick={() => {
+                  if (group.source.kind === "tag") setDialogTagKey(group.normalizedLabel);
+                }}
                 size="sm"
                 style={customTagColorSurfaceStyle(group.color)}
                 type="button"
                 variant="secondary"
               >
-                <HiOutlineTag className="me-1.5 size-3.5" />
+                {group.source.kind === "tag" ? (
+                  <HiOutlineTag className="me-1.5 size-3.5" />
+                ) : (
+                  <HiOutlineCalendarDays className="me-1.5 size-3.5" />
+                )}
                 <span>{group.label}</span>
                 <MiddleDot />
                 <span>{format.number(group.events.length)}</span>
@@ -538,8 +552,14 @@ export const CalendarTab = observer(() => {
           employee={editingEmployee}
           mode="global"
           onOpenChange={(open) => !open && setEditingEmployee(null)}
-          onSave={(fields, memberships) =>
-            store.updateEmployee(editingEmployee.id, fields, memberships)
+          onSave={(fields, memberships, customOptionDrafts) =>
+            store.updateEmployee(
+              editingEmployee.id,
+              fields,
+              memberships,
+              store.systemOrgViewId,
+              customOptionDrafts,
+            )
           }
           open={Boolean(editingEmployee)}
           tagOptions={store.units.indexes.tagOptions}

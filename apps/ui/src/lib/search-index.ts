@@ -7,7 +7,10 @@ import type {
 } from "@org-tools/types";
 
 import { createBirthdayKey, parseEmployeeBirthday } from "@/lib/birthday";
-import { evaluateCustomEmployeeFields } from "@/lib/custom-employee-fields";
+import {
+  evaluateCustomEmployeeFields,
+  getCustomEmployeeFieldFilterValues,
+} from "@/lib/custom-employee-fields";
 
 export const EMPTY_POSITION_LABEL = "Position not specified";
 
@@ -46,7 +49,15 @@ export const createEmployeeSearchDocument = (
     birthday: employee.birthday,
     birthdayKey: getEmployeeBirthdayKey(employee),
     customFieldValues: new Map(
-      [...customValues].map(([fieldId, value]) => [fieldId, value === null ? null : String(value)]),
+      customFieldDefinitions.map((definition) => [
+        definition.id,
+        getCustomEmployeeFieldFilterValues(
+          definition,
+          definition.kind === "template"
+            ? customValues.get(definition.id)
+            : employee.customFieldValues[definition.id],
+        ),
+      ]),
     ),
     employeeId: employee.id,
     gender: employee.gender,

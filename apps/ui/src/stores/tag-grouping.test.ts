@@ -146,10 +146,11 @@ describe("Catalog order and Unit grouping", () => {
       getOrgEditorExportEmployeeTags(employee, "en").map((tag) => tag.label.split(" · ")[0]),
     ).toEqual(["Alpha", "Zulu"]);
     expect(required(store.units).indexes.tagOptions).toEqual(["Alpha", "Zulu"]);
-    expect(required(store.units).indexes.datedTagGroups.map((tag) => tag.tagId)).toEqual([
-      alpha,
-      zulu,
-    ]);
+    expect(
+      required(store.units).indexes.datedTagGroups.map((tag) =>
+        tag.source.kind === "tag" ? tag.source.tagId : null,
+      ),
+    ).toEqual([alpha, zulu]);
     expect(
       buildOrgEditorUnitTagSummary(
         required(store.mainOrgEditor.units.find((unit) => unit.id === unitId)),

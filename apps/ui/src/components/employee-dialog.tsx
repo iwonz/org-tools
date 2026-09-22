@@ -1,7 +1,10 @@
 "use client";
 
 import type {
+  CustomEmployeeCompositeRecord,
+  CustomEmployeeFieldDefinition,
   CustomEmployeeFieldValue,
+  CustomEmployeeOptionDraft,
   EditableEmployeeFields,
   Employee,
   EmployeeId,
@@ -63,6 +66,7 @@ import {
   parseEmployeeBirthday,
   UNKNOWN_BIRTH_YEAR,
 } from "@/lib/birthday";
+import { createUuid } from "@/lib/employee-data";
 import { normalizeEmployeeTags } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
 import { createTagOrderIndex, orderByTagCatalog } from "@/lib/tag-order";
@@ -84,7 +88,11 @@ type CommonProps = {
 type GlobalEmployeeDialogProps = CommonProps & {
   employee?: Employee | null;
   mode: "global";
-  onSave: (fields: EditableEmployeeFields, unitMemberships: UnitAssignment[]) => void;
+  onSave: (
+    fields: EditableEmployeeFields,
+    unitMemberships: UnitAssignment[],
+    customOptionDrafts: CustomEmployeeOptionDraft[],
+  ) => void;
   units: UiOrgStructure;
 };
 
@@ -92,7 +100,11 @@ type EditorEmployeeDialogProps = CommonProps & {
   employee?: Employee | null;
   initialUnitIds?: OrgEditorUnitId[];
   mode: "editor";
-  onSave: (fields: EditableEmployeeFields, assignments: EditorEmployeeAssignment[]) => void;
+  onSave: (
+    fields: EditableEmployeeFields,
+    assignments: EditorEmployeeAssignment[],
+    customOptionDrafts: CustomEmployeeOptionDraft[],
+  ) => void;
   units: OrgEditorUnit[];
 };
 
@@ -104,7 +116,7 @@ type AssignableUnitId = UnitId | OrgEditorUnitId;
 const getInitialFields = (employee: Employee | null | undefined): EditableEmployeeFields => ({
   birthday: employee?.birthday ?? null,
   avatarBase64Url: employee?.avatarBase64Url ?? null,
-  customFieldValues: { ...(employee?.customFieldValues ?? {}) },
+  customFieldValues: structuredClone(employee?.customFieldValues ?? {}),
   email: employee?.email ?? null,
   firstName: employee?.firstName ?? "",
   gender: employee?.gender ?? "unspecified",
@@ -114,6 +126,19 @@ const getInitialFields = (employee: Employee | null | undefined): EditableEmploy
   tags: employee?.tags ?? [],
   username: employee?.username ?? null,
 });
+
+const createCompositeRecordKeys = (
+  employee: Employee | null | undefined,
+  definitions: readonly CustomEmployeeFieldDefinition[],
+): Record<string, string[]> =>
+  Object.fromEntries(
+    definitions.flatMap((definition) => {
+      if (definition.kind !== "composite") return [];
+      const value = employee?.customFieldValues[definition.id];
+      const recordCount = Array.isArray(value) ? value.length : 0;
+      return [[definition.id, Array.from({ length: recordCount }, () => createUuid())]];
+    }),
+  );
 
 const Field = ({
   children,
@@ -144,6 +169,10 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
   const [bossUnitIds, setBossUnitIds] = useState<AssignableUnitId[]>([]);
   const [positionByUnitId, setPositionByUnitId] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<UiMessageDescriptor | null>(null);
+  const [customOptionDrafts, setCustomOptionDrafts] = useState<CustomEmployeeOptionDraft[]>([]);
+  const [compositeRecordKeys, setCompositeRecordKeys] = useState<Record<string, string[]>>(() =>
+    createCompositeRecordKeys(employee, store.employeeFieldDefinitions),
+  );
   const [avatarError, setAvatarError] = useState<UiMessageDescriptor | null>(null);
   const [avatarSource, setAvatarSource] = useState<PreparedAvatarSource | null>(null);
   const [isPreparingAvatar, setIsPreparingAvatar] = useState(false);
@@ -203,6 +232,8 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
     if (!open) return;
 
     setFields(getInitialFields(employee));
+    setCompositeRecordKeys(createCompositeRecordKeys(employee, store.employeeFieldDefinitions));
+    setCustomOptionDrafts([]);
     setFormError(null);
     setAvatarError(null);
     setAvatarSource(null);
@@ -255,7 +286,16 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
           )
         : {},
     );
-  }, [editorUnits, employee, initialEditorUnitIds, mode, open, props.employee, unitOptionById]);
+  }, [
+    editorUnits,
+    employee,
+    initialEditorUnitIds,
+    mode,
+    open,
+    props.employee,
+    store.employeeFieldDefinitions,
+    unitOptionById,
+  ]);
 
   useEffect(() => () => releaseAvatarSource(avatarSource), [avatarSource]);
 
@@ -305,7 +345,13 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
   const updateCustomField = (fieldId: string, value: CustomEmployeeFieldValue | undefined) => {
     setFields((currentFields) => {
       const customFieldValues = { ...(currentFields.customFieldValues ?? {}) };
-      if (value === undefined || value === null || value === "") delete customFieldValues[fieldId];
+      if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        (Array.isArray(value) && value.length === 0)
+      )
+        delete customFieldValues[fieldId];
       else customFieldValues[fieldId] = value;
       return { ...currentFields, customFieldValues };
     });
@@ -350,6 +396,13 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
       profileUrl: fields.profileUrl?.trim() || null,
       username: fields.username?.trim() || null,
     };
+    const committedCustomOptionDrafts = customOptionDrafts.filter((draft) => {
+      const value = nextFields.customFieldValues?.[draft.fieldId];
+      return (
+        Array.isArray(value) &&
+        value.some((selected) => typeof selected === "string" && selected === draft.option.id)
+      );
+    });
 
     if (
       !nextFields.firstName &&
@@ -371,6 +424,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
             position: positionByUnitId[String(unitId)]?.trim() || null,
             unitId: unitId as UnitId,
           })),
+          committedCustomOptionDrafts,
         );
       } else {
         props.onSave(
@@ -380,6 +434,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
             position: positionByUnitId[String(unitId)]?.trim() || null,
             unitId: unitId as OrgEditorUnitId,
           })),
+          committedCustomOptionDrafts,
         );
       }
 
@@ -576,15 +631,178 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                 </Field>
               </section>
 
-              {store.employeeFieldDefinitions.some((definition) => definition.kind === "value") && (
+              {store.employeeFieldDefinitions.some(
+                (definition) => definition.kind !== "template",
+              ) && (
                 <section
                   className="grid gap-4 sm:grid-cols-2"
                   data-demo-id="employee-custom-fields"
                 >
                   {store.employeeFieldDefinitions.flatMap((definition) => {
-                    if (definition.kind !== "value") return [];
+                    if (definition.kind === "template") return [];
                     const value = fields.customFieldValues?.[definition.id];
                     const label = `${definition.name}${definition.required ? " *" : ""}`;
+                    if (definition.kind === "composite") {
+                      const records: CustomEmployeeCompositeRecord[] = Array.isArray(value)
+                        ? value.filter(
+                            (record): record is CustomEmployeeCompositeRecord =>
+                              typeof record === "object" &&
+                              record !== null &&
+                              !Array.isArray(record),
+                          )
+                        : [];
+                      const setRecordCell = (
+                        recordIndex: number,
+                        fieldId: string,
+                        cellValue: boolean | number | string | null | undefined,
+                      ) => {
+                        const nextRecords = records.map((record, index) => {
+                          if (index !== recordIndex) return record;
+                          const nextRecord = { ...record };
+                          if (cellValue === undefined || cellValue === null || cellValue === "") {
+                            delete nextRecord[fieldId];
+                          } else {
+                            nextRecord[fieldId] = cellValue;
+                          }
+                          return nextRecord;
+                        });
+                        updateCustomField(definition.id, nextRecords);
+                      };
+                      return [
+                        <div className="grid gap-3 sm:col-span-2" key={definition.id}>
+                          <Label>{label}</Label>
+                          {records.map((record, recordIndex) => (
+                            <div
+                              className="grid gap-3 rounded-md bg-muted/30 p-3"
+                              data-demo-id="employee-composite-record"
+                              key={compositeRecordKeys[definition.id]?.[recordIndex]}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-medium">
+                                  {t("Record {number}", { number: recordIndex + 1 })}
+                                </span>
+                                <Button
+                                  aria-label={t("Delete record")}
+                                  onClick={() => {
+                                    updateCustomField(
+                                      definition.id,
+                                      records.filter((_, index) => index !== recordIndex),
+                                    );
+                                    setCompositeRecordKeys((current) => ({
+                                      ...current,
+                                      [definition.id]: (current[definition.id] ?? []).filter(
+                                        (_, index) => index !== recordIndex,
+                                      ),
+                                    }));
+                                  }}
+                                  size="icon"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <HiOutlineTrash />
+                                </Button>
+                              </div>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                {definition.fields.map((field) => {
+                                  const cell = record[field.id];
+                                  const cellLabel = `${field.name}${field.required ? " *" : ""}`;
+                                  if (field.valueType === "boolean") {
+                                    return (
+                                      <div
+                                        className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm"
+                                        key={field.id}
+                                      >
+                                        <span>{cellLabel}</span>
+                                        <Checkbox
+                                          aria-label={cellLabel}
+                                          checked={cell === true}
+                                          onCheckedChange={(checked) =>
+                                            setRecordCell(recordIndex, field.id, checked === true)
+                                          }
+                                        />
+                                      </div>
+                                    );
+                                  }
+                                  if (field.valueType === "option") {
+                                    return (
+                                      <Field key={field.id} label={cellLabel}>
+                                        <Select
+                                          onValueChange={(next) =>
+                                            setRecordCell(
+                                              recordIndex,
+                                              field.id,
+                                              next === "__none__" ? undefined : next,
+                                            )
+                                          }
+                                          value={typeof cell === "string" ? cell : "__none__"}
+                                        >
+                                          <SelectTrigger aria-label={cellLabel}>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="__none__">
+                                              {t("Not specified")}
+                                            </SelectItem>
+                                            {field.options.map((option) => (
+                                              <SelectItem key={option.id} value={option.id}>
+                                                {option.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </Field>
+                                    );
+                                  }
+                                  return (
+                                    <Field key={field.id} label={cellLabel}>
+                                      <Input
+                                        aria-label={cellLabel}
+                                        inputMode={
+                                          field.valueType === "number" ? "decimal" : undefined
+                                        }
+                                        onChange={(event) =>
+                                          setRecordCell(
+                                            recordIndex,
+                                            field.id,
+                                            field.valueType === "number"
+                                              ? event.currentTarget.value === ""
+                                                ? undefined
+                                                : Number(event.currentTarget.value)
+                                              : event.currentTarget.value,
+                                          )
+                                        }
+                                        placeholder={
+                                          field.valueType === "date" ? "DD.MM.YYYY" : undefined
+                                        }
+                                        type={field.valueType === "number" ? "number" : "text"}
+                                        value={
+                                          cell === undefined || cell === null ? "" : String(cell)
+                                        }
+                                      />
+                                    </Field>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                          <Button
+                            data-demo-id="employee-add-composite-record"
+                            onClick={() => {
+                              updateCustomField(definition.id, [...records, {}]);
+                              setCompositeRecordKeys((current) => ({
+                                ...current,
+                                [definition.id]: [...(current[definition.id] ?? []), createUuid()],
+                              }));
+                            }}
+                            size="sm"
+                            type="button"
+                            variant="secondary"
+                          >
+                            {t("Add record")}
+                          </Button>
+                        </div>,
+                      ];
+                    }
                     if (definition.valueType === "boolean") {
                       return [
                         <div
@@ -603,6 +821,40 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                       ];
                     }
                     if (definition.valueType === "option") {
+                      if (definition.multiple) {
+                        const draftOptions = customOptionDrafts
+                          .filter((draft) => draft.fieldId === definition.id)
+                          .map((draft) => draft.option);
+                        const selectedIds = Array.isArray(value)
+                          ? value.filter(
+                              (optionId): optionId is string => typeof optionId === "string",
+                            )
+                          : [];
+                        return [
+                          <Field key={definition.id} label={label}>
+                            <MultiTagSelect
+                              ariaLabel={label}
+                              createOptionLabel={(name) => t("Create option “{name}”", { name })}
+                              onChange={(next) => updateCustomField(definition.id, next)}
+                              {...(definition.allowCustomOptions
+                                ? {
+                                    onCreateOption: (optionLabel: string) => {
+                                      const option = { id: createUuid(), label: optionLabel };
+                                      setCustomOptionDrafts((drafts) => [
+                                        ...drafts,
+                                        { fieldId: definition.id, option },
+                                      ]);
+                                      updateCustomField(definition.id, [...selectedIds, option.id]);
+                                    },
+                                  }
+                                : {})}
+                              options={[...definition.options, ...draftOptions]}
+                              placeholder={t("Select options")}
+                              selectedIds={selectedIds}
+                            />
+                          </Field>,
+                        ];
+                      }
                       return [
                         <Field key={definition.id} label={label}>
                           <Select

@@ -1,7 +1,7 @@
 import type { DatedTagEvent, Employee } from "@org-tools/types";
 
 export type CalendarDayDialogRow =
-  | { key: string; kind: "header"; label: string; normalizedLabel: string | null }
+  | { historyKey: string | null; key: string; kind: "header"; label: string }
   | { employee: Employee; key: string; kind: "employee" };
 
 export const buildCalendarDayDialogRows = ({
@@ -18,27 +18,38 @@ export const buildCalendarDayDialogRows = ({
     collator.compare(first.fullName, second.fullName) || first.id.localeCompare(second.id);
   const rows: CalendarDayDialogRow[] = [];
   if (birthdayEmployees.length > 0) {
-    rows.push({ key: "birthdays", kind: "header", label: "Birthdays", normalizedLabel: null });
+    rows.push({ historyKey: null, key: "birthdays", kind: "header", label: "Birthdays" });
     for (const employee of [...birthdayEmployees].sort(compareEmployees)) {
       rows.push({ employee, key: `birthdays:${employee.id}`, kind: "employee" });
     }
   }
-  const groups = new Map<string, { employees: Map<Employee["id"], Employee>; label: string }>();
+  const groups = new Map<
+    string,
+    { employees: Map<Employee["id"], Employee>; historyKey: string | null; label: string }
+  >();
   for (const event of events) {
     const normalizedLabel = event.label.toLocaleLowerCase("en-US");
-    const group = groups.get(normalizedLabel) ?? { employees: new Map(), label: event.label };
+    const groupKey =
+      event.source.kind === "tag"
+        ? `tag:${normalizedLabel}`
+        : `composite:${event.source.fieldId}:${normalizedLabel}`;
+    const group = groups.get(groupKey) ?? {
+      employees: new Map(),
+      historyKey: event.source.kind === "tag" ? normalizedLabel : null,
+      label: event.label,
+    };
     group.employees.set(event.employee.id, event.employee);
-    groups.set(normalizedLabel, group);
+    groups.set(groupKey, group);
   }
-  for (const [normalizedLabel, group] of groups) {
+  for (const [groupKey, group] of groups) {
     rows.push({
-      key: `tag:${normalizedLabel}`,
+      historyKey: group.historyKey,
+      key: groupKey,
       kind: "header",
       label: group.label,
-      normalizedLabel,
     });
     for (const employee of [...group.employees.values()].sort(compareEmployees)) {
-      rows.push({ employee, key: `tag:${normalizedLabel}:${employee.id}`, kind: "employee" });
+      rows.push({ employee, key: `${groupKey}:${employee.id}`, kind: "employee" });
     }
   }
   return rows;

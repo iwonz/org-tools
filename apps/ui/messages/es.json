@@ -632,6 +632,21 @@
     "Text background": "Fondo de texto",
     "No background": "Sin fondo",
     "Block background": "Fondo de bloque",
-    "Line background": "Fondo por línea"
+    "Line background": "Fondo por línea",
+    "Multiple selection": "Selección múltiple",
+    "Allow custom options": "Permitir opciones personalizadas",
+    "Composite": "Compuesto",
+    "Primary key": "Clave principal",
+    "Subfield": "Subcampo",
+    "Subfields": "Subcampos",
+    "Subfield name": "Nombre del subcampo",
+    "Delete subfield": "Eliminar subcampo",
+    "Add subfield": "Añadir subcampo",
+    "Record {number}": "Registro {number}",
+    "Delete record": "Eliminar registro",
+    "Add record": "Añadir registro",
+    "Select options": "Seleccionar opciones",
+    "Create option “{name}”": "Crear opción «{name}»",
+    "Composite primary values must be unique.": "Los valores de la clave principal compuesta deben ser únicos."
   }
 }

@@ -632,6 +632,21 @@
     "Text background": "文本背景",
     "No background": "无背景",
     "Block background": "块背景",
-    "Line background": "行背景"
+    "Line background": "行背景",
+    "Multiple selection": "多选",
+    "Allow custom options": "允许自定义选项",
+    "Composite": "复合字段",
+    "Primary key": "主键",
+    "Subfield": "子字段",
+    "Subfields": "子字段",
+    "Subfield name": "子字段名称",
+    "Delete subfield": "删除子字段",
+    "Add subfield": "添加子字段",
+    "Record {number}": "记录 {number}",
+    "Delete record": "删除记录",
+    "Add record": "添加记录",
+    "Select options": "选择选项",
+    "Create option “{name}”": "创建选项“{name}”",
+    "Composite primary values must be unique.": "复合字段的主键值必须唯一。"
   }
 }

@@ -694,9 +694,11 @@ describe("OrgToolsState", () => {
   test("enforces required custom values on the next Employee save", () => {
     const { employeeId, store, unitId } = populatedStore();
     const definition: CustomEmployeeFieldDefinition = {
+      allowCustomOptions: false,
       id: uuid(301),
       key: "department",
       kind: "value",
+      multiple: false,
       name: "Department",
       options: [],
       required: true,
@@ -721,9 +723,11 @@ describe("OrgToolsState", () => {
   test("clears incompatible values and filters when a Value field type changes", () => {
     const { employeeId, store, unitId } = populatedStore();
     const definition: CustomEmployeeFieldDefinition = {
+      allowCustomOptions: false,
       id: uuid(302),
       key: "department",
       kind: "value",
+      multiple: false,
       name: "Department",
       options: [],
       required: false,
@@ -760,6 +764,125 @@ describe("OrgToolsState", () => {
     expect(store.employeesUi.filters.customFields).toEqual([]);
     expect(store.orgEditor.units.find((unit) => unit.id === liveUnitId)?.liveFilter).toBeNull();
     expect(() => store.createOrgToolsState()).not.toThrow();
+  });
+
+  test("commits custom multi-options with the Employee and prunes removed options", () => {
+    const { employeeId, store, unitId } = populatedStore();
+    const definition: CustomEmployeeFieldDefinition = {
+      allowCustomOptions: true,
+      id: uuid(303),
+      key: "skills",
+      kind: "value",
+      multiple: true,
+      name: "Skills",
+      options: [{ id: uuid(304), label: "Planning" }],
+      required: false,
+      valueType: "option",
+    };
+    store.saveEmployeeFieldDefinition(definition);
+    const customOption = { id: uuid(305), label: "Facilitation" };
+    store.updateEmployee(
+      employeeId,
+      employeeFields({
+        customFieldValues: {
+          [definition.id]: [definition.options[0]?.id, customOption.id].filter(
+            (value): value is string => Boolean(value),
+          ),
+        },
+      }),
+      [{ isBoss: true, position: "Lead", unitId }],
+      store.systemOrgViewId,
+      [{ fieldId: definition.id, option: customOption }],
+    );
+    expect(
+      store.employeeFieldDefinitions.find((field) => field.id === definition.id),
+    ).toMatchObject({ options: [definition.options[0], customOption] });
+    expect(store.organizationEmployees[0]?.customFieldValues[definition.id]).toEqual([
+      uuid(304),
+      uuid(305),
+    ]);
+
+    store.saveEmployeeFieldDefinition({
+      ...definition,
+      options: [{ id: uuid(304), label: "Planning" }],
+    });
+    expect(store.organizationEmployees[0]?.customFieldValues[definition.id]).toEqual([uuid(304)]);
+  });
+
+  test("rejects obsolete Option definitions without explicit mode flags", () => {
+    const store = new OrgStore();
+    store.saveEmployeeFieldDefinition({
+      allowCustomOptions: false,
+      id: uuid(310),
+      key: "level",
+      kind: "value",
+      multiple: false,
+      name: "Level",
+      options: [{ id: uuid(311), label: "Senior" }],
+      required: false,
+      valueType: "option",
+    });
+    const obsolete = structuredClone(store.createOrgToolsState()) as unknown as {
+      organization: { employeeFieldDefinitions: Array<Record<string, unknown>> };
+    };
+    delete obsolete.organization.employeeFieldDefinitions[0]?.multiple;
+    expect(() => parseOrgToolsState(obsolete)).toThrow("invalid custom Employee fields");
+  });
+
+  test("rejects duplicate Composite primary values without committing custom options", () => {
+    const { employeeId, store, unitId } = populatedStore();
+    const optionDefinition: CustomEmployeeFieldDefinition = {
+      allowCustomOptions: true,
+      id: uuid(306),
+      key: "skills",
+      kind: "value",
+      multiple: true,
+      name: "Skills",
+      options: [],
+      required: false,
+      valueType: "option",
+    };
+    const primaryFieldId = uuid(308);
+    const compositeDefinition: CustomEmployeeFieldDefinition = {
+      fields: [
+        {
+          id: primaryFieldId,
+          name: "Certificate",
+          options: [],
+          required: true,
+          valueType: "text",
+        },
+      ],
+      id: uuid(307),
+      key: "certificates",
+      kind: "composite",
+      name: "Certificates",
+      primaryFieldId,
+      required: false,
+    };
+    store.saveEmployeeFieldDefinition(optionDefinition);
+    store.saveEmployeeFieldDefinition(compositeDefinition);
+    const option = { id: uuid(309), label: "New option" };
+    expect(() =>
+      store.updateEmployee(
+        employeeId,
+        employeeFields({
+          customFieldValues: {
+            [optionDefinition.id]: [option.id],
+            [compositeDefinition.id]: [
+              { [primaryFieldId]: "First Aid" },
+              { [primaryFieldId]: " first  aid " },
+            ],
+          },
+        }),
+        [{ isBoss: true, position: "Lead", unitId }],
+        store.systemOrgViewId,
+        [{ fieldId: optionDefinition.id, option }],
+      ),
+    ).toThrow("primary values");
+    expect(
+      store.employeeFieldDefinitions.find((field) => field.id === optionDefinition.id),
+    ).toMatchObject({ options: [] });
   });
 
   test("cascades Tag deletion through assignments and saved filters", () => {

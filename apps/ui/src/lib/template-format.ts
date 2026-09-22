@@ -25,7 +25,11 @@ const FIELD_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9]*$/;
 const MAX_TEMPLATE_DEPTH = 8;
 
 export const formatTemplateTextValue = (value: unknown) => {
-  if (Array.isArray(value)) return value.filter(Boolean).join("; ");
+  if (Array.isArray(value)) {
+    return value.some((item) => typeof item === "object" && item !== null)
+      ? JSON.stringify(value)
+      : value.filter(Boolean).join("; ");
+  }
   if (value === null || value === undefined) return "";
 
   return String(value);

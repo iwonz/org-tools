@@ -632,6 +632,21 @@
     "Text background": "Text background",
     "No background": "No background",
     "Block background": "Block background",
-    "Line background": "Line background"
+    "Line background": "Line background",
+    "Multiple selection": "Multiple selection",
+    "Allow custom options": "Allow custom options",
+    "Composite": "Composite",
+    "Primary key": "Primary key",
+    "Subfield": "Subfield",
+    "Subfields": "Subfields",
+    "Subfield name": "Subfield name",
+    "Delete subfield": "Delete subfield",
+    "Add subfield": "Add subfield",
+    "Record {number}": "Record {number}",
+    "Delete record": "Delete record",
+    "Add record": "Add record",
+    "Select options": "Select options",
+    "Create option “{name}”": "Create option “{name}”",
+    "Composite primary values must be unique.": "Composite primary values must be unique."
   }
 }

@@ -1599,6 +1599,60 @@ test("creates, crops, re-crops, pastes, and removes a local Employee avatar", as
   await assertLocalRequests();
 });
 
+test("creates extensible multi-option and Composite Employee fields", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  const modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+
+  await modelDialog.getByRole("button", { name: "Add field", exact: true }).click();
+  let fieldEditor = modelDialog.locator('[data-demo-id="employee-field-editor"]');
+  await fieldEditor.getByRole("tab", { name: "Value", exact: true }).click();
+  await fieldEditor.getByLabel("Name", { exact: true }).fill("Skills");
+  await fieldEditor.getByLabel("Token key", { exact: true }).fill("skills");
+  await fieldEditor.getByRole("combobox").first().click();
+  await page.getByRole("option", { name: "Option", exact: true }).click();
+  await fieldEditor.getByRole("switch", { name: "Multiple selection", exact: true }).click();
+  await fieldEditor.getByRole("switch", { name: "Allow custom options", exact: true }).click();
+  await fieldEditor.getByRole("button", { name: "Save", exact: true }).click();
+
+  await modelDialog.getByRole("button", { name: "Add field", exact: true }).click();
+  fieldEditor = modelDialog.locator('[data-demo-id="employee-field-editor"]');
+  await fieldEditor.getByRole("tab", { name: "Composite", exact: true }).click();
+  await fieldEditor.getByLabel("Name", { exact: true }).fill("Certificates");
+  await fieldEditor.getByLabel("Token key", { exact: true }).fill("certificates");
+  await fieldEditor.getByLabel("Subfield name", { exact: true }).fill("Certificate");
+  await fieldEditor.getByRole("button", { name: "Add subfield", exact: true }).click();
+  await fieldEditor.getByLabel("Subfield name", { exact: true }).nth(1).fill("Expires");
+  await fieldEditor.getByRole("combobox", { name: "Field type", exact: true }).nth(1).click();
+  await page.getByRole("option", { name: "Date", exact: true }).click();
+  await fieldEditor.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
+
+  await page.getByRole("button", { name: "Add Employee", exact: true }).click();
+  let employeeDialog = page.getByRole("dialog", { name: "Create Employee", exact: true });
+  await employeeDialog.getByLabel("First name", { exact: true }).fill("Avery");
+  await employeeDialog.getByLabel("Last name", { exact: true }).fill("Morgan");
+  await employeeDialog.getByLabel("Email", { exact: true }).fill("avery.morgan@example.test");
+  await employeeDialog.getByRole("button", { name: "Skills", exact: true }).click();
+  await employeeDialog.getByLabel("Search: Skills", { exact: true }).fill("Leadership");
+  await employeeDialog
+    .getByRole("button", { name: "Create option “Leadership”", exact: true })
+    .click();
+  await employeeDialog.locator('[data-demo-id="employee-add-composite-record"]').click();
+  await employeeDialog.getByLabel("Certificate *", { exact: true }).fill("First aid");
+  await employeeDialog.getByLabel("Expires", { exact: true }).fill("02.03.2031");
+  await employeeDialog.locator('[data-demo-id="employee-dialog-submit"]').click();
+
+  await page.getByRole("button", { name: "Add Employee", exact: true }).click();
+  employeeDialog = page.getByRole("dialog", { name: "Create Employee", exact: true });
+  await employeeDialog.getByRole("button", { name: "Skills", exact: true }).click();
+  await expect(employeeDialog.getByText("Leadership", { exact: true })).toBeVisible();
+  await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await assertLocalRequests();
+});
+
 test("atomically opens a complete synthetic state", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
@@ -2458,8 +2512,41 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await page.getByRole("option", { name: "Units", exact: true }).click();
   await expect(page.locator('fieldset[aria-label="Canvas Unit Product"]')).toBeVisible();
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+  const canvasImages = page.locator('[data-canvas-element-type="image"]');
+  const initialCanvasImageCount = await canvasImages.count();
+  await page.evaluate((pngBase64) => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ctrlKey: true, key: "v" }));
+    const bytes = Uint8Array.from(atob(pngBase64), (character) => character.charCodeAt(0));
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "canvas.png", { type: "image/png" }));
+    window.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData: transfer }));
+  }, "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=");
+  await expect(canvasImages).toHaveCount(initialCanvasImageCount + 1);
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+  await page.keyboard.press("Control+z");
+  await expect(canvasImages).toHaveCount(initialCanvasImageCount);
   await page.keyboard.press("Control+v");
-  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toBeVisible();
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(1);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ctrlKey: true, key: "v" }));
+  });
+  await page.waitForTimeout(150);
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(1);
+  await page.evaluate(() => {
+    window.dispatchEvent(new ClipboardEvent("paste", { bubbles: true }));
+  });
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(1);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+
+  await page.keyboard.press("Control+v");
+  await page.keyboard.press("Control+v");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(2);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(1);
   await page.keyboard.press("Control+z");
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
   await viewSelect.click();

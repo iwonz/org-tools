@@ -95,6 +95,75 @@ describe("Employee export rows", () => {
     ).toBe("29.02.1900");
   });
 
+  test("preserves multi-option arrays and typed Composite objects in structured JSON", () => {
+    const skillsId = "00000000-0000-4000-8000-000000000100";
+    const skillOptionId = "00000000-0000-4000-8000-000000000101";
+    const compositeId = "00000000-0000-4000-8000-000000000110";
+    const primaryFieldId = "00000000-0000-4000-8000-000000000111";
+    const scoreFieldId = "00000000-0000-4000-8000-000000000112";
+    const definitions = [
+      {
+        allowCustomOptions: false,
+        id: skillsId,
+        key: "skills",
+        kind: "value" as const,
+        multiple: true,
+        name: "Skills",
+        options: [{ id: skillOptionId, label: "Planning" }],
+        required: false,
+        valueType: "option" as const,
+      },
+      {
+        fields: [
+          {
+            id: primaryFieldId,
+            name: "Certificate",
+            options: [],
+            required: true,
+            valueType: "text" as const,
+          },
+          {
+            id: scoreFieldId,
+            name: "Score",
+            options: [],
+            required: false,
+            valueType: "number" as const,
+          },
+        ],
+        id: compositeId,
+        key: "certificates",
+        kind: "composite" as const,
+        name: "Certificates",
+        primaryFieldId,
+        required: false,
+      },
+    ];
+    const employee = createEmployee({
+      customFieldValues: {
+        [compositeId]: [{ [primaryFieldId]: "First aid", [scoreFieldId]: 98 }],
+        [skillsId]: [skillOptionId],
+      },
+    });
+    const baseOptions = createJsonOptions();
+    expect(
+      createStructuredJsonRecords(createRows(employee), {
+        ...baseOptions,
+        customEmployeeFieldDefinitions: definitions,
+        jsonFieldNames: {
+          ...baseOptions.jsonFieldNames,
+          custom: { [compositeId]: "certificates", [skillsId]: "skills" },
+        },
+        jsonTopLevelFieldOrder: [`custom:${skillsId}`, `custom:${compositeId}`],
+        selectedCustomEmployeeFieldIds: [skillsId, compositeId],
+      }),
+    ).toEqual([
+      {
+        certificates: [{ Certificate: "First aid", Score: 98 }],
+        skills: ["Planning"],
+      },
+    ]);
+  });
+
   test("supports All Units and First Unit with stable tree precedence", () => {
     const employee = createEmployee();
     const contexts = buildEmployeeUnitContextIndex([employee]).get(employee.id) ?? [];

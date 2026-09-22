@@ -632,6 +632,21 @@
     "Text background": "Фон текста",
     "No background": "Без фона",
     "Block background": "Фон блока",
-    "Line background": "Фон строк"
+    "Line background": "Фон строк",
+    "Multiple selection": "Мультивыбор",
+    "Allow custom options": "Разрешить свои значения",
+    "Composite": "Составное",
+    "Primary key": "Первичный ключ",
+    "Subfield": "Подполе",
+    "Subfields": "Подполя",
+    "Subfield name": "Название подполя",
+    "Delete subfield": "Удалить подполе",
+    "Add subfield": "Добавить подполе",
+    "Record {number}": "Запись {number}",
+    "Delete record": "Удалить запись",
+    "Add record": "Добавить запись",
+    "Select options": "Выберите варианты",
+    "Create option “{name}”": "Создать вариант «{name}»",
+    "Composite primary values must be unique.": "Значения первичного ключа составного поля должны быть уникальными."
   }
 }

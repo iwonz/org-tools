@@ -40,7 +40,10 @@ import type {
   ViewId,
 } from "@org-tools/types";
 
-import { validateCustomEmployeeFieldDefinitions } from "@/lib/custom-employee-fields";
+import {
+  normalizeCustomEmployeeFieldValue,
+  validateCustomEmployeeFieldDefinitions,
+} from "@/lib/custom-employee-fields";
 import {
   createUuid,
   isEmployeeGender,
@@ -202,17 +205,39 @@ const normalizeCustomFieldValues = (
   if (!isRecord(value)) return null;
   const result: Record<string, CustomEmployeeFieldValue> = {};
   for (const [key, fieldValue] of Object.entries(value)) {
+    if (!isUuid(key)) return null;
     if (
-      !isUuid(key) ||
-      !(
-        fieldValue === null ||
-        isString(fieldValue) ||
-        typeof fieldValue === "boolean" ||
-        isFiniteNumber(fieldValue)
+      fieldValue === null ||
+      isString(fieldValue) ||
+      typeof fieldValue === "boolean" ||
+      isFiniteNumber(fieldValue)
+    ) {
+      result[key] = fieldValue;
+      continue;
+    }
+    if (Array.isArray(fieldValue) && fieldValue.every(isString)) {
+      result[key] = [...fieldValue];
+      continue;
+    }
+    if (
+      Array.isArray(fieldValue) &&
+      fieldValue.every(
+        (record) =>
+          isRecord(record) &&
+          Object.entries(record).every(
+            ([fieldId, cell]) =>
+              isUuid(fieldId) &&
+              (cell === null ||
+                isString(cell) ||
+                typeof cell === "boolean" ||
+                isFiniteNumber(cell)),
+          ),
       )
-    )
-      return null;
-    result[key] = fieldValue;
+    ) {
+      result[key] = fieldValue as CustomEmployeeFieldValue;
+      continue;
+    }
+    return null;
   }
   return result;
 };
@@ -314,18 +339,6 @@ const normalizeTagDefinitions = (value: unknown): EmployeeTagDefinition[] | null
   return definitions;
 };
 
-const isCanonicalCustomDate = (value: string) => {
-  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
-  if (!match) return false;
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const year = Number(match[3]);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return (
-    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-  );
-};
-
 const normalizeCustomFieldDefinitions = (
   value: unknown,
 ): CustomEmployeeFieldDefinition[] | null => {
@@ -360,7 +373,19 @@ const normalizeCustomFieldDefinitions = (
     }
     if (
       item.kind === "value" &&
-      hasExactKeys(item, ["id", "key", "kind", "name", "options", "required", "valueType"]) &&
+      hasExactKeys(item, [
+        "allowCustomOptions",
+        "id",
+        "key",
+        "kind",
+        "multiple",
+        "name",
+        "options",
+        "required",
+        "valueType",
+      ]) &&
+      typeof item.allowCustomOptions === "boolean" &&
+      typeof item.multiple === "boolean" &&
       typeof item.required === "boolean" &&
       (item.valueType === "text" ||
         item.valueType === "number" ||
@@ -391,13 +416,83 @@ const normalizeCustomFieldDefinitions = (
       )
         return null;
       definitions.push({
+        allowCustomOptions: item.allowCustomOptions,
         id: item.id,
         key: item.key,
         kind: "value",
+        multiple: item.multiple,
         name: item.name,
         options,
         required: item.required,
         valueType: item.valueType,
+      });
+      continue;
+    }
+    if (
+      item.kind === "composite" &&
+      hasExactKeys(item, ["fields", "id", "key", "kind", "name", "primaryFieldId", "required"]) &&
+      Array.isArray(item.fields) &&
+      isUuid(item.primaryFieldId) &&
+      typeof item.required === "boolean"
+    ) {
+      const fieldIds = new Set<string>();
+      const fields = item.fields.flatMap((field) => {
+        if (
+          !isRecord(field) ||
+          !hasExactKeys(field, ["id", "name", "options", "required", "valueType"]) ||
+          !isUuid(field.id) ||
+          !isString(field.name) ||
+          typeof field.required !== "boolean" ||
+          !(
+            field.valueType === "text" ||
+            field.valueType === "number" ||
+            field.valueType === "boolean" ||
+            field.valueType === "date" ||
+            field.valueType === "option"
+          ) ||
+          !Array.isArray(field.options) ||
+          fieldIds.has(field.id)
+        ) {
+          return [];
+        }
+        const optionIds = new Set<string>();
+        const options = field.options.flatMap((option) => {
+          if (
+            !isRecord(option) ||
+            !hasExactKeys(option, ["id", "label"]) ||
+            !isUuid(option.id) ||
+            !isString(option.label) ||
+            !option.label.trim() ||
+            optionIds.has(option.id)
+          ) {
+            return [];
+          }
+          optionIds.add(option.id);
+          return [
+            { id: option.id, label: option.label.normalize("NFKC").trim().replace(/\s+/gu, " ") },
+          ];
+        });
+        if (options.length !== field.options.length) return [];
+        fieldIds.add(field.id);
+        return [
+          {
+            id: field.id,
+            name: field.name,
+            options,
+            required: field.required,
+            valueType: field.valueType as "boolean" | "date" | "number" | "option" | "text",
+          },
+        ];
+      });
+      if (fields.length !== item.fields.length) return null;
+      definitions.push({
+        fields,
+        id: item.id,
+        key: item.key,
+        kind: "composite",
+        name: item.name,
+        primaryFieldId: item.primaryFieldId,
+        required: item.required,
       });
       continue;
     }
@@ -1407,22 +1502,14 @@ const validateStateGraph = (state: OrgToolsState): void => {
     }
     for (const [fieldId, value] of Object.entries(employee.customFieldValues)) {
       const definition = fieldDefinitionById.get(fieldId);
-      if (definition?.kind !== "value")
-        throw new Error("Employee references a missing Value field.");
-      if (value === null) continue;
-      if (definition.valueType === "text" && typeof value !== "string")
-        throw new Error("Employee custom text value is invalid.");
-      if (definition.valueType === "number" && !isFiniteNumber(value))
-        throw new Error("Employee custom number value is invalid.");
-      if (definition.valueType === "boolean" && typeof value !== "boolean")
-        throw new Error("Employee custom boolean value is invalid.");
-      if (definition.valueType === "date" && !(isString(value) && isCanonicalCustomDate(value)))
-        throw new Error("Employee custom date value is invalid.");
-      if (
-        definition.valueType === "option" &&
-        !(isString(value) && definition.options.some((option) => option.id === value))
-      )
-        throw new Error("Employee custom option value is invalid.");
+      if (!definition || definition.kind === "template") {
+        throw new Error("Employee references a missing stored custom field.");
+      }
+      try {
+        normalizeCustomEmployeeFieldValue(definition, value);
+      } catch {
+        throw new Error("Employee custom field value is invalid.");
+      }
     }
   }
   const views = state.organization.views;

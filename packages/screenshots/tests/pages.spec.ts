@@ -275,7 +275,7 @@ test("runs the complete state editor at the repository base path without APIs or
   await createViewDialog.getByLabel("View name", { exact: true }).fill("Clipboard target");
   await createViewDialog.getByRole("button", { name: "Create", exact: true }).click();
   await page.keyboard.press("Control+v");
-  await expect(productUnit).toBeVisible();
+  await expect(productUnit).toHaveCount(1);
   await expect(productUnit.locator('[data-demo-id="unit-note-action"]')).toHaveAttribute(
     "data-note-active",
     "true",

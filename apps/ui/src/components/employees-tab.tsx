@@ -172,7 +172,9 @@ export const EmployeesTab = observer(() => {
         <EmployeeDialog
           mode="global"
           onOpenChange={setIsCreateOpen}
-          onSave={(fields, memberships) => store.createEmployee(fields, memberships)}
+          onSave={(fields, memberships, customOptionDrafts) =>
+            store.createEmployee(fields, memberships, store.systemOrgViewId, customOptionDrafts)
+          }
           open={isCreateOpen}
           tagOptions={units.indexes.tagOptions}
           units={units}
@@ -183,8 +185,14 @@ export const EmployeesTab = observer(() => {
           employee={editingEmployee}
           mode="global"
           onOpenChange={(open) => !open && setEditingEmployee(null)}
-          onSave={(fields, memberships) =>
-            store.updateEmployee(editingEmployee.id, fields, memberships)
+          onSave={(fields, memberships, customOptionDrafts) =>
+            store.updateEmployee(
+              editingEmployee.id,
+              fields,
+              memberships,
+              store.systemOrgViewId,
+              customOptionDrafts,
+            )
           }
           open={Boolean(editingEmployee)}
           tagOptions={units.indexes.tagOptions}

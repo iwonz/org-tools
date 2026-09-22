@@ -2496,7 +2496,10 @@ export const OrgStructureEditorTab = observer(() => {
     () => undefined,
   );
   const wheelCommitTimeoutRef = useRef<number | null>(null);
-  const pasteFallbackTimeoutRef = useRef<number | null>(null);
+  const pasteFallbackTimeoutsRef = useRef<Map<number, number>>(new Map());
+  const pasteRequestSequenceRef = useRef(0);
+  const pendingPasteRequestIdsRef = useRef<number[]>([]);
+  const lastPasteFallbackAtRef = useRef(0);
   const [unitDragDelta, setUnitDragDelta] = useState<CanvasPoint | null>(null);
   const unitDragDeltaRef = useRef<CanvasPoint | null>(null);
   const unitDragFrameSchedulerRef = useRef<ReturnType<
@@ -2653,10 +2656,12 @@ export const OrgStructureEditorTab = observer(() => {
         window.clearTimeout(wheelCommitTimeoutRef.current);
         wheelCommitTimeoutRef.current = null;
       }
-      if (pasteFallbackTimeoutRef.current !== null) {
-        window.clearTimeout(pasteFallbackTimeoutRef.current);
-        pasteFallbackTimeoutRef.current = null;
+      for (const timeoutId of pasteFallbackTimeoutsRef.current.values()) {
+        window.clearTimeout(timeoutId);
       }
+      pasteFallbackTimeoutsRef.current.clear();
+      pendingPasteRequestIdsRef.current = [];
+      lastPasteFallbackAtRef.current = 0;
       if (edgePanFrameIdRef.current !== null) {
         window.cancelAnimationFrame(edgePanFrameIdRef.current);
         edgePanFrameIdRef.current = null;
@@ -4417,13 +4422,20 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if ((event.metaKey || event.ctrlKey) && key === "v" && editor.canPaste) {
-        if (pasteFallbackTimeoutRef.current !== null) {
-          window.clearTimeout(pasteFallbackTimeoutRef.current);
-        }
-        pasteFallbackTimeoutRef.current = window.setTimeout(() => {
-          pasteFallbackTimeoutRef.current = null;
+        const requestId = pasteRequestSequenceRef.current + 1;
+        pasteRequestSequenceRef.current = requestId;
+        pendingPasteRequestIdsRef.current.push(requestId);
+        lastPasteFallbackAtRef.current = 0;
+        const timeoutId = window.setTimeout(() => {
+          pasteFallbackTimeoutsRef.current.delete(requestId);
+          if (!pendingPasteRequestIdsRef.current.includes(requestId)) return;
+          pendingPasteRequestIdsRef.current = pendingPasteRequestIdsRef.current.filter(
+            (pendingId) => pendingId !== requestId,
+          );
+          lastPasteFallbackAtRef.current = Date.now();
           editor.pasteAt(getCanvasCenterPoint());
-        }, 0);
+        }, 100);
+        pasteFallbackTimeoutsRef.current.set(requestId, timeoutId);
         return;
       }
 
@@ -4450,10 +4462,18 @@ export const OrgStructureEditorTab = observer(() => {
       if (target instanceof Element && target.closest("input, textarea, [contenteditable=true]")) {
         return;
       }
-      if (pasteFallbackTimeoutRef.current !== null) {
-        window.clearTimeout(pasteFallbackTimeoutRef.current);
-        pasteFallbackTimeoutRef.current = null;
+      const requestId = pendingPasteRequestIdsRef.current.shift();
+      const hadPendingKeyboardPaste = requestId !== undefined;
+      if (requestId !== undefined) {
+        const timeoutId = pasteFallbackTimeoutsRef.current.get(requestId);
+        if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+        pasteFallbackTimeoutsRef.current.delete(requestId);
       }
+      if (!hadPendingKeyboardPaste && Date.now() - lastPasteFallbackAtRef.current < 250) {
+        event.preventDefault();
+        return;
+      }
+      lastPasteFallbackAtRef.current = 0;
       const imageFile = [...(event.clipboardData?.items ?? [])]
         .find((item) => item.kind === "file" && item.type.startsWith("image/"))
         ?.getAsFile();
@@ -6421,15 +6441,16 @@ export const OrgStructureEditorTab = observer(() => {
           initialUnitIds={employeeDialogState.initialUnitIds}
           mode="editor"
           onOpenChange={(open) => !open && setEmployeeDialogState(null)}
-          onSave={(fields, assignments) => {
+          onSave={(fields, assignments, customOptionDrafts) => {
             if (!employeeDialogState.employee) {
-              store.createEmployee(fields, assignments, store.activeOrgViewId);
+              store.createEmployee(fields, assignments, store.activeOrgViewId, customOptionDrafts);
             } else {
               store.updateEmployee(
                 employeeDialogState.employee.id,
                 fields,
                 assignments,
                 store.activeOrgViewId,
+                customOptionDrafts,
               );
             }
           }}

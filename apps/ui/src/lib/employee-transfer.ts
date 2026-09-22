@@ -1,5 +1,8 @@
 import type {
+  CustomEmployeeCompositeSubfield,
   CustomEmployeeFieldDefinition,
+  CustomEmployeeFieldValue,
+  CustomEmployeeScalarValue,
   CustomEmployeeValueField,
   EditableEmployeeFields,
   EmployeeFieldId,
@@ -12,6 +15,7 @@ import type {
 } from "@org-tools/types";
 
 import { LocalizedError, uiMessage } from "@/i18n/messages";
+import { normalizeCustomEmployeeFieldValue } from "@/lib/custom-employee-fields";
 import {
   createUuid,
   isEmployeeGender,
@@ -331,32 +335,74 @@ const parseTeams = (value: unknown): EmployeeTransferTeam[] => {
 
 const parseCustomFieldValue = (
   value: unknown,
-  definition: CustomEmployeeValueField,
-): string | number | boolean | null => {
+  definition: Exclude<CustomEmployeeFieldDefinition, { kind: "template" }>,
+): CustomEmployeeFieldValue | null => {
   if (value === undefined || value === null || value === "") return null;
-  if (definition.valueType === "text") return requireString(value);
-  if (definition.valueType === "number") {
-    const number = typeof value === "number" ? value : Number(value);
-    if (!Number.isFinite(number)) throw new Error("Invalid custom number.");
-    return number;
+  const parseScalar = (
+    rawValue: unknown,
+    field:
+      | CustomEmployeeCompositeSubfield
+      | Pick<CustomEmployeeValueField, "options" | "valueType">,
+  ): CustomEmployeeScalarValue => {
+    if (field.valueType === "text") return requireString(rawValue);
+    if (field.valueType === "number") {
+      const number = typeof rawValue === "number" ? rawValue : Number(rawValue);
+      if (!Number.isFinite(number)) throw new Error("Invalid custom number.");
+      return number;
+    }
+    if (field.valueType === "boolean") {
+      if (typeof rawValue === "boolean") return rawValue;
+      if (rawValue === "true" || rawValue === 1) return true;
+      if (rawValue === "false" || rawValue === 0) return false;
+      throw new Error("Invalid custom flag.");
+    }
+    if (field.valueType === "date") {
+      const date = requireString(rawValue).trim();
+      if (!/^\d{2}\.\d{2}\.\d{4}$/u.test(date)) throw new Error("Invalid custom date.");
+      return date;
+    }
+    const normalized = normalizeSearchValue(requireString(rawValue));
+    const option = field.options.find(
+      (candidate) =>
+        candidate.id === rawValue || normalizeSearchValue(candidate.label) === normalized,
+    );
+    if (!option) throw new Error("Invalid custom option.");
+    return option.id;
+  };
+  if (definition.kind === "composite") {
+    if (!Array.isArray(value)) throw new Error("Invalid custom Composite value.");
+    const allowedKeys = new Set(definition.fields.flatMap((field) => [field.id, field.name]));
+    const records = value.map((rawRecord) => {
+      if (!isRecord(rawRecord)) throw new Error("Invalid custom Composite record.");
+      if (Object.keys(rawRecord).some((key) => !allowedKeys.has(key))) {
+        throw new Error("Unknown custom Composite subfield.");
+      }
+      const record: Record<string, CustomEmployeeScalarValue> = {};
+      for (const field of definition.fields) {
+        const hasId = Object.hasOwn(rawRecord, field.id);
+        const hasName = Object.hasOwn(rawRecord, field.name);
+        if (hasId && hasName && field.id !== field.name) {
+          throw new Error("Ambiguous custom Composite subfield.");
+        }
+        const rawCell = hasId ? rawRecord[field.id] : rawRecord[field.name];
+        if (rawCell !== undefined && rawCell !== null && rawCell !== "") {
+          record[field.id] = parseScalar(rawCell, field);
+        }
+      }
+      return record;
+    });
+    return normalizeCustomEmployeeFieldValue(definition, records) ?? null;
   }
-  if (definition.valueType === "boolean") {
-    if (typeof value === "boolean") return value;
-    if (value === "true" || value === 1) return true;
-    if (value === "false" || value === 0) return false;
-    throw new Error("Invalid custom flag.");
+  if (definition.multiple) {
+    if (!Array.isArray(value)) throw new Error("Invalid custom option array.");
+    return (
+      normalizeCustomEmployeeFieldValue(
+        definition,
+        value.map((item) => parseScalar(item, definition)),
+      ) ?? null
+    );
   }
-  if (definition.valueType === "date") {
-    const date = requireString(value).trim();
-    if (!/^\d{2}\.\d{2}\.\d{4}$/u.test(date)) throw new Error("Invalid custom date.");
-    return date;
-  }
-  const normalized = normalizeSearchValue(requireString(value));
-  const option = definition.options.find(
-    (candidate) => candidate.id === value || normalizeSearchValue(candidate.label) === normalized,
-  );
-  if (!option) throw new Error("Invalid custom option.");
-  return option.id;
+  return normalizeCustomEmployeeFieldValue(definition, parseScalar(value, definition)) ?? null;
 };
 
 export const deriveEmployeeImportPreview = (
@@ -396,13 +442,14 @@ export const deriveEmployeeImportPreview = (
   const rows: EmployeeImportRow[] = [];
   const valueDefinitions = [
     ...currentFieldDefinitions.filter(
-      (definition): definition is CustomEmployeeValueField => definition.kind === "value",
+      (definition): definition is Exclude<CustomEmployeeFieldDefinition, { kind: "template" }> =>
+        definition.kind !== "template",
     ),
     ...mapping.newValueFields.map((field) => field.definition),
   ];
   const customPathByFieldId = new Map<EmployeeFieldId, string>();
   for (const definition of currentFieldDefinitions) {
-    if (definition.kind !== "value") continue;
+    if (definition.kind === "template") continue;
     const path = pathByTarget.get(employeeImportCustomTarget(definition.id));
     if (path) customPathByFieldId.set(definition.id, path);
   }

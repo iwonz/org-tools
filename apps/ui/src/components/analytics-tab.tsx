@@ -638,8 +638,14 @@ export const AnalyticsTab = observer(() => {
           employee={editingEmployee}
           mode="global"
           onOpenChange={(open) => !open && setEditingEmployee(null)}
-          onSave={(fields, memberships) =>
-            store.updateEmployee(editingEmployee.id, fields, memberships)
+          onSave={(fields, memberships, customOptionDrafts) =>
+            store.updateEmployee(
+              editingEmployee.id,
+              fields,
+              memberships,
+              store.systemOrgViewId,
+              customOptionDrafts,
+            )
           }
           open={Boolean(editingEmployee)}
           tagOptions={employeeTagOptions}

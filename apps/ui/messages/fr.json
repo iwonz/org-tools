@@ -632,6 +632,21 @@
     "Text background": "Arrière-plan du texte",
     "No background": "Sans arrière-plan",
     "Block background": "Arrière-plan du bloc",
-    "Line background": "Arrière-plan des lignes"
+    "Line background": "Arrière-plan des lignes",
+    "Multiple selection": "Sélection multiple",
+    "Allow custom options": "Autoriser les options personnalisées",
+    "Composite": "Champ composé",
+    "Primary key": "Clé primaire",
+    "Subfield": "Sous-champ",
+    "Subfields": "Sous-champs",
+    "Subfield name": "Nom du sous-champ",
+    "Delete subfield": "Supprimer le sous-champ",
+    "Add subfield": "Ajouter un sous-champ",
+    "Record {number}": "Enregistrement {number}",
+    "Delete record": "Supprimer l’enregistrement",
+    "Add record": "Ajouter un enregistrement",
+    "Select options": "Sélectionner des options",
+    "Create option “{name}”": "Créer l’option « {name} »",
+    "Composite primary values must be unique.": "Les valeurs de clé primaire composite doivent être uniques."
   }
 }

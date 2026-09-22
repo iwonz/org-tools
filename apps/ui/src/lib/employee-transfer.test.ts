@@ -5,6 +5,7 @@ import {
   createSuggestedEmployeeImportMapping,
   deriveEmployeeImportPreview,
   employeeImportBuiltinTarget,
+  employeeImportCustomTarget,
   employeeImportPendingTarget,
   getEmployeeImportSourcePath,
   parseEmployeeImportText,
@@ -258,9 +259,11 @@ describe("Employee transfer", () => {
     mapping.newValueFields = [
       {
         definition: {
+          allowCustomOptions: false,
           id: fieldId,
           key: "department",
           kind: "value",
+          multiple: false,
           name: "Department",
           options: [],
           required: false,
@@ -279,6 +282,104 @@ describe("Employee transfer", () => {
     });
     expect(next.organization.employeeFieldDefinitions).toHaveLength(1);
     expect(next.organization.employees[0]?.customFieldValues[fieldId]).toBe("Platform");
+  });
+
+  test("maps multi-option and Composite arrays through existing definitions", () => {
+    const store = new OrgStore();
+    const employeeId = store.createEmployee(fields("alex@example.test"), []);
+    const skillsId = uuid(510);
+    const planningId = uuid(511);
+    const researchId = uuid(512);
+    const compositeId = uuid(520);
+    const primaryFieldId = uuid(521);
+    const dateFieldId = uuid(522);
+    store.saveEmployeeFieldDefinition({
+      allowCustomOptions: false,
+      id: skillsId,
+      key: "skills",
+      kind: "value",
+      multiple: true,
+      name: "Skills",
+      options: [
+        { id: planningId, label: "Planning" },
+        { id: researchId, label: "Research" },
+      ],
+      required: false,
+      valueType: "option",
+    });
+    store.saveEmployeeFieldDefinition({
+      fields: [
+        {
+          id: primaryFieldId,
+          name: "Certificate",
+          options: [],
+          required: true,
+          valueType: "text",
+        },
+        {
+          id: dateFieldId,
+          name: "Issued",
+          options: [],
+          required: false,
+          valueType: "date",
+        },
+      ],
+      id: compositeId,
+      key: "certificates",
+      kind: "composite",
+      name: "Certificates",
+      primaryFieldId,
+      required: false,
+    });
+    const source = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        {
+          certificates: [{ Certificate: "First aid", Issued: "01.02.2026" }],
+          email: "alex@example.test",
+          firstName: "Alex",
+          id: employeeId,
+          lastName: "Morgan",
+          skills: ["Planning", researchId],
+        },
+      ]),
+    );
+    const mapping = createSuggestedEmployeeImportMapping(source.paths);
+    mapping.sourceTargets.skills = employeeImportCustomTarget(skillsId);
+    mapping.sourceTargets.certificates = employeeImportCustomTarget(compositeId);
+    const preview = deriveEmployeeImportPreview(
+      source,
+      mapping,
+      store.organizationEmployees,
+      store.employeeFieldDefinitions,
+    );
+    expect(preview.rows[0]?.fields.customFieldValues).toEqual({
+      [compositeId]: [{ [dateFieldId]: "01.02.2026", [primaryFieldId]: "First aid" }],
+      [skillsId]: [planningId, researchId],
+    });
+
+    const invalidSource = parseEmployeeImportText(
+      "employees.json",
+      JSON.stringify([
+        {
+          certificates: [{ Certificate: "First aid", Unknown: "value" }],
+          email: "alex@example.test",
+          firstName: "Alex",
+          id: employeeId,
+          lastName: "Morgan",
+        },
+      ]),
+    );
+    const invalidMapping = createSuggestedEmployeeImportMapping(invalidSource.paths);
+    invalidMapping.sourceTargets.certificates = employeeImportCustomTarget(compositeId);
+    expect(() =>
+      deriveEmployeeImportPreview(
+        invalidSource,
+        invalidMapping,
+        store.organizationEmployees,
+        store.employeeFieldDefinitions,
+      ),
+    ).toThrow("Employee row {number} does not match the selected mapping.");
   });
 
   test("imports only complete current birthday values with unknown-year semantics", () => {

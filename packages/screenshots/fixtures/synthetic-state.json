@@ -2,18 +2,22 @@
   "organization": {
     "employeeFieldDefinitions": [
       {
+        "allowCustomOptions": false,
         "id": "80000000-0000-4000-8000-000000000001",
         "key": "department",
         "kind": "value",
+        "multiple": false,
         "name": "Department",
         "options": [],
         "required": true,
         "valueType": "text"
       },
       {
+        "allowCustomOptions": false,
         "id": "80000000-0000-4000-8000-000000000002",
         "key": "employmentLevel",
         "kind": "value",
+        "multiple": false,
         "name": "Employment level",
         "options": [
           { "id": "70000000-0000-4000-8000-000000000001", "label": "Senior" },

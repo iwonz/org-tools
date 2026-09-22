@@ -98,7 +98,7 @@ describe("tagColorSurfaceClassName", () => {
       canvasElements: [
         {
           ...createOrgEditorArrowElement({ x: 0, y: 0 }, { x: 10, y: 10 }),
-          strokeColor: "#abcdef",
+          strokeColor: "#abcdef" as const,
         },
       ],
     };

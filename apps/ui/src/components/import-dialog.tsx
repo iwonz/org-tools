@@ -165,7 +165,7 @@ function MappingGrid({
   const [newFieldKey, setNewFieldKey] = useState("");
   const [newFieldType, setNewFieldType] = useState<CustomEmployeeValueType>("text");
   const [newFieldOptions, setNewFieldOptions] = useState("");
-  const valueDefinitions = fieldDefinitions.filter((definition) => definition.kind === "value");
+  const valueDefinitions = fieldDefinitions.filter((definition) => definition.kind !== "template");
   const first = Math.max(0, Math.floor(scrollTop / MAPPING_ROW_HEIGHT) - OVERSCAN);
   const last = Math.min(
     paths.length,
@@ -350,9 +350,11 @@ function MappingGrid({
               }
               onClick={() => {
                 const definition = {
+                  allowCustomOptions: false,
                   id: createUuid(),
                   key: newFieldKey.trim(),
                   kind: "value" as const,
+                  multiple: false,
                   name: newFieldName.trim(),
                   options:
                     newFieldType === "option"

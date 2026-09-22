@@ -108,9 +108,11 @@ const structure = buildOrganizationStructure(
   [{ color: null, id: CRITICAL_TAG_ID, label: "Critical" }],
   [
     {
+      allowCustomOptions: false,
       id: DEPARTMENT_FIELD_ID,
       key: "department",
       kind: "value",
+      multiple: false,
       name: "Department",
       options: [],
       required: false,

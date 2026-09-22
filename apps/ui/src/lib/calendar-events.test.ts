@@ -80,21 +80,21 @@ describe("calendar event dates", () => {
           date: "2026-09-03",
           employee: second,
           label: "Release",
-          tagId: "00000000-0000-4000-8000-000000000010",
+          source: { kind: "tag", tagId: "00000000-0000-4000-8000-000000000010" },
         },
         {
           color: null,
           date: "2026-09-03",
           employee: first,
           label: "Anniversary",
-          tagId: "00000000-0000-4000-8000-000000000011",
+          source: { kind: "tag", tagId: "00000000-0000-4000-8000-000000000011" },
         },
         {
           color: null,
           date: "2026-09-03",
           employee: first,
           label: "Release",
-          tagId: "00000000-0000-4000-8000-000000000010",
+          source: { kind: "tag", tagId: "00000000-0000-4000-8000-000000000010" },
         },
       ],
       locale: "en",
@@ -109,5 +109,73 @@ describe("calendar event dates", () => {
       "tag:anniversary",
       `tag:anniversary:${first.id}`,
     ]);
+  });
+
+  test("indexes every populated Composite date with a neutral event label", () => {
+    const definitionId = "00000000-0000-4000-8000-000000000020";
+    const primaryFieldId = "00000000-0000-4000-8000-000000000021";
+    const issuedFieldId = "00000000-0000-4000-8000-000000000022";
+    const expiresFieldId = "00000000-0000-4000-8000-000000000023";
+    const item = {
+      ...employee("00000000-0000-4000-8000-000000000001"),
+      customFieldValues: {
+        [definitionId]: [
+          {
+            [expiresFieldId]: "02.03.2031",
+            [issuedFieldId]: "01.02.2026",
+            [primaryFieldId]: "First aid",
+          },
+        ],
+      },
+    };
+    const structure = createUiOrgStructure({
+      allEmployees: [item],
+      customFieldDefinitions: [
+        {
+          fields: [
+            {
+              id: primaryFieldId,
+              name: "Certificate",
+              options: [],
+              required: true,
+              valueType: "text",
+            },
+            {
+              id: issuedFieldId,
+              name: "Issued",
+              options: [],
+              required: false,
+              valueType: "date",
+            },
+            {
+              id: expiresFieldId,
+              name: "Expires",
+              options: [],
+              required: false,
+              valueType: "date",
+            },
+          ],
+          id: definitionId,
+          key: "certificates",
+          kind: "composite",
+          name: "Certificates",
+          primaryFieldId,
+          required: false,
+        },
+      ],
+      deepEmployees: [item],
+      deepUnits: [],
+      employeesById: new Map([[item.id, item]]),
+      roots: [],
+      unitsById: new Map(),
+    });
+    expect(structure.indexes.datedTagEventsByDate.get("2026-02-01")?.[0]).toMatchObject({
+      color: null,
+      label: "Certificates · First aid · Issued",
+      source: { fieldId: definitionId, kind: "composite" },
+    });
+    expect(structure.indexes.datedTagEventsByDate.get("2031-03-02")?.[0]?.label).toBe(
+      "Certificates · First aid · Expires",
+    );
   });
 });

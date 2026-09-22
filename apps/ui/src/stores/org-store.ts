@@ -1,6 +1,8 @@
 import type {
   AppLocale,
   CustomEmployeeFieldDefinition,
+  CustomEmployeeFieldValue,
+  CustomEmployeeOptionDraft,
   EditableEmployeeFields,
   EmployeeFieldId,
   EmployeeId,
@@ -24,6 +26,7 @@ import { buildOrganizationStructureWithResolution } from "@/lib/build-organizati
 import {
   extractTemplateFieldKeys,
   normalizeCustomEmployeeFieldKey,
+  normalizeCustomEmployeeFieldValue,
   rewriteTemplateFieldKey,
   validateCustomEmployeeFieldDefinitions,
 } from "@/lib/custom-employee-fields";
@@ -144,7 +147,15 @@ const cloneEmployeeFieldDefinition = (
 ): CustomEmployeeFieldDefinition =>
   definition.kind === "template"
     ? { ...definition }
-    : { ...definition, options: definition.options.map((option) => ({ ...option })) };
+    : definition.kind === "value"
+      ? { ...definition, options: definition.options.map((option) => ({ ...option })) }
+      : {
+          ...definition,
+          fields: definition.fields.map((field) => ({
+            ...field,
+            options: field.options.map((option) => ({ ...option })),
+          })),
+        };
 
 export class OrgStore {
   employeeFieldDefinitions: CustomEmployeeFieldDefinition[] = [];
@@ -1029,6 +1040,7 @@ export class OrgStore {
     fields: EditableEmployeeFields,
     unitMemberships: UnitAssignment[],
     viewId: ViewId = this.systemOrgViewId,
+    customOptionDrafts: readonly CustomEmployeeOptionDraft[] = [],
   ): EmployeeId {
     const now = new Date().toISOString();
     const normalizedFields = normalizeEditableEmployeeFields(fields);
@@ -1041,19 +1053,22 @@ export class OrgStore {
       throw new LocalizedError(uiMessage("An Employee with this name and email already exists."));
     }
     const id = createOrganizationEmployeeId();
-    const customFieldValues = this.normalizeCustomFieldValues(
+    const customFields = this.prepareCustomFieldSave(
       normalizedFields.customFieldValues ?? {},
+      customOptionDrafts,
     );
     const tags = this.resolveTagDrafts(normalizedFields.tags);
     const employee: OrganizationEmployee = {
       ...normalizedFields,
       createdAt: now,
-      customFieldValues,
+      customFieldValues: customFields.values,
       id,
       tags,
       updatedAt: now,
     };
 
+    this.employeeFieldDefinitions = customFields.definitions;
+    this.exportSession.synchronizeCustomFields(customFields.definitions);
     this.organizationEmployees = [...this.organizationEmployees, employee];
     this.applyOrganizationEmployeeAssignments(id, unitMemberships, viewId);
     this.rebuildMainModel();
@@ -1066,8 +1081,15 @@ export class OrgStore {
     fields: EditableEmployeeFields,
     unitMemberships: UnitAssignment[],
     viewId: ViewId = this.systemOrgViewId,
+    customOptionDrafts: readonly CustomEmployeeOptionDraft[] = [],
   ): void {
-    this.updateOrganizationEmployee(employeeId, fields, unitMemberships, viewId);
+    this.updateOrganizationEmployee(
+      employeeId,
+      fields,
+      unitMemberships,
+      viewId,
+      customOptionDrafts,
+    );
   }
 
   updateEmployeeTags(updates: readonly EmployeeTagUpdate[]): void {
@@ -1153,6 +1175,7 @@ export class OrgStore {
     fields: EditableEmployeeFields,
     unitMemberships: UnitAssignment[],
     viewId: ViewId,
+    customOptionDrafts: readonly CustomEmployeeOptionDraft[],
   ): void {
     const now = new Date().toISOString();
     const normalizedFields = normalizeEditableEmployeeFields(fields);
@@ -1165,60 +1188,88 @@ export class OrgStore {
     ) {
       throw new LocalizedError(uiMessage("An Employee with this name and email already exists."));
     }
-    const customFieldValues = this.normalizeCustomFieldValues(
+    const customFields = this.prepareCustomFieldSave(
       normalizedFields.customFieldValues ?? {},
+      customOptionDrafts,
     );
     const tags = this.resolveTagDrafts(normalizedFields.tags);
+    this.employeeFieldDefinitions = customFields.definitions;
+    this.exportSession.synchronizeCustomFields(customFields.definitions);
     this.organizationEmployees = this.organizationEmployees.map((employee) =>
       employee.id === employeeId
-        ? { ...employee, ...normalizedFields, customFieldValues, tags, updatedAt: now }
+        ? {
+            ...employee,
+            ...normalizedFields,
+            customFieldValues: customFields.values,
+            tags,
+            updatedAt: now,
+          }
         : employee,
     );
     this.applyOrganizationEmployeeAssignments(employeeId, unitMemberships, viewId);
     this.rebuildMainModel();
   }
 
-  private normalizeCustomFieldValues(
-    values: Record<string, string | number | boolean | null>,
-  ): Record<string, string | number | boolean | null> {
-    const result: Record<string, string | number | boolean | null> = {};
-    for (const definition of this.employeeFieldDefinitions) {
-      if (definition.kind !== "value") continue;
-      const value = values[definition.id] ?? null;
-      if (definition.required && (value === null || value === "")) {
-        throw new LocalizedError(uiMessage("Complete every required custom field."));
-      }
-      if (value === null || value === "") continue;
-      const isValid =
-        (definition.valueType === "text" && typeof value === "string") ||
-        (definition.valueType === "number" &&
-          typeof value === "number" &&
-          Number.isFinite(value)) ||
-        (definition.valueType === "boolean" && typeof value === "boolean") ||
-        (definition.valueType === "date" &&
-          typeof value === "string" &&
-          /^(\d{2})\.(\d{2})\.(\d{4})$/u.test(value) &&
-          (() => {
-            const [dayText, monthText, yearText] = value.split(".");
-            const day = Number(dayText);
-            const month = Number(monthText);
-            const year = Number(yearText);
-            const date = new Date(Date.UTC(year, month - 1, day));
-            return (
-              date.getUTCFullYear() === year &&
-              date.getUTCMonth() === month - 1 &&
-              date.getUTCDate() === day
-            );
-          })()) ||
-        (definition.valueType === "option" &&
-          typeof value === "string" &&
-          definition.options.some((option) => option.id === value));
-      if (!isValid) {
+  private prepareCustomFieldSave(
+    values: Record<string, CustomEmployeeFieldValue>,
+    customOptionDrafts: readonly CustomEmployeeOptionDraft[],
+  ): {
+    definitions: CustomEmployeeFieldDefinition[];
+    values: Record<string, CustomEmployeeFieldValue>;
+  } {
+    const definitions = this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition);
+    const optionIdReplacement = new Map<string, string>();
+    for (const draft of customOptionDrafts) {
+      const definition = definitions.find((field) => field.id === draft.fieldId);
+      if (
+        definition?.kind !== "value" ||
+        definition.valueType !== "option" ||
+        !definition.multiple ||
+        !definition.allowCustomOptions
+      ) {
         throw new LocalizedError(uiMessage("Custom Employee field value is invalid."));
       }
-      result[definition.id] = value;
+      const label = draft.option.label.normalize("NFKC").trim().replace(/\s+/gu, " ");
+      if (!label) throw new LocalizedError(uiMessage("Custom Employee field value is invalid."));
+      const normalizedLabel = normalizeSearchValue(label);
+      const existing = definition.options.find(
+        (option) => normalizeSearchValue(option.label) === normalizedLabel,
+      );
+      if (existing) {
+        optionIdReplacement.set(draft.option.id, existing.id);
+      } else {
+        definition.options.push({ id: draft.option.id, label });
+      }
     }
-    return result;
+    if (validateCustomEmployeeFieldDefinitions(definitions)) {
+      throw new LocalizedError(uiMessage("Custom Employee field is invalid."));
+    }
+    const result: Record<string, CustomEmployeeFieldValue> = {};
+    for (const definition of definitions) {
+      if (definition.kind === "template") continue;
+      let rawValue = values[definition.id];
+      if (definition.kind === "value" && definition.multiple && Array.isArray(rawValue)) {
+        rawValue = rawValue.map((value) =>
+          typeof value === "string" ? (optionIdReplacement.get(value) ?? value) : value,
+        ) as string[];
+      }
+      try {
+        const normalized = normalizeCustomEmployeeFieldValue(definition, rawValue);
+        if (normalized !== undefined) result[definition.id] = normalized;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        throw new LocalizedError(
+          uiMessage(
+            message === "Complete every required custom field."
+              ? "Complete every required custom field."
+              : message === "Composite primary values must be unique."
+                ? "Composite primary values must be unique."
+                : "Custom Employee field value is invalid.",
+          ),
+        );
+      }
+    }
+    return { definitions, values: result };
   }
 
   private resolveTagDrafts(tags: readonly EmployeeTag[]): EmployeeTagAssignment[] {
@@ -1288,6 +1339,12 @@ export class OrgStore {
         ...option,
         label: option.label.trim(),
       }));
+    } else if (normalized.kind === "composite") {
+      normalized.fields = normalized.fields.map((field) => ({
+        ...field,
+        name: field.name.trim(),
+        options: field.options.map((option) => ({ ...option, label: option.label.trim() })),
+      }));
     }
     let definitions = previous
       ? this.employeeFieldDefinitions.map((field) =>
@@ -1315,9 +1372,24 @@ export class OrgStore {
       }
     }
 
-    const changedValueShape =
-      previous?.kind === "value" &&
-      (normalized.kind !== "value" || previous.valueType !== normalized.valueType);
+    const previousStored = previous?.kind === "value" || previous?.kind === "composite";
+    const nextStored = normalized.kind === "value" || normalized.kind === "composite";
+    const changedValueShape = Boolean(
+      previousStored &&
+        (!nextStored ||
+          previous?.kind !== normalized.kind ||
+          (previous.kind === "value" &&
+            normalized.kind === "value" &&
+            (previous.valueType !== normalized.valueType ||
+              previous.multiple !== normalized.multiple)) ||
+          (previous.kind === "composite" &&
+            normalized.kind === "composite" &&
+            (previous.primaryFieldId !== normalized.primaryFieldId ||
+              previous.fields.some((field) => {
+                const nextField = normalized.fields.find((candidate) => candidate.id === field.id);
+                return !nextField || field.valueType !== nextField.valueType;
+              })))),
+    );
     if (changedValueShape) {
       this.organizationEmployees = this.organizationEmployees.map((employee) => {
         const customFieldValues = { ...employee.customFieldValues };
@@ -1326,23 +1398,84 @@ export class OrgStore {
       });
       this.clearCustomEmployeeFieldFilters(definition.id);
     }
-    if (previous?.kind === "value" && normalized.kind === "value") {
-      const optionIds = new Set(normalized.options.map((option) => option.id));
-      const removedOption = previous.options.some((option) => !optionIds.has(option.id));
+    if (!changedValueShape && previousStored && nextStored) {
+      const previousOptionIds = new Set(
+        previous.kind === "value"
+          ? previous.options.map((option) => option.id)
+          : previous.fields.flatMap((field) => field.options.map((option) => option.id)),
+      );
+      const nextOptionIds = new Set(
+        normalized.kind === "value"
+          ? normalized.options.map((option) => option.id)
+          : normalized.fields.flatMap((field) => field.options.map((option) => option.id)),
+      );
+      const removedOption = [...previousOptionIds].some((optionId) => !nextOptionIds.has(optionId));
       this.organizationEmployees = this.organizationEmployees.map((employee) => {
-        if (
-          previous.valueType !== "option" ||
-          normalized.valueType !== "option" ||
-          employee.customFieldValues[definition.id] == null ||
-          optionIds.has(String(employee.customFieldValues[definition.id]))
-        ) {
-          return employee;
+        const current = employee.customFieldValues[definition.id];
+        if (current === undefined || !removedOption) return employee;
+        let candidate: CustomEmployeeFieldValue | undefined = current;
+        if (normalized.kind === "value" && normalized.valueType === "option") {
+          candidate = normalized.multiple
+            ? Array.isArray(current)
+              ? (current.filter(
+                  (optionId) => typeof optionId === "string" && nextOptionIds.has(optionId),
+                ) as string[])
+              : undefined
+            : typeof current === "string" && nextOptionIds.has(current)
+              ? current
+              : undefined;
+        } else if (normalized.kind === "composite" && Array.isArray(current)) {
+          candidate = current.flatMap((record) => {
+            if (typeof record !== "object" || record === null || Array.isArray(record)) return [];
+            const nextRecord = { ...record };
+            for (const field of normalized.fields) {
+              if (
+                field.valueType === "option" &&
+                typeof nextRecord[field.id] === "string" &&
+                !field.options.some((option) => option.id === nextRecord[field.id])
+              ) {
+                delete nextRecord[field.id];
+              }
+            }
+            try {
+              return normalizeCustomEmployeeFieldValue(normalized, [nextRecord])
+                ? [nextRecord]
+                : [];
+            } catch {
+              return [];
+            }
+          });
         }
         const customFieldValues = { ...employee.customFieldValues };
-        delete customFieldValues[definition.id];
+        if (candidate === undefined || (Array.isArray(candidate) && candidate.length === 0)) {
+          delete customFieldValues[definition.id];
+        } else {
+          customFieldValues[definition.id] = candidate;
+        }
         return { ...employee, customFieldValues };
       });
       if (removedOption) this.clearCustomEmployeeFieldFilters(definition.id);
+    }
+    if (!changedValueShape && nextStored) {
+      let clearedInvalidValue = false;
+      this.organizationEmployees = this.organizationEmployees.map((employee) => {
+        const current = employee.customFieldValues[definition.id];
+        if (current === undefined) return employee;
+        try {
+          const value = normalizeCustomEmployeeFieldValue(normalized, current);
+          if (value === undefined) return employee;
+          return {
+            ...employee,
+            customFieldValues: { ...employee.customFieldValues, [definition.id]: value },
+          };
+        } catch {
+          clearedInvalidValue = true;
+          const customFieldValues = { ...employee.customFieldValues };
+          delete customFieldValues[definition.id];
+          return { ...employee, customFieldValues };
+        }
+      });
+      if (clearedInvalidValue) this.clearCustomEmployeeFieldFilters(definition.id);
     }
     this.employeeFieldDefinitions = definitions;
     this.exportSession.synchronizeCustomFields(definitions);

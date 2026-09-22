@@ -1,13 +1,19 @@
 "use client";
 
 import type {
+  CustomEmployeeCompositeField,
   CustomEmployeeFieldDefinition,
   CustomEmployeeFieldHash,
   CustomEmployeeValueType,
   EmployeeFieldId,
 } from "@org-tools/types";
 import { useMemo, useState } from "react";
-import { HiOutlineCodeBracket, HiOutlinePlus, HiOutlineTrash } from "react-icons/hi2";
+import {
+  HiOutlineCodeBracket,
+  HiOutlinePlus,
+  HiOutlineSquares2X2,
+  HiOutlineTrash,
+} from "react-icons/hi2";
 
 import { TemplateFormatInput } from "@/components/template-format-input";
 import {
@@ -21,7 +27,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogBody,
@@ -39,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useMessageText, useUiText } from "@/i18n/use-ui-text";
@@ -60,6 +66,29 @@ const createDraft = (): CustomEmployeeFieldDefinition => ({
   name: "",
   template: "",
 });
+
+const createCompositeDraft = (
+  draft: Pick<CustomEmployeeFieldDefinition, "id" | "key" | "name">,
+): CustomEmployeeCompositeField => {
+  const primaryFieldId = createUuid();
+  return {
+    fields: [
+      {
+        id: primaryFieldId,
+        name: "",
+        options: [],
+        required: true,
+        valueType: "text",
+      },
+    ],
+    id: draft.id,
+    key: draft.key,
+    kind: "composite",
+    name: draft.name,
+    primaryFieldId,
+    required: false,
+  };
+};
 
 type PendingDraftChange = {
   description:
@@ -96,7 +125,7 @@ export function EmployeeModelDialog({
     ],
     [draft, store.employeeFieldDefinitions],
   );
-  const setDraftKind = (kind: "template" | "value") => {
+  const setDraftKind = (kind: "composite" | "template" | "value") => {
     if (!draft || draft.kind === kind) return;
     const next: CustomEmployeeFieldDefinition =
       kind === "template"
@@ -108,15 +137,19 @@ export function EmployeeModelDialog({
             name: draft.name,
             template: "",
           }
-        : {
-            id: draft.id,
-            key: draft.key,
-            kind,
-            name: draft.name,
-            options: [],
-            required: false,
-            valueType: "text",
-          };
+        : kind === "value"
+          ? {
+              allowCustomOptions: false,
+              id: draft.id,
+              key: draft.key,
+              kind,
+              multiple: false,
+              name: draft.name,
+              options: [],
+              required: false,
+              valueType: "text",
+            }
+          : createCompositeDraft(draft);
     if (store.employeeFieldDefinitions.some((field) => field.id === draft.id)) {
       setPendingDraftChange({
         description: "Changing the field kind or type clears its stored values and filters.",
@@ -194,7 +227,13 @@ export function EmployeeModelDialog({
                       type="button"
                     >
                       <div className="truncate text-sm font-medium">{field.name}</div>
-                      <div className="truncate text-xs text-muted-foreground">{`{${field.key}} · ${field.kind === "template" ? t("Template") : t("Value")}`}</div>
+                      <div className="truncate text-xs text-muted-foreground">{`{${field.key}} · ${
+                        field.kind === "template"
+                          ? t("Template")
+                          : field.kind === "composite"
+                            ? t("Composite")
+                            : t("Value")
+                      }`}</div>
                     </button>
                     <Button
                       aria-label={t("Delete field")}
@@ -217,9 +256,9 @@ export function EmployeeModelDialog({
               >
                 <Tabs
                   value={draft.kind}
-                  onValueChange={(kind) => setDraftKind(kind as "template" | "value")}
+                  onValueChange={(kind) => setDraftKind(kind as "composite" | "template" | "value")}
                 >
-                  <TabsList className="grid grid-cols-2">
+                  <TabsList className="grid grid-cols-3">
                     <TabsTrigger value="template">
                       <HiOutlineCodeBracket />
                       {t("Template")}
@@ -227,6 +266,10 @@ export function EmployeeModelDialog({
                     <TabsTrigger value="value">
                       <HiOutlinePlus />
                       {t("Value")}
+                    </TabsTrigger>
+                    <TabsTrigger value="composite">
+                      <HiOutlineSquares2X2 />
+                      {t("Composite")}
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -278,7 +321,7 @@ export function EmployeeModelDialog({
                       </Select>
                     </div>
                   </>
-                ) : (
+                ) : draft.kind === "value" ? (
                   <>
                     <div className="grid gap-2">
                       <Label>{t("Field type")}</Label>
@@ -286,6 +329,9 @@ export function EmployeeModelDialog({
                         onValueChange={(valueType) => {
                           const next: CustomEmployeeFieldDefinition = {
                             ...draft,
+                            allowCustomOptions:
+                              valueType === "option" ? draft.allowCustomOptions : false,
+                            multiple: valueType === "option" ? draft.multiple : false,
                             options: valueType === "option" ? draft.options : [],
                             valueType: valueType as CustomEmployeeValueType,
                           };
@@ -328,16 +374,39 @@ export function EmployeeModelDialog({
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm">
                       <span>{t("Required")}</span>
-                      <Checkbox
+                      <Switch
                         aria-label={t("Required")}
                         checked={draft.required}
-                        onCheckedChange={(required) =>
-                          setDraft({ ...draft, required: required === true })
-                        }
+                        onCheckedChange={(required) => setDraft({ ...draft, required })}
                       />
                     </div>
                     {draft.valueType === "option" && (
                       <div className="grid gap-2">
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm">
+                          <span>{t("Multiple selection")}</span>
+                          <Switch
+                            aria-label={t("Multiple selection")}
+                            checked={draft.multiple}
+                            onCheckedChange={(multiple) =>
+                              setDraft({
+                                ...draft,
+                                allowCustomOptions: multiple ? draft.allowCustomOptions : false,
+                                multiple,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm">
+                          <span>{t("Allow custom options")}</span>
+                          <Switch
+                            aria-label={t("Allow custom options")}
+                            checked={draft.allowCustomOptions}
+                            disabled={!draft.multiple}
+                            onCheckedChange={(allowCustomOptions) =>
+                              setDraft({ ...draft, allowCustomOptions })
+                            }
+                          />
+                        </div>
                         <Label>{t("Options")}</Label>
                         {draft.options.map((option, index) => (
                           <div className="flex gap-2" key={option.id}>
@@ -403,6 +472,323 @@ export function EmployeeModelDialog({
                         </Button>
                       </div>
                     )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm">
+                      <span>{t("Required")}</span>
+                      <Switch
+                        aria-label={t("Required")}
+                        checked={draft.required}
+                        onCheckedChange={(required) => setDraft({ ...draft, required })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>{t("Primary key")}</Label>
+                      <Select
+                        onValueChange={(primaryFieldId) => {
+                          const next: CustomEmployeeCompositeField = {
+                            ...draft,
+                            fields: draft.fields.map((field) => ({
+                              ...field,
+                              required: field.id === primaryFieldId ? true : field.required,
+                            })),
+                            primaryFieldId,
+                          };
+                          const original = store.employeeFieldDefinitions.find(
+                            (field) => field.id === draft.id,
+                          );
+                          if (
+                            original?.kind === "composite" &&
+                            original.primaryFieldId !== primaryFieldId
+                          ) {
+                            setPendingDraftChange({
+                              description:
+                                "Changing the field kind or type clears its stored values and filters.",
+                              next,
+                            });
+                          } else {
+                            setDraft(next);
+                          }
+                        }}
+                        value={draft.primaryFieldId}
+                      >
+                        <SelectTrigger aria-label={t("Primary key")}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {draft.fields.map((field, index) => (
+                            <SelectItem key={field.id} value={field.id}>
+                              {field.name || `${t("Subfield")} ${index + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-3">
+                      <Label>{t("Subfields")}</Label>
+                      {draft.fields.map((field, index) => (
+                        <div className="grid gap-3 rounded-md bg-background p-3" key={field.id}>
+                          <div className="flex items-start gap-2">
+                            <Input
+                              aria-label={t("Subfield name")}
+                              onChange={(event) =>
+                                setDraft({
+                                  ...draft,
+                                  fields: draft.fields.map((candidate) =>
+                                    candidate.id === field.id
+                                      ? { ...candidate, name: event.currentTarget.value }
+                                      : candidate,
+                                  ),
+                                })
+                              }
+                              placeholder={t("Subfield name")}
+                              value={field.name}
+                            />
+                            <Button
+                              aria-label={t("Delete subfield")}
+                              disabled={draft.fields.length === 1}
+                              onClick={() => {
+                                const remaining = draft.fields.filter(
+                                  (candidate) => candidate.id !== field.id,
+                                );
+                                const next: CustomEmployeeCompositeField = {
+                                  ...draft,
+                                  fields: remaining.map((candidate, remainingIndex) => ({
+                                    ...candidate,
+                                    required:
+                                      field.id === draft.primaryFieldId && remainingIndex === 0
+                                        ? true
+                                        : candidate.required,
+                                  })),
+                                  primaryFieldId:
+                                    field.id === draft.primaryFieldId
+                                      ? (remaining[0]?.id ?? draft.primaryFieldId)
+                                      : draft.primaryFieldId,
+                                };
+                                const original = store.employeeFieldDefinitions.find(
+                                  (candidate) => candidate.id === draft.id,
+                                );
+                                if (
+                                  original?.kind === "composite" &&
+                                  original.fields.some((candidate) => candidate.id === field.id)
+                                ) {
+                                  setPendingDraftChange({
+                                    description:
+                                      "Changing the field kind or type clears its stored values and filters.",
+                                    next,
+                                  });
+                                } else {
+                                  setDraft(next);
+                                }
+                              }}
+                              size="icon"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <HiOutlineTrash />
+                            </Button>
+                          </div>
+                          <Select
+                            onValueChange={(valueType) => {
+                              const next: CustomEmployeeCompositeField = {
+                                ...draft,
+                                fields: draft.fields.map((candidate) =>
+                                  candidate.id === field.id
+                                    ? {
+                                        ...candidate,
+                                        options: valueType === "option" ? candidate.options : [],
+                                        valueType: valueType as CustomEmployeeValueType,
+                                      }
+                                    : candidate,
+                                ),
+                              };
+                              const original = store.employeeFieldDefinitions.find(
+                                (candidate) => candidate.id === draft.id,
+                              );
+                              const originalField =
+                                original?.kind === "composite"
+                                  ? original.fields.find((candidate) => candidate.id === field.id)
+                                  : undefined;
+                              if (originalField && originalField.valueType !== valueType) {
+                                setPendingDraftChange({
+                                  description:
+                                    "Changing the field kind or type clears its stored values and filters.",
+                                  next,
+                                });
+                              } else {
+                                setDraft(next);
+                              }
+                            }}
+                            value={field.valueType}
+                          >
+                            <SelectTrigger aria-label={t("Field type")}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VALUE_TYPES.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {t(
+                                    type === "text"
+                                      ? "Text"
+                                      : type === "number"
+                                        ? "Number"
+                                        : type === "boolean"
+                                          ? "Flag"
+                                          : type === "date"
+                                            ? "Date"
+                                            : "Option",
+                                  )}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex items-center justify-between gap-3 text-sm">
+                            <span>{t("Required")}</span>
+                            <Switch
+                              aria-label={`${field.name || `${t("Subfield")} ${index + 1}`} · ${t("Required")}`}
+                              checked={field.required}
+                              disabled={field.id === draft.primaryFieldId}
+                              onCheckedChange={(required) =>
+                                setDraft({
+                                  ...draft,
+                                  fields: draft.fields.map((candidate) =>
+                                    candidate.id === field.id
+                                      ? { ...candidate, required }
+                                      : candidate,
+                                  ),
+                                })
+                              }
+                            />
+                          </div>
+                          {field.valueType === "option" && (
+                            <div className="grid gap-2">
+                              <Label>{t("Options")}</Label>
+                              {field.options.map((option, optionIndex) => (
+                                <div className="flex gap-2" key={option.id}>
+                                  <Input
+                                    onChange={(event) =>
+                                      setDraft({
+                                        ...draft,
+                                        fields: draft.fields.map((candidate) =>
+                                          candidate.id === field.id
+                                            ? {
+                                                ...candidate,
+                                                options: candidate.options.map(
+                                                  (current, currentIndex) =>
+                                                    currentIndex === optionIndex
+                                                      ? {
+                                                          ...current,
+                                                          label: event.currentTarget.value,
+                                                        }
+                                                      : current,
+                                                ),
+                                              }
+                                            : candidate,
+                                        ),
+                                      })
+                                    }
+                                    value={option.label}
+                                  />
+                                  <Button
+                                    aria-label={t("Delete option")}
+                                    onClick={() => {
+                                      const next: CustomEmployeeCompositeField = {
+                                        ...draft,
+                                        fields: draft.fields.map((candidate) =>
+                                          candidate.id === field.id
+                                            ? {
+                                                ...candidate,
+                                                options: candidate.options.filter(
+                                                  (current) => current.id !== option.id,
+                                                ),
+                                              }
+                                            : candidate,
+                                        ),
+                                      };
+                                      const original = store.employeeFieldDefinitions.find(
+                                        (candidate) => candidate.id === draft.id,
+                                      );
+                                      const originalField =
+                                        original?.kind === "composite"
+                                          ? original.fields.find(
+                                              (candidate) => candidate.id === field.id,
+                                            )
+                                          : undefined;
+                                      if (
+                                        originalField?.options.some(
+                                          (candidate) => candidate.id === option.id,
+                                        )
+                                      ) {
+                                        setPendingDraftChange({
+                                          description:
+                                            "Deleting this option clears it from every Employee.",
+                                          next,
+                                        });
+                                      } else {
+                                        setDraft(next);
+                                      }
+                                    }}
+                                    size="icon"
+                                    type="button"
+                                    variant="ghost"
+                                  >
+                                    <HiOutlineTrash />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button
+                                onClick={() =>
+                                  setDraft({
+                                    ...draft,
+                                    fields: draft.fields.map((candidate) =>
+                                      candidate.id === field.id
+                                        ? {
+                                            ...candidate,
+                                            options: [
+                                              ...candidate.options,
+                                              { id: createUuid(), label: "" },
+                                            ],
+                                          }
+                                        : candidate,
+                                    ),
+                                  })
+                                }
+                                size="sm"
+                                type="button"
+                                variant="secondary"
+                              >
+                                <HiOutlinePlus />
+                                {t("Add option")}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      <Button
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            fields: [
+                              ...draft.fields,
+                              {
+                                id: createUuid(),
+                                name: "",
+                                options: [],
+                                required: false,
+                                valueType: "text",
+                              },
+                            ],
+                          })
+                        }
+                        size="sm"
+                        type="button"
+                        variant="secondary"
+                      >
+                        <HiOutlinePlus />
+                        {t("Add subfield")}
+                      </Button>
+                    </div>
                   </>
                 )}
                 {error && (

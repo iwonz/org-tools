@@ -632,6 +632,21 @@
     "Text background": "خلفية النص",
     "No background": "بدون خلفية",
     "Block background": "خلفية الكتلة",
-    "Line background": "خلفية الأسطر"
+    "Line background": "خلفية الأسطر",
+    "Multiple selection": "تحديد متعدد",
+    "Allow custom options": "السماح بخيارات مخصصة",
+    "Composite": "مركب",
+    "Primary key": "المفتاح الأساسي",
+    "Subfield": "حقل فرعي",
+    "Subfields": "الحقول الفرعية",
+    "Subfield name": "اسم الحقل الفرعي",
+    "Delete subfield": "حذف الحقل الفرعي",
+    "Add subfield": "إضافة حقل فرعي",
+    "Record {number}": "السجل {number}",
+    "Delete record": "حذف السجل",
+    "Add record": "إضافة سجل",
+    "Select options": "تحديد الخيارات",
+    "Create option “{name}”": "إنشاء الخيار «{name}»",
+    "Composite primary values must be unique.": "يجب أن تكون قيم المفتاح الأساسي المركب فريدة."
   }
 }

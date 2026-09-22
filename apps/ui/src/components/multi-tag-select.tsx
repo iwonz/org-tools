@@ -25,6 +25,7 @@ export type MultiTagSelectOption<Id extends number | string> = {
 export function MultiTagSelect<Id extends number | string>({
   ariaLabel,
   className,
+  createOptionLabel,
   emptyState,
   onCreateOption,
   onChange,
@@ -34,6 +35,7 @@ export function MultiTagSelect<Id extends number | string>({
 }: {
   ariaLabel: string;
   className?: string;
+  createOptionLabel?: (label: string) => string;
   emptyState?: string;
   onCreateOption?: (label: string) => void;
   onChange: (selectedIds: Id[]) => void;
@@ -158,7 +160,8 @@ export function MultiTagSelect<Id extends number | string>({
               variant="secondary"
             >
               <HiOutlinePlus />
-              {t("Create tag “{name}”", { name: query.trim() })}
+              {createOptionLabel?.(query.trim()) ??
+                t("Create tag “{name}”", { name: query.trim() })}
             </Button>
           )}
           <div className="max-h-64 overflow-auto rounded-md border bg-background">

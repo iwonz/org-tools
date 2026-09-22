@@ -1,6 +1,10 @@
 import type {
+  CustomEmployeeCompositeField,
+  CustomEmployeeCompositeRecord,
+  CustomEmployeeCompositeSubfield,
   CustomEmployeeFieldDefinition,
   CustomEmployeeFieldValue,
+  CustomEmployeeScalarValue,
   CustomEmployeeValueField,
   Employee,
   EmployeeFieldId,
@@ -60,8 +64,22 @@ export type CustomEmployeeFieldValidationIssue =
   | "duplicate-name"
   | "invalid-key"
   | "missing-name"
+  | "composite-invalid"
+  | "option-mode-invalid"
   | "option-required"
   | "template-cycle";
+
+const validateOptions = (options: readonly { id: string; label: string }[]) => {
+  const ids = new Set<string>();
+  const labels = new Set<string>();
+  for (const option of options) {
+    const label = normalizeDefinitionIdentity(option.label);
+    if (!label || ids.has(option.id) || labels.has(label)) return false;
+    ids.add(option.id);
+    labels.add(label);
+  }
+  return true;
+};
 
 export const validateCustomEmployeeFieldDefinitions = (
   definitions: readonly CustomEmployeeFieldDefinition[],
@@ -81,13 +99,36 @@ export const validateCustomEmployeeFieldDefinitions = (
     keys.add(normalizedKey);
     definitionByKey.set(normalizedKey, definition);
 
-    if (definition.kind === "value" && definition.valueType === "option") {
-      const optionLabels = new Set<string>();
-      for (const option of definition.options) {
-        const label = normalizeDefinitionIdentity(option.label);
-        if (!label || optionLabels.has(label)) return "option-required";
-        optionLabels.add(label);
+    if (definition.kind === "value") {
+      if (
+        (definition.valueType !== "option" &&
+          (definition.options.length > 0 ||
+            definition.multiple ||
+            definition.allowCustomOptions)) ||
+        (!definition.multiple && definition.allowCustomOptions)
+      ) {
+        return "option-mode-invalid";
       }
+      if (!validateOptions(definition.options)) return "option-required";
+    }
+    if (definition.kind === "composite") {
+      const fieldIds = new Set<string>();
+      const fieldNames = new Set<string>();
+      if (definition.fields.length === 0) return "composite-invalid";
+      for (const field of definition.fields) {
+        const fieldName = normalizeDefinitionIdentity(field.name);
+        if (!fieldName || fieldIds.has(field.id) || fieldNames.has(fieldName)) {
+          return "composite-invalid";
+        }
+        if (field.valueType !== "option" && field.options.length > 0) {
+          return "composite-invalid";
+        }
+        if (!validateOptions(field.options)) return "option-required";
+        fieldIds.add(field.id);
+        fieldNames.add(fieldName);
+      }
+      const primary = definition.fields.find((field) => field.id === definition.primaryFieldId);
+      if (!primary?.required) return "composite-invalid";
     }
   }
 
@@ -212,13 +253,199 @@ export const md5Hex = (input: string): string => {
     .join("");
 };
 
+export const isCanonicalCustomEmployeeDate = (value: string) => {
+  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/u.exec(value);
+  if (!match) return false;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+};
+
+const isEmptyCustomValue = (value: unknown) =>
+  value === undefined || value === null || (typeof value === "string" && value.trim() === "");
+
+const normalizeScalarValue = (
+  definition:
+    | Pick<CustomEmployeeValueField, "options" | "valueType">
+    | CustomEmployeeCompositeSubfield,
+  value: unknown,
+): CustomEmployeeScalarValue | undefined => {
+  if (isEmptyCustomValue(value)) return undefined;
+  if (definition.valueType === "text" && typeof value === "string") return value.trim();
+  if (definition.valueType === "number" && typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (definition.valueType === "boolean" && typeof value === "boolean") return value;
+  if (
+    definition.valueType === "date" &&
+    typeof value === "string" &&
+    isCanonicalCustomEmployeeDate(value)
+  ) {
+    return value;
+  }
+  if (
+    definition.valueType === "option" &&
+    typeof value === "string" &&
+    definition.options.some((option) => option.id === value)
+  ) {
+    return value;
+  }
+  throw new Error("Custom Employee field value is invalid.");
+};
+
+const primaryValueIdentity = (
+  field: CustomEmployeeCompositeSubfield,
+  value: CustomEmployeeScalarValue,
+) => {
+  if (field.valueType === "option") {
+    const label = field.options.find((option) => option.id === value)?.label ?? "";
+    return normalizeDefinitionIdentity(label);
+  }
+  return typeof value === "string" ? normalizeDefinitionIdentity(value) : String(value);
+};
+
+export const normalizeCustomEmployeeFieldValue = (
+  definition: Exclude<CustomEmployeeFieldDefinition, { kind: "template" }>,
+  value: unknown,
+): CustomEmployeeFieldValue | undefined => {
+  if (definition.kind === "value") {
+    if (definition.multiple) {
+      if (value === undefined || value === null) {
+        if (definition.required) throw new Error("Complete every required custom field.");
+        return undefined;
+      }
+      if (!Array.isArray(value)) throw new Error("Custom Employee field value is invalid.");
+      const selected = value.map((item) => normalizeScalarValue(definition, item));
+      if (selected.some((item) => typeof item !== "string")) {
+        throw new Error("Custom Employee field value is invalid.");
+      }
+      const unique = [...new Set(selected as string[])];
+      if (unique.length !== selected.length)
+        throw new Error("Custom Employee field value is invalid.");
+      if (definition.required && unique.length === 0) {
+        throw new Error("Complete every required custom field.");
+      }
+      return unique.length > 0 ? unique : undefined;
+    }
+    const normalized = normalizeScalarValue(definition, value);
+    if (definition.required && normalized === undefined) {
+      throw new Error("Complete every required custom field.");
+    }
+    return normalized;
+  }
+
+  if (value === undefined || value === null) {
+    if (definition.required) throw new Error("Complete every required custom field.");
+    return undefined;
+  }
+  if (!Array.isArray(value)) throw new Error("Custom Employee field value is invalid.");
+  if (definition.required && value.length === 0) {
+    throw new Error("Complete every required custom field.");
+  }
+  const primary = definition.fields.find((field) => field.id === definition.primaryFieldId);
+  if (!primary) throw new Error("Custom Employee field value is invalid.");
+  const primaryValues = new Set<string>();
+  const records: CustomEmployeeCompositeRecord[] = [];
+  for (const rawRecord of value) {
+    if (typeof rawRecord !== "object" || rawRecord === null || Array.isArray(rawRecord)) {
+      throw new Error("Custom Employee field value is invalid.");
+    }
+    const unknownKey = Object.keys(rawRecord).find(
+      (fieldId) => !definition.fields.some((field) => field.id === fieldId),
+    );
+    if (unknownKey) throw new Error("Custom Employee field value is invalid.");
+    const record: CustomEmployeeCompositeRecord = {};
+    for (const field of definition.fields) {
+      const normalized = normalizeScalarValue(
+        field,
+        (rawRecord as Record<string, unknown>)[field.id],
+      );
+      if (field.required && normalized === undefined) {
+        throw new Error("Complete every required custom field.");
+      }
+      if (normalized !== undefined) record[field.id] = normalized;
+    }
+    const primaryValue = record[primary.id];
+    if (primaryValue === undefined || primaryValue === null) {
+      throw new Error("Complete every required custom field.");
+    }
+    const identity = primaryValueIdentity(primary, primaryValue);
+    if (primaryValues.has(identity)) throw new Error("Composite primary values must be unique.");
+    primaryValues.add(identity);
+    records.push(record);
+  }
+  return records.length > 0 ? records : undefined;
+};
+
+const resolveOptionValue = (
+  definition:
+    | Pick<CustomEmployeeValueField, "options" | "valueType">
+    | CustomEmployeeCompositeSubfield,
+  value: CustomEmployeeScalarValue | undefined,
+) => {
+  if (value === undefined || value === null) return null;
+  if (definition.valueType !== "option") return value;
+  return definition.options.find((option) => option.id === value)?.label ?? null;
+};
+
 const getValueFieldOutput = (
   definition: CustomEmployeeValueField,
   value: CustomEmployeeFieldValue | undefined,
 ) => {
   if (value === undefined || value === null) return null;
-  if (definition.valueType !== "option") return value;
-  return definition.options.find((option) => option.id === value)?.label ?? null;
+  if (definition.multiple) {
+    if (!Array.isArray(value)) return null;
+    return value.flatMap((optionId) => {
+      if (typeof optionId !== "string") return [];
+      const label = definition.options.find((option) => option.id === optionId)?.label;
+      return label ? [label] : [];
+    });
+  }
+  return resolveOptionValue(definition, value as CustomEmployeeScalarValue);
+};
+
+const getCompositeFieldOutput = (
+  definition: CustomEmployeeCompositeField,
+  value: CustomEmployeeFieldValue | undefined,
+) => {
+  if (!Array.isArray(value)) return null;
+  return value.flatMap((record) => {
+    if (typeof record !== "object" || record === null || Array.isArray(record)) return [];
+    return [
+      Object.fromEntries(
+        definition.fields.map((field) => [field.name, resolveOptionValue(field, record[field.id])]),
+      ),
+    ];
+  });
+};
+
+export const getCustomEmployeeFieldFilterValues = (
+  definition: CustomEmployeeFieldDefinition,
+  value: CustomEmployeeFieldValue | undefined,
+): string[] => {
+  if (definition.kind === "template") {
+    return isEmptyCustomValue(value) ? [] : [String(value)];
+  }
+  if (definition.kind === "value") {
+    const output = getValueFieldOutput(definition, value);
+    return Array.isArray(output)
+      ? output.map(String)
+      : isEmptyCustomValue(output)
+        ? []
+        : [String(output)];
+  }
+  if (!Array.isArray(value)) return [];
+  const primary = definition.fields.find((field) => field.id === definition.primaryFieldId);
+  if (!primary) return [];
+  return value.flatMap((record) => {
+    if (typeof record !== "object" || record === null || Array.isArray(record)) return [];
+    const resolved = resolveOptionValue(primary, record[primary.id]);
+    return isEmptyCustomValue(resolved) ? [] : [String(resolved)];
+  });
 };
 
 const getBuiltInValue = (employee: Employee, key: string): unknown => {
@@ -268,6 +495,8 @@ export const evaluateCustomEmployeeFields = (
     let value: CustomEmployeeFieldValue;
     if (definition.kind === "value") {
       value = getValueFieldOutput(definition, employee.customFieldValues[definition.id]);
+    } else if (definition.kind === "composite") {
+      value = getCompositeFieldOutput(definition, employee.customFieldValues[definition.id]);
     } else {
       const rendered = renderTemplateFormat({
         resolveField: (key) => {

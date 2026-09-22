@@ -39,11 +39,21 @@ export type EmployeeTag = {
 
 export type CustomEmployeeFieldHash = "md5" | "none" | "sha256";
 export type CustomEmployeeValueType = "boolean" | "date" | "number" | "option" | "text";
-export type CustomEmployeeFieldValue = boolean | number | string | null;
+export type CustomEmployeeScalarValue = boolean | number | string | null;
+export type CustomEmployeeCompositeRecord = Record<EmployeeFieldId, CustomEmployeeScalarValue>;
+export type CustomEmployeeFieldValue =
+  | CustomEmployeeCompositeRecord[]
+  | CustomEmployeeScalarValue
+  | string[];
 
 export type CustomEmployeeFieldOption = {
   id: EmployeeFieldOptionId;
   label: string;
+};
+
+export type CustomEmployeeOptionDraft = {
+  fieldId: EmployeeFieldId;
+  option: CustomEmployeeFieldOption;
 };
 
 type CustomEmployeeFieldBase = {
@@ -59,13 +69,33 @@ export type CustomEmployeeTemplateField = CustomEmployeeFieldBase & {
 };
 
 export type CustomEmployeeValueField = CustomEmployeeFieldBase & {
+  allowCustomOptions: boolean;
   kind: "value";
+  multiple: boolean;
   options: CustomEmployeeFieldOption[];
   required: boolean;
   valueType: CustomEmployeeValueType;
 };
 
-export type CustomEmployeeFieldDefinition = CustomEmployeeTemplateField | CustomEmployeeValueField;
+export type CustomEmployeeCompositeSubfield = {
+  id: EmployeeFieldId;
+  name: string;
+  options: CustomEmployeeFieldOption[];
+  required: boolean;
+  valueType: CustomEmployeeValueType;
+};
+
+export type CustomEmployeeCompositeField = CustomEmployeeFieldBase & {
+  fields: CustomEmployeeCompositeSubfield[];
+  kind: "composite";
+  primaryFieldId: EmployeeFieldId;
+  required: boolean;
+};
+
+export type CustomEmployeeFieldDefinition =
+  | CustomEmployeeCompositeField
+  | CustomEmployeeTemplateField
+  | CustomEmployeeValueField;
 
 /** Generic fields shared by organization Employees and transfer records. */
 export type EditableEmployeeFields = {
