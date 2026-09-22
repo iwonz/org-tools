@@ -2,6 +2,7 @@ import type { CustomEmployeeFieldDefinition, EditableEmployeeFields } from "@org
 import { describe, expect, test } from "vitest";
 
 import { isUuid } from "@/lib/employee-data";
+import { DEFAULT_EMPLOYEE_DISPLAY_FORMATS } from "@/lib/employee-display-defaults";
 import { isEmployeeId } from "@/lib/employee-id";
 import { createEmptyEmployeeSearchFilters } from "@/lib/employee-search";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
@@ -67,6 +68,7 @@ describe("OrgToolsState", () => {
     expect(store.activeTab).toBe("orgEditor");
     expect(store.units?.roots).toEqual([]);
     const organization = store.createOrgToolsState().organization;
+    expect(organization.employeeDisplayFormats).toEqual(DEFAULT_EMPLOYEE_DISPLAY_FORMATS);
     expect(organization.employeeFieldDefinitions).toEqual([]);
     expect(organization.employees).toEqual([]);
     expect(organization.tags).toEqual([]);
@@ -76,6 +78,37 @@ describe("OrgToolsState", () => {
       name: null,
       structure: { canvasElements: [], layoutMode: "topDown", units: [] },
     });
+  });
+
+  test("requires and round-trips exact Employee display formats", () => {
+    const state = createBlankOrgToolsState();
+    state.organization.employeeDisplayFormats = {
+      editor: "{fullName}\n{email}",
+      editorExport: "{fullName}",
+      employees: "{email}",
+      units: "{position}",
+    };
+    expect(parseOrgToolsState(state).organization.employeeDisplayFormats).toEqual(
+      state.organization.employeeDisplayFormats,
+    );
+
+    const missing = structuredClone(state) as unknown as {
+      organization: Record<string, unknown>;
+    };
+    delete missing.organization.employeeDisplayFormats;
+    expect(() => parseOrgToolsState(missing)).toThrow("invalid top-level structure");
+
+    const extra = structuredClone(state) as unknown as {
+      organization: { employeeDisplayFormats: Record<string, unknown> };
+    };
+    extra.organization.employeeDisplayFormats.legacy = "{fullName}";
+    expect(() => parseOrgToolsState(extra)).toThrow("invalid top-level structure");
+
+    const invalid = structuredClone(state) as unknown as {
+      organization: { employeeDisplayFormats: Record<string, unknown> };
+    };
+    invalid.organization.employeeDisplayFormats.editor = null;
+    expect(() => parseOrgToolsState(invalid)).toThrow("invalid top-level structure");
   });
 
   test("round-trips exact canvas elements and rejects missing, unsafe, or cyclic shapes", () => {

@@ -58,7 +58,14 @@ control.
   model** defines stored Value fields, repeatable Composite fields, or derived Template fields with optional MD5/SHA-256 output.
   Option values can allow multiple selections and, when configured, new shared choices created while editing an Employee.
   Composite fields contain ordered typed subfields, exactly one required primary key that is unique within each Employee,
-  and zero or more records; every populated Composite date appears in Calendar. Advanced values remain absent from Employee cards and Editor PNG until a separate presentation is configured;
+  and zero or more records; every populated Composite date appears in Calendar. **Employee model**
+  keeps these definitions on **Model** and adds **Display**, where four saved formats control cards
+  in Employees, Units, Editor, and Editor image output. Each format supports `@` suggestions,
+  `{token}` fields, and conditions. It can use built-in Employee and Unit fields, Tags, or any custom
+  field. Every nonempty result line is shown in order to the right of the avatar; the first is the
+  primary line and the rest are secondary lines. Empty formats are valid. Changes remain a local
+  draft until **Save** commits all four together. Cards outside those four named contexts use the
+  Employees format;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
   deletion. Its flat rows expose Eye, Color, Edit, and Delete: Eye opens current full Employee cards,
   Edit opens a rename-only modal, and Color opens the picker directly. The picker keeps a full custom
@@ -114,8 +121,11 @@ control.
   the boss. Turning the cloud off removes the footer and its height from both Editor and PNG while
   retaining Employee Tags. **Distribution mode** settings choose **Distributed** and **Not
   distributed** colors through the shared palette, exact input, and opacity draft. Green and amber
-  are the defaults; the distributed color also controls placement lines and endpoint markers. Employee names
-  keep the normal theme text color for both distribution statuses, including selected rows. Settings
+  are the defaults; the distributed color also controls placement lines and endpoint markers.
+  Employee display lines keep the normal theme text color for both distribution statuses,
+  including selected rows. The Editor row height grows with the saved line count and shares its
+  clipping and geometry with PNG. Each image dialog starts from the Editor-export format; edits in
+  the dialog are temporary and do not update the Employee model. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
   Manual Unit context menus also provide **Add open position**. An open position is a View-local

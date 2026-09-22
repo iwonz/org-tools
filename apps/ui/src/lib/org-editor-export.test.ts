@@ -102,6 +102,9 @@ describe("Org Editor image export", () => {
     expect(createDefaultOrgEditorImageExportSettings("Localized manager").imageBossLabel).toBe(
       "Localized manager",
     );
+    expect(
+      createDefaultOrgEditorImageExportSettings("Localized manager", "{email}").employeeFormat,
+    ).toBe("{email}");
     expect(ORG_EDITOR_EXPORT_GRADIENTS.map(({ label }) => label)).toEqual([
       "Air",
       "Mint",

@@ -22,9 +22,18 @@ test("opens at the root and writes organization plus durable UI automatically", 
   await expect(page.locator('[data-demo-id="project-save"]')).toHaveCount(0);
 
   await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  const modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  await modelDialog
+    .locator("#employee-display-employees-format")
+    .fill("{fullName}\nPersisted display");
+  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
+  await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Persisted display");
 
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
   await page.waitForTimeout(500);
@@ -84,6 +93,18 @@ test("synchronizes state and durable UI between tabs without conflicts", async (
   await expect(
     page.locator('[data-demo-id="employees-search"]').getByRole("searchbox"),
   ).toHaveValue("Avery");
+
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  const modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  await modelDialog
+    .locator("#employee-display-employees-format")
+    .fill("{fullName}\nSynchronized display");
+  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
+  await expect(secondPage.locator('[data-demo-id="employees-list"]')).toContainText(
+    "Synchronized display",
+  );
 });
 
 test("validates scoped state writes and rejects cross-origin mutations", async ({ page }) => {

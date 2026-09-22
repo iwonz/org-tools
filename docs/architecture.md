@@ -17,6 +17,7 @@ The public JSON value has exactly two top-level properties:
 ```ts
 type OrgToolsState = {
   organization: {
+    employeeDisplayFormats: EmployeeDisplayFormats;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
     tags: EmployeeTagDefinition[];
@@ -35,6 +36,15 @@ live per View in the bounded
 `ui.editor` projection, while Data Download persists its selected source View. Ordinary interface
 writes therefore do not serialize Employees or structural documents. Open surfaces, notifications,
 search suggestions, and unfinished forms are transient.
+
+The required `employeeDisplayFormats` object stores one template for Employees, Units, Editor DOM,
+and Editor image output. The shared renderer resolves built-in Unit and Employee fields plus custom
+fields, evaluates the existing token and conditional grammar, joins arrays with `; `, and removes
+empty trimmed lines. List and fallback contexts aggregate system-View assignments in structural
+order; one Unit or Editor row resolves only that Unit. A custom-field key rename rewrites all four
+templates in the same action, and a referenced custom field cannot be deleted. The Editor DOM and
+PNG renderer share the resulting line count, row heights, offsets, text width, Unit bounds, hit
+testing, and anchors. Image dialogs clone the saved Editor-export format into transient settings.
 
 Each View owns required `structure.settings`: `groupByTag` and `showTagCloud` default to true;
 `distributedColor` and `undistributedColor` default to green and amber and use non-null named or

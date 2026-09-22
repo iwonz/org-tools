@@ -10,6 +10,7 @@ import {
 } from "@/lib/export-format";
 import {
   renderTemplateFormat,
+  renderTemplateFormatParts,
   type TemplateFieldValue,
   templateReferencesField,
 } from "@/lib/template-format";
@@ -41,6 +42,25 @@ describe("renderTemplateFormat", () => {
         isBoss: "Unit Lead",
       }),
     ).toBe("Ada Lovelace · Unit Lead");
+  });
+
+  test("retains field identity for interactive formatted text", () => {
+    const values = { email: "ada@example.test", fullName: "Ada Lovelace", isBoss: "Manager" };
+    expect(
+      renderTemplateFormatParts({
+        resolveField: (fieldName): TemplateFieldValue =>
+          Object.hasOwn(values, fieldName)
+            ? { known: true, value: values[fieldName as keyof typeof values] }
+            : { known: false },
+        template: "{fullName} · {email} {isBoss ? '· {isBoss}' : ''}",
+      }),
+    ).toEqual([
+      { fieldName: "fullName", text: "Ada Lovelace" },
+      { fieldName: null, text: " · " },
+      { fieldName: "email", text: "ada@example.test" },
+      { fieldName: null, text: " · " },
+      { fieldName: "isBoss", text: "Manager" },
+    ]);
   });
 
   test("uses ternary else branch for false, empty, null, undefined and empty arrays", () => {

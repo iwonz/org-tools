@@ -1347,6 +1347,12 @@ test("atomically imports, directly exports, automatically writes, and reloads st
   const exportedState = JSON.parse(await readFile(exportedPath ?? "", "utf8")) as OrgToolsState;
   expect(Object.keys(exportedState).sort()).toEqual(["organization", "ui"]);
   expect(exportedState.organization.employees).toHaveLength(4);
+  expect(exportedState.organization.employeeDisplayFormats).toEqual({
+    editor: "{fullName}\n{tags}",
+    editorExport: "{fullName} {isBoss ? '· {isBoss}' : ''}\n{tags}",
+    employees: "{fullName}\n{username}\n{email}\n{position}\n{unitName}\n{tags}",
+    units: "{fullName}\n{username}\n{email}\n{position}\n{unitName}\n{tags}",
+  });
 
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -1365,6 +1371,11 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
   const obsoleteBirthdayEmployee = obsoleteBirthdayState.organization.employees[0];
   if (!obsoleteBirthdayEmployee) throw new Error("Synthetic Employee is unavailable.");
   obsoleteBirthdayEmployee.birthday = "03-14";
+  const obsoleteDisplayState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as {
+    organization: Partial<OrgToolsState["organization"]>;
+    ui: OrgToolsState["ui"];
+  };
+  delete obsoleteDisplayState.organization.employeeDisplayFormats;
 
   const rejectedFiles = [
     {
@@ -1385,6 +1396,14 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
         buffer: Buffer.from(JSON.stringify({ employees: [{ name: "Ordinary row" }] })),
         mimeType: "application/json",
         name: "generic.json",
+      },
+    },
+    {
+      error: "Only a complete Org Tools state can be imported.",
+      file: {
+        buffer: Buffer.from(JSON.stringify(obsoleteDisplayState)),
+        mimeType: "application/json",
+        name: "obsolete-display-state.json",
       },
     },
     {
@@ -1609,6 +1628,25 @@ test("creates extensible multi-option and Composite Employee fields", async ({ p
   await modelDialog.getByRole("button", { name: "Add field", exact: true }).click();
   let fieldEditor = modelDialog.locator('[data-demo-id="employee-field-editor"]');
   await fieldEditor.getByRole("tab", { name: "Value", exact: true }).click();
+  const requiredRow = fieldEditor
+    .getByRole("switch", { name: "Required", exact: true })
+    .locator("..");
+  expect(
+    await requiredRow.evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return {
+        backgroundColor: style.backgroundColor,
+        borderRadius: style.borderRadius,
+        borderWidth: style.borderWidth,
+        padding: style.padding,
+      };
+    }),
+  ).toEqual({
+    backgroundColor: "rgba(0, 0, 0, 0)",
+    borderRadius: "0px",
+    borderWidth: "0px",
+    padding: "0px",
+  });
   await fieldEditor.getByLabel("Name", { exact: true }).fill("Skills");
   await fieldEditor.getByLabel("Token key", { exact: true }).fill("skills");
   await fieldEditor.getByRole("combobox").first().click();
@@ -1650,6 +1688,161 @@ test("creates extensible multi-option and Composite Employee fields", async ({ p
   await employeeDialog.getByRole("button", { name: "Skills", exact: true }).click();
   await expect(employeeDialog.getByText("Leadership", { exact: true })).toBeVisible();
   await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await assertLocalRequests();
+});
+
+test("edits contextual Employee card formats with live previews and local image overrides", async ({
+  page,
+}) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  let modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  for (const key of ["employees", "units", "editor", "editorExport"]) {
+    await expect(modelDialog.locator(`[data-demo-id="employee-display-${key}"]`)).toBeVisible();
+    await expect(
+      modelDialog.locator(`[data-demo-id="employee-display-${key}-preview"] article`),
+    ).toHaveAccessibleName(/\S/u);
+  }
+
+  const employeesFormat = modelDialog.locator("#employee-display-employees-format");
+  await employeesFormat.fill("{fullName}\nDraft only");
+  await expect(
+    modelDialog.locator('[data-demo-id="employee-display-employees-preview"]'),
+  ).toContainText("Draft only");
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
+
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  await expect(modelDialog.locator("#employee-display-employees-format")).not.toHaveValue(
+    /Draft only/u,
+  );
+
+  await modelDialog.locator("#employee-display-employees-format").fill("@dep");
+  const suggestions = modelDialog.locator('[data-demo-id="template-token-suggestions"]');
+  await expect(suggestions).toContainText("{department}");
+  await modelDialog.locator("#employee-display-employees-format").press("Enter");
+  await expect(modelDialog.locator("#employee-display-employees-format")).toHaveValue(
+    "{department}",
+  );
+
+  await modelDialog
+    .locator("#employee-display-employees-format")
+    .fill("{fullName} · {email}\nEmployee card");
+  await modelDialog
+    .locator("#employee-display-units-format")
+    .fill("{fullName}\n{position} · {unitName}\nUnit card");
+  await modelDialog
+    .locator("#employee-display-editor-format")
+    .fill("{fullName}\n{tags}\nEditor card");
+  const imageFormat = "{fullName} {isBoss ? '· {isBoss}' : ''}\n{department}\nExport card";
+  await modelDialog.locator("#employee-display-editorExport-format").fill(imageFormat);
+  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
+
+  const employeeCard = page.locator('[data-demo-id="employees-list"] article').first();
+  await expect(employeeCard).toContainText("Employee card");
+  await expect(employeeCard).toHaveAccessibleName(/\S/u);
+  await expect(
+    employeeCard.getByRole("link", { name: "Avery Stone", exact: true }),
+  ).toHaveAttribute("href", "https://example.test/profiles/avery-stone");
+  await expect(
+    employeeCard.getByRole("link", { name: "avery.stone@example.test", exact: true }),
+  ).toHaveAttribute("href", /^mailto:avery\.stone%40example\.test$/u);
+  await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("Avery");
+  await expect(employeeCard.locator("mark").first()).toHaveText("Avery");
+  await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("");
+  await page.getByRole("tab", { name: "Units", exact: true }).click();
+  await page
+    .locator('[data-demo-id="unit-tree-item"]')
+    .filter({ hasText: "Product" })
+    .first()
+    .click();
+  await expect(page.locator('[data-demo-id="unit-employee-card"]').first()).toContainText(
+    "Unit card",
+  );
+  await expect(
+    page.locator('[data-demo-id="unit-employee-card"]').first().getByRole("button", {
+      name: "Product",
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  const editorRow = page.locator("[data-org-editor-employee-row]").first();
+  await expect(editorRow).toContainText("Editor card");
+  expect(
+    await editorRow.evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeGreaterThan(48);
+  await page.evaluate(() => {
+    const paintedText: string[] = [];
+    const originalFillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+      paintedText.push(String(text));
+      if (maxWidth === undefined) return originalFillText.call(this, text, x, y);
+      return originalFillText.call(this, text, x, y, maxWidth);
+    };
+    (
+      window as typeof window & { __employeeDisplayPaintedText?: string[] }
+    ).__employeeDisplayPaintedText = paintedText;
+  });
+  await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
+  const imageDialog = page.getByRole("dialog", { name: "Export View image", exact: true });
+  await expect(imageDialog.getByLabel("Employee format", { exact: true })).toHaveValue(imageFormat);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { __employeeDisplayPaintedText?: string[] })
+            .__employeeDisplayPaintedText ?? [],
+      ),
+    )
+    .toEqual(expect.arrayContaining(["Product", "Export card"]));
+  await imageDialog.getByLabel("Employee format", { exact: true }).fill("{fullName}\nLocal image");
+  await expect(imageDialog.locator('[data-demo-id="org-editor-view-image-preview"]')).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          (window as typeof window & { __employeeDisplayPaintedText?: string[] })
+            .__employeeDisplayPaintedText ?? []
+        ).includes("Local image"),
+      ),
+    )
+    .toBe(true);
+  await imageDialog.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page
+    .locator('fieldset[aria-label="Canvas Unit Product"]')
+    .click({ button: "right", position: { x: 20, y: 20 } });
+  await page.locator('[data-demo-id="org-editor-export-action"]').click();
+  const scopedImageDialog = page.getByRole("dialog", { name: "Export", exact: true });
+  await expect(scopedImageDialog.getByLabel("Format", { exact: true })).toHaveValue(imageFormat);
+  await scopedImageDialog.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await page.locator('[data-demo-id="employee-tags-button"]').click();
+  const tagDialog = page.getByRole("dialog", { name: "Tags", exact: true });
+  await tagDialog.locator('[data-demo-id="tag-catalog-view-employees"]').first().click();
+  await expect(page.locator('[data-demo-id="tag-employees-list"]')).toContainText("Employee card");
+  await page
+    .getByRole("dialog", { name: /Employees with Tag/u })
+    .getByRole("button", { name: "Close", exact: true })
+    .first()
+    .click();
+  await tagDialog.getByRole("button", { name: "Close", exact: true }).first().click();
+
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  await expect(modelDialog.locator("#employee-display-editorExport-format")).toHaveValue(
+    imageFormat,
+  );
   await assertLocalRequests();
 });
 
@@ -2793,18 +2986,10 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
       (window as typeof window & { __orgToolsExportPaintedText?: string[] })
         .__orgToolsExportPaintedText ?? [],
   );
-  const completeLocalizedTag = `${LONG_EXPORT_TAG} · Sep 1, 2026`;
-  expect(
-    paintedText.some((_, startIndex) => {
-      let candidate = "";
-      for (let index = startIndex; index < paintedText.length; index += 1) {
-        candidate += paintedText[index];
-        if (candidate === completeLocalizedTag) return true;
-        if (!completeLocalizedTag.startsWith(candidate)) return false;
-      }
-      return false;
-    }),
-  ).toBe(true);
+  expect(paintedText.some((text) => text.startsWith("Remote; Engineering; Accessibility"))).toBe(
+    true,
+  );
+  expect(paintedText.some((text) => text.includes("Sep 1, 2026"))).toBe(false);
   expect(paintedText).not.toContain("Live");
   expect(paintedText).not.toContain("Static");
   expect(paintedText).not.toContain("Dynamic");
@@ -3741,14 +3926,13 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
 
-  const coloredChip = page.locator('[data-tag-color-surface][data-tag-color="blue"]').first();
-  const neutralChip = page.locator('[data-tag-color-surface][data-tag-color="none"]').first();
+  await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
+  const tagPopover = page.locator('[data-demo-id="employees-tag-picker-popover"]');
+  const coloredChip = tagPopover.locator('[data-tag-color-surface][data-tag-color="blue"]').first();
+  const neutralChip = tagPopover.locator('[data-tag-color-surface][data-tag-color="none"]').first();
   await expectFilledTagSurface(coloredChip);
   await expectFilledTagSurface(neutralChip);
   expect(await getBackgroundColor(coloredChip)).not.toBe(await getBackgroundColor(neutralChip));
-
-  await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
-  const tagPopover = page.locator('[data-demo-id="employees-tag-picker-popover"]');
   const tealOption = tagPopover.locator('[data-tag-color-surface][data-tag-color="teal"]');
   await expectFilledTagSurface(tealOption);
   await tealOption.hover();
@@ -3947,8 +4131,10 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await catalog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");
+  await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
   await expectFilledTagSurface(coloredChip);
   expect(await getBackgroundColor(coloredChip)).not.toBe(await getBackgroundColor(neutralChip));
+  await page.keyboard.press("Escape");
 
   await page.getByRole("tab", { name: "Calendar", exact: true }).click();
   const calendarTag = page.locator('[data-demo-id="calendar-dated-tag-group"][data-color="amber"]');

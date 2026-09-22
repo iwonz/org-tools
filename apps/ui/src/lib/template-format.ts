@@ -9,6 +9,11 @@ export type TemplateFieldValue =
 
 export type TemplateFieldResolver = (fieldName: string) => TemplateFieldValue;
 
+export type TemplateFormatPart = {
+  fieldName: string | null;
+  text: string;
+};
+
 type TemplateExpression =
   | {
       fieldName: string;
@@ -175,7 +180,7 @@ const parseTemplateExpression = (rawExpression: string): TemplateExpression | nu
   };
 };
 
-export const renderTemplateFormat = ({
+export const renderTemplateFormatParts = ({
   formatValue = formatTemplateTextValue,
   maxDepth = MAX_TEMPLATE_DEPTH,
   resolveField,
@@ -186,24 +191,33 @@ export const renderTemplateFormat = ({
   resolveField: TemplateFieldResolver;
   template: string;
 }) => {
-  const render = (templatePart: string, depth: number): string => {
-    if (depth > maxDepth) return templatePart;
+  const append = (parts: TemplateFormatPart[], text: string, fieldName: string | null = null) => {
+    if (!text) return;
+    const previous = parts.at(-1);
+    if (previous?.fieldName === fieldName) {
+      previous.text += text;
+      return;
+    }
+    parts.push({ fieldName, text });
+  };
+  const render = (templatePart: string, depth: number): TemplateFormatPart[] => {
+    if (depth > maxDepth) return [{ fieldName: null, text: templatePart }];
 
-    let result = "";
+    const result: TemplateFormatPart[] = [];
     let cursor = 0;
 
     while (cursor < templatePart.length) {
       const openIndex = templatePart.indexOf("{", cursor);
       if (openIndex === -1) {
-        result += templatePart.slice(cursor);
+        append(result, templatePart.slice(cursor));
         break;
       }
 
-      result += templatePart.slice(cursor, openIndex);
+      append(result, templatePart.slice(cursor, openIndex));
 
       const closeIndex = findTemplateTokenEnd(templatePart, openIndex);
       if (closeIndex === -1) {
-        result += templatePart.slice(openIndex);
+        append(result, templatePart.slice(openIndex));
         break;
       }
 
@@ -211,29 +225,35 @@ export const renderTemplateFormat = ({
       const expression = parseTemplateExpression(templatePart.slice(openIndex + 1, closeIndex));
 
       if (!expression) {
-        result += rawToken;
+        append(result, rawToken);
         cursor = closeIndex + 1;
         continue;
       }
 
       if (expression.type === "field") {
         const resolvedField = resolveField(expression.fieldName);
-        result += resolvedField.known ? formatValue(resolvedField.value) : rawToken;
+        append(
+          result,
+          resolvedField.known ? formatValue(resolvedField.value) : rawToken,
+          resolvedField.known ? expression.fieldName : null,
+        );
         cursor = closeIndex + 1;
         continue;
       }
 
       const conditionValue = resolveField(expression.conditionFieldName);
       if (!conditionValue.known) {
-        result += rawToken;
+        append(result, rawToken);
         cursor = closeIndex + 1;
         continue;
       }
 
-      result += render(
+      for (const part of render(
         isTemplateTruthy(conditionValue.value) ? expression.thenTemplate : expression.elseTemplate,
         depth + 1,
-      );
+      )) {
+        append(result, part.text, part.fieldName);
+      }
       cursor = closeIndex + 1;
     }
 
@@ -242,6 +262,11 @@ export const renderTemplateFormat = ({
 
   return render(template, 0);
 };
+
+export const renderTemplateFormat = (options: Parameters<typeof renderTemplateFormatParts>[0]) =>
+  renderTemplateFormatParts(options)
+    .map((part) => part.text)
+    .join("");
 
 export const templateReferencesField = (template: string, fieldName: string) => {
   let cursor = 0;

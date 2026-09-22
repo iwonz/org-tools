@@ -213,9 +213,9 @@ export async function exerciseTagGrouping(page: Page) {
     .locator('[data-demo-id="employees-list"] article')
     .filter({ hasText: "Blair Example" });
   await expect(bothCard).toBeVisible();
-  const chips = bothCard.locator("[data-employee-tags-density] > span");
-  await expect(chips.nth(0)).toContainText("Priority Alpha");
-  await expect(chips.nth(1)).toContainText("Priority Zulu");
+  await expect(bothCard.locator("[data-employee-display-content]")).toContainText(
+    "Priority Alpha; Priority Zulu",
+  );
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect.poll(rowIds).toEqual(groupedOrder);
   await page.evaluate(() => {

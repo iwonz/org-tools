@@ -62,6 +62,7 @@ import {
   orgEditorTemplateUnitFields,
 } from "@/lib/org-editor-export";
 import { downloadBlob } from "@/lib/org-file";
+import { useOrgStore } from "@/stores/org-store-context";
 
 const sanitizeViewImageName = (name: string) =>
   name
@@ -99,13 +100,18 @@ export function OrgEditorViewImageExportDialog({
   viewSettings: OrgEditorViewSettings;
 }) {
   const t = useUiText();
+  const store = useOrgStore();
   const locale = useLocale();
   const countText = useCountText();
   const managerLabel = t("Manager");
   const previousManagerLabel = useRef(managerLabel);
   const [settings, setSettings] = useState(() =>
-    createDefaultOrgEditorImageExportSettings(managerLabel),
+    createDefaultOrgEditorImageExportSettings(
+      managerLabel,
+      store.employeeDisplayFormats.editorExport,
+    ),
   );
+  const previousImageOpenRef = useRef(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
@@ -113,16 +119,30 @@ export function OrgEditorViewImageExportDialog({
   const [status, setStatus] = useState<"copied" | "error" | "saved" | null>(null);
   const employeeFormatTokens = useMemo(
     () =>
-      [...exportEmployeeFields, ...orgEditorTemplateUnitFields]
-        .filter((field) => field.key !== "avatarBase64Url" && field.key !== "tags")
+      [
+        ...exportEmployeeFields,
+        ...orgEditorTemplateUnitFields,
+        ...store.employeeFieldDefinitions.map((field) => ({ key: field.key, label: field.name })),
+      ]
+        .filter((field) => field.key !== "avatarBase64Url")
         .map((field) => ({
           description: templateFormatTokenDescriptionKeys[field.key]
             ? t(templateFormatTokenDescriptionKeys[field.key] as UiTextKey)
             : field.label,
           key: field.key,
         })),
-    [t],
+    [store.employeeFieldDefinitions, t],
   );
+
+  useEffect(() => {
+    if (open && !previousImageOpenRef.current) {
+      setSettings((current) => ({
+        ...current,
+        employeeFormat: store.employeeDisplayFormats.editorExport,
+      }));
+    }
+    previousImageOpenRef.current = open;
+  }, [open, store.employeeDisplayFormats.editorExport]);
 
   useEffect(() => {
     if (previousManagerLabel.current === managerLabel) return;
@@ -151,6 +171,7 @@ export function OrgEditorViewImageExportDialog({
     (maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS) =>
       createOrgEditorImageExportResult({
         canvasElements,
+        customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
         distributionEnabledUnitIds,
         distributionUnitIdsByEmployeeId,
         employeeById,
@@ -171,6 +192,7 @@ export function OrgEditorViewImageExportDialog({
       }),
     [
       canvasElements,
+      store.employeeFieldDefinitions,
       distributionEnabledUnitIds,
       distributionUnitIdsByEmployeeId,
       employeeById,

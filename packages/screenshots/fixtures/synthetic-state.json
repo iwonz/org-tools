@@ -1,5 +1,11 @@
 {
   "organization": {
+    "employeeDisplayFormats": {
+      "editor": "{fullName}\n{tags}",
+      "editorExport": "{fullName} {isBoss ? '· {isBoss}' : ''}\n{tags}",
+      "employees": "{fullName}\n{username}\n{email}\n{position}\n{unitName}\n{tags}",
+      "units": "{fullName}\n{username}\n{email}\n{position}\n{unitName}\n{tags}"
+    },
     "employeeFieldDefinitions": [
       {
         "allowCustomOptions": false,

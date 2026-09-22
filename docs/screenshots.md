@@ -143,10 +143,10 @@ Compound matching.
 
 [![Employee model](screenshots/feature-employees-model.png)](screenshots/feature-employees-model.png)
 
-Inspect the built-in Employee, Unit, and Tag tokens together with configured custom Value and
-Template fields.
+Configure the four saved Employee-card formats and inspect their real contextual previews on the
+Display tab. The following Value and Template frames retain coverage of the Model tab.
 
-Capabilities: Built-in fields, Custom fields, Stable token keys, Value and Template kinds.
+Capabilities: Display formats, Token suggestions, Contextual previews, Atomic draft save.
 
 ### Custom Value field
 
@@ -657,8 +657,10 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   the no-event fallback runs once, a late event cannot duplicate that fallback, consecutive
   gestures remain independent, and image paste does not also paste the structural clipboard.
 - Confirm Employee model exposes accessible switches for Required, Multiple selection, and custom
-  options; Employee editing can commit a shared custom option and a dated Composite record without
-  adding either value to Employee cards or Editor PNG output.
+  options; Required rows have no field background, border, radius, or padding. Employee editing can
+  commit a shared custom option and a dated Composite record. Confirm the Display tab previews and
+  saves all four formats together, dismissal discards drafts, fallback cards use Employees, Editor
+  and both PNG dialogs use their assigned formats, and image-dialog edits remain local.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,
   effective density, and clamping copy while Copy/Save remain unchanged.

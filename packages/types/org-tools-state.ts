@@ -18,6 +18,13 @@ export type AppLocale = "ar" | "en" | "es" | "fr" | "ru" | "zh";
 export type UiTheme = "light" | "dark" | "system";
 export type UiActiveTab = "units" | "employees" | "orgEditor" | "export" | "analytics" | "calendar";
 
+export type EmployeeDisplayFormats = {
+  editor: string;
+  editorExport: string;
+  employees: string;
+  units: string;
+};
+
 export type OrgToolsEmployeeFilters = {
   birthday: { day: number; month: number; year: number } | null;
   customFields: EmployeeCustomFieldFilter[];
@@ -150,6 +157,7 @@ export type OrgToolsUiState = {
 
 export type OrgToolsState = {
   organization: {
+    employeeDisplayFormats: EmployeeDisplayFormats;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
     tags: EmployeeTagDefinition[];

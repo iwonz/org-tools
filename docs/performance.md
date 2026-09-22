@@ -35,6 +35,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   values by organization revision. Filter option discovery and output reuse the same cache.
   Multi-option filters reuse resolved label arrays, Composite filters reuse only indexed primary
   values, and Composite Calendar dates are flattened once during the same organization-index build.
+- Resolve each mounted Employee card from one saved contextual format and already indexed Unit
+  contexts. Format output is bounded by the persisted format and field values, drops empty lines,
+  and does not add catalog scans. Editor and PNG compute the same line-count height once per row and
+  feed it into the existing prefix-offset pass, so multiline cards preserve O(n) geometry work.
 - Cache derived structures by View document revision and global Employee/Tag/field references.
   Materialize only the system View, active Editor View, and selected Download View at once.
 - Build the active View's direct `EmployeeId → UnitId[]` distribution index only when materialized
@@ -114,8 +118,9 @@ measurement. DOM and PNG consume the same line rectangles and indivisible count 
 Analytics builds every count group, known birth-year index, and gender age cohort in one Employee
 pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys
 rather than detached Employee arrays. Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, a constant-size Tag
-indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same deterministic tag
-packing, variable row heights, and prefix geometry. Image export measures each included tag once
+indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same
+display-line heights and prefix geometry; open-position rows continue to use deterministic Tag
+packing. Image export measures each included open-position Tag once
 with the loaded output font, retains complete multi-line chip layouts, and builds one immutable
 render entry per included Unit before painting cards and connections without measuring mounted or
 virtualized DOM.

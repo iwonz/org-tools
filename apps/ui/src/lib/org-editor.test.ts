@@ -8,6 +8,8 @@ import {
   findOrgEditorEmployeeRowIndex,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
+  getOrgEditorEmployeeDisplayLineBaselines,
+  getOrgEditorEmployeeRowHeightForDisplayLines,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
   getOrgEditorEmployeeRowStackLayout,
@@ -68,6 +70,22 @@ describe("Org Editor adaptive grid", () => {
       expect(Math.abs(unit.x % ORG_EDITOR_GRID_SIZE)).toBe(0);
       expect(Math.abs(unit.y % ORG_EDITOR_GRID_SIZE)).toBe(0);
     }
+  });
+});
+
+describe("Org Editor Employee display geometry", () => {
+  test("uses the current minimum and expands deterministically for additional lines", () => {
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(0)).toBe(48);
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(2)).toBe(48);
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(3)).toBe(64);
+    expect(
+      getOrgEditorEmployeeDisplayLineBaselines({
+        employeeRowHeight: 64,
+        employeeRowOffset: 12,
+        lineCount: 3,
+        unitY: 100,
+      }),
+    ).toEqual([214, 230, 246]);
   });
 });
 

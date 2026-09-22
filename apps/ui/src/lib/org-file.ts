@@ -2,6 +2,7 @@ import type {
   AppLocale,
   CustomEmployeeFieldDefinition,
   CustomEmployeeFieldValue,
+  EmployeeDisplayFormats,
   EmployeeId,
   EmployeeLiveFilterRule,
   EmployeeTagAssignment,
@@ -52,6 +53,7 @@ import {
   isUuid,
   normalizeBirthday,
 } from "@/lib/employee-data";
+import { DEFAULT_EMPLOYEE_DISPLAY_FORMATS } from "@/lib/employee-display-defaults";
 import { createEmployeeIdentityKey, isEmployeeId } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
@@ -1886,7 +1888,24 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (
     !hasExactKeys(input, ["organization", "ui"]) ||
     !isRecord(input.organization) ||
-    !hasExactKeys(input.organization, ["employeeFieldDefinitions", "employees", "tags", "views"]) ||
+    !hasExactKeys(input.organization, [
+      "employeeDisplayFormats",
+      "employeeFieldDefinitions",
+      "employees",
+      "tags",
+      "views",
+    ]) ||
+    !isRecord(input.organization.employeeDisplayFormats) ||
+    !hasExactKeys(input.organization.employeeDisplayFormats, [
+      "editor",
+      "editorExport",
+      "employees",
+      "units",
+    ]) ||
+    !isString(input.organization.employeeDisplayFormats.editor) ||
+    !isString(input.organization.employeeDisplayFormats.editorExport) ||
+    !isString(input.organization.employeeDisplayFormats.employees) ||
+    !isString(input.organization.employeeDisplayFormats.units) ||
     !Array.isArray(input.organization.employeeFieldDefinitions) ||
     !Array.isArray(input.organization.employees) ||
     !Array.isArray(input.organization.tags) ||
@@ -1907,6 +1926,12 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (views.some((view) => !view)) throw new Error("State contains an invalid View structure.");
   const state: OrgToolsState = {
     organization: {
+      employeeDisplayFormats: {
+        editor: input.organization.employeeDisplayFormats.editor,
+        editorExport: input.organization.employeeDisplayFormats.editorExport,
+        employees: input.organization.employeeDisplayFormats.employees,
+        units: input.organization.employeeDisplayFormats.units,
+      } satisfies EmployeeDisplayFormats,
       employeeFieldDefinitions,
       employees: employees as OrganizationEmployee[],
       tags,
@@ -2005,6 +2030,7 @@ export const createBlankOrgToolsState = (
   const now = currentDate.toISOString();
   return {
     organization: {
+      employeeDisplayFormats: { ...DEFAULT_EMPLOYEE_DISPLAY_FORMATS },
       employeeFieldDefinitions: [],
       employees: [],
       tags: [],

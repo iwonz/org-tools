@@ -165,8 +165,12 @@ export function OrgEditorExportDialog({
   const [scope, setScope] = useState<OrgEditorExportScope>("subtree");
   const [activeTab, setActiveTab] = useState<OrgEditorExportTab>("image");
   const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() =>
-    createDefaultOrgEditorImageExportSettings(localizedManagerLabel),
+    createDefaultOrgEditorImageExportSettings(
+      localizedManagerLabel,
+      store.employeeDisplayFormats.editorExport,
+    ),
   );
+  const previousImageOpenRef = useRef(false);
   const previousLocalizedManagerLabelRef = useRef(localizedManagerLabel);
   const [templateFormat, setTemplateFormat] = useState(DEFAULT_TEMPLATE_FORMAT);
   const [removeEmptyTemplateLines, setRemoveEmptyTemplateLines] = useState(false);
@@ -229,12 +233,22 @@ export function OrgEditorExportDialog({
     [hasAvatarBase64UrlField],
   );
   const visibleImageEmployeeFields = useMemo(
-    () =>
-      visibleEmployeeFields.filter(
-        (field) => field.key !== "avatarBase64Url" && field.key !== "tags",
-      ),
-    [visibleEmployeeFields],
+    () => [
+      ...visibleEmployeeFields.filter((field) => field.key !== "avatarBase64Url"),
+      ...store.employeeFieldDefinitions.map((field) => ({ key: field.key, label: field.name })),
+    ],
+    [store.employeeFieldDefinitions, visibleEmployeeFields],
   );
+
+  useEffect(() => {
+    if (open && !previousImageOpenRef.current) {
+      setImageSettings((current) => ({
+        ...current,
+        employeeFormat: store.employeeDisplayFormats.editorExport,
+      }));
+    }
+    previousImageOpenRef.current = open;
+  }, [open, store.employeeDisplayFormats.editorExport]);
   const exportRows = useMemo(() => {
     if (!unit) return [];
 
@@ -348,6 +362,7 @@ export function OrgEditorExportDialog({
     setPreviewError(null);
     createOrgEditorImageExportResult({
       canvasElements,
+      customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
       distributionEnabledUnitIds,
       distributionUnitIdsByEmployeeId,
       viewSettings,
@@ -399,6 +414,7 @@ export function OrgEditorExportDialog({
     locale,
     open,
     scope,
+    store.employeeFieldDefinitions,
     tagOrder,
     tagDefinitions,
     viewSettings,
@@ -435,6 +451,7 @@ export function OrgEditorExportDialog({
 
     return createOrgEditorUnitImageBlob({
       canvasElements,
+      customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
       distributionEnabledUnitIds,
       distributionUnitIdsByEmployeeId,
       viewSettings,

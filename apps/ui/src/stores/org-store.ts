@@ -4,6 +4,7 @@ import type {
   CustomEmployeeFieldValue,
   CustomEmployeeOptionDraft,
   EditableEmployeeFields,
+  EmployeeDisplayFormats,
   EmployeeFieldId,
   EmployeeId,
   EmployeeTag,
@@ -35,6 +36,7 @@ import {
   createUuid,
   normalizeEditableEmployeeFields,
 } from "@/lib/employee-data";
+import { DEFAULT_EMPLOYEE_DISPLAY_FORMATS } from "@/lib/employee-display-defaults";
 import { createEmployeeIdentityKey } from "@/lib/employee-id";
 import type { EmployeeSearchFilters } from "@/lib/employee-search";
 import { type EmployeeTagUpdate, normalizeEmployeeTags } from "@/lib/employee-tags";
@@ -158,6 +160,7 @@ const cloneEmployeeFieldDefinition = (
         };
 
 export class OrgStore {
+  employeeDisplayFormats: EmployeeDisplayFormats = { ...DEFAULT_EMPLOYEE_DISPLAY_FORMATS };
   employeeFieldDefinitions: CustomEmployeeFieldDefinition[] = [];
   tagDefinitions: EmployeeTagDefinition[] = [];
   organizationEmployees: OrganizationEmployee[] = [];
@@ -233,6 +236,7 @@ export class OrgStore {
         viewModelCache: false,
         uiOrgStructure: observable.ref,
         organizationEmployees: observable.shallow,
+        employeeDisplayFormats: observable.ref,
         employeeFieldDefinitions: observable.shallow,
         tagDefinitions: observable.shallow,
       },
@@ -256,6 +260,7 @@ export class OrgStore {
   private get organizationObservation() {
     return [
       this.organizationEmployees,
+      this.employeeDisplayFormats,
       this.employeeFieldDefinitions,
       this.tagDefinitions,
       this.orgViews.viewRecords,
@@ -483,6 +488,7 @@ export class OrgStore {
             : buildView(state.ui.download.sourceViewId);
 
       this.organizationEmployees = nextEmployees;
+      this.employeeDisplayFormats = { ...state.organization.employeeDisplayFormats };
       this.employeeFieldDefinitions = structuredClone(state.organization.employeeFieldDefinitions);
       this.tagDefinitions = structuredClone(state.organization.tags);
       this.exportSession.synchronizeCustomFields(this.employeeFieldDefinitions);
@@ -1351,6 +1357,7 @@ export class OrgStore {
           field.id === normalized.id ? normalized : cloneEmployeeFieldDefinition(field),
         )
       : [...this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition), normalized];
+    let nextDisplayFormats = this.employeeDisplayFormats;
     if (previous && previous.key !== normalized.key) {
       definitions = definitions.map((field) =>
         field.kind === "template"
@@ -1360,10 +1367,17 @@ export class OrgStore {
             }
           : field,
       );
+      nextDisplayFormats = Object.fromEntries(
+        Object.entries(this.employeeDisplayFormats).map(([key, format]) => [
+          key,
+          rewriteTemplateFieldKey(format, previous.key, normalized.key),
+        ]),
+      ) as EmployeeDisplayFormats;
     }
     const issue = validateCustomEmployeeFieldDefinitions(definitions);
     if (issue) throw new LocalizedError(uiMessage("Custom Employee field is invalid."));
     if (previous && previous.key !== normalized.key) {
+      this.employeeDisplayFormats = nextDisplayFormats;
       this.exportSession.setTemplateFormat(
         rewriteTemplateFieldKey(this.exportSession.templateFormat, previous.key, normalized.key),
       );
@@ -1494,8 +1508,15 @@ export class OrgStore {
             normalizeCustomEmployeeFieldKey(key) === normalizeCustomEmployeeFieldKey(target.key),
         ),
     );
+    const referencedByDisplayFormat = Object.values(this.employeeDisplayFormats).some((format) =>
+      extractTemplateFieldKeys(format).some(
+        (key) =>
+          normalizeCustomEmployeeFieldKey(key) === normalizeCustomEmployeeFieldKey(target.key),
+      ),
+    );
     if (
       referenced ||
+      referencedByDisplayFormat ||
       this.exportSession.selectedCustomEmployeeFieldIds.includes(fieldId) ||
       extractTemplateFieldKeys(this.exportSession.templateFormat).some(
         (key) =>
@@ -1663,6 +1684,7 @@ export class OrgStore {
 
   createOrganizationState(): OrgToolsState["organization"] {
     return {
+      employeeDisplayFormats: { ...this.employeeDisplayFormats },
       employeeFieldDefinitions: this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition),
       employees: this.organizationEmployees.map((employee) => ({
         ...employee,
@@ -1671,6 +1693,10 @@ export class OrgStore {
       tags: this.tagDefinitions.map((tag) => ({ ...tag })),
       views: this.orgViews.createState(),
     };
+  }
+
+  setEmployeeDisplayFormats(formats: EmployeeDisplayFormats): void {
+    this.employeeDisplayFormats = { ...formats };
   }
 
   createDurableUiState(): OrgToolsState["ui"] {

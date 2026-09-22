@@ -357,8 +357,10 @@ test("captures the complete Employee workflow", async ({ page }) => {
 
   await page.locator('[data-demo-id="employee-model-button"]').click();
   let dialog = page.getByRole("dialog", { name: "Employee model", exact: true });
-  await expect(dialog.getByText("Built-in fields", { exact: true })).toBeVisible();
+  await dialog.getByRole("tab", { name: "Display", exact: true }).click();
+  await expect(dialog.locator('[data-demo-id="employee-display-employees"]')).toBeVisible();
   await capture(page, "employees-model");
+  await dialog.getByRole("tab", { name: "Model", exact: true }).click();
   await dialog.getByRole("button", { name: /Department/u }).click();
   await dialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;

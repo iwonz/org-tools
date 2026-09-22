@@ -287,8 +287,14 @@ test("runs the complete state editor at the repository base path without APIs or
   await expect(productUnit).toBeVisible();
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
-  const coloredTag = page.locator('[data-tag-color-surface][data-tag-color="blue"]').first();
-  const neutralTag = page.locator('[data-tag-color-surface][data-tag-color="none"]').first();
+  await page.locator('[data-demo-id="employees-tag-picker-trigger"]').first().click();
+  const employeeTagPicker = page.locator('[data-demo-id="employees-tag-picker-popover"]');
+  const coloredTag = employeeTagPicker
+    .locator('[data-tag-color-surface][data-tag-color="blue"]')
+    .first();
+  const neutralTag = employeeTagPicker
+    .locator('[data-tag-color-surface][data-tag-color="none"]')
+    .first();
   await expect(coloredTag).toBeVisible();
   await expect(neutralTag).toBeVisible();
   const [coloredBackground, neutralBackground] = await Promise.all(
@@ -298,7 +304,10 @@ test("runs the complete state editor at the repository base path without APIs or
   );
   expect(coloredBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(coloredBackground).not.toBe(neutralBackground);
-  await expect(page.locator('[data-tag-color-surface] [class~="rounded-full"]')).toHaveCount(0);
+  await expect(
+    employeeTagPicker.locator('[data-tag-color-surface] [class~="rounded-full"]'),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
 
   await page.locator('[data-demo-id="employees-position-filter"]').click();
   const employeeFilters = page.locator('[data-demo-id="employees-position-popover"]');
@@ -453,6 +462,15 @@ test("hands state to another live tab and forgets it after the final tab closes"
     "aria-selected",
     "true",
   );
+
+  await page.locator('[data-demo-id="employee-model-button"]').click();
+  const modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  await modelDialog.locator("#employee-display-employees-format").fill("{fullName}\nLive display");
+  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
+  await secondPage.bringToFront();
+  await expect(secondPage.locator('[data-demo-id="employees-list"]')).toContainText("Live display");
 
   await page.close();
   await secondPage.close();

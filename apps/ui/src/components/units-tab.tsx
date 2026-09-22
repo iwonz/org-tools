@@ -60,6 +60,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { UnitDialog } from "@/components/unit-dialog";
 import { UnitTree } from "@/components/unit-tree";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
+import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -93,13 +94,17 @@ const setTransparentDragImage = (event: DragEvent<HTMLElement>) => {
 };
 
 function UnitEmployeeDragPreview({
+  displayFormat,
   employee,
   initialPoint,
   previewRef,
+  unitContexts,
 }: {
+  displayFormat: string;
   employee: Employee;
   initialPoint: EmployeeDragPoint;
   previewRef: RefObject<HTMLDivElement | null>;
+  unitContexts: EmployeeUnitContext[];
 }) {
   if (typeof document === "undefined") return null;
 
@@ -114,7 +119,13 @@ function UnitEmployeeDragPreview({
         transform: `translate3d(${initialPoint.x}px, ${initialPoint.y}px, 0) translate(-50%, -50%)`,
       }}
     >
-      <EmployeeCard className="bg-transparent" employee={employee} variant="compact" />
+      <EmployeeCard
+        className="bg-transparent"
+        displayFormat={displayFormat}
+        displayUnitContexts={unitContexts}
+        employee={employee}
+        variant="compact"
+      />
     </div>,
     document.body,
   );
@@ -549,6 +560,12 @@ export const UnitsTab = observer(() => {
             cardDataDemoId="unit-employee-card"
             className="flex-1 p-0"
             dataDemoId="units-employee-cards"
+            displayFormat={store.employeeDisplayFormats.units}
+            displayUnitContexts={(employee) =>
+              (store.employeeUnitContextsByEmployeeId.get(employee.id) ?? []).filter(
+                (context) => context.unitId === selectedUnit.id,
+              )
+            }
             draggable={(employee) =>
               selectedUnit.membershipMode === "manual" && directEmployeeIdSet.has(employee.id)
             }
@@ -590,9 +607,13 @@ export const UnitsTab = observer(() => {
       </ProductSurface>
       {draggedEmployee && employeeDragPoint && (
         <UnitEmployeeDragPreview
+          displayFormat={store.employeeDisplayFormats.units}
           employee={draggedEmployee}
           initialPoint={employeeDragPoint}
           previewRef={dragPreviewRef}
+          unitContexts={(
+            store.employeeUnitContextsByEmployeeId.get(draggedEmployee.id) ?? []
+          ).filter((context) => context.unitId === selectedUnit.id)}
         />
       )}
       {unitDialog && (

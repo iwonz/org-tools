@@ -8,13 +8,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { HiOutlineInformationCircle } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
-import { EmployeeTags } from "@/components/employee-tags";
 import { HighlightedText } from "@/components/highlighted-text";
 import { MiddleDot } from "@/components/middle-dot";
 import { useUiText } from "@/i18n/use-ui-text";
+import { renderEmployeeDisplayLineDetails } from "@/lib/employee-display";
 import { createEmployeeProfileUrl, createMailtoUrl } from "@/lib/employee-links";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { cn } from "@/lib/utils";
+import { useOrgStore } from "@/stores/org-store-context";
 
 const CARD_HEIGHT_ESTIMATE = 132;
 const EMPTY_EMPLOYEES: Employee[] = [];
@@ -26,6 +27,8 @@ type EmployeeCardListProps = {
   cardClassName?: string;
   className?: string;
   dataDemoId?: string;
+  displayFormat?: string;
+  displayUnitContexts?: (employee: Employee) => EmployeeUnitContext[];
   employees?: Employee[];
   emptyState?: ReactNode;
   draggable?: (employee: Employee) => boolean;
@@ -58,6 +61,8 @@ type EmployeeCardProps = {
   bossPosition?: EmployeeUnitPosition | null;
   className?: string;
   dataDemoId?: string;
+  displayFormat?: string;
+  displayUnitContexts?: readonly EmployeeUnitContext[];
   draggable?: boolean;
   employee: Employee;
   name?: ReactNode;
@@ -141,72 +146,6 @@ export function EmployeeIdentity({
   );
 }
 
-function EmployeeProfileLink({
-  children,
-  className,
-  employee,
-}: {
-  children: ReactNode;
-  className?: string;
-  employee: Employee;
-}) {
-  const profileUrl = createEmployeeProfileUrl(employee.profileUrl);
-
-  if (!profileUrl) {
-    return <span className={className}>{children}</span>;
-  }
-
-  return (
-    <a
-      className={cn(
-        "cursor-pointer rounded-sm outline-none transition-colors hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring",
-        className,
-      )}
-      href={profileUrl}
-      onClick={(event) => event.stopPropagation()}
-      referrerPolicy="no-referrer"
-      rel="noopener noreferrer"
-      target="_blank"
-    >
-      {children}
-    </a>
-  );
-}
-
-function EmployeeUnitContextTag({
-  onClick,
-  unitContext,
-}: {
-  onClick?: (unitContext: EmployeeUnitContext) => void;
-  unitContext: EmployeeUnitContext;
-}) {
-  const t = useUiText();
-  const title = `${unitContext.position || t("Position not specified")} · ${unitContext.unitFullPath}`;
-  const label = unitContext.position || t("Position not specified");
-  const handleClick = onClick ? () => onClick(unitContext) : undefined;
-
-  return (
-    <span
-      className="inline-flex max-w-full items-center rounded-md border bg-muted px-2 py-1 text-xs leading-snug text-muted-foreground"
-      title={title}
-    >
-      <span className="min-w-0 truncate font-medium text-foreground">{label}</span>
-      <MiddleDot className="mx-1" />
-      <button
-        className={cn(
-          "min-w-0 truncate rounded-sm text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-          handleClick && "cursor-pointer hover:bg-accent hover:text-foreground hover:underline",
-        )}
-        disabled={!handleClick}
-        onClick={handleClick}
-        type="button"
-      >
-        {unitContext.unitName}
-      </button>
-    </span>
-  );
-}
-
 function EmployeeAvatarWithBossMarker({
   avatarClassName,
   bossPosition,
@@ -251,14 +190,123 @@ function EmployeeAvatarWithBossMarker({
   );
 }
 
+export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
+  compact = false,
+  employee,
+  format,
+  onUnitContextClick,
+  queryTokens = [],
+  unitContexts,
+}: {
+  compact?: boolean;
+  employee: Employee;
+  format?: string;
+  onUnitContextClick?: (unitContext: EmployeeUnitContext) => void;
+  queryTokens?: string[];
+  unitContexts?: readonly EmployeeUnitContext[];
+}) {
+  const store = useOrgStore();
+  const t = useUiText();
+  const resolvedUnitContexts =
+    unitContexts ?? store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
+  const lines = renderEmployeeDisplayLineDetails({
+    bossLabel: t("Manager"),
+    customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
+    employee,
+    format: format ?? store.employeeDisplayFormats.employees,
+    unitContexts: resolvedUnitContexts,
+  });
+  const mailtoUrl = createMailtoUrl(employee.email);
+  const profileUrl = createEmployeeProfileUrl(employee.profileUrl);
+  const lineClassName = (index: number) =>
+    cn(
+      "block min-w-0 truncate",
+      index === 0
+        ? compact
+          ? "text-sm font-medium"
+          : "text-sm font-semibold"
+        : "text-xs text-muted-foreground",
+    );
+  const actionClassName =
+    "rounded-sm outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring";
+
+  return (
+    <div className="grid min-w-0 gap-1" data-employee-display-content>
+      {lines.map((line, index) => {
+        const key = `${index}:${line.text}`;
+        return (
+          <span className={lineClassName(index)} key={key}>
+            {line.parts.map((part, partIndex) => {
+              const partKey = `${partIndex}:${part.fieldName ?? "literal"}`;
+              if (part.fieldName === "email" && mailtoUrl) {
+                return (
+                  <a
+                    className={actionClassName}
+                    href={mailtoUrl}
+                    key={partKey}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <HighlightedText queryTokens={queryTokens} text={part.text} />
+                  </a>
+                );
+              }
+              if (
+                (part.fieldName === "fullName" || part.fieldName === "profileUrl") &&
+                profileUrl
+              ) {
+                return (
+                  <a
+                    className={actionClassName}
+                    href={profileUrl}
+                    key={partKey}
+                    onClick={(event) => event.stopPropagation()}
+                    referrerPolicy="no-referrer"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    <HighlightedText queryTokens={queryTokens} text={part.text} />
+                  </a>
+                );
+              }
+              if (part.fieldName === "unitName" && onUnitContextClick) {
+                return (
+                  <span key={partKey}>
+                    {resolvedUnitContexts.map((unitContext, unitIndex) => (
+                      <span key={unitContext.id}>
+                        {unitIndex > 0 && "; "}
+                        <button
+                          className={actionClassName}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onUnitContextClick(unitContext);
+                          }}
+                          type="button"
+                        >
+                          <HighlightedText queryTokens={queryTokens} text={unitContext.unitName} />
+                        </button>
+                      </span>
+                    ))}
+                  </span>
+                );
+              }
+              return <HighlightedText key={partKey} queryTokens={queryTokens} text={part.text} />;
+            })}
+          </span>
+        );
+      })}
+    </div>
+  );
+});
+
 export const EmployeeCard = observer(function EmployeeCard({
   actions,
   bossPosition = null,
   className,
   dataDemoId,
+  displayFormat,
+  displayUnitContexts,
   draggable = false,
   employee,
-  name,
   onClick,
   onDoubleClick,
   onDragEnd,
@@ -266,11 +314,8 @@ export const EmployeeCard = observer(function EmployeeCard({
   onUnitContextClick,
   queryTokens = [],
   selected = false,
-  subtitle,
-  unitContexts = [],
   variant = "list",
 }: EmployeeCardProps) {
-  const t = useUiText();
   const isCompact = variant === "compact";
   const isInteractive = Boolean(onClick || onDoubleClick);
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -284,6 +329,7 @@ export const EmployeeCard = observer(function EmployeeCard({
   if (isCompact) {
     return (
       <article
+        aria-label={employee.fullName}
         className={cn(
           "flex h-full min-w-0 items-center gap-3 rounded-none bg-transparent px-3 py-2 transition-colors hover:bg-accent/45 active:bg-accent-strong/55",
           isInteractive && "cursor-pointer",
@@ -303,13 +349,14 @@ export const EmployeeCard = observer(function EmployeeCard({
       >
         <EmployeeAvatarWithBossMarker bossPosition={bossPosition} employee={employee} />
         <div className="min-w-0 flex-1">
-          <EmployeeProfileLink className="block truncate text-sm font-medium" employee={employee}>
-            {name ?? employee.fullName}
-          </EmployeeProfileLink>
-          <div className="mt-1 block truncate text-xs text-muted-foreground">
-            {subtitle ?? <EmployeeIdentity employee={employee} />}
-          </div>
-          <EmployeeTags className="mt-1.5" compact queryTokens={queryTokens} tags={employee.tags} />
+          <EmployeeDisplayContent
+            compact
+            employee={employee}
+            queryTokens={queryTokens}
+            {...(displayFormat === undefined ? {} : { format: displayFormat })}
+            {...(displayUnitContexts === undefined ? {} : { unitContexts: displayUnitContexts })}
+            {...(onUnitContextClick ? { onUnitContextClick } : {})}
+          />
         </div>
         {actions && (
           <div className="flex shrink-0 items-center gap-1" data-employee-card-actions>
@@ -322,6 +369,7 @@ export const EmployeeCard = observer(function EmployeeCard({
 
   return (
     <article
+      aria-label={employee.fullName}
       className={cn(
         "relative flex min-w-0 items-start gap-3 rounded-none bg-transparent p-3.5 transition-colors hover:bg-accent/45 active:bg-accent-strong/55",
         isInteractive && "cursor-pointer",
@@ -345,26 +393,13 @@ export const EmployeeCard = observer(function EmployeeCard({
         employee={employee}
       />
       <div className="min-w-0 flex-1">
-        <EmployeeProfileLink className="block truncate text-sm font-semibold" employee={employee}>
-          {name ?? employee.fullName}
-        </EmployeeProfileLink>
-        {subtitle ?? <EmployeeIdentity employee={employee} />}
-        <div className="mt-3 flex min-w-0 flex-wrap gap-1.5">
-          {unitContexts.length === 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {t("Positions and Units are not specified")}
-            </span>
-          ) : (
-            unitContexts.map((unitContext) => (
-              <EmployeeUnitContextTag
-                key={`${employee.id}:${unitContext.id}`}
-                unitContext={unitContext}
-                {...(onUnitContextClick ? { onClick: onUnitContextClick } : {})}
-              />
-            ))
-          )}
-        </div>
-        <EmployeeTags className="mt-2" queryTokens={queryTokens} tags={employee.tags} />
+        <EmployeeDisplayContent
+          employee={employee}
+          queryTokens={queryTokens}
+          {...(displayFormat === undefined ? {} : { format: displayFormat })}
+          {...(displayUnitContexts === undefined ? {} : { unitContexts: displayUnitContexts })}
+          {...(onUnitContextClick ? { onUnitContextClick } : {})}
+        />
       </div>
       {actions && (
         <div className="flex shrink-0 items-start gap-1" data-employee-card-actions>
@@ -382,6 +417,8 @@ export function EmployeeCardList({
   cardClassName,
   className,
   dataDemoId,
+  displayFormat,
+  displayUnitContexts,
   employees = EMPTY_EMPLOYEES,
   emptyState,
   draggable,
@@ -483,6 +520,10 @@ export function EmployeeCardList({
                   {...(cardDataDemoId ? { dataDemoId: cardDataDemoId } : {})}
                   {...(onUnitContextClick ? { onUnitContextClick } : {})}
                   {...(cardClassName ? { className: cardClassName } : {})}
+                  {...(displayFormat === undefined ? {} : { displayFormat })}
+                  {...(displayUnitContexts === undefined
+                    ? {}
+                    : { displayUnitContexts: displayUnitContexts(employee) })}
                 />
               </div>
             );

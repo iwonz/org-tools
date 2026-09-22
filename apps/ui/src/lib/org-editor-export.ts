@@ -1,4 +1,5 @@
 import type {
+  CustomEmployeeFieldDefinition,
   Employee,
   EmployeeId,
   EmployeeTag,
@@ -17,6 +18,8 @@ import {
   getEditorEmployeeDistributionPresentation,
 } from "@/lib/editor-distribution";
 import { isSafeAvatarBase64Url } from "@/lib/employee-data";
+import { renderEmployeeDisplayLines } from "@/lib/employee-display";
+import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { getEmployeeInitials } from "@/lib/employee-utils";
 import {
   asExportText,
@@ -30,7 +33,9 @@ import {
   buildOrgEditorUnitEmployeeSummaryById,
   buildOrgEditorUnitTagSummary,
   createOrgEditorUnitTagFooterLayout,
+  getOrgEditorEmployeeDisplayLineBaselines,
   getOrgEditorEmployeePosition,
+  getOrgEditorEmployeeRowHeightForDisplayLines,
   getOrgEditorEmployeeRowStackLayout,
   getOrgEditorEmployeeRowSurfaceBounds,
   getOrgEditorEmployeeTextMaxWidth,
@@ -140,6 +145,7 @@ export type OrgEditorTemplateRow = {
 };
 
 type OrgEditorImageUnitRenderData = {
+  employeeDisplayLines: string[][];
   employeeDistributionPresentations: Array<EditorEmployeeDistributionPresentation | null>;
   rows: OrgEditorUnitRow[];
   employeeRowHeights: number[];
@@ -500,10 +506,11 @@ export const orgEditorTemplateUnitFields: Array<{
 
 export const createDefaultOrgEditorImageExportSettings = (
   imageBossLabel = ORG_EDITOR_DEFAULT_BOSS_LABEL,
+  employeeFormat = ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT,
 ): OrgEditorImageExportSettings => ({
   background: { type: "transparent" },
   density: 2,
-  employeeFormat: ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT,
+  employeeFormat,
   fontFamily: ORG_EDITOR_EXPORT_FONTS[0]?.family ?? "system-ui",
   imageBossLabel,
   padding: 20,
@@ -1333,6 +1340,7 @@ const renderOrgEditorTemplate = ({
 
 export const createOrgEditorImageExportResult = async ({
   canvasElements = [],
+  customEmployeeFieldDefinitions = [],
   distributionEnabledUnitIds,
   distributionUnitIdsByEmployeeId,
   viewSettings,
@@ -1350,6 +1358,7 @@ export const createOrgEditorImageExportResult = async ({
   units,
 }: {
   canvasElements?: readonly OrgEditorCanvasElement[];
+  customEmployeeFieldDefinitions?: readonly CustomEmployeeFieldDefinition[];
   distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   viewSettings: OrgEditorViewSettings;
@@ -1399,10 +1408,23 @@ export const createOrgEditorImageExportResult = async ({
     );
     const width = getOrgEditorUnitBounds(unit).width;
     const availableTagWidth = getOrgEditorEmployeeTextMaxWidth(width);
+    const employeeDisplayLines = rows.map((row) => {
+      if (row.type !== "employee") return [];
+      const employee = employeeById.get(row.employeeId);
+      if (!employee) return ["Employee unavailable"];
+      const unitPosition = employee.unitPositions.find((position) => position.unitId === unit.id);
+      return renderEmployeeDisplayLines({
+        bossLabel: settings.imageBossLabel.trim(),
+        customEmployeeFieldDefinitions,
+        employee,
+        format: settings.employeeFormat,
+        unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
+      });
+    });
     const employeeTagLayouts = rows.map((row) => {
       const tags =
         row.type === "employee"
-          ? (employeeById.get(row.employeeId)?.tags ?? [])
+          ? []
           : row.openPosition.tags.flatMap((assignment) => {
               const definition = tagDefinitionById.get(assignment.tagId);
               return definition
@@ -1415,8 +1437,12 @@ export const createOrgEditorImageExportResult = async ({
         (text) => measureContext.measureText(text).width,
       );
     });
-    const employeeRowHeights = employeeTagLayouts.map((layout) =>
-      getOrgEditorExportEmployeeRowHeightForTagLayout(layout),
+    const employeeRowHeights = rows.map((row, index) =>
+      row.type === "employee"
+        ? getOrgEditorEmployeeRowHeightForDisplayLines(employeeDisplayLines[index]?.length ?? 0)
+        : getOrgEditorExportEmployeeRowHeightForTagLayout(
+            employeeTagLayouts[index] ?? { chips: [], height: 0, rowCount: 0 },
+          ),
     );
     const { offsets: employeeRowOffsets } = getOrgEditorEmployeeRowStackLayout(employeeRowHeights);
 
@@ -1427,6 +1453,7 @@ export const createOrgEditorImageExportResult = async ({
       ? 0
       : getOrgEditorUnitTagFooterHeight(tagSummaries, width - 16);
     return {
+      employeeDisplayLines,
       employeeDistributionPresentations,
       employeeRowHeights,
       employeeRowOffsets,
@@ -1637,6 +1664,7 @@ export const createOrgEditorImageExportResult = async ({
   }
 
   for (const {
+    employeeDisplayLines,
     employeeDistributionPresentations,
     employeeRowHeights,
     employeeRowOffsets,
@@ -1731,20 +1759,6 @@ export const createOrgEditorImageExportResult = async ({
           ? avatarUrlByEmployeeKey.get(`${unit.id}:${row.employeeId}`)
           : undefined;
       const avatarImage = avatarUrl ? (avatarImageByUrl.get(avatarUrl) ?? null) : null;
-      const employeeText = openPosition
-        ? openPosition.title
-        : employee
-          ? renderOrgEditorTemplate({
-              bossLabel: settings.imageBossLabel.trim(),
-              employee,
-              format: settings.employeeFormat,
-              isBoss,
-              position: getEffectiveEmployeePosition(employee, unit),
-              unitName: getOrgEditorUnitDisplayName(unit),
-            })
-              .replace(/\s+/g, " ")
-              .trim()
-          : "Employee unavailable";
 
       const distributionPresentation = employeeDistributionPresentations[employeeIndex] ?? null;
       const distributionFillStyle = getOrgEditorExportEmployeeRowFillStyle(
@@ -1833,15 +1847,38 @@ export const createOrgEditorImageExportResult = async ({
       context.textAlign = "start";
       context.textBaseline = "alphabetic";
       context.fillStyle = openPositionBackground?.textStyle ?? "#0f172a";
-      context.font = getCanvasFont(settings.fontFamily, 400, ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE);
-      drawTrimmedText(
-        context,
-        employeeText,
-        employeeGeometry.textX,
-        employeeGeometry.textBaselineY,
-        employeeGeometry.textMaxWidth,
-      );
-      if (employee || openPosition) {
+      if (row.type === "employee") {
+        const lines = employeeDisplayLines[employeeIndex] ?? [];
+        const baselines = getOrgEditorEmployeeDisplayLineBaselines({
+          employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+          employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
+          lineCount: lines.length,
+          unitY: unit.y,
+        });
+        for (const [lineIndex, line] of lines.entries()) {
+          context.fillStyle = lineIndex === 0 ? "#0f172a" : "#64748b";
+          context.font = getCanvasFont(
+            settings.fontFamily,
+            lineIndex === 0 ? 500 : 400,
+            lineIndex === 0 ? ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE : 11,
+          );
+          drawTrimmedText(
+            context,
+            line,
+            employeeGeometry.textX,
+            baselines[lineIndex] ?? employeeGeometry.textBaselineY,
+            employeeGeometry.textMaxWidth,
+          );
+        }
+      } else if (openPosition) {
+        context.font = getCanvasFont(settings.fontFamily, 400, ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE);
+        drawTrimmedText(
+          context,
+          openPosition.title,
+          employeeGeometry.textX,
+          employeeGeometry.textBaselineY,
+          employeeGeometry.textMaxWidth,
+        );
         drawOrgEditorEmployeeTags({
           context,
           fontFamily: settings.fontFamily,
