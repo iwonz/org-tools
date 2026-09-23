@@ -10,6 +10,7 @@ import type {
   EmployeeDisplayLineGaps,
   EmployeeFieldId,
 } from "@org-tools/types";
+import { observer } from "mobx-react-lite";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HiOutlineCircleStack,
@@ -62,6 +63,12 @@ import {
   wouldCreateTemplateDependencyCycle,
 } from "@/lib/custom-employee-fields";
 import { createUuid } from "@/lib/employee-data";
+import {
+  EMPLOYEE_DISPLAY_LINE_GAP_MAX,
+  EMPLOYEE_DISPLAY_LINE_GAP_MIN,
+  normalizeEmployeeDisplayLineGapInput,
+  parseEmployeeDisplayLineGapInput,
+} from "@/lib/employee-display-line-gap";
 import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -149,7 +156,7 @@ type PendingDraftChange = {
   next: CustomEmployeeFieldDefinition;
 };
 
-export function EmployeeModelDialog({
+export const EmployeeModelDialog = observer(function EmployeeModelDialog({
   onOpenChange,
   open,
 }: {
@@ -164,12 +171,17 @@ export function EmployeeModelDialog({
   const [pendingDraftChange, setPendingDraftChange] = useState<PendingDraftChange | null>(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
   const [activeTab, setActiveTab] = useState<"display" | "model">("model");
-  const [displayDraft, setDisplayDraft] = useState<EmployeeDisplayFormats>(() => ({
-    ...store.employeeDisplayFormats,
-  }));
-  const [lineGapDraft, setLineGapDraft] = useState<EmployeeDisplayLineGaps>(() => ({
-    ...store.employeeDisplayLineGaps,
-  }));
+  const [activeLineGapKey, setActiveLineGapKey] = useState<keyof EmployeeDisplayLineGaps | null>(
+    null,
+  );
+  const [lineGapInputs, setLineGapInputs] = useState<Record<keyof EmployeeDisplayLineGaps, string>>(
+    () => ({
+      editor: String(store.employeeDisplayLineGaps.editor),
+      editorExport: String(store.employeeDisplayLineGaps.editorExport),
+      employees: String(store.employeeDisplayLineGaps.employees),
+      units: String(store.employeeDisplayLineGaps.units),
+    }),
+  );
   const previousOpenRef = useRef(false);
   const tokenOptions = useMemo(
     () => [
@@ -226,11 +238,33 @@ export function EmployeeModelDialog({
   useEffect(() => {
     if (open && !previousOpenRef.current) {
       setActiveTab("model");
-      setDisplayDraft({ ...store.employeeDisplayFormats });
-      setLineGapDraft({ ...store.employeeDisplayLineGaps });
+      setActiveLineGapKey(null);
+      setLineGapInputs({
+        editor: String(store.employeeDisplayLineGaps.editor),
+        editorExport: String(store.employeeDisplayLineGaps.editorExport),
+        employees: String(store.employeeDisplayLineGaps.employees),
+        units: String(store.employeeDisplayLineGaps.units),
+      });
     }
     previousOpenRef.current = open;
-  }, [open, store.employeeDisplayFormats, store.employeeDisplayLineGaps]);
+  }, [open, store.employeeDisplayLineGaps]);
+  useEffect(() => {
+    if (!open) return;
+    setLineGapInputs((current) => {
+      const next = { ...current };
+      let changed = false;
+      for (const { key } of DISPLAY_FORMAT_SECTIONS) {
+        if (activeLineGapKey === key && parseEmployeeDisplayLineGapInput(current[key]) === null) {
+          continue;
+        }
+        const stored = String(store.employeeDisplayLineGaps[key]);
+        if (next[key] === stored) continue;
+        next[key] = stored;
+        changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [activeLineGapKey, open, store.employeeDisplayLineGaps]);
   const setDraftKind = (kind: "composite" | "template" | "value") => {
     if (!draft || draft.kind === kind) return;
     const next: CustomEmployeeFieldDefinition =
@@ -274,6 +308,14 @@ export function EmployeeModelDialog({
     } catch (saveError) {
       setError(describeError(saveError));
     }
+  };
+  const commitLineGapInput = (key: keyof EmployeeDisplayLineGaps) => {
+    const lineGap = normalizeEmployeeDisplayLineGapInput(
+      lineGapInputs[key],
+      store.employeeDisplayLineGaps[key],
+    );
+    setLineGapInputs((current) => ({ ...current, [key]: String(lineGap) }));
+    store.setEmployeeDisplayLineGap(key, lineGap);
   };
   return (
     <>
@@ -978,38 +1020,52 @@ export function EmployeeModelDialog({
                         id={`employee-display-${key}-format`}
                         inlineMarkdownTools
                         label={t("Format")}
-                        onChange={(format) =>
-                          setDisplayDraft((current) => ({ ...current, [key]: format }))
+                        labelAction={
+                          <Button
+                            className="h-auto p-0 text-sm"
+                            data-demo-id={`employee-display-${key}-reset`}
+                            onClick={() => store.resetEmployeeDisplayFormat(key)}
+                            type="button"
+                            variant="link"
+                          >
+                            {t("Reset")}
+                          </Button>
                         }
+                        onChange={(format) => store.setEmployeeDisplayFormat(key, format)}
                         tokens={displayTokenOptions}
-                        value={displayDraft[key]}
+                        value={store.employeeDisplayFormats[key]}
                       />
                       <div className="grid gap-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <Label htmlFor={`employee-display-${key}-line-gap`}>
-                            {t("Line spacing")}
-                          </Label>
-                          <output
-                            className="tabular-nums text-sm text-muted-foreground"
-                            htmlFor={`employee-display-${key}-line-gap`}
-                          >
-                            {lineGapDraft[key]} px
-                          </output>
-                        </div>
-                        <input
+                        <Label htmlFor={`employee-display-${key}-line-gap`}>
+                          {t("Line spacing")}
+                        </Label>
+                        <Input
                           aria-label={t("Line spacing")}
-                          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+                          className="w-24 tabular-nums"
                           data-demo-id={`employee-display-${key}-line-gap`}
                           id={`employee-display-${key}-line-gap`}
-                          max={24}
-                          min={0}
+                          inputMode="numeric"
+                          max={EMPLOYEE_DISPLAY_LINE_GAP_MAX}
+                          min={EMPLOYEE_DISPLAY_LINE_GAP_MIN}
+                          onBlur={() => {
+                            commitLineGapInput(key);
+                            setActiveLineGapKey(null);
+                          }}
                           onChange={(event) => {
-                            const lineGap = Number(event.currentTarget.value);
-                            setLineGapDraft((current) => ({ ...current, [key]: lineGap }));
+                            const value = event.currentTarget.value;
+                            setLineGapInputs((current) => ({ ...current, [key]: value }));
+                            const lineGap = parseEmployeeDisplayLineGapInput(value);
+                            if (lineGap !== null) store.setEmployeeDisplayLineGap(key, lineGap);
+                          }}
+                          onFocus={() => setActiveLineGapKey(key)}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter") return;
+                            event.preventDefault();
+                            event.currentTarget.blur();
                           }}
                           step={1}
-                          type="range"
-                          value={lineGapDraft[key]}
+                          type="number"
+                          value={lineGapInputs[key]}
                         />
                       </div>
                       <div className="grid gap-2">
@@ -1024,8 +1080,8 @@ export function EmployeeModelDialog({
                         >
                           <EmployeeCard
                             className="hover:bg-transparent active:bg-transparent"
-                            displayFormat={displayDraft[key]}
-                            displayLineGap={lineGapDraft[key]}
+                            displayFormat={store.employeeDisplayFormats[key]}
+                            displayLineGap={store.employeeDisplayLineGaps[key]}
                             displayUnitContexts={unitContexts}
                             employee={employee}
                             variant={isEditor ? "compact" : "list"}
@@ -1035,14 +1091,6 @@ export function EmployeeModelDialog({
                     </section>
                   );
                 })}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => store.setEmployeeDisplaySettings(displayDraft, lineGapDraft)}
-                    type="button"
-                  >
-                    {t("Save")}
-                  </Button>
-                </div>
               </TabsContent>
             </Tabs>
           </DialogBody>
@@ -1108,4 +1156,4 @@ export function EmployeeModelDialog({
       </AlertDialog>
     </>
   );
-}
+});

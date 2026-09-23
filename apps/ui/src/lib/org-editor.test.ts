@@ -80,6 +80,9 @@ describe("Org Editor adaptive grid", () => {
 describe("Org Editor Employee display geometry", () => {
   test("uses the current minimum and expands deterministically for additional lines", () => {
     expect(getOrgEditorEmployeeRowHeightForDisplayLines(0)).toBe(48);
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(1, 0)).toBe(48);
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(1, 4)).toBe(48);
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(1, 24)).toBe(48);
     expect(getOrgEditorEmployeeRowHeightForDisplayLines(2)).toBe(48);
     expect(getOrgEditorEmployeeRowHeightForDisplayLines(3)).toBe(64);
     expect(getOrgEditorEmployeeRowHeightForDisplayLines(3, 4)).toBe(72);

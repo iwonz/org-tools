@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createDefaultEmployeeDisplayFormats } from "@/lib/employee-display-defaults";
 import { createBlankOrgToolsState } from "@/lib/org-file";
 import { OrgStore } from "@/stores/org-store";
 
@@ -37,5 +38,51 @@ describe("state change tracking", () => {
 
     expect(store.organizationChangeSequence).toBe(0);
     expect(store.uiChangeSequence).toBeGreaterThan(0);
+  });
+
+  it("tracks focused Employee display changes and ignores repeated values", () => {
+    const store = new OrgStore();
+    store.resetChangeTracking();
+
+    store.setEmployeeDisplayFormat("employees", "{fullName}\n{tags}");
+    expect(store.employeeDisplayFormats.employees).toBe("{fullName}\n{tags}");
+    expect(store.organizationChangeSequence).toBe(1);
+
+    store.setEmployeeDisplayFormat("employees", "{fullName}\n{tags}");
+    expect(store.organizationChangeSequence).toBe(1);
+
+    store.setEmployeeDisplayLineGap("employees", 12);
+    expect(store.employeeDisplayLineGaps.employees).toBe(12);
+    expect(store.organizationChangeSequence).toBe(2);
+
+    store.setEmployeeDisplayLineGap("employees", 12);
+    store.setEmployeeDisplaySettings(store.employeeDisplayFormats, store.employeeDisplayLineGaps);
+    expect(store.organizationChangeSequence).toBe(2);
+  });
+
+  it("rejects invalid focused Employee display line gaps", () => {
+    const store = new OrgStore();
+    store.resetChangeTracking();
+
+    for (const lineGap of [-1, 1.5, 25, Number.NaN]) {
+      expect(() => store.setEmployeeDisplayLineGap("editor", lineGap)).toThrow(RangeError);
+    }
+    expect(store.organizationChangeSequence).toBe(0);
+  });
+
+  it("resets one Employee display format for the current locale", () => {
+    const store = new OrgStore();
+    store.setLocale("ru");
+    store.setEmployeeDisplayFormat("editorExport", "Custom");
+    store.setEmployeeDisplayLineGap("editorExport", 19);
+    store.resetChangeTracking();
+
+    store.resetEmployeeDisplayFormat("editorExport");
+
+    expect(store.employeeDisplayFormats.editorExport).toBe(
+      createDefaultEmployeeDisplayFormats("ru").editorExport,
+    );
+    expect(store.employeeDisplayLineGaps.editorExport).toBe(19);
+    expect(store.organizationChangeSequence).toBe(1);
   });
 });

@@ -242,6 +242,69 @@ describe("Employee display formats", () => {
     ).toBe(layout);
   });
 
+  test("adds line gaps only between measured visual rows", () => {
+    const singleSource = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "{fullName}",
+      unitContexts: [],
+    });
+    const singleAtZero = layoutEmployeeDisplayRichLines(singleSource, {
+      availableWidth: 400,
+      density: "normal",
+      lineGap: 0,
+    });
+    const singleAtTwentyFour = layoutEmployeeDisplayRichLines(singleSource, {
+      availableWidth: 400,
+      density: "normal",
+      lineGap: 24,
+    });
+    expect(singleAtZero.lines).toHaveLength(1);
+    expect(singleAtTwentyFour.height).toBe(singleAtZero.height);
+    expect(singleAtTwentyFour.lines[0]?.y).toBe(0);
+
+    const multipleSource = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "First\n\nSecond",
+      unitContexts: [],
+    });
+    const multipleAtFour = layoutEmployeeDisplayRichLines(multipleSource, {
+      availableWidth: 400,
+      density: "normal",
+      lineGap: 4,
+    });
+    expect(multipleAtFour.lines).toHaveLength(3);
+    expect(multipleAtFour.lines.map((line) => line.y)).toEqual([0, 24, 48]);
+    expect(multipleAtFour.height).toBe(68);
+
+    const wrappedAtTwentyFour = layoutEmployeeDisplayRichLines(singleSource, {
+      availableWidth: 32,
+      density: "normal",
+      lineGap: 24,
+    });
+    expect(wrappedAtTwentyFour.lines.length).toBeGreaterThan(1);
+    expect(wrappedAtTwentyFour.height).toBe(
+      wrappedAtTwentyFour.lines.reduce((sum, line) => sum + line.height, 0) +
+        24 * (wrappedAtTwentyFour.lines.length - 1),
+    );
+  });
+
+  test("keeps every ordinary navigation-like token as plain text", () => {
+    const contexts = [createOrgUnitContext(unitPosition(2, "Product", "Lead"))];
+    const lines = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee: { ...employee, profileUrl: "https://example.test/profiles/avery" },
+      format: "{fullName}\n{profileUrl}\n{email}\n{position}\n{unitName}",
+      unitContexts: contexts,
+    });
+
+    expect(lines).toHaveLength(5);
+    expect(
+      lines.flatMap((line) => line.nodes).every((node) => node.type !== "text" || !node.href),
+    ).toBe(true);
+  });
+
   test("keeps position and Unit tokens as ordinary text and localizes missing assignments", () => {
     const contexts = [
       createOrgUnitContext(unitPosition(2, "Product", "Lead")),

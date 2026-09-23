@@ -151,6 +151,7 @@ export const EmployeesTab = observer(() => {
             }}
             className="flex-1 p-0"
             dataDemoId="employees-list"
+            displayContext="employees"
             employees={visibleEmployees}
             emptyState={hasSearch ? t("No Employees found") : t("No Employees yet")}
             name={(employee) => (

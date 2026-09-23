@@ -661,6 +661,7 @@
     "Employee fields": "Поля сотрудника",
     "Unit context fields": "Поля контекста команды",
     "Display only": "Только отображение",
-    "Line spacing": "Межстрочный интервал"
+    "Line spacing": "Межстрочный интервал",
+    "Reset": "Сбросить"
   }
 }

@@ -4,7 +4,7 @@ import type { Employee, EmployeeId, EmployeeUnitPosition, UnitId } from "@org-to
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import type { DragEvent, KeyboardEvent, ReactNode } from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HiOutlineInformationCircle } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
@@ -18,7 +18,7 @@ import {
   layoutEmployeeDisplayRichLines,
   renderEmployeeDisplayLineDetails,
 } from "@/lib/employee-display";
-import { createEmployeeProfileUrl, createMailtoUrl } from "@/lib/employee-links";
+import { createMailtoUrl } from "@/lib/employee-links";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { TAG_SURFACE_METRICS } from "@/lib/tag-surface";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,8 @@ import { useOrgStore } from "@/stores/org-store-context";
 
 const CARD_HEIGHT_ESTIMATE = 132;
 const EMPTY_EMPLOYEES: Employee[] = [];
+
+export type EmployeeCardDisplayContext = "employees" | "fallback" | "units";
 
 type EmployeeCardListProps = {
   actions?: (employee: Employee) => ReactNode;
@@ -35,6 +37,7 @@ type EmployeeCardListProps = {
   className?: string;
   dataDemoId?: string;
   displayFormat?: string;
+  displayContext?: EmployeeCardDisplayContext;
   displayLineGap?: number;
   displayUnitContexts?: (employee: Employee) => EmployeeUnitContext[];
   employees?: Employee[];
@@ -70,6 +73,7 @@ type EmployeeCardProps = {
   className?: string;
   dataDemoId?: string;
   displayFormat?: string;
+  displayContext?: EmployeeCardDisplayContext;
   displayLineGap?: number;
   displayUnitContexts?: readonly EmployeeUnitContext[];
   draggable?: boolean;
@@ -203,6 +207,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   className,
   compact = false,
   density = "card",
+  displayContext = "fallback",
   employee,
   format,
   lineGap,
@@ -216,6 +221,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   className?: string;
   compact?: boolean;
   density?: "card" | "editor";
+  displayContext?: EmployeeCardDisplayContext;
   employee: Employee;
   format?: string;
   lineGap?: number;
@@ -229,6 +235,8 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   const store = useOrgStore();
   const t = useUiText();
   const appFormat = useAppFormatter();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [measuredWrapWidth, setMeasuredWrapWidth] = useState<number | null>(null);
   const resolvedUnitContexts =
     unitContexts ?? store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
   const richLines = renderEmployeeDisplayLineDetails({
@@ -239,11 +247,25 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
     unitContexts: resolvedUnitContexts,
   });
   const resolvedLineGap = lineGap ?? store.employeeDisplayLineGaps.employees;
+  useLayoutEffect(() => {
+    if (providedVisualLayout || wrapWidth !== undefined) return;
+    const element = contentRef.current;
+    if (!element) return;
+    const updateWidth = () => {
+      const width = Math.floor(element.getBoundingClientRect().width);
+      if (width > 0) setMeasuredWrapWidth((current) => (current === width ? current : width));
+    };
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [providedVisualLayout, wrapWidth]);
+  const resolvedWrapWidth = wrapWidth ?? measuredWrapWidth;
   const visualLayout =
     providedVisualLayout ??
-    (wrapWidth
+    (resolvedWrapWidth
       ? layoutEmployeeDisplayRichLines(richLines, {
-          availableWidth: wrapWidth,
+          availableWidth: resolvedWrapWidth,
           density: density === "editor" ? "compact" : "normal",
           direction: store.locale === "ar" ? "rtl" : "ltr",
           formatTag: (tag) =>
@@ -260,7 +282,10 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
         })
       : null);
   const lines = richLines;
-  const profileUrl = createEmployeeProfileUrl(employee.profileUrl);
+  const nativePositionLinks =
+    interactiveLinks &&
+    (displayContext === "employees" || displayContext === "units") &&
+    onUnitContextClick !== undefined;
   const lineClassName = cn(
     "block min-w-0 overflow-hidden font-normal",
     density === "editor" ? "text-xs leading-4" : "text-sm leading-5",
@@ -282,10 +307,12 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   if (visualLayout) {
     return (
       <div
-        className={cn("grid min-w-0", className)}
+        className={cn("relative min-w-0", className)}
         data-employee-display-content
+        data-employee-display-line-gap={resolvedLineGap}
         dir={visualLayout.direction}
-        style={{ rowGap: resolvedLineGap }}
+        ref={contentRef}
+        style={{ height: visualLayout.height }}
       >
         {visualLayout.lines.map((line) => (
           <span
@@ -293,20 +320,47 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
             className={lineClassName}
             data-employee-display-blank={line.blank ? "true" : undefined}
             key={`${line.y}:${line.height}:${line.text}`}
-            style={{ minHeight: line.height }}
+            style={{
+              height: line.height,
+              left: 0,
+              position: "absolute",
+              top: line.y,
+              width: "100%",
+            }}
           >
             {line.fragments.map((fragment, fragmentIndex) => {
               const key = `${fragmentIndex}:${fragment.type}:${fragment.text}`;
-              const previous = line.fragments[fragmentIndex - 1];
-              const marginInlineStart = previous
-                ? Math.max(
-                    0,
-                    visualLayout.direction === "rtl"
-                      ? previous.x - fragment.x - fragment.width
-                      : fragment.x - previous.x - previous.width,
-                  )
-                : 0;
+              const fragmentStyle = {
+                height: fragment.height,
+                left: fragment.x,
+                position: "absolute" as const,
+                top: 0,
+                width: fragment.width,
+              };
               if (fragment.type === "text") {
+                const content = <HighlightedText queryTokens={queryTokens} text={fragment.text} />;
+                if (fragment.node.explicitLink && fragment.node.href && interactiveLinks) {
+                  const isExternal = /^https?:/iu.test(fragment.node.href);
+                  return (
+                    <a
+                      className={cn(actionClassName, textClassName(fragment.node))}
+                      data-employee-markdown-link="interactive"
+                      href={fragment.node.href}
+                      key={key}
+                      onClick={(event) => event.stopPropagation()}
+                      style={fragmentStyle}
+                      {...(isExternal
+                        ? {
+                            referrerPolicy: "no-referrer" as const,
+                            rel: "noopener noreferrer",
+                            target: "_blank",
+                          }
+                        : {})}
+                    >
+                      {content}
+                    </a>
+                  );
+                }
                 return (
                   <span
                     className={textClassName(fragment.node)}
@@ -318,13 +372,9 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                         : undefined
                     }
                     key={key}
-                    style={{
-                      display: "inline-block",
-                      marginInlineStart,
-                      width: fragment.width,
-                    }}
+                    style={fragmentStyle}
                   >
-                    <HighlightedText queryTokens={queryTokens} text={fragment.text} />
+                    {content}
                   </span>
                 );
               }
@@ -333,13 +383,9 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                   <TagSurface
                     className="inline-flex items-center whitespace-nowrap"
                     color={fragment.tag.color}
-                    density="compact"
+                    density={visualLayout.density}
                     key={key}
-                    style={{
-                      height: fragment.height,
-                      marginInlineStart,
-                      width: fragment.width,
-                    }}
+                    style={fragmentStyle}
                   >
                     <HighlightedText queryTokens={queryTokens} text={fragment.text} />
                   </TagSurface>
@@ -348,31 +394,50 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
               const source = `${fragment.position.label} · ${fragment.position.unitContext.unitName}`;
               const positionEnd = fragment.position.label.length;
               const separatorEnd = positionEnd + 3;
-              const renderRange = (start: number, end: number, rangeClassName: string) => {
+              const renderRange = (
+                start: number,
+                end: number,
+                rangeClassName: string,
+                unitLink = false,
+              ) => {
                 const from = Math.max(fragment.start, start);
                 const to = Math.min(fragment.end, end);
                 if (from >= to) return null;
-                return (
-                  <span className={rangeClassName}>
-                    <HighlightedText queryTokens={queryTokens} text={source.slice(from, to)} />
-                  </span>
+                const content = (
+                  <HighlightedText queryTokens={queryTokens} text={source.slice(from, to)} />
                 );
+                if (unitLink && nativePositionLinks) {
+                  return (
+                    <button
+                      className={cn(
+                        rangeClassName,
+                        "cursor-pointer rounded-sm text-left outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring",
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onUnitContextClick?.(fragment.position.unitContext);
+                      }}
+                      type="button"
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+                return <span className={rangeClassName}>{content}</span>;
               };
               return (
                 <TagSurface
                   className="inline-flex items-center whitespace-nowrap"
-                  density="compact"
+                  data-employee-position-assignment
+                  density={visualLayout.density}
                   key={key}
-                  style={{
-                    height: fragment.height,
-                    marginInlineStart,
-                    width: fragment.width,
-                  }}
+                  style={fragmentStyle}
+                  title={`${fragment.position.label} · ${fragment.position.unitContext.unitFullPath}`}
                   variant="position"
                 >
                   {renderRange(0, positionEnd, "font-medium text-foreground")}
                   {renderRange(positionEnd, separatorEnd, "text-muted-foreground")}
-                  {renderRange(separatorEnd, source.length, "text-muted-foreground")}
+                  {renderRange(separatorEnd, source.length, "text-muted-foreground", true)}
                 </TagSurface>
               );
             })}
@@ -386,6 +451,8 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
     <div
       className={cn("grid min-w-0", className)}
       data-employee-display-content
+      data-employee-display-line-gap={resolvedLineGap}
+      ref={contentRef}
       style={{ rowGap: resolvedLineGap }}
     >
       {lines.map((line, index) => {
@@ -438,7 +505,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                           <HighlightedText queryTokens={queryTokens} text={label} />
                         </span>
                         <MiddleDot {...(density === "editor" ? { className: "mx-0.5" } : {})} />
-                        {interactiveLinks && onUnitContextClick ? (
+                        {nativePositionLinks ? (
                           <button
                             className="cursor-pointer rounded-sm text-left outline-none transition-colors hover:bg-accent hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                             onClick={(event) => {
@@ -497,46 +564,6 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                   </a>
                 );
               }
-              if (
-                (node.fieldName === "fullName" || node.fieldName === "profileUrl") &&
-                profileUrl &&
-                interactiveLinks
-              ) {
-                return (
-                  <a
-                    className={cn(actionClassName, textClassName(node))}
-                    href={profileUrl}
-                    key={nodeKey}
-                    onClick={(event) => event.stopPropagation()}
-                    referrerPolicy="no-referrer"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <HighlightedText queryTokens={queryTokens} text={node.text} />
-                  </a>
-                );
-              }
-              if (node.fieldName === "unitName" && onUnitContextClick && interactiveLinks) {
-                return (
-                  <span className={textClassName(node)} key={nodeKey}>
-                    {resolvedUnitContexts.map((unitContext, unitIndex) => (
-                      <span key={unitContext.id}>
-                        {unitIndex > 0 && "; "}
-                        <button
-                          className={actionClassName}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onUnitContextClick(unitContext);
-                          }}
-                          type="button"
-                        >
-                          <HighlightedText queryTokens={queryTokens} text={unitContext.unitName} />
-                        </button>
-                      </span>
-                    ))}
-                  </span>
-                );
-              }
               return (
                 <span className={textClassName(node)} key={nodeKey}>
                   <HighlightedText queryTokens={queryTokens} text={node.text} />
@@ -555,6 +582,7 @@ export const EmployeeCard = observer(function EmployeeCard({
   bossPosition = null,
   className,
   dataDemoId,
+  displayContext = "fallback",
   displayFormat,
   displayLineGap,
   displayUnitContexts,
@@ -604,6 +632,7 @@ export const EmployeeCard = observer(function EmployeeCard({
         <div className="min-w-0 flex-1">
           <EmployeeDisplayContent
             compact
+            displayContext={displayContext}
             employee={employee}
             queryTokens={queryTokens}
             {...(displayFormat === undefined ? {} : { format: displayFormat })}
@@ -648,6 +677,7 @@ export const EmployeeCard = observer(function EmployeeCard({
       />
       <div className="min-w-0 flex-1">
         <EmployeeDisplayContent
+          displayContext={displayContext}
           employee={employee}
           queryTokens={queryTokens}
           {...(displayFormat === undefined ? {} : { format: displayFormat })}
@@ -672,6 +702,7 @@ export function EmployeeCardList({
   cardClassName,
   className,
   dataDemoId,
+  displayContext = "fallback",
   displayFormat,
   displayLineGap,
   displayUnitContexts,
@@ -763,6 +794,7 @@ export function EmployeeCardList({
                 <EmployeeCard
                   actions={actions}
                   bossPosition={getBossPosition(employee, bossUnitId)}
+                  displayContext={displayContext}
                   draggable={draggable?.(employee) ?? false}
                   employee={employee}
                   name={name?.(employee)}

@@ -472,10 +472,14 @@ test("hands state to another live tab and forgets it after the final tab closes"
   const modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
   await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
   await modelDialog.locator("#employee-display-employees-format").fill("{fullName}\nLive display");
-  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("11");
+  await expect(modelDialog.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await secondPage.bringToFront();
   await expect(secondPage.locator('[data-demo-id="employees-list"]')).toContainText("Live display");
+  await expect(
+    secondPage.locator('[data-demo-id="employees-list"] [data-employee-display-content]').first(),
+  ).toHaveAttribute("data-employee-display-line-gap", "11");
 
   await page.close();
   await secondPage.close();

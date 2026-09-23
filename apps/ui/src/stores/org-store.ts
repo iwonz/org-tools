@@ -39,6 +39,7 @@ import {
   normalizeEditableEmployeeFields,
 } from "@/lib/employee-data";
 import {
+  createDefaultEmployeeDisplayFormats,
   DEFAULT_EMPLOYEE_DISPLAY_FORMATS,
   DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS,
 } from "@/lib/employee-display-defaults";
@@ -1713,12 +1714,40 @@ export class OrgStore {
     formats: EmployeeDisplayFormats,
     lineGaps: EmployeeDisplayLineGaps,
   ): void {
-    this.employeeDisplayFormats = { ...formats };
-    this.employeeDisplayLineGaps = { ...lineGaps };
+    const formatsChanged = Object.keys(formats).some(
+      (key) =>
+        formats[key as keyof EmployeeDisplayFormats] !==
+        this.employeeDisplayFormats[key as keyof EmployeeDisplayFormats],
+    );
+    const lineGapsChanged = Object.keys(lineGaps).some(
+      (key) =>
+        lineGaps[key as keyof EmployeeDisplayLineGaps] !==
+        this.employeeDisplayLineGaps[key as keyof EmployeeDisplayLineGaps],
+    );
+    if (!formatsChanged && !lineGapsChanged) return;
+    if (formatsChanged) this.employeeDisplayFormats = { ...formats };
+    if (lineGapsChanged) this.employeeDisplayLineGaps = { ...lineGaps };
   }
 
   setEmployeeDisplayFormats(formats: EmployeeDisplayFormats): void {
     this.setEmployeeDisplaySettings(formats, this.employeeDisplayLineGaps);
+  }
+
+  setEmployeeDisplayFormat(key: keyof EmployeeDisplayFormats, format: string): void {
+    if (this.employeeDisplayFormats[key] === format) return;
+    this.employeeDisplayFormats = { ...this.employeeDisplayFormats, [key]: format };
+  }
+
+  setEmployeeDisplayLineGap(key: keyof EmployeeDisplayLineGaps, lineGap: number): void {
+    if (!Number.isInteger(lineGap) || lineGap < 0 || lineGap > 24) {
+      throw new RangeError("Employee display line gap must be an integer from 0 through 24.");
+    }
+    if (this.employeeDisplayLineGaps[key] === lineGap) return;
+    this.employeeDisplayLineGaps = { ...this.employeeDisplayLineGaps, [key]: lineGap };
+  }
+
+  resetEmployeeDisplayFormat(key: keyof EmployeeDisplayFormats): void {
+    this.setEmployeeDisplayFormat(key, createDefaultEmployeeDisplayFormats(this.locale)[key]);
   }
 
   createDurableUiState(): OrgToolsState["ui"] {

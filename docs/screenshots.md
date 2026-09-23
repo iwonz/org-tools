@@ -144,12 +144,13 @@ Compound matching.
 [![Employee model](screenshots/feature-employees-model.png)](screenshots/feature-employees-model.png)
 
 Configure the four saved Employee-card formats and inspect their real contextual previews on the
-Display tab. The frame shows the thematic tabs, flat sections, per-format line-spacing sliders,
-wrapped Markdown, native assignment and Tag treatments, and the selection formatting menu. The following Value and Template frames
+Display tab. The frame shows the thematic tabs, flat sections, per-format Reset actions and numeric
+line-spacing inputs, wrapped Markdown, native assignment and Tag treatments, the selection
+formatting menu, and no separate Display Save action. The following Value and Template frames
 retain coverage of the Model tab.
 
 Capabilities: Display formats, Line wrapping and spacing, Markdown tools, Native Tags and
-assignments, Contextual previews, Atomic draft save.
+assignments, Contextual previews, Live apply, Per-format reset.
 
 ### Custom Value field
 
@@ -663,11 +664,13 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm Employee model exposes accessible switches for Required, Multiple selection, and custom
   options; Required rows have no field background, border, radius, or padding. Employee editing can
   commit a shared custom option and a dated Composite record. Confirm the Display tab previews and
-  saves all four formats together, shows thematic tab icons and flat sections, formats a selected
+  applies each valid format or numeric gap immediately, shows Reset beside every format with no
+  Display Save button, keeps spacing only between visual rows, shows thematic tab icons and flat sections, formats a selected
   range by keyboard-accessible Markdown actions, validates link protocols, coexists with `@`
-  suggestions, and discards dismissed drafts. Confirm all lines share normal base typography,
+  suggestions, and retains accepted changes after dismissal. Confirm all lines share normal base typography,
   colored dated Tags and compound `Position · Unit` pills survive Markdown, plain email stays
-  unlinked until explicitly marked up, fallback cards use Employees, Editor links remain inert,
+  unlinked until explicitly marked up, all ordinary tokens stay unlinked, only the Unit segment of
+  `{positions}` links in Employees and Units, fallback cards use Employees with inert Unit segments, Editor links remain inert,
   Editor and both PNG dialogs use their assigned formats, all six visual inputs share `@`, Enter,
   and Markdown selection tools without `{field}` button catalogs, and wrapped Tag and assignment
   fragments share DOM/PNG order, geometry, typography, color, padding, radius, and gaps. Image-dialog

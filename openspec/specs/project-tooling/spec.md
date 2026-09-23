@@ -641,13 +641,14 @@ Automated checks SHALL cover exact state parsing, definition and value validatio
 
 ### Requirement: Screenshot gallery covers Employee display formats
 The deterministic gallery SHALL remain exactly 59 PNG files. The primary Employee-model frame SHALL
-show the icon-labeled Display tab, flat format sections, a rich native preview, and the Markdown
-selection menu, while existing Value and Template frames SHALL continue to cover Model. Repeated
-unchanged generation MUST produce identical hashes.
+show the icon-labeled Display tab, flat format sections, numeric line-gap inputs, per-format Reset
+actions, a rich native preview, the Markdown selection menu, and no Display Save button. Existing
+Value and Template frames SHALL continue to cover Model. Repeated unchanged generation MUST produce
+identical hashes.
 
 #### Scenario: Generate the Employee model gallery
 - **WHEN** the maintained gallery is generated twice from unchanged source
-- **THEN** all 59 PNG hashes match and the Employee-model frames cover Markdown Display editing plus the existing Model workflows
+- **THEN** all 59 PNG hashes match and the Employee-model frames cover live Markdown Display editing, Reset actions, numeric gaps, and the existing Model workflows
 
 ### Requirement: Maintained validation covers unified Employee inline layout
 The deterministic gallery and browser suite SHALL retain the maintained scenario count and cover

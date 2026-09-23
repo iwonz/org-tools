@@ -65,13 +65,18 @@ control.
   text opens the local formatting menu; its link editor accepts only `http`, `https`, `mailto`, or
   `tel` addresses. Model lists Employee-owned fields separately from Unit-context fields, and custom
   Template fields suggest only values available without Unit context. Each destination has its own
-  0-24 px line-spacing slider. Enter creates rows, authored internal blank rows remain visible, and
+  0-24 px integer line-spacing input. Enter creates rows, authored internal blank rows remain visible, and
   long text wraps by words with character fallback. Markdown supplies any emphasis. `{tags}` retains colored and dated chips, while
   `{positions}` renders every contextual assignment as a bordered `Position · Unit` pill.
   `{position}` and `{unitName}` remain ordinary `; `-joined text. `{isBoss}` is condition-only, so
   visible boss text is authored in a ternary. `{email}` is ordinary text until
   an author adds an explicit link such as `[{email}](mailto:{email})`. Empty formats are valid.
-  Changes remain a local draft until **Save** commits all formats and gaps together. Cards outside those four named contexts use the
+  The gap appears only between adjacent visible rows, with no extra space above, below, or around a
+  single row. Valid edits apply immediately; blank or invalid gap text is restored or normalized on
+  blur and Enter. **Reset** beside Format restores only that section's current-locale default and
+  keeps every gap unchanged. Ordinary tokens do not create links. Explicit safe Markdown links work
+  in interactive lists, while only the Unit-name portion of `{positions}` links implicitly in the
+  Employees and Units sections. Cards outside those named sections keep it inert and use the
   Employees format;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
   deletion. Its flat rows expose Eye, Color, Edit, and Delete: Eye opens current full Employee cards,

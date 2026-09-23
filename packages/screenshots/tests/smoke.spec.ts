@@ -1767,6 +1767,13 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(
     modelDialog.locator('[data-demo-id="employee-model-tab-display"] svg'),
   ).toBeVisible();
+  await expect(modelDialog.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  const defaultDisplayFormats = {
+    editor: "{fullName}\n{tags}",
+    editorExport: "{fullName} {isBoss ? '· Manager' : ''}\n{tags}",
+    employees: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
+    units: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
+  } as const;
   for (const key of ["employees", "units", "editor", "editorExport"]) {
     const section = modelDialog.locator(`[data-demo-id="employee-display-${key}"]`);
     await expect(section).toBeVisible();
@@ -1782,6 +1789,12 @@ test("edits contextual Employee card formats with live previews and local image 
     await expect(
       modelDialog.locator(`[data-demo-id="employee-display-${key}-line-gap"]`),
     ).toHaveValue("4");
+    await expect(
+      modelDialog.locator(`[data-demo-id="employee-display-${key}-line-gap"]`),
+    ).toHaveAttribute("type", "number");
+    await expect(
+      modelDialog.locator(`[data-demo-id="employee-display-${key}-reset"]`),
+    ).toBeVisible();
     const formatInput = modelDialog.locator(`#employee-display-${key}-format`);
     await formatInput.fill("@full");
     await expect(section.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
@@ -1799,7 +1812,30 @@ test("edits contextual Employee card formats with live previews and local image 
     await expect(section.locator('[data-demo-id="template-markdown-tools"]')).toBeVisible();
     await page.keyboard.press("Escape");
     await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+    await modelDialog.locator(`[data-demo-id="employee-display-${key}-reset"]`).click();
+    await expect(formatInput).toHaveValue(
+      defaultDisplayFormats[key as keyof typeof defaultDisplayFormats],
+    );
   }
+
+  const employeesGapInput = modelDialog.locator(
+    '[data-demo-id="employee-display-employees-line-gap"]',
+  );
+  const employeesPreviewContent = modelDialog.locator(
+    '[data-demo-id="employee-display-employees-preview"] [data-employee-display-content]',
+  );
+  await modelDialog.locator("#employee-display-employees-format").fill("{fullName}");
+  await employeesGapInput.fill("0");
+  const oneLineHeightAtZero = await employeesPreviewContent.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
+  await employeesGapInput.fill("24");
+  const oneLineHeightAtTwentyFour = await employeesPreviewContent.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
+  expect(oneLineHeightAtTwentyFour).toBe(oneLineHeightAtZero);
+  await modelDialog.locator('[data-demo-id="employee-display-employees-reset"]').click();
+  await employeesGapInput.fill("4");
 
   const employeesFormat = modelDialog.locator("#employee-display-employees-format");
   await employeesFormat.fill("{fullName}\n\nDraft only");
@@ -1812,11 +1848,18 @@ test("edits contextual Employee card formats with live previews and local image 
   );
   await expect(previewLines).toHaveCount(3);
   await expect(previewLines.nth(1)).toHaveAttribute("data-employee-display-blank", "true");
-  await expect(
-    modelDialog.locator(
-      '[data-demo-id="employee-display-employees-preview"] [data-employee-display-content]',
-    ),
-  ).toHaveCSS("row-gap", "12px");
+  const previewGeometry = await previewLines.evaluateAll((lines) =>
+    lines.map((line) => {
+      const bounds = line.getBoundingClientRect();
+      return { height: bounds.height, y: bounds.y };
+    }),
+  );
+  expect(previewGeometry[1]?.y).toBe(
+    (previewGeometry[0]?.y ?? 0) + (previewGeometry[0]?.height ?? 0) + 12,
+  );
+  expect(previewGeometry[2]?.y).toBe(
+    (previewGeometry[1]?.y ?? 0) + (previewGeometry[1]?.height ?? 0) + 12,
+  );
   expect(
     await previewLines.nth(0).evaluate((element) => getComputedStyle(element).fontWeight),
   ).toBe(await previewLines.nth(1).evaluate((element) => getComputedStyle(element).fontWeight));
@@ -1868,12 +1911,27 @@ test("edits contextual Employee card formats with live previews and local image 
   await page.locator('[data-demo-id="employee-model-button"]').click();
   modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
   await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
-  await expect(modelDialog.locator("#employee-display-employees-format")).not.toHaveValue(
-    /Draft only/u,
+  await expect(modelDialog.locator("#employee-display-employees-format")).toHaveValue(
+    "**Avery** Draft",
   );
   await expect(
     modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]'),
-  ).toHaveValue("4");
+  ).toHaveValue("12");
+  const employeesLineGap = modelDialog.locator(
+    '[data-demo-id="employee-display-employees-line-gap"]',
+  );
+  await employeesLineGap.fill("");
+  await expect(
+    modelDialog.locator(
+      '[data-demo-id="employee-display-employees-preview"] [data-employee-display-content]',
+    ),
+  ).toHaveAttribute("data-employee-display-line-gap", "12");
+  await employeesLineGap.blur();
+  await expect(employeesLineGap).toHaveValue("12");
+  await employeesLineGap.fill("30");
+  await employeesLineGap.press("Enter");
+  await expect(employeesLineGap).toHaveValue("24");
+  await employeesLineGap.fill("12");
 
   const displayEmployeesFormat = modelDialog.locator("#employee-display-employees-format");
   await displayEmployeesFormat.fill("@positions");
@@ -1886,18 +1944,21 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(suggestions).toContainText("{department}");
   await displayEmployeesFormat.press("Enter");
   await expect(displayEmployeesFormat).toHaveValue("{department}");
+  await modelDialog.locator('[data-demo-id="employee-display-employees-reset"]').click();
+  await expect(displayEmployeesFormat).toHaveValue(defaultDisplayFormats.employees);
+  await expect(employeesLineGap).toHaveValue("12");
 
   await modelDialog
     .locator("#employee-display-employees-format")
     .fill(
-      "**{fullName}** · [{email}](mailto:{email})\n[Directory](https://example.test/directory)\nEmployee card\n{tags}",
+      "**{fullName}** · [{email}](mailto:{email})\n{profileUrl}\n[Directory](https://example.test/directory)\nEmployee card\n{positions}\n{tags}",
     );
   await modelDialog
     .locator("#employee-display-units-format")
-    .fill("{fullName}\n{positions}\nUnit card");
+    .fill("{fullName}\n{position}\n{unitName}\n{positions}\nUnit card");
   await modelDialog
     .locator("#employee-display-editor-format")
-    .fill("_{fullName}_\n{tags}\n[Editor card](https://example.test/editor)");
+    .fill("_{fullName}_\n{positions}\n{tags}\n[Editor card](https://example.test/editor)");
   const imageFormat = "{fullName} {isBoss ? '· Manager' : ''}\n{positions}\n{tags}\n`Export card`";
   await modelDialog.locator("#employee-display-editorExport-format").fill(imageFormat);
   await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("12");
@@ -1914,27 +1975,34 @@ test("edits contextual Employee card formats with live previews and local image 
       '[data-demo-id="employee-display-units-preview"] [data-employee-position-assignment]',
     ),
   ).toBeVisible();
-  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   const employeeCard = page.locator('[data-demo-id="employees-list"] article').first();
   await expect(employeeCard).toContainText("Employee card");
-  await expect(employeeCard.locator("[data-employee-display-content]")).toHaveCSS(
-    "row-gap",
-    "12px",
+  await expect(employeeCard.locator("[data-employee-display-content]")).toHaveAttribute(
+    "data-employee-display-line-gap",
+    "12",
   );
   await expect(employeeCard).toHaveAccessibleName(/\S/u);
-  await expect(
-    employeeCard.getByRole("link", { name: "Avery Stone", exact: true }),
-  ).toHaveAttribute("href", "https://example.test/profiles/avery-stone");
+  await expect(employeeCard.getByRole("link", { name: "Avery Stone", exact: true })).toHaveCount(0);
   await expect(
     employeeCard.getByRole("link", { name: "avery.stone@example.test", exact: true }),
   ).toHaveAttribute("href", "mailto:avery.stone@example.test");
+  await expect(
+    employeeCard.getByText("https://example.test/profiles/avery-stone", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    employeeCard.getByRole("link", {
+      name: "https://example.test/profiles/avery-stone",
+      exact: true,
+    }),
+  ).toHaveCount(0);
   const directoryLink = employeeCard.getByRole("link", { name: "Directory", exact: true });
   await expect(directoryLink).toHaveAttribute("href", "https://example.test/directory");
   await expect(directoryLink).toHaveAttribute("referrerpolicy", "no-referrer");
   await expect(directoryLink).toHaveAttribute("rel", "noopener noreferrer");
   await expect(employeeCard.locator('[data-employee-markdown-link="interactive"]')).toHaveCount(2);
+  await expect(employeeCard.getByRole("button", { name: "Product", exact: true })).toBeVisible();
   await expect(employeeCard.locator("[data-tag-color-surface]").first()).toBeVisible();
   await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("Avery");
   await expect(employeeCard.locator("mark").first()).toHaveText("Avery");
@@ -1959,13 +2027,14 @@ test("edits contextual Employee card formats with live previews and local image 
       name: "Product",
       exact: true,
     }),
-  ).toBeVisible();
+  ).toHaveCount(1);
 
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   const editorRow = page.locator("[data-org-editor-employee-row]").first();
   await expect(editorRow).toContainText("Editor card");
   await expect(editorRow.locator('[data-employee-markdown-link="inert"]')).toBeVisible();
   await expect(editorRow.locator("a")).toHaveCount(0);
+  await expect(editorRow.getByRole("button", { name: "Product", exact: true })).toHaveCount(0);
   await expect(editorRow.locator("[data-tag-color-surface]").first()).toBeVisible();
   expect(
     await editorRow.evaluate((element) => element.getBoundingClientRect().height),
@@ -2054,7 +2123,11 @@ test("edits contextual Employee card formats with live previews and local image 
   await page.locator('[data-demo-id="employee-tags-button"]').click();
   const tagDialog = page.getByRole("dialog", { name: "Tags", exact: true });
   await tagDialog.locator('[data-demo-id="tag-catalog-view-employees"]').first().click();
-  await expect(page.locator('[data-demo-id="tag-employees-list"]')).toContainText("Employee card");
+  const tagEmployeesList = page.locator('[data-demo-id="tag-employees-list"]');
+  await expect(tagEmployeesList).toContainText("Employee card");
+  await expect(tagEmployeesList.getByRole("button", { name: "Product", exact: true })).toHaveCount(
+    0,
+  );
   await page
     .getByRole("dialog", { name: /Employees with Tag/u })
     .getByRole("button", { name: "Close", exact: true })
@@ -2067,6 +2140,12 @@ test("edits contextual Employee card formats with live previews and local image 
   await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
   await expect(modelDialog.locator("#employee-display-editorExport-format")).toHaveValue(
     imageFormat,
+  );
+  await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
+  await page.reload();
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await expect(page.locator('[data-demo-id="employees-list"] article').first()).toContainText(
+    "Employee card",
   );
   await assertLocalRequests();
 });
@@ -3467,12 +3546,17 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
     .toBe(480);
   await expect
     .poll(async () => {
-      const response = await page.request.get("/api/state");
-      const document = (await response.json()) as { state: OrgToolsState };
-      const persistedLongText = document.state.organization.views
-        .flatMap((view) => view.structure.canvasElements)
-        .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
-      return persistedLongText?.type === "text" ? persistedLongText.width : null;
+      try {
+        const response = await page.request.get("/api/state");
+        if (!response.ok()) return null;
+        const document = (await response.json()) as { state: OrgToolsState };
+        const persistedLongText = document.state.organization.views
+          .flatMap((view) => view.structure.canvasElements)
+          .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
+        return persistedLongText?.type === "text" ? persistedLongText.width : null;
+      } catch {
+        return null;
+      }
     })
     .toBe(480);
   await page.waitForTimeout(2_000);
@@ -3828,6 +3912,8 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   const planningTag = state.organization.tags.find((tag) => tag.label === "Planning");
   if (!planningTag) throw new Error("Synthetic Planning Tag is unavailable.");
   datedEmployee.tags.push({ date: "2026-07-10", tagId: planningTag.id });
+  state.organization.employeeDisplayFormats.employees =
+    "[{fullName}]({profileUrl})\n{username}\n{email}\n{positions}\n{tags}";
   const importDialog = await openImportDialog(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",

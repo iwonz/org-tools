@@ -126,7 +126,10 @@ Analytics builds every count group, known birth-year index, and gender age cohor
 pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys
 rather than detached Employee arrays. Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, a constant-size Tag
 indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same
-display-line heights and prefix geometry; open-position rows continue to use deterministic Tag
+display-line heights and prefix geometry. Mounted list cards measure their information-column width
+with `ResizeObserver` and reuse the same bounded layout cache; virtual rows remeasure only after the
+resolved height changes. Focused Display setters skip identical values, while the existing latest-
+snapshot writer coalesces valid keystroke updates. Open-position rows continue to use deterministic Tag
 packing. Image export measures each included open-position Tag once
 with the loaded output font, retains complete multi-line chip layouts, and builds one immutable
 render entry per included Unit before painting cards and connections without measuring mounted or

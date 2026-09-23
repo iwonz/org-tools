@@ -563,6 +563,7 @@ export const UnitsTab = observer(() => {
             cardDataDemoId="unit-employee-card"
             className="flex-1 p-0"
             dataDemoId="units-employee-cards"
+            displayContext="units"
             displayFormat={store.employeeDisplayFormats.units}
             displayLineGap={store.employeeDisplayLineGaps.units}
             displayUnitContexts={(employee) =>

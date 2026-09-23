@@ -36,12 +36,14 @@ computed locally. Multi-option catalogs, user-created choices,
 Composite schemas and records, their validation, and their derived Calendar events remain inside
 the same in-memory or loopback boundary. New custom options remain transient dialog data until the
 complete Employee save succeeds. Employee display formats, line gaps, and their previews resolve
-only the current local catalog and View context. Display drafts and image-dialog overrides remain in dialog
-memory until their explicit Save or dismissal. Their inline Markdown parser never executes HTML,
+only the current local catalog and View context. Valid Display edits immediately enter the local
+organization State and its loopback SQLite or live-tab channel; invalid numeric input remains only
+in the mounted control. Image-dialog overrides remain transient until dismissal. Their inline Markdown parser never executes HTML,
 loads images, or interprets Markdown from resolved Employee values. Plain fields, including
-`{email}`, never create navigation. Only explicit `http`, `https`, `mailto`, and `tel` Markdown
-links can navigate from list cards after a user action; Editor and image links
-remain inert. Rendering or previewing a format creates no remote lookup. Export
+profile, email, position, Unit, and custom values, never create navigation. Only explicit `http`,
+`https`, `mailto`, and `tel` Markdown links can navigate from interactive list cards after a user
+action. The Unit-name portion of `{positions}` can perform local navigation only in Employees and
+Units cards. Fallback cards, Editor, and image links remain inert. Rendering or previewing a format creates no remote lookup. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
 shared text, Markdown, Tag, assignment, and suffix layout runs locally from the current width,

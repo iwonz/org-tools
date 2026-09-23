@@ -29,11 +29,15 @@ test("opens at the root and writes organization plus durable UI automatically", 
   await modelDialog
     .locator("#employee-display-employees-format")
     .fill("{fullName}\nPersisted display");
-  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("9");
+  await expect(modelDialog.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Persisted display");
+  await expect(
+    page.locator('[data-demo-id="employees-list"] [data-employee-display-content]').first(),
+  ).toHaveAttribute("data-employee-display-line-gap", "9");
 
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
   await page.waitForTimeout(500);
@@ -100,11 +104,14 @@ test("synchronizes state and durable UI between tabs without conflicts", async (
   await modelDialog
     .locator("#employee-display-employees-format")
     .fill("{fullName}\nSynchronized display");
-  await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
+  await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("7");
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await expect(secondPage.locator('[data-demo-id="employees-list"]')).toContainText(
     "Synchronized display",
   );
+  await expect(
+    secondPage.locator('[data-demo-id="employees-list"] [data-employee-display-content]').first(),
+  ).toHaveAttribute("data-employee-display-line-gap", "7");
 });
 
 test("validates scoped state writes and rejects cross-origin mutations", async ({ page }) => {

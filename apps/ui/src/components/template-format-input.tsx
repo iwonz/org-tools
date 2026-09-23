@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   HiOutlineBold,
@@ -89,6 +90,7 @@ export function TemplateFormatInput({
   id,
   inlineMarkdownTools = false,
   label,
+  labelAction,
   onChange,
   tokens,
   value,
@@ -97,6 +99,7 @@ export function TemplateFormatInput({
   id: string;
   inlineMarkdownTools?: boolean;
   label: string;
+  labelAction?: ReactNode;
   onChange: (value: string) => void;
   tokens: TemplateFormatToken[];
   value: string;
@@ -242,28 +245,31 @@ export function TemplateFormatInput({
 
   return (
     <div className="grid min-w-0 gap-2" data-demo-id={dataDemoId} ref={rootRef}>
-      <div className="flex items-center gap-1.5">
-        <Label htmlFor={id}>{label}</Label>
-        <span className="group relative inline-flex">
-          <button
-            aria-describedby={`${id}-token-help`}
-            aria-label={t("Token suggestions help")}
-            className="inline-flex size-5 cursor-help items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-            data-demo-id="template-format-help"
-            type="button"
-          >
-            <HiOutlineInformationCircle className="size-4" />
-          </button>
-          <span
-            className="pointer-events-none absolute start-0 top-full z-[90] mt-1 hidden w-64 rounded-md border border-border/80 bg-popover px-3 py-2 text-start text-xs font-normal leading-relaxed text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)] group-hover:block group-focus-within:block"
-            id={`${id}-token-help`}
-            role="tooltip"
-          >
-            {t("Type @ to open token suggestions. Use {example} for conditional text.", {
-              example: "{condition ? 'value' : 'fallback'}",
-            })}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <Label htmlFor={id}>{label}</Label>
+          <span className="group relative inline-flex">
+            <button
+              aria-describedby={`${id}-token-help`}
+              aria-label={t("Token suggestions help")}
+              className="inline-flex size-5 cursor-help items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+              data-demo-id="template-format-help"
+              type="button"
+            >
+              <HiOutlineInformationCircle className="size-4" />
+            </button>
+            <span
+              className="pointer-events-none absolute start-0 top-full z-[90] mt-1 hidden w-64 rounded-md border border-border/80 bg-popover px-3 py-2 text-start text-xs font-normal leading-relaxed text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)] group-hover:block group-focus-within:block"
+              id={`${id}-token-help`}
+              role="tooltip"
+            >
+              {t("Type @ to open token suggestions. Use {example} for conditional text.", {
+                example: "{condition ? 'value' : 'fallback'}",
+              })}
+            </span>
           </span>
-        </span>
+        </div>
+        {labelAction}
       </div>
       <div className="relative min-w-0">
         <Textarea

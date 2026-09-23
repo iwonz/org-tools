@@ -18,11 +18,11 @@ Download settings SHALL store its source View, one complete `jsonTopLevelFieldOr
 scalar Employee fields plus Unit and Tag collection keys, ordered nested Unit and Tag fields,
 independently named fields, exact exclusion keys, Template row mode, and Template format. They SHALL
 NOT store a separate Employee-only top-level order, CSV, flat Unit columns, or a Unit-path separator.
-Transient overlays, notifications, unfinished form drafts, complete generated output, Editor
-history/clipboard, and Editor export settings MUST NOT enter the state. There SHALL be no
-deterministic Employee digest, inline Tag label, obsolete Calendar cloud state, missing definition
-reference, View-local Employee, override, format discriminator, version, compatibility alias,
-legacy reader, partial document, unknown key, or old custom/output shape.
+Transient overlays, notifications, unfinished form drafts, invalid Display number-input text,
+complete generated output, Editor history/clipboard, and Editor export settings MUST NOT enter the
+state. There SHALL be no deterministic Employee digest, inline Tag label, obsolete Calendar cloud
+state, missing definition reference, View-local Employee, override, format discriminator, version,
+compatibility alias, legacy reader, partial document, unknown key, or old custom/output shape.
 
 #### Scenario: Open the current state
 - **WHEN** either runtime receives a fully valid current state with four bounded line gaps
@@ -37,15 +37,15 @@ legacy reader, partial document, unknown key, or old custom/output shape.
 - **THEN** all View documents, global catalogs, Employee formats, line gaps, and valid durable UI context restore atomically
 
 #### Scenario: Capture current state
-- **WHEN** current state is captured after one atomic Employee-display save
-- **THEN** all four formats and four line gaps appear in the same organization revision
+- **WHEN** current state is captured after valid focused Employee-display edits
+- **THEN** the latest four formats and four line gaps appear in the organization snapshot
 
 #### Scenario: Obsolete document
 - **WHEN** input contains a former State shape, partial line-gap object, format discriminator, version, compatibility alias, or unknown key
 - **THEN** strict validation rejects it without changing memory or durable storage
 
 #### Scenario: Transient interface
-- **WHEN** a dialog, popover, toast, output build, View history/clipboard, or Editor export session is active while state is captured
+- **WHEN** a dialog, popover, toast, invalid Display number input, output build, View history/clipboard, or Editor export session is active while state is captured
 - **THEN** that transient condition is absent from the captured state
 
 ### Requirement: Server mode persists one state automatically
@@ -328,13 +328,27 @@ MUST remain strict and MUST NOT add migration or compatibility behavior.
 - **THEN** no partial converted state becomes authoritative and the complete original family can be restored locally
 
 ### Requirement: Employee display formats are one organization change
-Saving Employee display formats SHALL update one organization object, enqueue one server-mode
-SQLite organization snapshot, and publish one browser-mode live-tab organization update. Reading
-cards or previews MUST NOT create persistence or synchronization work.
+Each valid Employee display format or line-gap edit SHALL update only the selected organization
+value, enqueue one server-mode SQLite organization snapshot, and publish one browser-mode live-tab
+organization update. Writing a value equal to the current value and reading cards or previews MUST
+NOT create a revision, persistence write, or synchronization message. The automatic writer MAY
+coalesce successive typing snapshots while preserving the latest validated state.
 
-#### Scenario: Save four formats
-- **WHEN** a user saves a changed Display draft
-- **THEN** the four formats persist and synchronize as one logical organization mutation
+#### Scenario: Edit one format
+- **WHEN** a user changes one Employee display format to a different string
+- **THEN** that one logical organization mutation persists and synchronizes immediately
+
+#### Scenario: Edit one line gap
+- **WHEN** a user changes one Employee display line gap to a different valid integer
+- **THEN** that one logical organization mutation persists and synchronizes immediately
+
+#### Scenario: Repeat the current value
+- **WHEN** a format or line-gap operation receives its already stored value
+- **THEN** the organization revision, SQLite writer, and live-tab publisher receive no work
+
+#### Scenario: Read a preview
+- **WHEN** a card or preview resolves current Employee display settings
+- **THEN** no persistence or synchronization work is created
 
 ### Requirement: Employee line gaps are converted once outside runtime
 Delivery SHALL stop the owned runtime, preserve a timestamped ignored database-family backup, add

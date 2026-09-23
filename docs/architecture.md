@@ -49,16 +49,26 @@ Markdown runs, Tags, and `Position · Unit` assignments in source order on share
 wraps by word and grapheme and emits content-sized fragment rectangles. DOM renders those fragments
 with cloned decoration while Canvas paints the same rectangles. Normal surfaces use 11 px type,
 16 px line height, 8 px horizontal and 2 px vertical padding, 6 px radius, and 4 px gaps; Editor and
-PNG use 9 px type, 12 px line height, 6 px horizontal padding, 6 px radius, and 2 px gaps. `{position}` and
-`{unitName}` remain ordinary text values. List and fallback contexts
+PNG use 9 px type, 12 px line height, 6 px horizontal padding, 6 px radius, and 2 px gaps. The
+configured display gap is inserted only between adjacent measured visual rows; it contributes no
+outer space and cannot change a single-row height. `{position}`, `{unitName}`, `{fullName}`,
+`{profileUrl}`, `{email}`, and custom tokens remain ordinary text values. List and fallback contexts
 aggregate system-View assignments in structural order; one Unit or Editor row resolves only that
 Unit. `isBoss` is a condition-only boolean; visible text belongs in a ternary branch. Plain
-`{email}` remains text; an explicit safe Markdown link can add `mailto:` navigation in
-lists and remains styled but inert in Editor and PNG. A custom-field key rename rewrites all four templates in the same action, and a referenced
+tokens remain text; an explicit safe Markdown link can add navigation in interactive lists and
+remains styled but inert in Editor and PNG. Only the Unit-name fragment inside `{positions}` has
+implicit navigation, and only Employees and Units cards enable it. Fallback cards, drag previews,
+Editor, and PNG keep the fragment inert. A custom-field key rename rewrites all four templates in the same action, and a referenced
 custom field cannot be deleted. The Editor DOM and PNG renderer share word/character wrapping,
 authored blank rows, line gaps, rich-line counts, wrapped chip rows, row heights, offsets, text
 width, Unit bounds, hit testing, and anchors. Image dialogs clone the saved Editor-export format and
 line gap into transient settings.
+
+The Employee Display tab reads these organization values directly. Each valid format or bounded
+integer gap edit calls a focused no-op-aware store action, so MobX observation immediately drives
+the existing coalesced SQLite writer or `BroadcastChannel` publisher. Invalid number-input text
+stays in the mounted input until blur or Enter normalizes it. Per-format Reset resolves the current
+locale's maintained default at activation time and updates only that format.
 
 Each View owns required `structure.settings`: `groupByTag` and `showTagCloud` default to true;
 `distributedColor` and `undistributedColor` default to green and amber and use non-null named or
