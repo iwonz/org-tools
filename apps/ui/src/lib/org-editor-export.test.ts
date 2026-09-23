@@ -81,7 +81,7 @@ const unit: OrgEditorUnit = {
 };
 
 describe("Org Editor image export", () => {
-  test("packs compound Employee assignments as single-line pills", () => {
+  test("wraps compound Employee assignments into content-sized decorated fragments", () => {
     const createPosition = (
       unitId: string,
       unitName: string,
@@ -103,11 +103,17 @@ describe("Org Editor image export", () => {
     ];
     const layout = createOrgEditorExportEmployeePositionLayout(positions, 96);
 
-    expect(layout.rowCount).toBe(2);
-    expect(layout.chips.map((chip) => chip.lines)).toEqual([
-      ["Lead · Product"],
-      ["Advisor · Research and Development"],
-    ]);
+    expect(layout.rowCount).toBeGreaterThan(2);
+    expect(
+      positions.map((_, itemIndex) =>
+        layout.chips
+          .filter((chip) => chip.itemIndex === itemIndex)
+          .flatMap((chip) => chip.lines)
+          .join(" ")
+          .replace(/\s+/gu, " "),
+      ),
+    ).toEqual(["Lead · Product", "Advisor · Research and Development"]);
+    expect(layout.chips.every((chip) => chip.lines.length === 1 && chip.width <= 96)).toBe(true);
     expect(layout.chips.every((chip) => chip.height === ORG_EDITOR_EMPLOYEE_TAG_STYLE.height)).toBe(
       true,
     );
@@ -283,7 +289,7 @@ describe("Org Editor image export", () => {
     );
     expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBe(38);
     expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90)).toBeCloseTo(43.2);
-    expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(3);
+    expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(4);
     expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBeGreaterThan(76);
   });
 
@@ -291,18 +297,22 @@ describe("Org Editor image export", () => {
     const label = "StrategicCustomerExperienceOperationsEnablement";
     const measureText = (text: string) => [...text].length * 6;
     const layout = createOrgEditorExportEmployeeTagLayout([label, "Remote"], 72, measureText);
-    const longChip = layout.chips[0];
-    const followingChip = layout.chips[1];
-    if (!longChip || !followingChip) throw new Error("Expected both tag chips.");
+    const longChips = layout.chips.filter((chip) => chip.itemIndex === 0);
+    const followingChip = layout.chips.find((chip) => chip.itemIndex === 1);
+    if (!followingChip) throw new Error("Expected both logical tags.");
 
-    expect(longChip.lines.length).toBeGreaterThan(1);
-    expect(longChip.lines.join("")).toBe(label);
-    expect(longChip.lines.every((line) => measureText(line) <= 60)).toBe(true);
-    expect(longChip.lines.every((line) => !line.includes("..."))).toBe(true);
-    expect(longChip.width).toBe(72);
-    expect(longChip.height).toBeGreaterThan(ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height);
-    expect(followingChip.y).toBeGreaterThanOrEqual(longChip.height + 2);
-    expect(layout.rowCount).toBe(2);
+    expect(longChips.length).toBeGreaterThan(1);
+    expect(longChips.flatMap((chip) => chip.lines).join("")).toBe(label);
+    expect(longChips.every((chip) => chip.lines.every((line) => measureText(line) <= 60))).toBe(
+      true,
+    );
+    expect(longChips.every((chip) => chip.lines.every((line) => !line.includes("...")))).toBe(true);
+    expect(longChips.at(-1)?.width).toBeLessThan(72);
+    expect(
+      longChips.every((chip) => chip.height === ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height),
+    ).toBe(true);
+    expect(followingChip.y).toBeGreaterThanOrEqual(longChips.at(-1)?.y ?? 0);
+    expect(layout.rowCount).toBeGreaterThan(2);
     expect(getOrgEditorExportEmployeeRowHeightForTagLayout(layout)).toBe(
       48 + layout.height - ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height,
     );

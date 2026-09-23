@@ -360,7 +360,7 @@ test("captures the complete Employee workflow", async ({ page }) => {
   await dialog.getByRole("tab", { name: "Display", exact: true }).click();
   await expect(dialog.locator('[data-demo-id="employee-display-employees"]')).toBeVisible();
   const displayFormat = dialog.locator("#employee-display-employees-format");
-  await displayFormat.fill("**{fullName}**\n{position}\n{tags}");
+  await displayFormat.fill("**{fullName}** · {tags}\n{positions}");
   await displayFormat.evaluate((element) => {
     const textarea = element as HTMLTextAreaElement;
     textarea.focus();

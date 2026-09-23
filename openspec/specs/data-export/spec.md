@@ -3,6 +3,7 @@
 ## Purpose
 Define the local, generic structured-text and Editor image export boundary for Employees and Units.
 ## Requirements
+
 ### Requirement: Data export remains local and generic
 The application SHALL export selected Employees as structured JSON or separator templates using
 only the generic data model. JSON SHALL contain one object per selected Employee and SHALL expose
@@ -84,29 +85,25 @@ same packing model as the live Editor.
 - **THEN** no downloaded-file success label appears and any prior copy confirmation is cleared
 
 ### Requirement: Template formats use one token-aware input
-Data Download, Editor Template export, full-View Editor Image Employee format, and custom Employee Template definitions SHALL
-use one shared multiline Format input and SHALL NOT render separate
-token-button catalogs. Every such input SHALL place a compact focusable help icon immediately after
-its Format label. Hovering or focusing the icon SHALL explain that typing `@` opens token suggestions
-and that `{condition ? 'value' : 'fallback'}` resolves a conditional expression; the input
-placeholder SHALL provide the same concise `@` discovery cue. Typing `@` immediately before the
-caret SHALL open a caret-positioned bordered suggestion menu containing the matching `{token}` and a
-localized short description. Matching MUST be case-insensitive by substring across token keys and
-descriptions. Choosing a token SHALL replace only the active `@query` with the existing `{token}`
-syntax and place the caret after it. Manual `{token}` values and `?` conditional expressions SHALL
-retain their existing formatter behavior.
+All token-aware Format inputs SHALL use one shared multiline control. This includes Data Download,
+Editor Template export, both Editor Image Employee formats, custom Employee Template definitions,
+and the four Employee Display formats. These inputs SHALL NOT render separate token-button
+catalogs. Every input SHALL expose localized `@` discovery,
+caret-positioned case-insensitive suggestions, keyboard and pointer insertion, and preserved source
+newlines. The six visual Employee formats SHALL additionally expose the shared Markdown selection
+tools. Plain-text Template formats SHALL not expose or interpret Markdown.
 
 #### Scenario: Discover token suggestions and conditions
 - **WHEN** a user hovers or focuses the help icon beside any token-aware Format label
-- **THEN** localized guidance explains that typing `@` opens token suggestions and shows the supported `?` conditional form without changing the field value
+- **THEN** localized guidance explains `@` suggestions and the supported conditional form without changing the value
 
 #### Scenario: See the token placeholder
 - **WHEN** a token-aware Format field is empty
 - **THEN** its localized placeholder indicates that `@` can add tokens
 
 #### Scenario: Insert a token with the keyboard
-- **WHEN** a user types `@name`, changes the active suggestion with Arrow Up or Arrow Down, and presses Enter
-- **THEN** the matching `{token}` replaces `@name`, focus remains in Format, and the caret follows the inserted token
+- **WHEN** a user types an `@` query, selects a suggestion, and presses Enter
+- **THEN** only that query becomes the existing `{token}` syntax and the caret follows it
 
 #### Scenario: Insert a token with the pointer
 - **WHEN** the suggestion menu is open and the user activates an option
@@ -125,8 +122,16 @@ retain their existing formatter behavior.
 - **THEN** the first press only closes the menu and a subsequent Backspace edits the Format value normally
 
 #### Scenario: Preserve a conditional format
-- **WHEN** full-View Employee Format contains a valid `?` conditional expression
-- **THEN** preview, copied PNG, and saved PNG resolve it with the same formatter behavior as other Template surfaces
+- **WHEN** either PNG Employee format contains a valid conditional expression
+- **THEN** preview, copied PNG, and saved PNG resolve it with the same formatter behavior
+
+#### Scenario: Preserve authored newlines
+- **WHEN** a user presses Enter in any Format input
+- **THEN** the newline remains in its visual or plain-text destination according to that format's semantics
+
+#### Scenario: Edit either PNG format
+- **WHEN** a user selects text in the scoped or full-View PNG Employee format
+- **THEN** the same Markdown menu available in Employee Display formats is available without a token-button catalog
 
 ### Requirement: Birthday output retains complete canonical data
 Data Download and Editor JSON or Template export SHALL emit an Employee birthday directly as its
@@ -247,25 +252,25 @@ Structured JSON SHALL export multi-option values as label arrays and Composite v
 
 ### Requirement: Editor PNG starts from the persisted Employee export format
 Scoped and full-View Editor Image export SHALL initialize Employee content from the persisted Editor
-export format. The local Image format SHALL remain a transient override and SHALL support Employee,
-Tag, contextual Unit, custom-field, and display-only `{positions}` tokens plus inline Markdown. PNG
-painting MUST use the same normalized rich lines, font marks, inert explicit safe-link styling,
-native Tag chips, compound assignment pills, wrapping, and row geometry contract as Editor cards
-while applying the export format independently. Plain `{email}` MUST paint as ordinary text.
+export format. Each local Image format SHALL remain a transient override and SHALL support Employee,
+Tag, contextual Unit, custom-field, and display-only `{positions}` tokens plus inline Markdown and
+authored newlines. Both dialogs MUST use the same token builder and MUST exclude avatar data. PNG
+painting MUST consume the same measured rich fragments, font marks, inert explicit safe-link
+styling, Tag colors, compound assignment styling, wrapping, and row geometry as Editor cards while
+applying explicit image settings independently. Plain `{email}` MUST paint as ordinary text.
 
 #### Scenario: Open Editor Image export
-- **WHEN** the Image export dialog opens
-- **THEN** its Employee format equals the current persisted Editor-export format
+- **WHEN** either Image export dialog opens
+- **THEN** its Employee format equals the current persisted Editor-export format and no token-button catalog is present
 
 #### Scenario: Override one export
 - **WHEN** a user changes the Employee format inside an Image export dialog
 - **THEN** preview, copy, and save use the local value without changing the persisted model format
 
 #### Scenario: Paint rich Employee content
-- **WHEN** an exported Employee format contains Markdown, colored dated Tags, and `{positions}`
-- **THEN** preview, copied PNG, and saved PNG paint matching text marks, compound pill surfaces, segment typography, wrapping, and Unit geometry without an active link or remote request
+- **WHEN** an exported Employee format contains Markdown, adjacent text, colored dated Tags, and `{positions}`
+- **THEN** preview, copied PNG, and saved PNG paint the shared inline fragments and dependent Unit geometry without an active link or remote request
 
 #### Scenario: Paint email values
 - **WHEN** an exported format contains plain `{email}` and an explicit Markdown `mailto:` link
 - **THEN** both paint locally as text and only the explicit link receives inert link styling
-

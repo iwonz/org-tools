@@ -2,12 +2,13 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineTag } from "react-icons/hi2";
 import {
   EmployeeTagDatePopover,
   EmployeeTagDateText,
 } from "@/components/employee-tag-date-popover";
+import { TagSurface } from "@/components/tag-surface";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,6 @@ import {
   toggleEmployeeTagForTargets,
 } from "@/lib/employee-tags";
 import { normalizeSearchValue } from "@/lib/search-index";
-import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -83,6 +83,11 @@ export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
     getItemKey: (index) => normalizeSearchValue(visibleOptions[index] ?? String(index)),
     overscan: 5,
   });
+  const measurementKey = visibleOptions.join("\u0000");
+  useEffect(() => {
+    void measurementKey;
+    virtualizer.measure();
+  }, [measurementKey, virtualizer]);
 
   const createAndAssignTag = () => {
     const [createdTag] = normalizeEmployeeTags([query]);
@@ -158,7 +163,7 @@ export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
 
               return (
                 <div
-                  className="absolute left-0 top-0 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 text-xs transition-colors hover:bg-accent hover:text-accent-foreground active:bg-accent-strong"
+                  className="absolute left-0 top-0 grid min-h-11 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-xs transition-colors hover:bg-accent hover:text-accent-foreground active:bg-accent-strong"
                   data-employee-tag-option
                   data-state={
                     checked === "indeterminate"
@@ -167,9 +172,10 @@ export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
                         ? "checked"
                         : "unchecked"
                   }
+                  data-index={virtualRow.index}
                   key={virtualRow.key}
+                  ref={virtualizer.measureElement}
                   style={{
-                    height: virtualRow.size,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
@@ -179,24 +185,16 @@ export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
                     onCheckedChange={() => onApply(toggleEmployeeTagForTargets(employees, tag))}
                   />
                   <button
-                    className="min-w-0 flex-1 truncate rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="min-w-0 flex-1 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => onApply(toggleEmployeeTagForTargets(employees, tag))}
                     type="button"
                   >
-                    <span
-                      className={cn(
-                        "inline-flex max-w-full items-center rounded-md px-2 py-0.5",
-                        tagColorSurfaceClassName(definition?.color),
-                      )}
-                      data-tag-color={definition?.color ?? "none"}
-                      data-tag-color-surface
-                      style={customTagColorSurfaceStyle(definition?.color)}
-                    >
+                    <TagSurface color={definition?.color}>
                       <EmployeeTagDateText
                         date={checked === false ? null : dateState}
                         label={tag}
                       />
-                    </span>
+                    </TagSurface>
                   </button>
                   {checked !== false && (
                     <EmployeeTagDatePopover

@@ -1,0 +1,52 @@
+import type { EmployeeTagColor } from "@org-tools/types";
+import type { ComponentPropsWithoutRef } from "react";
+
+import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
+import { TAG_SURFACE_METRICS, type TagSurfaceDensity } from "@/lib/tag-surface";
+import { cn } from "@/lib/utils";
+
+export function TagSurface({
+  children,
+  className,
+  color,
+  density = "normal",
+  style,
+  title,
+  variant = "tag",
+  ...props
+}: Omit<ComponentPropsWithoutRef<"span">, "color"> & {
+  color?: EmployeeTagColor | null | undefined;
+  density?: TagSurfaceDensity;
+  variant?: "position" | "tag";
+}) {
+  const metrics = TAG_SURFACE_METRICS[density];
+  return (
+    <span
+      {...props}
+      className={cn(
+        "w-fit max-w-full whitespace-normal break-words [-webkit-box-decoration-break:clone] [box-decoration-break:clone] [overflow-wrap:anywhere]",
+        variant === "tag"
+          ? tagColorSurfaceClassName(color)
+          : "border border-border bg-muted text-muted-foreground",
+        className,
+      )}
+      data-tag-color={variant === "tag" ? (color ?? "none") : undefined}
+      data-tag-color-surface={variant === "tag" ? true : undefined}
+      data-tag-surface-density={density}
+      style={{
+        ...customTagColorSurfaceStyle(variant === "tag" ? color : null),
+        borderRadius: metrics.radius,
+        boxDecorationBreak: "clone",
+        fontSize: metrics.fontSize,
+        lineHeight: `${metrics.lineHeight}px`,
+        paddingBlock: metrics.verticalPadding,
+        paddingInline: metrics.horizontalPadding,
+        WebkitBoxDecorationBreak: "clone",
+        ...style,
+      }}
+      title={title}
+    >
+      {children}
+    </span>
+  );
+}

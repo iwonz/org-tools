@@ -21,9 +21,11 @@ import { isSafeAvatarBase64Url } from "@/lib/employee-data";
 import {
   type EmployeeDisplayLine,
   type EmployeeDisplayPosition,
+  type EmployeeDisplayVisualLayout,
+  type EmployeeDisplayVisualLine,
   getEmployeeDisplayPositionText,
+  layoutEmployeeDisplayRichLines,
   renderEmployeeDisplayRichLines,
-  wrapEmployeeDisplayRichLines,
 } from "@/lib/employee-display";
 import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { getEmployeeInitials } from "@/lib/employee-utils";
@@ -41,8 +43,7 @@ import {
   createOrgEditorUnitTagFooterLayout,
   getOrgEditorEmployeeDisplayLineBaselines,
   getOrgEditorEmployeePosition,
-  getOrgEditorEmployeeRichVisualLineCount,
-  getOrgEditorEmployeeRowHeightForRichLines,
+  getOrgEditorEmployeeRowHeightForVisualLayout,
   getOrgEditorEmployeeRowStackLayout,
   getOrgEditorEmployeeRowSurfaceBounds,
   getOrgEditorEmployeeTextMaxWidth,
@@ -92,6 +93,7 @@ import {
   getStickerColorStyle,
   getTagColorCanvasStyle,
 } from "@/lib/tag-color";
+import { layoutInlineSurfaces } from "@/lib/tag-surface";
 import { renderTemplateFormat, type TemplateFieldValue } from "@/lib/template-format";
 import type { ExportEmployeeFieldKey, ExportRowMode } from "@/stores/org-store";
 
@@ -149,7 +151,7 @@ export type OrgEditorTemplateRow = {
 };
 
 type OrgEditorImageUnitRenderData = {
-  employeeDisplayLines: EmployeeDisplayLine[][];
+  employeeDisplayLayouts: EmployeeDisplayVisualLayout[];
   employeeDistributionPresentations: Array<EditorEmployeeDistributionPresentation | null>;
   rows: OrgEditorUnitRow[];
   employeeRowHeights: number[];
@@ -822,38 +824,20 @@ const drawTrimmedText = (
   context.fillText(nextText ? `${nextText}...` : "...", x, y);
 };
 
-const fitOrgEditorEmployeeText = (
-  context: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-) => {
-  if (context.measureText(text).width <= maxWidth) return text;
-  let nextText = text;
-  while (nextText.length > 0 && context.measureText(`${nextText}...`).width > maxWidth) {
-    nextText = nextText.slice(0, -1);
-  }
-  return nextText ? `${nextText}...` : maxWidth > 0 ? "..." : "";
-};
-
 const drawOrgEditorEmployeeRichLine = ({
   baseline,
   context,
   fontFamily,
   line,
-  locale,
-  maxWidth,
   x,
 }: {
   baseline: number;
   context: CanvasRenderingContext2D;
   fontFamily: string;
   line: EmployeeDisplayLine;
-  locale: string;
-  maxWidth: number;
   x: number;
 }) => {
   let cursorX = x;
-  const limitX = x + maxWidth;
   for (const node of line.nodes) {
     if (node.type === "text") {
       const weight = node.marks.bold ? 700 : 400;
@@ -861,8 +845,7 @@ const drawOrgEditorEmployeeRichLine = ({
         ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
         : getOrgEditorCanvasCssFontFamily(fontFamily);
       context.font = `${node.marks.italic ? "italic " : ""}${weight} ${ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE}px ${textFontFamily}`;
-      const availableWidth = Math.max(0, limitX - cursorX);
-      const text = fitOrgEditorEmployeeText(context, node.text, availableWidth);
+      const text = node.text;
       const width = context.measureText(text).width;
       if (node.marks.code && width > 0) {
         context.fillStyle = "rgba(15, 23, 42, 0.08)";
@@ -885,25 +868,59 @@ const drawOrgEditorEmployeeRichLine = ({
         context.stroke();
       }
       cursorX += width;
+    }
+  }
+};
+
+const drawOrgEditorEmployeeVisualLine = ({
+  baseline,
+  context,
+  fontFamily,
+  line,
+  x,
+}: {
+  baseline: number;
+  context: CanvasRenderingContext2D;
+  fontFamily: string;
+  line: EmployeeDisplayVisualLine;
+  x: number;
+}) => {
+  for (const fragment of line.fragments) {
+    const fragmentX = x + fragment.x;
+    if (fragment.type === "text") {
+      const codeInset = fragment.node.marks.code ? 2 : 0;
+      drawOrgEditorEmployeeRichLine({
+        baseline,
+        context,
+        fontFamily,
+        line: {
+          nodes: [{ ...fragment.node, text: fragment.text }],
+          text: fragment.text,
+        },
+        x: fragmentX + codeInset,
+      });
       continue;
     }
-    if (node.type === "tags" && node.tags.length === 0) continue;
-    if (node.type === "positions" && node.positions.length === 0) continue;
-    if (cursorX > x) cursorX += ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.gap;
-    const availableWidth = Math.max(1, limitX - cursorX);
-    const layout =
-      node.type === "tags"
-        ? createOrgEditorExportEmployeeTagLayout(
-            getOrgEditorExportTags(node.tags, locale),
-            availableWidth,
-          )
-        : createOrgEditorExportEmployeePositionLayout(node.positions, availableWidth);
-    if (node.type === "tags") {
+    const chip = {
+      bordered: fragment.type === "position",
+      color: fragment.type === "tag" ? (fragment.tag.color ?? null) : null,
+      continued: fragment.start > 0,
+      end: fragment.end,
+      height: fragment.height,
+      itemIndex: 0,
+      lines: [fragment.text],
+      start: fragment.start,
+      width: fragment.width,
+      x: 0,
+      y: 0,
+    } satisfies OrgEditorExportEmployeeTagChipLayout;
+    const layout = { chips: [chip], height: chip.height, rowCount: 1 };
+    if (fragment.type === "tag") {
       drawOrgEditorEmployeeTags({
         context,
         fontFamily,
         layout,
-        x: cursorX,
+        x: fragmentX,
         y: baseline - 10,
       });
     } else {
@@ -911,15 +928,11 @@ const drawOrgEditorEmployeeRichLine = ({
         context,
         fontFamily,
         layout,
-        positions: node.positions,
-        x: cursorX,
+        positions: [fragment.position],
+        x: fragmentX,
         y: baseline - 10,
       });
     }
-    const firstRowWidth = layout.chips
-      .filter((chip) => chip.y === 0)
-      .reduce((width, chip) => Math.max(width, chip.x + chip.width), 0);
-    cursorX += firstRowWidth;
   }
 };
 
@@ -1072,8 +1085,12 @@ export const getOrgEditorExportEmployeeTagChipWidth = (label: string, maxWidth: 
 export type OrgEditorExportEmployeeTagChipLayout = {
   bordered: boolean;
   color: EmployeeTagColor | null;
+  continued: boolean;
+  end: number;
   height: number;
+  itemIndex: number;
   lines: string[];
+  start: number;
   width: number;
   x: number;
   y: number;
@@ -1090,42 +1107,6 @@ type MeasureOrgEditorExportText = (text: string) => number;
 const estimateOrgEditorExportText: MeasureOrgEditorExportText = (text) =>
   text.length * ORG_EDITOR_EMPLOYEE_TAG_STYLE.widthPerCharacter;
 
-const wrapOrgEditorExportTagLabel = (
-  label: string,
-  maxTextWidth: number,
-  measureText: MeasureOrgEditorExportText,
-) => {
-  const lines: string[] = [];
-  let line = "";
-
-  for (const segment of label.split(/(\s+)/u).filter(Boolean)) {
-    const candidate = `${line}${segment}`;
-    if (line && measureText(candidate) > maxTextWidth) {
-      lines.push(line);
-      line = "";
-    }
-    if (measureText(segment) <= maxTextWidth) {
-      line += segment;
-      continue;
-    }
-
-    let chunk = "";
-    for (const character of segment) {
-      const nextChunk = `${chunk}${character}`;
-      if (chunk && measureText(nextChunk) > maxTextWidth) {
-        lines.push(chunk);
-        chunk = character;
-      } else {
-        chunk = nextChunk;
-      }
-    }
-    line = chunk;
-  }
-
-  if (line || lines.length === 0) lines.push(line);
-  return lines;
-};
-
 export const createOrgEditorExportEmployeeTagLayout = (
   tags: readonly (OrgEditorExportEmployeeTag | string)[],
   maxWidth: number,
@@ -1134,49 +1115,33 @@ export const createOrgEditorExportEmployeeTagLayout = (
 ): OrgEditorExportEmployeeTagLayout => {
   if (tags.length === 0 || maxWidth <= 0) return { chips: [], height: 0, rowCount: 0 };
 
-  const safeWidth = Math.max(1, maxWidth);
-  const horizontalPadding = ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.horizontalPadding;
-  const maxTextWidth = Math.max(1, safeWidth - horizontalPadding * 2);
-  const chipDrafts = tags.map((tag) => {
-    const { bordered, color, label } =
-      typeof tag === "string" ? { bordered: false, color: null, label: tag } : tag;
-    const naturalWidth = Math.max(24, horizontalPadding * 2 + measureText(label));
-    const lines =
-      naturalWidth <= safeWidth || !wrapLongLabels
-        ? [label]
-        : wrapOrgEditorExportTagLabel(label, maxTextWidth, measureText);
+  const normalized = tags.map((tag) =>
+    typeof tag === "string" ? { bordered: false, color: null, label: tag } : tag,
+  );
+  const layout = layoutInlineSurfaces({
+    availableWidth: Math.max(1, maxWidth),
+    density: "compact",
+    measureText,
+    texts: normalized.map((tag) => tag.label),
+  });
+  const chips = layout.fragments.map((fragment) => {
+    const tag = normalized[fragment.itemIndex];
     return {
-      bordered: Boolean(bordered),
-      color,
-      height:
-        ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.height +
-        Math.max(0, lines.length - 1) * ORG_EDITOR_EXPORT_EMPLOYEE_TAG_LINE_HEIGHT,
-      lines,
-      width: Math.min(safeWidth, naturalWidth),
+      bordered: Boolean(tag?.bordered),
+      color: tag?.color ?? null,
+      continued: fragment.continued,
+      end: fragment.end,
+      height: fragment.height,
+      itemIndex: fragment.itemIndex,
+      lines: [fragment.text],
+      start: fragment.start,
+      width: fragment.width,
+      x: fragment.x,
+      y: fragment.y,
     };
   });
-  const chips: OrgEditorExportEmployeeTagChipLayout[] = [];
-  let rowCount = 1;
-  let rowHeight = 0;
-  let rowY = 0;
-  let usedWidth = 0;
-
-  for (const draft of chipDrafts) {
-    let chipX = usedWidth === 0 ? 0 : usedWidth + ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.gap;
-    if (usedWidth > 0 && chipX + draft.width > safeWidth) {
-      rowY += rowHeight + ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.gap;
-      rowCount += 1;
-      rowHeight = 0;
-      usedWidth = 0;
-      chipX = 0;
-    }
-
-    chips.push({ ...draft, x: chipX, y: rowY });
-    rowHeight = Math.max(rowHeight, draft.height);
-    usedWidth = chipX + draft.width;
-  }
-
-  return { chips, height: rowY + rowHeight, rowCount };
+  void wrapLongLabels;
+  return { chips, height: layout.height, rowCount: layout.rowCount };
 };
 
 export const createOrgEditorExportEmployeePositionLayout = (
@@ -1301,8 +1266,8 @@ const drawOrgEditorEmployeePositions = ({
 }) => {
   context.textAlign = "start";
   context.textBaseline = "middle";
-  for (const [index, chip] of layout.chips.entries()) {
-    const position = positions[index];
+  for (const chip of layout.chips) {
+    const position = positions[chip.itemIndex];
     if (!position) continue;
     const chipX = x + chip.x;
     const chipY = y + chip.y;
@@ -1317,41 +1282,31 @@ const drawOrgEditorEmployeePositions = ({
     context.lineWidth = 1;
     context.stroke();
 
-    const textX = chipX + ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.horizontalPadding;
+    let textX = chipX + ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.horizontalPadding;
     const textY = chipY + chip.height / 2 + 0.5;
-    const maxTextWidth = Math.max(
-      0,
-      chip.width - ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.horizontalPadding * 2,
-    );
     const separator = " · ";
-    context.font = getCanvasFont(fontFamily, 500, ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize);
-    const positionWidth = context.measureText(position.label).width;
-    context.font = getCanvasFont(fontFamily, 400, ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize);
-    const separatorWidth = context.measureText(separator).width;
-    const remainingUnitWidth = maxTextWidth - positionWidth - separatorWidth;
-
-    if (remainingUnitWidth <= 4) {
-      context.font = getCanvasFont(fontFamily, 500, ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize);
-      context.fillStyle = "#0f172a";
-      context.fillText(
-        fitOrgEditorEmployeeText(context, position.label, maxTextWidth),
-        textX,
-        textY,
+    const source = getEmployeeDisplayPositionText(position);
+    const positionEnd = position.label.length;
+    const separatorEnd = positionEnd + separator.length;
+    const ranges = [
+      { end: positionEnd, start: 0, textStyle: "#0f172a", weight: 500 },
+      { end: separatorEnd, start: positionEnd, textStyle: "#64748b", weight: 400 },
+      { end: source.length, start: separatorEnd, textStyle: "#64748b", weight: 400 },
+    ];
+    for (const range of ranges) {
+      const start = Math.max(chip.start, range.start);
+      const end = Math.min(chip.end, range.end);
+      if (start >= end) continue;
+      const text = source.slice(start, end);
+      context.font = getCanvasFont(
+        fontFamily,
+        range.weight,
+        ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize,
       );
-      continue;
+      context.fillStyle = range.textStyle;
+      context.fillText(text, textX, textY);
+      textX += context.measureText(text).width;
     }
-
-    context.font = getCanvasFont(fontFamily, 500, ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize);
-    context.fillStyle = "#0f172a";
-    context.fillText(position.label, textX, textY);
-    context.font = getCanvasFont(fontFamily, 400, ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize);
-    context.fillStyle = "#64748b";
-    context.fillText(separator, textX + positionWidth, textY);
-    context.fillText(
-      fitOrgEditorEmployeeText(context, position.unitContext.unitName, remainingUnitWidth),
-      textX + positionWidth + separatorWidth,
-      textY,
-    );
   }
 };
 
@@ -1610,17 +1565,25 @@ export const createOrgEditorImageExportResult = async ({
       const employee = employeeById.get(row.employeeId);
       if (!employee) return [];
       const unitPosition = employee.unitPositions.find((position) => position.unitId === unit.id);
-      return wrapEmployeeDisplayRichLines(
-        renderEmployeeDisplayRichLines({
-          customEmployeeFieldDefinitions,
-          employee,
-          format: settings.employeeFormat,
-          positionNotSpecifiedLabel,
-          unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
-        }),
-        availableTagWidth,
-      );
+      return renderEmployeeDisplayRichLines({
+        customEmployeeFieldDefinitions,
+        employee,
+        format: settings.employeeFormat,
+        positionNotSpecifiedLabel,
+        unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
+      });
     });
+    const employeeDisplayLayouts = employeeDisplayLines.map((lines) =>
+      layoutEmployeeDisplayRichLines(lines, {
+        availableWidth: availableTagWidth,
+        density: "compact",
+        direction: locale === "ar" ? "rtl" : "ltr",
+        font: settings.fontFamily,
+        formatTag: (tag) => getOrgEditorExportTagLabels([tag], locale)[0] ?? tag.label,
+        lineGap: settings.employeeLineGap,
+        locale,
+      }),
+    );
     const employeeTagLayouts = rows.map((row) => {
       const tags =
         row.type === "employee"
@@ -1634,17 +1597,11 @@ export const createOrgEditorImageExportResult = async ({
       return createOrgEditorExportEmployeeTagLayout(
         getOrgEditorExportTags(tags, locale),
         availableTagWidth,
-        (text) => measureContext.measureText(text).width,
       );
     });
     const employeeRowHeights = rows.map((row, index) =>
       row.type === "employee"
-        ? getOrgEditorEmployeeRowHeightForRichLines(
-            employeeDisplayLines[index] ?? [],
-            availableTagWidth,
-            (tag) => getOrgEditorExportTagLabels([tag], locale)[0] ?? tag.label,
-            settings.employeeLineGap,
-          )
+        ? getOrgEditorEmployeeRowHeightForVisualLayout(employeeDisplayLayouts[index]?.height ?? 0)
         : getOrgEditorExportEmployeeRowHeightForTagLayout(
             employeeTagLayouts[index] ?? { chips: [], height: 0, rowCount: 0 },
           ),
@@ -1658,7 +1615,7 @@ export const createOrgEditorImageExportResult = async ({
       ? 0
       : getOrgEditorUnitTagFooterHeight(tagSummaries, width - 16);
     return {
-      employeeDisplayLines,
+      employeeDisplayLayouts,
       employeeDistributionPresentations,
       employeeRowHeights,
       employeeRowOffsets,
@@ -1869,7 +1826,7 @@ export const createOrgEditorImageExportResult = async ({
   }
 
   for (const {
-    employeeDisplayLines,
+    employeeDisplayLayouts,
     employeeDistributionPresentations,
     employeeRowHeights,
     employeeRowOffsets,
@@ -2053,12 +2010,13 @@ export const createOrgEditorImageExportResult = async ({
       context.textBaseline = "alphabetic";
       context.fillStyle = openPositionBackground?.textStyle ?? "#0f172a";
       if (row.type === "employee") {
-        const lines = employeeDisplayLines[employeeIndex] ?? [];
-        const visualLineCount = getOrgEditorEmployeeRichVisualLineCount(
-          lines,
-          employeeGeometry.textMaxWidth,
-          (tag) => getOrgEditorExportTagLabels([tag], locale)[0] ?? tag.label,
-        );
+        const layout = employeeDisplayLayouts[employeeIndex] ?? {
+          density: "compact",
+          direction: "ltr",
+          height: 0,
+          lines: [],
+        };
+        const visualLineCount = layout.lines.length;
         const baselines = getOrgEditorEmployeeDisplayLineBaselines({
           employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
           employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
@@ -2066,22 +2024,14 @@ export const createOrgEditorImageExportResult = async ({
           lineGap: settings.employeeLineGap,
           unitY: unit.y,
         });
-        let visualLineIndex = 0;
-        for (const line of lines) {
-          drawOrgEditorEmployeeRichLine({
+        for (const [visualLineIndex, line] of layout.lines.entries()) {
+          drawOrgEditorEmployeeVisualLine({
             baseline: baselines[visualLineIndex] ?? employeeGeometry.textBaselineY,
             context,
             fontFamily: settings.fontFamily,
             line,
-            locale,
-            maxWidth: employeeGeometry.textMaxWidth,
             x: employeeGeometry.textX,
           });
-          visualLineIndex += getOrgEditorEmployeeRichVisualLineCount(
-            [line],
-            employeeGeometry.textMaxWidth,
-            (tag) => getOrgEditorExportTagLabels([tag], locale)[0] ?? tag.label,
-          );
         }
       } else if (openPosition) {
         context.font = getCanvasFont(settings.fontFamily, 400, ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE);
@@ -2106,7 +2056,11 @@ export const createOrgEditorImageExportResult = async ({
       const footerY = unit.y + height - footerHeight;
       context.fillStyle = "#f1f5f9";
       context.fillRect(unit.x + 1, footerY, width - 2, footerHeight - 1);
-      context.font = getCanvasFont(settings.fontFamily, 400, 10);
+      context.font = getCanvasFont(
+        settings.fontFamily,
+        400,
+        ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize,
+      );
       context.textAlign = "start";
       context.textBaseline = "middle";
       const availableWidth = width - ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2;

@@ -97,7 +97,10 @@ control.
   scroll; release inside to save the shown position. Escape or release outside cancels the move. A filtered
   move inserts the Tag relative to its target in the full catalog. All Tag chips, pickers, Calendar
   groups, and export values follow that order; searching does not promote matching chips. New Tags
-  append, and renaming or recoloring retains position.
+  append, and renaming or recoloring retains position. Tag surfaces use the same normal or compact
+  metrics throughout cards, previews, forms, pickers, filters, the catalog, Calendar, Editor, and
+  PNG. A long label wraps by word and then grapheme; each wrapped part keeps its own content-sized
+  tonal background, padding, radius, date or count suffix, and interaction target.
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
@@ -131,8 +134,9 @@ control.
   are the defaults; the distributed color also controls placement lines and endpoint markers.
   Employee display lines keep the normal theme text color for both distribution statuses,
   including selected rows. Safe Markdown links are styled but inert on the canvas. The Editor row
-  height grows with rich text lines and wrapped Tag or position chips and shares its clipping,
-  hit-testing, anchors, and geometry with PNG. Each image dialog starts from the Editor-export format; edits in
+  height grows with shared rich visual rows. Text, Markdown, Tags, and assignments flow inline, and
+  each wrapped Tag or position fragment shares its order, rectangle, typography, color, spacing,
+  hit-testing, anchors, and Unit geometry with PNG. Each image dialog starts from the Editor-export format; edits in
   the dialog are temporary and do not update the Employee model. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
@@ -203,8 +207,9 @@ control.
   while retaining a light export palette and configurable output styling. Unit-only and subtree
   images determine distribution status from the complete active View, including assignments outside
   the image scope. Footer chips use equal compact insets and follow their own label/count width rather
-  than reserving trailing space. Long footer and Employee-row Tags wrap completely without an
-  ellipsis, including mixed scripts and emoji; the count suffix stays together. Static/Live
+  than reserving trailing space. Long footer and Employee-row Tags wrap into content-sized decorated
+  fragments without an ellipsis or full-width colored remainder, including mixed scripts and emoji;
+  the count suffix stays together. Static/Live
   membership type is not printed. Dragging Units, Employees, connections, or a marquee near the
   canvas edge smoothly pans in that direction without ending the gesture. Deleting a nested or
   multi-Unit selection is one atomic operation that removes stale selections, filters, and output

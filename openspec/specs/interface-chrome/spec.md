@@ -3,6 +3,7 @@
 ## Purpose
 Define the restrained layered shell, interaction states, workflow grouping, and overlay hierarchy.
 ## Requirements
+
 ### Requirement: Application chrome uses a restrained layered visual system
 The application SHALL use a dark collapsible navigation sidebar, a compact workflow header outside
 Editor, a low-contrast shell, full-bleed workflows, and restrained tonal grouping in light and dark
@@ -343,10 +344,12 @@ Analytics, Calendar, Data Download, and utility actions.
 
 ### Requirement: Tag color is expressed through restrained surface fill
 Colored Tag chips and Tag-like controls SHALL use one low-chroma tonal fill and matching readable
-foreground without decorative leading dots, added borders, shadows, or geometry changes. Neutral
-Tags SHALL retain a neutral fill, and hover, focus, active, and selected feedback SHALL not erase the
-configured Tag identity.
+foreground without decorative leading dots, added borders, or shadows. Neutral Tags SHALL retain a
+neutral fill. Normal and compact densities MUST obtain font size, line height, padding, radius, and
+gap from one shared contract. A long logical Tag MUST render content-sized cloned decoration around
+each wrapped fragment. Hover, focus, active, and selected feedback SHALL not erase configured Tag
+identity or change fragment geometry.
 
 #### Scenario: Interact with a colored Tag surface
-- **WHEN** a colored Tag surface is hovered, focused, activated, or selected in either theme
-- **THEN** its configured fill remains recognizable and its text remains readable without a color dot
+- **WHEN** a colored one-line or wrapped Tag surface is hovered, focused, activated, or selected in either theme
+- **THEN** its configured fill remains recognizable, text remains readable, and decoration geometry remains stable without a color dot

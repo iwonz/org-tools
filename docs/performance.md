@@ -41,9 +41,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   and does not add catalog scans. A 256-entry least-recently-used cache stores parsed Markdown trees
   by the resolved template structure without retaining organization values. Native Tag and compound
   assignment nodes reuse bounded chip packing based on the complete `Position · Unit` projection.
-  A bounded text-width cache and shared word/character packer keep wrapping linear in output size.
-  Editor and PNG compute the same rich-line, configured-gap, and wrapped-chip height
-  once per row and feed it into the existing prefix-offset pass, so formatted cards preserve O(n)
+  A weakly owned cache keeps at most eight width, locale, direction, density, and font variants for
+  one resolved rich-line source. The shared word/grapheme packer stays linear in output size.
+  Editor computes one rich fragment layout per row and passes it to DOM rendering, geometry, and
+  PNG; the configured-gap height feeds the existing prefix-offset pass, so formatted cards preserve O(n)
   geometry work.
 - Cache derived structures by View document revision and global Employee/Tag/field references.
   Materialize only the system View, active Editor View, and selected Download View at once.
@@ -98,9 +99,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   anchor set while emphasizing the nearest candidate.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
-  View; a deterministic glyph-aware width packs intrinsic short chips and grapheme-safe long lines,
+  View; a deterministic glyph-aware width packs intrinsic short Tag fragments and grapheme-safe long labels,
   and the cached wrapped footer heights participate in the same geometry pass without DOM
-measurement. DOM and PNG consume the same line rectangles and indivisible count suffix. Disabling the View Tag
+measurement. DOM and PNG consume the same content-sized fragment rectangles and indivisible count suffix. Disabling the View Tag
   cloud sets every footer height to zero, including cached geometry. Distribution color drafts stay
   local to the open picker; shared light/dark/canvas tonal values are derived from one color
   calculation, and each included PNG row performs only indexed status and cached-color lookups.

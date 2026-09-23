@@ -1,6 +1,6 @@
 "use client";
 
-import type { EmployeeGender, UiOrgStructure, UnitId } from "@org-tools/types";
+import type { EmployeeGender, EmployeeTagColor, UiOrgStructure, UnitId } from "@org-tools/types";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import type { ReactNode } from "react";
@@ -19,6 +19,7 @@ import {
 } from "react-icons/hi2";
 
 import { HighlightedText } from "@/components/highlighted-text";
+import { TagSurface } from "@/components/tag-surface";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -123,6 +124,7 @@ type EmployeeUnitFilterOption<TId extends UnitId> = {
 };
 
 type EmployeeSelectableFilterOption<TId extends string> = {
+  color?: EmployeeTagColor | null;
   id: TId;
   label: string;
   subtitle?: string;
@@ -230,6 +232,13 @@ function EmployeeFilterOptionList<TId extends string>({
     getScrollElement: () => scrollRef.current,
     overscan: 6,
   });
+  const measurementKey = options
+    .map((option) => `${option.id}\u0000${option.label}\u0000${option.subtitle ?? ""}`)
+    .join("\u0001");
+  useEffect(() => {
+    void measurementKey;
+    rowVirtualizer.measure();
+  }, [measurementKey, rowVirtualizer]);
   const scrollHeight = Math.min(rowVirtualizer.getTotalSize(), 192);
 
   if (options.length === 0) {
@@ -256,12 +265,13 @@ function EmployeeFilterOptionList<TId extends string>({
 
           return (
             <div
-              className="absolute left-0 top-0 flex w-full items-start gap-2 px-2 py-1.5 text-sm transition-colors hover:bg-accent/50 active:bg-accent-strong/55"
+              className="absolute left-0 top-0 flex min-h-9 w-full items-start gap-2 px-2 py-1.5 text-sm transition-colors hover:bg-accent/50 active:bg-accent-strong/55"
+              data-index={virtualRow.index}
               data-filter-option
               data-filter-option-index={virtualRow.index}
               key={String(option.id)}
+              ref={rowVirtualizer.measureElement}
               style={{
-                height: virtualRow.size,
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
@@ -277,9 +287,15 @@ function EmployeeFilterOptionList<TId extends string>({
                 title={option.subtitle ?? option.label}
                 type="button"
               >
-                <span className="truncate">
-                  <HighlightedText queryTokens={queryTokens} text={option.label} />
-                </span>
+                {"color" in option ? (
+                  <TagSurface color={option.color}>
+                    <HighlightedText queryTokens={queryTokens} text={option.label} />
+                  </TagSurface>
+                ) : (
+                  <span className="break-words [overflow-wrap:anywhere]">
+                    <HighlightedText queryTokens={queryTokens} text={option.label} />
+                  </span>
+                )}
                 {option.subtitle && option.subtitle !== option.label && (
                   <span className="truncate text-xs text-muted-foreground">
                     <HighlightedText queryTokens={queryTokens} text={option.subtitle} />
@@ -522,8 +538,8 @@ export const EmployeeSearchInput = observer(function EmployeeSearchInput({
   const tagFilterOptions = useMemo(
     () =>
       store.tagDefinitions.length > 0
-        ? store.tagDefinitions.map((tag) => ({ id: tag.id, label: tag.label }))
-        : tagOptions.map((label) => ({ id: label, label })),
+        ? store.tagDefinitions.map((tag) => ({ color: tag.color, id: tag.id, label: tag.label }))
+        : tagOptions.map((label) => ({ color: null, id: label, label })),
     [store.tagDefinitions, tagOptions],
   );
   const tagQueryTokens = useMemo(

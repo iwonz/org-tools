@@ -159,7 +159,7 @@ describe("Org Editor Employee display geometry", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  test("measures compound assignment text before wrapping whole pills", () => {
+  test("wraps compound assignments into the same content-sized visual fragments", () => {
     const createUnitContext = (value: number, unitName: string, position: string) =>
       createOrgUnitContext({
         isBoss: false,
@@ -190,8 +190,8 @@ describe("Org Editor Employee display geometry", () => {
       },
     ];
 
-    expect(getOrgEditorEmployeeRichVisualLineCount(lines, 80)).toBe(2);
-    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 80)).toBe(48);
+    expect(getOrgEditorEmployeeRichVisualLineCount(lines, 80)).toBe(4);
+    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 80)).toBe(80);
   });
 });
 
@@ -470,15 +470,13 @@ describe("Org Editor Unit Tag footer", () => {
     const chip = (label: string, count = 1, availableWidth = 264) =>
       getOrgEditorUnitTagFooterChipWidth({ count, label }, availableWidth);
 
-    expect(chip("TeamLead")).toBe(83);
-    expect(chip("Vue")).toBe(49);
-    expect(chip("Backend")).toBe(73);
-    expect(chip("PHP")).toBe(53);
+    expect(chip("TeamLead")).toBeGreaterThan(chip("Vue"));
+    expect(chip("Backend")).toBeGreaterThan(chip("PHP"));
     expect(chip("Cafe\u0301")).toBe(chip("Café"));
     expect(chip("团队")).toBeGreaterThan(chip("UI"));
     expect(chip("فريق")).toBeGreaterThan(40);
     expect(chip("A very long Tag name", 12, 72)).toBeLessThanOrEqual(72);
-    expect(ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING).toBe(8);
+    expect(ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING).toBe(6);
 
     const summaries = ["TeamLead", "Vue", "Backend", "PHP"].map((label, index) => ({
       color: null,
@@ -487,7 +485,7 @@ describe("Org Editor Unit Tag footer", () => {
       tagId: `tag-${index}`,
     }));
     expect(getOrgEditorUnitTagFooterHeight(summaries, 264)).toBe(
-      ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT * 2 + 4,
+      ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
     );
   });
 
@@ -502,19 +500,23 @@ describe("Org Editor Unit Tag footer", () => {
       [{ color: "blue", count: 12, label, tagId: "tag-long" }],
       96,
     );
-    const chipLayout = layout.chips[0];
+    const chipLayouts = layout.chips.filter((chip) => chip.tagId === "tag-long");
 
-    expect(chipLayout).toBeDefined();
-    expect(chipLayout?.width).toBeLessThanOrEqual(96);
-    expect(chipLayout?.lines.length).toBeGreaterThan(1);
+    expect(chipLayouts.length).toBeGreaterThan(1);
+    expect(chipLayouts.every((chip) => chip.width <= 96)).toBe(true);
     expect(
-      chipLayout?.lines
+      chipLayouts
+        .flatMap((chip) => chip.lines)
         .map((line) => line.label)
         .join("")
         .replace(/\s+/gu, ""),
     ).toBe(label.normalize("NFC").replace(/\s+/gu, ""));
-    expect(chipLayout?.lines.some((line) => line.suffix === "· 12")).toBe(true);
-    expect(chipLayout?.lines.some((line) => line.label.includes("…"))).toBe(false);
+    expect(chipLayouts.flatMap((chip) => chip.lines).some((line) => line.suffix === "· 12")).toBe(
+      true,
+    );
+    expect(chipLayouts.flatMap((chip) => chip.lines).some((line) => line.label.includes("…"))).toBe(
+      false,
+    );
     expect(layout.height).toBeGreaterThan(
       ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
     );

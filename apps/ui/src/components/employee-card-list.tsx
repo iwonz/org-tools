@@ -11,13 +11,16 @@ import { EmployeeAvatar } from "@/components/employee-avatar";
 import { EmployeeTags } from "@/components/employee-tags";
 import { HighlightedText } from "@/components/highlighted-text";
 import { MiddleDot } from "@/components/middle-dot";
-import { useUiText } from "@/i18n/use-ui-text";
+import { TagSurface } from "@/components/tag-surface";
+import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
 import {
+  type EmployeeDisplayVisualLayout,
+  layoutEmployeeDisplayRichLines,
   renderEmployeeDisplayLineDetails,
-  wrapEmployeeDisplayRichLines,
 } from "@/lib/employee-display";
 import { createEmployeeProfileUrl, createMailtoUrl } from "@/lib/employee-links";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
+import { TAG_SURFACE_METRICS } from "@/lib/tag-surface";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -207,6 +210,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   onUnitContextClick,
   queryTokens = [],
   unitContexts,
+  visualLayout: providedVisualLayout,
   wrapWidth,
 }: {
   className?: string;
@@ -219,10 +223,12 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   onUnitContextClick?: (unitContext: EmployeeUnitContext) => void;
   queryTokens?: string[];
   unitContexts?: readonly EmployeeUnitContext[];
+  visualLayout?: EmployeeDisplayVisualLayout;
   wrapWidth?: number;
 }) {
   const store = useOrgStore();
   const t = useUiText();
+  const appFormat = useAppFormatter();
   const resolvedUnitContexts =
     unitContexts ?? store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
   const richLines = renderEmployeeDisplayLineDetails({
@@ -232,11 +238,31 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
     positionNotSpecifiedLabel: t("Position not specified"),
     unitContexts: resolvedUnitContexts,
   });
-  const lines = wrapWidth ? wrapEmployeeDisplayRichLines(richLines, wrapWidth) : richLines;
   const resolvedLineGap = lineGap ?? store.employeeDisplayLineGaps.employees;
+  const visualLayout =
+    providedVisualLayout ??
+    (wrapWidth
+      ? layoutEmployeeDisplayRichLines(richLines, {
+          availableWidth: wrapWidth,
+          density: density === "editor" ? "compact" : "normal",
+          direction: store.locale === "ar" ? "rtl" : "ltr",
+          formatTag: (tag) =>
+            tag.date
+              ? `${tag.label} · ${appFormat.dateTime(new Date(`${tag.date}T00:00:00Z`), {
+                  day: "numeric",
+                  month: "short",
+                  timeZone: "UTC",
+                  ...(density === "editor" ? { year: "numeric" as const } : {}),
+                })}`
+              : tag.label,
+          lineGap: resolvedLineGap,
+          locale: store.locale,
+        })
+      : null);
+  const lines = richLines;
   const profileUrl = createEmployeeProfileUrl(employee.profileUrl);
   const lineClassName = cn(
-    "flex min-w-0 flex-wrap items-center overflow-hidden font-normal",
+    "block min-w-0 overflow-hidden font-normal",
     density === "editor" ? "text-xs leading-4" : "text-sm leading-5",
   );
   const actionClassName =
@@ -248,10 +274,113 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
           node.marks.bold && "font-semibold",
           node.marks.italic && "italic",
           node.marks.strike && "line-through",
-          node.marks.code && "rounded-sm bg-muted px-1 py-0.5 font-mono text-[0.9em]",
+          node.marks.code && "rounded-sm bg-muted px-0.5 font-mono text-[0.9em]",
           node.explicitLink && node.href && "text-signal underline underline-offset-2",
         )
       : undefined;
+
+  if (visualLayout) {
+    return (
+      <div
+        className={cn("grid min-w-0", className)}
+        data-employee-display-content
+        dir={visualLayout.direction}
+        style={{ rowGap: resolvedLineGap }}
+      >
+        {visualLayout.lines.map((line) => (
+          <span
+            aria-hidden={line.blank ? "true" : undefined}
+            className={lineClassName}
+            data-employee-display-blank={line.blank ? "true" : undefined}
+            key={`${line.y}:${line.height}:${line.text}`}
+            style={{ minHeight: line.height }}
+          >
+            {line.fragments.map((fragment, fragmentIndex) => {
+              const key = `${fragmentIndex}:${fragment.type}:${fragment.text}`;
+              const previous = line.fragments[fragmentIndex - 1];
+              const marginInlineStart = previous
+                ? Math.max(
+                    0,
+                    visualLayout.direction === "rtl"
+                      ? previous.x - fragment.x - fragment.width
+                      : fragment.x - previous.x - previous.width,
+                  )
+                : 0;
+              if (fragment.type === "text") {
+                return (
+                  <span
+                    className={textClassName(fragment.node)}
+                    data-employee-markdown-link={
+                      fragment.node.explicitLink
+                        ? fragment.node.href
+                          ? "inert"
+                          : "unsafe"
+                        : undefined
+                    }
+                    key={key}
+                    style={{
+                      display: "inline-block",
+                      marginInlineStart,
+                      width: fragment.width,
+                    }}
+                  >
+                    <HighlightedText queryTokens={queryTokens} text={fragment.text} />
+                  </span>
+                );
+              }
+              if (fragment.type === "tag") {
+                return (
+                  <TagSurface
+                    className="inline-flex items-center whitespace-nowrap"
+                    color={fragment.tag.color}
+                    density="compact"
+                    key={key}
+                    style={{
+                      height: fragment.height,
+                      marginInlineStart,
+                      width: fragment.width,
+                    }}
+                  >
+                    <HighlightedText queryTokens={queryTokens} text={fragment.text} />
+                  </TagSurface>
+                );
+              }
+              const source = `${fragment.position.label} · ${fragment.position.unitContext.unitName}`;
+              const positionEnd = fragment.position.label.length;
+              const separatorEnd = positionEnd + 3;
+              const renderRange = (start: number, end: number, rangeClassName: string) => {
+                const from = Math.max(fragment.start, start);
+                const to = Math.min(fragment.end, end);
+                if (from >= to) return null;
+                return (
+                  <span className={rangeClassName}>
+                    <HighlightedText queryTokens={queryTokens} text={source.slice(from, to)} />
+                  </span>
+                );
+              };
+              return (
+                <TagSurface
+                  className="inline-flex items-center whitespace-nowrap"
+                  density="compact"
+                  key={key}
+                  style={{
+                    height: fragment.height,
+                    marginInlineStart,
+                    width: fragment.width,
+                  }}
+                  variant="position"
+                >
+                  {renderRange(0, positionEnd, "font-medium text-foreground")}
+                  {renderRange(positionEnd, separatorEnd, "text-muted-foreground")}
+                  {renderRange(separatorEnd, source.length, "text-muted-foreground")}
+                </TagSurface>
+              );
+            })}
+          </span>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -289,26 +418,29 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
               }
               if (node.type === "positions") {
                 return (
-                  <span className="inline-flex max-w-full flex-wrap gap-1" key={nodeKey}>
-                    {node.positions.map(({ label, unitContext }) => (
-                      <span
-                        className={cn(
-                          "inline-flex max-w-full items-center rounded-md border bg-muted text-muted-foreground",
-                          density === "editor"
-                            ? "px-1.5 py-0 text-[9px] leading-3"
-                            : "px-2 py-1 text-xs leading-snug",
-                        )}
+                  <span className="max-w-full" key={nodeKey}>
+                    {node.positions.map(({ label, unitContext }, positionIndex) => (
+                      <TagSurface
+                        className="align-baseline"
+                        density={density === "editor" ? "compact" : "normal"}
                         data-employee-position-assignment
                         key={unitContext.id}
+                        style={{
+                          marginInlineEnd:
+                            positionIndex + 1 < node.positions.length
+                              ? TAG_SURFACE_METRICS[density === "editor" ? "compact" : "normal"].gap
+                              : undefined,
+                        }}
                         title={`${label} · ${unitContext.unitFullPath}`}
+                        variant="position"
                       >
-                        <span className="min-w-0 truncate font-medium text-foreground">
+                        <span className="font-medium text-foreground">
                           <HighlightedText queryTokens={queryTokens} text={label} />
                         </span>
                         <MiddleDot {...(density === "editor" ? { className: "mx-0.5" } : {})} />
                         {interactiveLinks && onUnitContextClick ? (
                           <button
-                            className="min-w-0 cursor-pointer truncate rounded-sm text-left outline-none transition-colors hover:bg-accent hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                            className="cursor-pointer rounded-sm text-left outline-none transition-colors hover:bg-accent hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                             onClick={(event) => {
                               event.stopPropagation();
                               onUnitContextClick(unitContext);
@@ -321,14 +453,14 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                             />
                           </button>
                         ) : (
-                          <span className="min-w-0 truncate">
+                          <span>
                             <HighlightedText
                               queryTokens={queryTokens}
                               text={unitContext.unitName}
                             />
                           </span>
                         )}
-                      </span>
+                      </TagSurface>
                     ))}
                   </span>
                 );

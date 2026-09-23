@@ -18,6 +18,7 @@ import { EmployeeCard, EmployeeCardList } from "@/components/employee-card-list"
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { useAppLocale } from "@/components/locale-provider";
 import { MiddleDot } from "@/components/middle-dot";
+import { TagSurface } from "@/components/tag-surface";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +42,6 @@ import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
 import { formatCalendarDayTitle, getCalendarWeekStart } from "@/lib/calendar-locale";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
-import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -386,13 +386,9 @@ export const CalendarTab = observer(() => {
           >
             {datedTagGroups.map((group) => (
               <Button
-                className={cn(
-                  "h-8 shrink-0 gap-0 rounded-full px-2.5 text-xs",
-                  tagColorSurfaceClassName(group.color),
-                )}
+                className="h-auto max-w-full shrink-0 rounded-md border-0 bg-transparent p-0 text-xs shadow-none hover:bg-transparent active:bg-transparent"
                 data-color={group.color ?? "none"}
                 data-demo-id="calendar-dated-tag-group"
-                data-tag-color-surface
                 disabled={group.source.kind === "composite"}
                 key={`${group.source.kind}:${
                   group.source.kind === "tag" ? group.source.tagId : group.normalizedLabel
@@ -401,18 +397,19 @@ export const CalendarTab = observer(() => {
                   if (group.source.kind === "tag") setDialogTagKey(group.normalizedLabel);
                 }}
                 size="sm"
-                style={customTagColorSurfaceStyle(group.color)}
                 type="button"
-                variant="secondary"
+                variant="ghost"
               >
-                {group.source.kind === "tag" ? (
-                  <HiOutlineTag className="me-1.5 size-3.5" />
-                ) : (
-                  <HiOutlineCalendarDays className="me-1.5 size-3.5" />
-                )}
-                <span>{group.label}</span>
-                <MiddleDot />
-                <span>{format.number(group.events.length)}</span>
+                <TagSurface color={group.color}>
+                  {group.source.kind === "tag" ? (
+                    <HiOutlineTag className="me-1 inline-block size-3.5 align-[-0.2em]" />
+                  ) : (
+                    <HiOutlineCalendarDays className="me-1 inline-block size-3.5 align-[-0.2em]" />
+                  )}
+                  <span>{group.label}</span>
+                  <MiddleDot />
+                  <span>{format.number(group.events.length)}</span>
+                </TagSurface>
               </Button>
             ))}
           </div>

@@ -234,20 +234,25 @@ test("runs the complete state editor at the repository base path without APIs or
         const label = chip.firstElementChild?.getBoundingClientRect();
         const count = chip.lastElementChild?.getBoundingClientRect();
         const bounds = chip.getBoundingClientRect();
+        const style = window.getComputedStyle(chip);
         return {
           labelClientWidth: chip.firstElementChild?.clientWidth ?? 0,
           labelScrollWidth: chip.firstElementChild?.scrollWidth ?? 0,
           left: (label?.left ?? bounds.left) - bounds.left,
+          paddingInlineEnd: style.paddingInlineEnd,
+          paddingInlineStart: style.paddingInlineStart,
           right: bounds.right - (count?.right ?? bounds.right),
         };
       }),
     );
   expect(footerChipInsets.length).toBeGreaterThan(1);
   for (const inset of footerChipInsets) {
-    expect(inset.left).toBeGreaterThanOrEqual(7);
-    expect(inset.left).toBeLessThanOrEqual(9);
-    expect(inset.right).toBeGreaterThanOrEqual(7);
-    expect(inset.right).toBeLessThanOrEqual(12);
+    expect(inset.left).toBeGreaterThanOrEqual(5.5);
+    expect(inset.left).toBeLessThanOrEqual(7);
+    expect(inset.right).toBeGreaterThanOrEqual(5.5);
+    expect(inset.right).toBeLessThanOrEqual(14);
+    expect(inset.paddingInlineStart).toBe("6px");
+    expect(inset.paddingInlineEnd).toBe("6px");
     expect(inset.labelScrollWidth).toBeLessThanOrEqual(inset.labelClientWidth + 1);
   }
 

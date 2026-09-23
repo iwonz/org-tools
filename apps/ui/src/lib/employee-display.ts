@@ -15,6 +15,12 @@ import {
   getExportEmployeeFieldValue,
 } from "@/lib/export-format";
 import {
+  getTagSurfaceHeight,
+  TAG_SURFACE_METRICS,
+  type TagSurfaceDensity,
+  takeFittingText,
+} from "@/lib/tag-surface";
+import {
   renderTemplateFormatParts,
   type TemplateFieldResolver,
   type TemplateFormatPart,
@@ -527,4 +533,328 @@ export const wrapEmployeeDisplayRichLines = (
     flush();
   }
   return wrapped;
+};
+
+export type EmployeeDisplayVisualFragment =
+  | {
+      height: number;
+      node: EmployeeDisplayTextNode;
+      text: string;
+      type: "text";
+      width: number;
+      x: number;
+    }
+  | {
+      continued: boolean;
+      end: number;
+      height: number;
+      start: number;
+      tag: EmployeeTag;
+      text: string;
+      type: "tag";
+      width: number;
+      x: number;
+    }
+  | {
+      continued: boolean;
+      end: number;
+      height: number;
+      position: EmployeeDisplayPosition;
+      start: number;
+      text: string;
+      type: "position";
+      width: number;
+      x: number;
+    };
+
+export type EmployeeDisplayVisualLine = {
+  blank?: true;
+  fragments: EmployeeDisplayVisualFragment[];
+  height: number;
+  text: string;
+  width: number;
+  y: number;
+};
+
+export type EmployeeDisplayVisualLayout = {
+  density: TagSurfaceDensity;
+  direction: "ltr" | "rtl";
+  height: number;
+  lines: EmployeeDisplayVisualLine[];
+};
+
+const defaultEmployeeDisplayMeasure = (
+  text: string,
+  density: TagSurfaceDensity,
+  node?: EmployeeDisplayTextNode,
+) => {
+  if (node) {
+    const widthPerCharacter = node.marks.code ? 7.2 : node.marks.bold ? 6.7 : 6.4;
+    return [...text].length * widthPerCharacter + (node.marks.code ? 4 : 0);
+  }
+  return [...text].length * (density === "compact" ? 5.2 : 6.1);
+};
+
+type EmployeeDisplayMeasure = typeof defaultEmployeeDisplayMeasure;
+
+const EMPLOYEE_DISPLAY_LAYOUT_CACHE_LIMIT = 8;
+const employeeDisplayLayoutCache = new WeakMap<
+  readonly EmployeeDisplayLine[],
+  Map<string, EmployeeDisplayVisualLayout>
+>();
+const employeeDisplayMeasureIds = new WeakMap<EmployeeDisplayMeasure, number>();
+let nextEmployeeDisplayMeasureId = 1;
+
+const getEmployeeDisplayMeasureId = (measureText: EmployeeDisplayMeasure) => {
+  const existing = employeeDisplayMeasureIds.get(measureText);
+  if (existing) return existing;
+  const id = nextEmployeeDisplayMeasureId;
+  nextEmployeeDisplayMeasureId += 1;
+  employeeDisplayMeasureIds.set(measureText, id);
+  return id;
+};
+
+export const layoutEmployeeDisplayRichLines = (
+  sourceLines: readonly EmployeeDisplayLine[],
+  {
+    availableWidth,
+    density = "compact",
+    direction = "ltr",
+    font = "system-ui",
+    formatTag = (tag) => tag.label,
+    lineGap = 0,
+    locale = "en",
+    measureText = defaultEmployeeDisplayMeasure,
+  }: {
+    availableWidth: number;
+    density?: TagSurfaceDensity;
+    direction?: "ltr" | "rtl";
+    font?: string;
+    formatTag?: (tag: EmployeeTag) => string;
+    lineGap?: number;
+    locale?: string;
+    measureText?: EmployeeDisplayMeasure;
+  },
+): EmployeeDisplayVisualLayout => {
+  const safeWidth = Math.max(1, availableWidth);
+  const metrics = TAG_SURFACE_METRICS[density];
+  const baseLineHeight = density === "compact" ? 16 : 20;
+  const surfaceHeight = getTagSurfaceHeight(density);
+  const lines: EmployeeDisplayVisualLine[] = [];
+  const formattedTagText = new Map<EmployeeTag, string>();
+  const getFormattedTagText = (tag: EmployeeTag) => {
+    const cached = formattedTagText.get(tag);
+    if (cached !== undefined) return cached;
+    const value = formatTag(tag);
+    formattedTagText.set(tag, value);
+    return value;
+  };
+  const cacheKey = JSON.stringify([
+    safeWidth,
+    density,
+    direction,
+    font,
+    lineGap,
+    locale,
+    getEmployeeDisplayMeasureId(measureText),
+    sourceLines.map((line) => [
+      Boolean(line.blank),
+      line.nodes.map((node) =>
+        node.type === "text"
+          ? [node.type, node.text, node.href, node.fieldName, node.explicitLink, node.marks]
+          : node.type === "tags"
+            ? [node.type, node.tags.map((tag) => [tag.tagId, getFormattedTagText(tag), tag.color])]
+            : [
+                node.type,
+                node.positions.map((position) => [
+                  position.label,
+                  position.unitContext.id,
+                  position.unitContext.unitName,
+                ]),
+              ],
+      ),
+    ]),
+  ]);
+  const sourceCache = employeeDisplayLayoutCache.get(sourceLines);
+  const cachedLayout = sourceCache?.get(cacheKey);
+  if (cachedLayout) {
+    sourceCache?.delete(cacheKey);
+    sourceCache?.set(cacheKey, cachedLayout);
+    return cachedLayout;
+  }
+
+  for (const sourceLine of sourceLines) {
+    if (sourceLine.blank) {
+      lines.push({ blank: true, fragments: [], height: baseLineHeight, text: "", width: 0, y: 0 });
+      continue;
+    }
+    let fragments: EmployeeDisplayVisualFragment[] = [];
+    let width = 0;
+    const pushLine = () => {
+      if (fragments.length === 0) return;
+      lines.push({
+        fragments,
+        height: Math.max(baseLineHeight, ...fragments.map((fragment) => fragment.height)),
+        text: fragments
+          .map((fragment) => fragment.text)
+          .join("")
+          .trimEnd(),
+        width,
+        y: 0,
+      });
+      fragments = [];
+      width = 0;
+    };
+    const appendText = (node: EmployeeDisplayTextNode) => {
+      let rest = node.text;
+      while (rest) {
+        if (fragments.length === 0) rest = rest.trimStart();
+        if (!rest) break;
+        const remainingWidth = Math.max(1, safeWidth - width);
+        const fitted = takeFittingText(rest, remainingWidth, (value) =>
+          measureText(value, density, node),
+        );
+        if (!fitted.text && fragments.length > 0) {
+          pushLine();
+          continue;
+        }
+        const text = fitted.text || rest;
+        const textWidth = Math.min(remainingWidth, measureText(text, density, node));
+        fragments.push({
+          height: baseLineHeight,
+          node,
+          text,
+          type: "text",
+          width: textWidth,
+          x: width,
+        });
+        width += textWidth;
+        rest = fitted.rest;
+        if (rest) pushLine();
+      }
+    };
+    const appendSurfacePart = (
+      type: "position" | "tag",
+      value: EmployeeDisplayPosition | EmployeeTag,
+      sourceText: string,
+      initialStart = 0,
+      initialContinued = false,
+    ) => {
+      let rest = sourceText.normalize("NFC").trim() || " ";
+      let start = initialStart;
+      let continued = initialContinued;
+      while (rest) {
+        const gap = width > 0 ? metrics.gap : 0;
+        let maxTextWidth = safeWidth - width - gap - metrics.horizontalPadding * 2;
+        if (maxTextWidth <= 0 && fragments.length > 0) {
+          pushLine();
+          continue;
+        }
+        maxTextWidth = Math.max(1, maxTextWidth);
+        const fitted = takeFittingText(rest, maxTextWidth, (text) => measureText(text, density));
+        if (!fitted.text && fragments.length > 0) {
+          pushLine();
+          continue;
+        }
+        const text = fitted.text || rest;
+        const fragmentWidth = Math.min(
+          safeWidth,
+          measureText(text, density) + metrics.horizontalPadding * 2,
+        );
+        const x = width + gap;
+        const common = {
+          continued,
+          end: start + text.length,
+          height: surfaceHeight,
+          start,
+          text,
+          width: fragmentWidth,
+          x,
+        };
+        fragments.push(
+          type === "tag"
+            ? { ...common, tag: value as EmployeeTag, type }
+            : { ...common, position: value as EmployeeDisplayPosition, type },
+        );
+        width = x + fragmentWidth;
+        start += text.length + Math.max(0, rest.length - fitted.rest.length - text.length);
+        rest = fitted.rest;
+        continued = true;
+        if (rest) pushLine();
+      }
+    };
+    const appendSurface = (
+      type: "position" | "tag",
+      value: EmployeeDisplayPosition | EmployeeTag,
+      sourceText: string,
+    ) => {
+      const label = type === "tag" ? (value as EmployeeTag).label.normalize("NFC") : sourceText;
+      const normalizedSource = sourceText.normalize("NFC");
+      const suffix =
+        type === "tag" && normalizedSource.startsWith(label)
+          ? normalizedSource.slice(label.length)
+          : "";
+      appendSurfacePart(type, value, suffix ? label : normalizedSource);
+      if (!suffix) return;
+      const lastFragment = fragments.at(-1);
+      if (lastFragment?.type === type) {
+        const combinedText = `${lastFragment.text}${suffix}`;
+        const combinedWidth = Math.min(
+          safeWidth,
+          measureText(combinedText, density) + metrics.horizontalPadding * 2,
+        );
+        if (lastFragment.x + combinedWidth <= safeWidth) {
+          lastFragment.text = combinedText;
+          lastFragment.end += suffix.length;
+          lastFragment.width = combinedWidth;
+          width = lastFragment.x + combinedWidth;
+          return;
+        }
+      }
+      appendSurfacePart(type, value, suffix.trimStart(), label.length, true);
+    };
+
+    for (const node of sourceLine.nodes) {
+      if (node.type === "text") {
+        appendText(node);
+      } else if (node.type === "tags") {
+        for (const tag of node.tags) appendSurface("tag", tag, getFormattedTagText(tag));
+      } else {
+        for (const position of node.positions) {
+          appendSurface("position", position, getEmployeeDisplayPositionText(position));
+        }
+      }
+    }
+    pushLine();
+  }
+
+  if (direction === "rtl") {
+    for (const line of lines) {
+      for (const fragment of line.fragments) {
+        fragment.x = safeWidth - fragment.x - fragment.width;
+      }
+    }
+  }
+
+  let layoutHeight = 0;
+  for (const [index, line] of lines.entries()) {
+    line.y = layoutHeight;
+    layoutHeight += line.height + (index + 1 < lines.length ? lineGap : 0);
+  }
+
+  const layout: EmployeeDisplayVisualLayout = {
+    density,
+    direction,
+    height: layoutHeight,
+    lines,
+  };
+  const nextCache = sourceCache ?? new Map<string, EmployeeDisplayVisualLayout>();
+  nextCache.set(cacheKey, layout);
+  while (nextCache.size > EMPLOYEE_DISPLAY_LAYOUT_CACHE_LIMIT) {
+    const oldest = nextCache.keys().next().value;
+    if (oldest === undefined) break;
+    nextCache.delete(oldest);
+  }
+  if (!sourceCache) employeeDisplayLayoutCache.set(sourceLines, nextCache);
+  return layout;
 };

@@ -17,7 +17,8 @@ import type {
   Unit,
 } from "@org-tools/types";
 import { createUuid } from "@/lib/employee-data";
-import { type EmployeeDisplayLine, getEmployeeDisplayPositionText } from "@/lib/employee-display";
+import { type EmployeeDisplayLine, layoutEmployeeDisplayRichLines } from "@/lib/employee-display";
+import { layoutInlineSurfaces, TAG_SURFACE_METRICS } from "@/lib/tag-surface";
 
 export const ORG_EDITOR_UNIT_MIN_WIDTH = 280;
 export const ORG_EDITOR_UNIT_HEADER_HEIGHT = 72;
@@ -33,11 +34,11 @@ export const ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS = 6;
 export const ORG_EDITOR_EMPLOYEE_ROW_GAP = 4;
 export const ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING = 8;
 export const ORG_EDITOR_EMPLOYEE_TAG_STYLE = {
-  fontSize: 9,
-  gap: 2,
-  height: 12,
-  horizontalPadding: 6,
-  radius: 6,
+  fontSize: TAG_SURFACE_METRICS.compact.fontSize,
+  gap: TAG_SURFACE_METRICS.compact.gap,
+  height: TAG_SURFACE_METRICS.compact.lineHeight + TAG_SURFACE_METRICS.compact.verticalPadding * 2,
+  horizontalPadding: TAG_SURFACE_METRICS.compact.horizontalPadding,
+  radius: TAG_SURFACE_METRICS.compact.radius,
   widthPerCharacter: 5.2,
 } as const;
 export const ORG_EDITOR_EMPLOYEE_TAG_ROW_HEIGHT =
@@ -54,13 +55,15 @@ export const ORG_EDITOR_UNIT_LAYER_GAP = 64;
 export const ORG_EDITOR_UNIT_ROOT_GAP = 64;
 export const ORG_EDITOR_UNIT_MIN_HEIGHT = 120;
 export const ORG_EDITOR_UNIT_COLLAPSED_HEIGHT = ORG_EDITOR_UNIT_HEADER_HEIGHT;
-export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT = 20;
-export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING = 8;
-export const ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP = 4;
-export const ORG_EDITOR_UNIT_TAG_FOOTER_GAP = 4;
-export const ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT = 12;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT = ORG_EDITOR_EMPLOYEE_TAG_STYLE.height;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING =
+  ORG_EDITOR_EMPLOYEE_TAG_STYLE.horizontalPadding;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP = ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_GAP = ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT = TAG_SURFACE_METRICS.compact.lineHeight;
 export const ORG_EDITOR_UNIT_TAG_FOOTER_PADDING = 8;
-export const ORG_EDITOR_UNIT_TAG_FOOTER_VERTICAL_PADDING = 4;
+export const ORG_EDITOR_UNIT_TAG_FOOTER_VERTICAL_PADDING =
+  TAG_SURFACE_METRICS.compact.verticalPadding;
 export const ORG_EDITOR_DEFAULT_LAYOUT_MODE: OrgEditorLayoutMode = "topDown";
 export const ORG_EDITOR_GRID_SIZE = 24;
 export const ORG_EDITOR_UNIT_NOTE_MAX_UTF8_BYTES = 64 * 1024;
@@ -111,6 +114,7 @@ export type OrgEditorUnitTagFooterLine = {
 export type OrgEditorUnitTagFooterChipLayout = {
   color: EmployeeTagColor | null;
   count: number;
+  id: string;
   height: number;
   label: string;
   lines: OrgEditorUnitTagFooterLine[];
@@ -125,9 +129,6 @@ export type OrgEditorUnitTagFooterLayout = {
   height: number;
   rowCount: number;
 };
-
-const COMPACT_FOOTER_TEXT_SAFETY = 3;
-const WRAPPED_FOOTER_RENDER_SAFETY = 4;
 
 const getCompactFooterGlyphWidth = (glyph: string) => {
   if (/\p{Mark}/u.test(glyph)) return 0;
@@ -151,114 +152,6 @@ const measureCompactFooterText = (value: string) =>
     (width, glyph) => width + getCompactFooterGlyphWidth(glyph),
     0,
   );
-
-const measureCompactFooterLabel = (value: string) =>
-  measureCompactFooterText(value) + ([...value].length <= 3 ? 0 : COMPACT_FOOTER_TEXT_SAFETY);
-
-const getGraphemes = (value: string) => {
-  if (typeof Intl.Segmenter === "function") {
-    return [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(value)].map(
-      ({ segment }) => segment,
-    );
-  }
-  return [...value];
-};
-
-const wrapCompactFooterLabel = (label: string, maxWidth: number) => {
-  const normalizedLabel = label.normalize("NFC").trim();
-  if (!normalizedLabel) return [""];
-  const lines: string[] = [];
-  let line = "";
-
-  const pushWord = (word: string) => {
-    const candidate = line ? `${line} ${word}` : word;
-    if (measureCompactFooterText(candidate) <= maxWidth) {
-      line = candidate;
-      return;
-    }
-    if (line) {
-      lines.push(line);
-      line = "";
-    }
-    if (measureCompactFooterText(word) <= maxWidth) {
-      line = word;
-      return;
-    }
-    let chunk = "";
-    for (const grapheme of getGraphemes(word)) {
-      const nextChunk = `${chunk}${grapheme}`;
-      if (chunk && measureCompactFooterText(nextChunk) > maxWidth) {
-        lines.push(chunk);
-        chunk = grapheme;
-      } else {
-        chunk = nextChunk;
-      }
-    }
-    line = chunk;
-  };
-
-  for (const word of normalizedLabel.split(/\s+/u)) pushWord(word);
-  if (line || lines.length === 0) lines.push(line);
-  return lines;
-};
-
-const createOrgEditorUnitTagFooterChipDraft = (
-  summary: OrgEditorUnitTagSummary,
-  availableWidth: number,
-) => {
-  const safeWidth = Math.max(1, availableWidth);
-  const maxTextWidth = Math.max(
-    1,
-    safeWidth - ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2,
-  );
-  // Keep the shared metric comfortably inside the browser-rendered Noto glyph width.
-  // The same wrapped lines are consumed by DOM and canvas export, so this safety
-  // allowance prevents a platform font rasterizer from clipping the final grapheme.
-  const wrapTextWidth = Math.max(1, maxTextWidth - 24);
-  const suffix = `· ${summary.count}`;
-  const suffixWidth = measureCompactFooterText(suffix);
-  const label = summary.label.normalize("NFC").trim();
-  const labelWidth = measureCompactFooterLabel(label);
-  const naturalContentWidth = labelWidth + ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP + suffixWidth;
-  let lines: OrgEditorUnitTagFooterLine[];
-
-  if (naturalContentWidth <= maxTextWidth) {
-    lines = [{ id: `${summary.tagId}:0`, label, suffix, width: naturalContentWidth }];
-  } else {
-    const wrappedLabels = wrapCompactFooterLabel(label, wrapTextWidth);
-    lines = wrappedLabels.map((lineLabel, index) => ({
-      id: `${summary.tagId}:${index}`,
-      label: lineLabel,
-      suffix: null,
-      width: measureCompactFooterLabel(lineLabel),
-    }));
-    const lastLine = lines.at(-1);
-    if (
-      lastLine &&
-      lastLine.width + ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP + suffixWidth <= wrapTextWidth
-    ) {
-      lastLine.suffix = suffix;
-      lastLine.width += ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP + suffixWidth;
-    } else {
-      lines.push({ id: `${summary.tagId}:${lines.length}`, label: "", suffix, width: suffixWidth });
-    }
-  }
-
-  const contentWidth =
-    Math.max(...lines.map((line) => line.width)) +
-    (lines.length > 1 ? WRAPPED_FOOTER_RENDER_SAFETY : 0);
-  const width = Math.min(
-    safeWidth,
-    Math.max(40, Math.ceil(contentWidth + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING * 2)),
-  );
-  const height = Math.max(
-    ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
-    lines.length * ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT +
-      ORG_EDITOR_UNIT_TAG_FOOTER_VERTICAL_PADDING * 2,
-  );
-
-  return { ...summary, height, lines, width };
-};
 
 export const snapOrgEditorCoordinate = (value: number) =>
   Math.round(value / ORG_EDITOR_GRID_SIZE) * ORG_EDITOR_GRID_SIZE;
@@ -347,79 +240,71 @@ export const createOrgEditorUnitTagFooterLayout = (
     return { chips: [], height: 0, rowCount: 0 };
   }
   const safeWidth = Math.max(1, availableWidth);
-  const drafts = summaries.map((summary) =>
-    createOrgEditorUnitTagFooterChipDraft(summary, safeWidth),
-  );
-  const chips: OrgEditorUnitTagFooterChipLayout[] = [];
-  let rowCount = 1;
-  let rowHeight = 0;
-  let x = ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
-  let y = ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
-
-  for (const draft of drafts) {
-    const rowStart = ORG_EDITOR_UNIT_TAG_FOOTER_PADDING;
-    const rowEnd = rowStart + safeWidth;
-    if (x > rowStart && x + draft.width > rowEnd) {
-      y += rowHeight + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
-      x = rowStart;
-      rowHeight = 0;
-      rowCount += 1;
-    }
-    chips.push({
-      color: draft.color,
-      count: draft.count,
-      height: draft.height,
-      label: draft.label,
-      lines: draft.lines,
-      tagId: draft.tagId,
-      width: draft.width,
-      x,
-      y,
-    });
-    rowHeight = Math.max(rowHeight, draft.height);
-    x += draft.width + ORG_EDITOR_UNIT_TAG_FOOTER_GAP;
-  }
+  const layout = layoutInlineSurfaces({
+    availableWidth: safeWidth,
+    density: "compact",
+    measureText: measureCompactFooterText,
+    suffixes: summaries.map((summary) => ` · ${summary.count}`),
+    texts: summaries.map((summary) => summary.label),
+  });
+  const chips = layout.fragments.flatMap((fragment) => {
+    const summary = summaries[fragment.itemIndex];
+    if (!summary) return [];
+    const suffixMatch = /^(.*?)(\s*·\s*\d+)$/u.exec(fragment.text);
+    const label = suffixMatch?.[1] ?? fragment.text;
+    const suffix = suffixMatch?.[2]?.trimStart() ?? null;
+    return [
+      {
+        color: summary.color,
+        count: summary.count,
+        height: fragment.height,
+        id: `${summary.tagId}:${fragment.row}:${fragment.start}:${fragment.end}`,
+        label: summary.label,
+        lines: [
+          {
+            id: `${summary.tagId}:${fragment.row}:${fragment.start}:${fragment.end}:0`,
+            label,
+            suffix,
+            width: Math.max(0, fragment.width - TAG_SURFACE_METRICS.compact.horizontalPadding * 2),
+          },
+        ],
+        tagId: summary.tagId,
+        width: fragment.width,
+        x: ORG_EDITOR_UNIT_TAG_FOOTER_PADDING + fragment.x,
+        y: ORG_EDITOR_UNIT_TAG_FOOTER_PADDING + fragment.y,
+      },
+    ];
+  });
 
   return {
     chips,
-    height: y + rowHeight + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
-    rowCount,
+    height: layout.height + ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2,
+    rowCount: layout.rowCount,
   };
 };
 
 export const getOrgEditorUnitTagFooterChipWidth = (
   summary: Pick<OrgEditorUnitTagSummary, "count" | "label">,
   availableWidth: number,
-) =>
-  createOrgEditorUnitTagFooterChipDraft(
-    { color: null, count: summary.count, label: summary.label, tagId: "" },
+) => {
+  const layout = createOrgEditorUnitTagFooterLayout(
+    [{ color: null, count: summary.count, label: summary.label, tagId: "" }],
     availableWidth,
-  ).width;
+  );
+  return Math.max(0, ...layout.chips.map((chip) => chip.width));
+};
 
 export const setOrgEditorUnitTagFooterHeight = (unitId: OrgEditorUnitId, height: number): void => {
   tagFooterHeightByUnitId.set(unitId, height);
 };
 
-export const packOrgEditorTagLabels = (
-  labels: readonly string[],
-  availableWidth: number,
-): number => {
-  if (labels.length === 0) return 0;
-  let rows = 1;
-  let usedWidth = 0;
-  for (const label of labels) {
-    const chipWidth = getOrgEditorTagChipWidth(label, availableWidth);
-    const nextWidth =
-      usedWidth === 0 ? chipWidth : usedWidth + ORG_EDITOR_EMPLOYEE_TAG_GAP + chipWidth;
-    if (usedWidth > 0 && nextWidth > availableWidth) {
-      rows += 1;
-      usedWidth = chipWidth;
-    } else {
-      usedWidth = nextWidth;
-    }
-  }
-  return rows;
-};
+export const packOrgEditorTagLabels = (labels: readonly string[], availableWidth: number): number =>
+  layoutInlineSurfaces({
+    availableWidth,
+    density: "compact",
+    measureText: (value) => value.length * ORG_EDITOR_EMPLOYEE_TAG_STYLE.widthPerCharacter,
+    texts: labels,
+  }).rowCount;
 
 export const getOrgEditorTagChipWidth = (label: string, availableWidth: number) =>
   Math.min(
@@ -447,32 +332,22 @@ export const getOrgEditorEmployeeRowHeightForDisplayLines = (lineCount: number, 
       ORG_EDITOR_EMPLOYEE_CONTENT_VERTICAL_PADDING,
   );
 
+export const getOrgEditorEmployeeRowHeightForVisualLayout = (layoutHeight: number) =>
+  Math.max(
+    ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
+    Math.max(0, layoutHeight) + ORG_EDITOR_EMPLOYEE_CONTENT_VERTICAL_PADDING,
+  );
+
 export const getOrgEditorEmployeeRichVisualLineCount = (
   lines: readonly EmployeeDisplayLine[],
   availableWidth: number,
   formatTag: (tag: EmployeeTag) => string = (tag) => tag.label,
 ) =>
-  lines.reduce((total, line) => {
-    let lineRows = 1;
-    for (const node of line.nodes) {
-      if (node.type === "tags") {
-        lineRows = Math.max(
-          lineRows,
-          packOrgEditorTagLabels(node.tags.map(formatTag), availableWidth),
-        );
-      }
-      if (node.type === "positions") {
-        lineRows = Math.max(
-          lineRows,
-          packOrgEditorTagLabels(
-            node.positions.map(getEmployeeDisplayPositionText),
-            availableWidth,
-          ),
-        );
-      }
-    }
-    return total + lineRows;
-  }, 0);
+  layoutEmployeeDisplayRichLines(lines, {
+    availableWidth,
+    density: "compact",
+    formatTag,
+  }).lines.length;
 
 export const getOrgEditorEmployeeRowHeightForRichLines = (
   lines: readonly EmployeeDisplayLine[],
@@ -480,9 +355,13 @@ export const getOrgEditorEmployeeRowHeightForRichLines = (
   formatTag?: (tag: EmployeeTag) => string,
   lineGap = 0,
 ) =>
-  getOrgEditorEmployeeRowHeightForDisplayLines(
-    getOrgEditorEmployeeRichVisualLineCount(lines, availableWidth, formatTag),
-    lineGap,
+  getOrgEditorEmployeeRowHeightForVisualLayout(
+    layoutEmployeeDisplayRichLines(lines, {
+      availableWidth,
+      density: "compact",
+      ...(formatTag ? { formatTag } : {}),
+      lineGap,
+    }).height,
   );
 
 export const getOrgEditorEmployeeDisplayLineBaselines = ({

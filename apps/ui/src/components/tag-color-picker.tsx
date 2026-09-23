@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HiCheck, HiOutlineChevronDown, HiOutlineSwatch } from "react-icons/hi2";
 
+import { TagSurface } from "@/components/tag-surface";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,7 +20,6 @@ import {
 import type { UiTextKey } from "@/i18n/messages";
 import { useUiText } from "@/i18n/use-ui-text";
 import {
-  customTagColorSurfaceStyle,
   decodeTagColorDraft,
   EMPLOYEE_TAG_COLOR_NAMES,
   employeeTagColorToHex,
@@ -35,7 +35,6 @@ import {
   tagColorInputPlaceholder,
   tagColorOpacityByteToPercent,
   tagColorOpacityPercentToByte,
-  tagColorSurfaceClassName,
 } from "@/lib/tag-color";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -83,16 +82,8 @@ function TagColorLabel({
     : (emptyLabel ?? t("No color"));
 
   return (
-    <span
-      className={cn(
-        "inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-medium",
-        tagColorSurfaceClassName(color),
-      )}
-      data-tag-color={color ?? "none"}
-      data-tag-color-surface
-      style={customTagColorSurfaceStyle(color)}
-    >
-      <span className="truncate">{label}</span>
+    <TagSurface className="font-medium" color={color}>
+      <span>{label}</span>
       {showSelectionSlot && (
         <span
           aria-hidden="true"
@@ -101,7 +92,7 @@ function TagColorLabel({
           {selected && <HiCheck className="size-3" />}
         </span>
       )}
-    </span>
+    </TagSurface>
   );
 }
 

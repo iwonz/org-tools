@@ -3,6 +3,7 @@
 ## Purpose
 Define stable global Tag definitions, catalog management, colored assignments, and reference cleanup.
 ## Requirements
+
 ### Requirement: Tags use stable catalog definitions
 The system SHALL persist Tags as UUID-keyed global definitions with a unique normalized label and an
 optional color that is either a named supplied preset or a canonical lowercase six- or eight-digit
@@ -112,24 +113,30 @@ retaining stale Employee snapshots or scanning on scroll.
 - **THEN** the modal shows the localized ordinary empty state without hiding the action
 
 ### Requirement: Assignment controls reflect catalog colors
-Every Tag assignment surface SHALL display the current global named or custom color as its own
-restrained tonal fill with a readable matching foreground in light and dark themes. Tag chips,
-assignment pickers, catalog identity labels, and Calendar Tag controls MUST NOT add a separate
-leading color dot. Color SHALL be editable only in the central Tag dialog. A new Tag staged in an
-Employee form SHALL use the neutral no-color fill and SHALL enter the catalog only when the Employee
-save succeeds.
+Every Tag assignment and selection surface SHALL display the current global named or custom color
+as its own restrained tonal fill with a readable matching foreground in light and dark themes.
+Employee chips, form drafts, assignment pickers, filters, catalog identity labels and drag previews,
+Calendar controls, color previews, Editor footers, and image output MUST share density-based font,
+padding, radius, gap, and inline wrapping semantics without a separate leading color dot. Long
+labels MUST remain complete and content-sized. Color SHALL be editable only in the central Tag
+dialog. A new Tag staged in an Employee form SHALL use the neutral no-color fill and SHALL enter the
+catalog only when the Employee save succeeds.
 
 #### Scenario: Render a colored Tag
-- **WHEN** a Tag with a named or custom catalog color appears in an Employee chip, assignment picker, catalog, or Calendar
-- **THEN** the Tag surface uses a readable tonal form of that color as its fill and no leading color dot is rendered
+- **WHEN** a named or custom catalog color appears on any Tag surface
+- **THEN** every decorated fragment uses its readable tonal color and no leading color dot
 
 #### Scenario: Render a neutral Tag
 - **WHEN** a Tag has no configured color
-- **THEN** its surface uses the neutral Tag treatment without an empty marker or reserved marker space
+- **THEN** every fragment uses the neutral Tag treatment without an empty marker or reserved marker space
 
 #### Scenario: Cancel a new staged Tag
 - **WHEN** a user creates a draft Tag and cancels the Employee form
 - **THEN** neither the catalog nor the Employee is changed
+
+#### Scenario: Wrap a control label
+- **WHEN** a Tag is wider than a form, picker, filter, catalog, Calendar, or color-preview surface
+- **THEN** the complete label wraps without truncation while checkbox, date, delete, drag, and activation controls remain usable
 
 ### Requirement: Palette choices preview the Tag surface
 The shared Tag color dropdown SHALL show a full-spectrum picker, a synchronized opacity slider and
@@ -274,3 +281,12 @@ bounded Popover.
 #### Scenario: Use the palette accessibly
 - **WHEN** Used colors render at narrow width or in an RTL locale
 - **THEN** 28-pixel swatches wrap without overflow and expose keyboard selection, exact color and opacity labels, tooltips, and a geometry-stable selected mark
+
+### Requirement: Virtual Tag rows measure wrapped content
+Virtualized Tag picker and filter rows SHALL derive their heights from mounted wrapped content and
+SHALL invalidate measurements when width, locale, direction, density, or label content changes.
+Stable Tag identity and bounded overscan MUST remain in use.
+
+#### Scenario: Scroll long Tag options
+- **WHEN** a virtualized Tag list contains mixed one-line and multi-line labels
+- **THEN** rows do not overlap or leave stale gaps and every checkbox and action remains aligned with its Tag

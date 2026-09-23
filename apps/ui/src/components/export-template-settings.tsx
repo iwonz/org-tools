@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 
+import { templateFormatTokenDescriptionKeys } from "@/components/employee-display-format-tokens";
 import { TemplateFormatInput } from "@/components/template-format-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import type { UiTextKey } from "@/i18n/messages";
 import { useUiText } from "@/i18n/use-ui-text";
 
 export type ExportTemplateToken = {
@@ -28,27 +28,6 @@ type ExportTemplateSettingsProps = {
   unitFields: ExportTemplateToken[];
 };
 
-export const templateFormatTokenDescriptionKeys: Record<string, UiTextKey> = {
-  avatarBase64Url: "Template token: embedded avatar",
-  birthday: "Template token: complete birthday",
-  email: "Template token: email address",
-  firstName: "Template token: first name",
-  fullName: "Template token: full name",
-  gender: "Template token: gender",
-  id: "Template token: Employee identifier",
-  isBoss: "Template token: manager status",
-  lastName: "Template token: last name",
-  phone: "Template token: phone number",
-  position: "Template token: Unit position",
-  profileUrl: "Template token: profile link",
-  tagDates: "Template token: dated Tags",
-  tags: "Template token: Tag labels",
-  unitFullPath: "Template token: full Unit path",
-  unitId: "Template token: Unit identifier",
-  unitName: "Template token: Unit name",
-  username: "Template token: username",
-};
-
 export function ExportTemplateSettings({
   children,
   dataDemoId,
@@ -65,9 +44,10 @@ export function ExportTemplateSettings({
 }: ExportTemplateSettingsProps) {
   const t = useUiText();
   const tokens = [...employeeFields, ...unitFields].map((field) => ({
-    description: templateFormatTokenDescriptionKeys[field.key]
-      ? t(templateFormatTokenDescriptionKeys[field.key] as UiTextKey)
-      : field.label,
+    description: (() => {
+      const descriptionKey = templateFormatTokenDescriptionKeys[field.key];
+      return descriptionKey ? t(descriptionKey) : field.label;
+    })(),
     key: field.key,
   }));
   return (

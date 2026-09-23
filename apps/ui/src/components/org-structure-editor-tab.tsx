@@ -105,6 +105,7 @@ import {
 } from "@/components/search-controls";
 import { SourceEmptyState, TopLevelEmptyState } from "@/components/source-empty-state";
 import { TagColorPicker } from "@/components/tag-color-picker";
+import { TagSurface } from "@/components/tag-surface";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -136,8 +137,9 @@ import {
 } from "@/lib/editor-distribution";
 import { createUuid } from "@/lib/employee-data";
 import {
+  type EmployeeDisplayVisualLayout,
+  layoutEmployeeDisplayRichLines,
   renderEmployeeDisplayRichLines,
-  wrapEmployeeDisplayRichLines,
 } from "@/lib/employee-display";
 import {
   countEmployeeIdsInSelection,
@@ -161,8 +163,8 @@ import {
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForDisplayLines,
-  getOrgEditorEmployeeRowHeightForRichLines,
   getOrgEditorEmployeeRowHeightForTagLabels,
+  getOrgEditorEmployeeRowHeightForVisualLayout,
   getOrgEditorEmployeeRowLayout,
   getOrgEditorEmployeeTextMaxWidth,
   getOrgEditorOrderedEmployeeIds,
@@ -264,6 +266,7 @@ type CanvasRichTextInput = {
 
 const EMPTY_EMPLOYEE_MAP = new Map<EmployeeId, Employee>();
 const EMPTY_SEARCH_DOCUMENT_MAP = new Map<EmployeeId, EmployeeSearchDocument>();
+const EMPTY_EMPLOYEE_DISPLAY_LAYOUTS = new Map<string, EmployeeDisplayVisualLayout>();
 type AddEmployeesTarget = {
   type: "newUnit";
   point: CanvasPoint;
@@ -1310,6 +1313,7 @@ function OrgEditorEmployeeDragPreview({
 }
 
 function OrgEditorNode({
+  employeeDisplayLayouts,
   employeeDisplayFormat,
   employeeDisplayLineGap,
   viewSettings,
@@ -1345,6 +1349,7 @@ function OrgEditorNode({
   unit,
   visibleWorldRect,
 }: {
+  employeeDisplayLayouts: ReadonlyMap<string, EmployeeDisplayVisualLayout>;
   employeeDisplayFormat: string;
   employeeDisplayLineGap: number;
   viewSettings: OrgEditorViewSettings;
@@ -1685,6 +1690,7 @@ function OrgEditorNode({
                           compact
                           density="canvas"
                           tags={tags}
+                          wrapWidth={getOrgEditorEmployeeTextMaxWidth(unitWidth)}
                         />
                       </span>
                     </button>
@@ -1827,6 +1833,13 @@ function OrgEditorNode({
                           interactiveLinks={false}
                           queryTokens={queryTokens}
                           unitContexts={employeeDisplayUnitContexts}
+                          {...(employeeDisplayLayouts.has(row.key)
+                            ? {
+                                visualLayout: employeeDisplayLayouts.get(
+                                  row.key,
+                                ) as EmployeeDisplayVisualLayout,
+                              }
+                            : {})}
                           wrapWidth={getOrgEditorEmployeeTextMaxWidth(getOrgEditorUnitWidth(unit))}
                         />
                       ) : (
@@ -1875,16 +1888,13 @@ function OrgEditorNode({
           style={{ height: tagFooterHeight }}
         >
           {tagFooterLayout.chips.map((chip) => (
-            <span
-              className={cn(
-                "absolute inline-flex max-w-full flex-col justify-center rounded-md px-2 text-[10px] leading-3",
-                tagColorSurfaceClassName(chip.color),
-              )}
-              data-tag-color={chip.color ?? "none"}
+            <TagSurface
+              className="absolute inline-flex max-w-full items-center whitespace-nowrap"
+              color={chip.color}
               data-tag-label={chip.label}
-              key={chip.tagId}
+              density="compact"
+              key={chip.id}
               style={{
-                ...customTagColorSurfaceStyle(chip.color),
                 height: chip.height,
                 left: chip.x,
                 top: chip.y,
@@ -1906,7 +1916,7 @@ function OrgEditorNode({
                   )}
                 </span>
               ))}
-            </span>
+            </TagSurface>
           ))}
         </div>
       )}
@@ -1926,6 +1936,7 @@ const MemoizedOrgEditorNode = memo(
   OrgEditorNode,
   (previous: Parameters<typeof OrgEditorNode>[0], next: Parameters<typeof OrgEditorNode>[0]) =>
     previous.employeeDisplayFormat === next.employeeDisplayFormat &&
+    previous.employeeDisplayLayouts === next.employeeDisplayLayouts &&
     previous.employeeDisplayLineGap === next.employeeDisplayLineGap &&
     previous.unit === next.unit &&
     previous.viewSettings === next.viewSettings &&
@@ -2853,6 +2864,7 @@ export const OrgStructureEditorTab = observer(() => {
       OrgEditorUnitId,
       {
         heights: ReadonlyMap<string, number>;
+        layouts: ReadonlyMap<string, EmployeeDisplayVisualLayout>;
         orderedRows: ReturnType<typeof getOrgEditorOrderedUnitRows>;
       }
     >();
@@ -2862,6 +2874,7 @@ export const OrgStructureEditorTab = observer(() => {
         getOrgEditorEmployeeTextMaxWidth(getOrgEditorUnitWidth(unit)),
       );
       const heights = new Map<string, number>();
+      const layouts = new Map<string, EmployeeDisplayVisualLayout>();
       const orderedRows = getOrgEditorOrderedUnitRows(
         unit,
         employeeById,
@@ -2874,8 +2887,8 @@ export const OrgStructureEditorTab = observer(() => {
           const unitPosition = employee?.unitPositions.find(
             (position) => position.unitId === unit.id,
           );
-          const richLines = employee
-            ? wrapEmployeeDisplayRichLines(
+          const richLayout = employee
+            ? layoutEmployeeDisplayRichLines(
                 renderEmployeeDisplayRichLines({
                   customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
                   employee,
@@ -2883,16 +2896,11 @@ export const OrgStructureEditorTab = observer(() => {
                   positionNotSpecifiedLabel: t("Position not specified"),
                   unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
                 }),
-                availableWidth,
-              )
-            : [];
-          heights.set(
-            row.key,
-            employee
-              ? getOrgEditorEmployeeRowHeightForRichLines(
-                  richLines,
+                {
                   availableWidth,
-                  (tag) =>
+                  density: "compact",
+                  direction: textDirection,
+                  formatTag: (tag) =>
                     tag.date
                       ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
                           day: "numeric",
@@ -2901,13 +2909,21 @@ export const OrgStructureEditorTab = observer(() => {
                           year: "numeric",
                         })}`
                       : tag.label,
-                  store.employeeDisplayLineGaps.editor,
-                )
+                  lineGap: store.employeeDisplayLineGaps.editor,
+                  locale: store.locale,
+                },
+              )
+            : null;
+          heights.set(
+            row.key,
+            employee
+              ? getOrgEditorEmployeeRowHeightForVisualLayout(richLayout?.height ?? 0)
               : getOrgEditorEmployeeRowHeightForDisplayLines(
                   1,
                   store.employeeDisplayLineGaps.editor,
                 ),
           );
+          if (richLayout) layouts.set(row.key, richLayout);
           continue;
         }
         const tags = openPositionTagsById.get(row.openPosition.id) ?? [];
@@ -2923,7 +2939,7 @@ export const OrgStructureEditorTab = observer(() => {
         );
         heights.set(row.key, getOrgEditorEmployeeRowHeightForTagLabels(labels, availableWidth));
       }
-      geometryByUnitId.set(unit.id, { heights, orderedRows });
+      geometryByUnitId.set(unit.id, { heights, layouts, orderedRows });
     }
     return geometryByUnitId;
   }, [
@@ -2934,8 +2950,10 @@ export const OrgStructureEditorTab = observer(() => {
     store.employeeDisplayFormats.editor,
     store.employeeDisplayLineGaps.editor,
     store.employeeFieldDefinitions,
+    store.locale,
     t,
     tagOrder,
+    textDirection,
     viewSettings.groupByTag,
   ]);
   const unitTagGeometry = useMemo(() => {
@@ -5705,6 +5723,10 @@ export const OrgStructureEditorTab = observer(() => {
             {renderCanvasElementLayer("behindUnits")}
             {visibleUnits.map((unit) => (
               <MemoizedOrgEditorNode
+                employeeDisplayLayouts={
+                  employeeRowGeometryByUnitId.get(unit.id)?.layouts ??
+                  EMPTY_EMPLOYEE_DISPLAY_LAYOUTS
+                }
                 employeeDisplayFormat={store.employeeDisplayFormats.editor}
                 employeeDisplayLineGap={store.employeeDisplayLineGaps.editor}
                 viewSettings={viewSettings}

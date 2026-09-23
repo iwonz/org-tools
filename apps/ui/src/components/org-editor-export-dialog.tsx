@@ -25,7 +25,7 @@ import {
   HiOutlineQueueList,
   HiOutlineRectangleGroup,
 } from "react-icons/hi2";
-
+import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
 import { ExportRowModeControl } from "@/components/export-row-mode-control";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
 import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
@@ -33,6 +33,7 @@ import {
   StructuredJsonSettings,
   type StructuredJsonSettingsValue,
 } from "@/components/structured-json-settings";
+import { TemplateFormatInput } from "@/components/template-format-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,12 +54,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
-import {
-  EMPLOYEE_DISPLAY_POSITIONS_KEY,
-  isEmployeeDisplayPositionsKey,
-} from "@/lib/custom-employee-fields";
 import {
   countTemplateOutputLines,
   createExportPreview,
@@ -223,20 +219,9 @@ export function OrgEditorExportDialog({
       ),
     [hasAvatarBase64UrlField],
   );
-  const visibleImageEmployeeFields = useMemo(
-    () => [
-      ...visibleEmployeeFields.filter((field) => field.key !== "avatarBase64Url"),
-      ...(store.employeeFieldDefinitions.some((field) => isEmployeeDisplayPositionsKey(field.key))
-        ? []
-        : [
-            {
-              key: EMPLOYEE_DISPLAY_POSITIONS_KEY,
-              label: EMPLOYEE_DISPLAY_POSITIONS_KEY,
-            },
-          ]),
-      ...store.employeeFieldDefinitions.map((field) => ({ key: field.key, label: field.name })),
-    ],
-    [store.employeeFieldDefinitions, visibleEmployeeFields],
+  const imageEmployeeFormatTokens = useMemo(
+    () => createEmployeeDisplayFormatTokens(store.employeeFieldDefinitions, t),
+    [store.employeeFieldDefinitions, t],
   );
 
   useEffect(() => {
@@ -427,10 +412,6 @@ export function OrgEditorExportDialog({
 
   const setImageBackground = (background: OrgEditorImageBackground) => {
     updateImageSettings({ background });
-  };
-
-  const appendImageEmployeeField = (fieldKey: string) => {
-    updateImageSettings({ employeeFormat: `${imageSettings.employeeFormat}{${fieldKey}}` });
   };
 
   const createImageBlob = () => {
@@ -807,42 +788,16 @@ export function OrgEditorExportDialog({
                   </div>
                 </div>
 
-                <div className="grid gap-3 pt-2">
-                  <div className="grid gap-2">
-                    <Label>{t("Employee format")}</Label>
-                    <div className="flex min-w-0 flex-wrap gap-2">
-                      {visibleImageEmployeeFields.map((field) => (
-                        <Button
-                          key={field.key}
-                          onClick={() => appendImageEmployeeField(field.key)}
-                          size="sm"
-                          type="button"
-                          variant="outline"
-                        >
-                          {field.label}
-                        </Button>
-                      ))}
-                      <Button
-                        onClick={() => appendImageEmployeeField("isBoss")}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        isBoss
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="org-editor-export-employee-format">{t("Format")}</Label>
-                    <Textarea
-                      className="h-20 resize-none"
-                      id="org-editor-export-employee-format"
-                      onChange={(event) =>
-                        updateImageSettings({ employeeFormat: event.currentTarget.value })
-                      }
-                      value={imageSettings.employeeFormat}
-                    />
-                  </div>
+                <div className="pt-2">
+                  <TemplateFormatInput
+                    dataDemoId="org-editor-export-employee-format"
+                    id="org-editor-export-employee-format"
+                    inlineMarkdownTools
+                    label={t("Employee format")}
+                    onChange={(employeeFormat) => updateImageSettings({ employeeFormat })}
+                    tokens={imageEmployeeFormatTokens}
+                    value={imageSettings.employeeFormat}
+                  />
                 </div>
               </section>
             </TabsContent>

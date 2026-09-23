@@ -599,8 +599,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   remain visible everywhere. Copy in one View and Paste in another regenerates Unit IDs and leaves
   Undo isolated to the target; state replacement clears the transient shared clipboard. System View
   lifecycle actions stay disabled, and View controls show no hover or native tooltip.
-- Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned name
-  and tag columns, complete chip-internal tag wrapping without ellipsis, boss marker, variable row
+- Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned rich
+  content, complete content-sized Tag fragments without ellipsis or trailing fill, boss marker, variable row
   heights, exactly four logical pixels between adjacent Employee/open-position surfaces with no
   outer row gap, content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
   row tones and optional open-position tonal backgrounds resolved from the complete active View,
@@ -668,8 +668,10 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   suggestions, and discards dismissed drafts. Confirm all lines share normal base typography,
   colored dated Tags and compound `Position · Unit` pills survive Markdown, plain email stays
   unlinked until explicitly marked up, fallback cards use Employees, Editor links remain inert,
-  Editor and both PNG dialogs use their assigned formats, wrapped chips
-  share DOM/PNG geometry, and image-dialog edits remain local.
+  Editor and both PNG dialogs use their assigned formats, all six visual inputs share `@`, Enter,
+  and Markdown selection tools without `{field}` button catalogs, and wrapped Tag and assignment
+  fragments share DOM/PNG order, geometry, typography, color, padding, radius, and gaps. Image-dialog
+  edits remain local.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,
   effective density, and clamping copy while Copy/Save remain unchanged.

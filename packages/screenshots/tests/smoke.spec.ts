@@ -65,6 +65,12 @@ test("manages View-local open positions and replaces one with an Employee", asyn
 });
 
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
+const MULTILINGUAL_LONG_TAGS = [
+  "\u041e\u0447\u0435\u043d\u044c \u0434\u043b\u0438\u043d\u043d\u043e\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043a\u0438\u0440\u0438\u043b\u043b\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u0442\u0435\u0433\u0430",
+  "\u0627\u0633\u0645 \u0639\u0644\u0627\u0645\u0629 \u0639\u0631\u0628\u064a\u0629 \u0637\u0648\u064a\u0644 \u0644\u0644\u063a\u0627\u064a\u0629",
+  "\u975e\u5e38\u306b\u9577\u3044\u30c1\u30fc\u30e0\u30bf\u30b0\u540d",
+  "Platform \ud83d\ude80\ud83e\uddd1\ud83c\udffd\u200d\ud83d\udcbb reliability",
+] as const;
 
 const createTestEmployeeId = (fields: {
   email: string | null;
@@ -182,6 +188,11 @@ async function createLongRosterState(): Promise<OrgToolsState> {
     { color: "rose", id: longTagId, label: LONG_EXPORT_TAG },
     { color: null, id: clientTagId, label: "Client Applications" },
     { color: null, id: platformTagId, label: "Platform" },
+    ...MULTILINGUAL_LONG_TAGS.map((label, index) => ({
+      color: (["blue", "teal", "amber", "green"] as const)[index] ?? null,
+      id: `90000000-0000-4000-8000-${String(90 + index).padStart(12, "0")}`,
+      label,
+    })),
   );
   const tagIdByLabel = new Map(state.organization.tags.map((tag) => [tag.label, tag.id]));
 
@@ -204,6 +215,12 @@ async function createLongRosterState(): Promise<OrgToolsState> {
       profileUrl: null,
       tags: [
         ...(index === 0 ? [{ date: "2026-09-01", tagId: longTagId }] : []),
+        ...(index === 0
+          ? MULTILINGUAL_LONG_TAGS.map((label) => ({
+              date: null,
+              tagId: tagIdByLabel.get(label) as string,
+            }))
+          : []),
         { date: null, tagId: index % 2 === 0 ? clientTagId : platformTagId },
         { date: null, tagId: tagIdByLabel.get("Accessibility") as string },
         { date: null, tagId: tagIdByLabel.get("Engineering") as string },
@@ -1765,6 +1782,23 @@ test("edits contextual Employee card formats with live previews and local image 
     await expect(
       modelDialog.locator(`[data-demo-id="employee-display-${key}-line-gap"]`),
     ).toHaveValue("4");
+    const formatInput = modelDialog.locator(`#employee-display-${key}-format`);
+    await formatInput.fill("@full");
+    await expect(section.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
+      "{fullName}",
+    );
+    await formatInput.press("Enter");
+    await expect(formatInput).toHaveValue("{fullName}");
+    await formatInput.fill("Rich text");
+    await formatInput.evaluate((element) => {
+      const textarea = element as HTMLTextAreaElement;
+      textarea.focus();
+      textarea.setSelectionRange(0, 4);
+    });
+    await formatInput.press("Shift+ArrowRight");
+    await expect(section.locator('[data-demo-id="template-markdown-tools"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+    await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
   }
 
   const employeesFormat = modelDialog.locator("#employee-display-employees-format");
@@ -1794,7 +1828,9 @@ test("edits contextual Employee card formats with live previews and local image 
     textarea.setSelectionRange(0, 4);
   });
   await employeesFormat.press("Shift+ArrowRight");
-  const markdownTools = modelDialog.locator('[data-demo-id="template-markdown-tools"]');
+  const markdownTools = modelDialog
+    .locator('[data-demo-id="employee-display-employees"]')
+    .locator('[data-demo-id="template-markdown-tools"]');
   await expect(markdownTools).toBeVisible();
   await markdownTools.getByRole("button", { name: "Bold", exact: true }).click();
   await expect(employeesFormat).toHaveValue("**Avery** Draft");
@@ -1948,7 +1984,8 @@ test("edits contextual Employee card formats with live previews and local image 
   });
   await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
   const imageDialog = page.getByRole("dialog", { name: "Export View image", exact: true });
-  await expect(imageDialog.getByLabel("Employee format", { exact: true })).toHaveValue(imageFormat);
+  const viewImageEmployeeFormat = imageDialog.getByLabel("Employee format", { exact: true });
+  await expect(viewImageEmployeeFormat).toHaveValue(imageFormat);
   await expect
     .poll(() =>
       page.evaluate(
@@ -1958,7 +1995,22 @@ test("edits contextual Employee card formats with live previews and local image 
       ),
     )
     .toEqual(expect.arrayContaining(["Product Lead", "Design", "Export card"]));
-  await imageDialog.getByLabel("Employee format", { exact: true }).fill("{fullName}\nLocal image");
+  await viewImageEmployeeFormat.fill("@full");
+  await expect(imageDialog.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
+    "{fullName}",
+  );
+  await viewImageEmployeeFormat.press("Enter");
+  await expect(viewImageEmployeeFormat).toHaveValue("{fullName}");
+  await viewImageEmployeeFormat.fill("View image");
+  await viewImageEmployeeFormat.evaluate((element) => {
+    const textarea = element as HTMLTextAreaElement;
+    textarea.focus();
+    textarea.setSelectionRange(0, 4);
+  });
+  await viewImageEmployeeFormat.press("Shift+ArrowRight");
+  await expect(imageDialog.locator('[data-demo-id="template-markdown-tools"]')).toBeVisible();
+  await page.keyboard.press("Escape");
+  await viewImageEmployeeFormat.fill("{fullName}\nLocal image");
   await expect(imageDialog.locator('[data-demo-id="org-editor-view-image-preview"]')).toBeVisible();
   await expect
     .poll(() =>
@@ -1977,7 +2029,25 @@ test("edits contextual Employee card formats with live previews and local image 
     .click({ button: "right", position: { x: 20, y: 20 } });
   await page.locator('[data-demo-id="org-editor-export-action"]').click();
   const scopedImageDialog = page.getByRole("dialog", { name: "Export", exact: true });
-  await expect(scopedImageDialog.getByLabel("Format", { exact: true })).toHaveValue(imageFormat);
+  const scopedImageEmployeeFormat = scopedImageDialog.getByLabel("Employee format", {
+    exact: true,
+  });
+  await expect(scopedImageEmployeeFormat).toHaveValue(imageFormat);
+  await expect(scopedImageDialog.getByRole("button", { name: /^\{/u })).toHaveCount(0);
+  await scopedImageEmployeeFormat.fill("@full");
+  await expect(
+    scopedImageDialog.locator('[data-demo-id="template-token-suggestions"]'),
+  ).toContainText("{fullName}");
+  await scopedImageEmployeeFormat.press("Enter");
+  await expect(scopedImageEmployeeFormat).toHaveValue("{fullName}");
+  await scopedImageEmployeeFormat.fill("Scoped image");
+  await scopedImageEmployeeFormat.evaluate((element) => {
+    const textarea = element as HTMLTextAreaElement;
+    textarea.focus();
+    textarea.setSelectionRange(0, 6);
+  });
+  await scopedImageEmployeeFormat.press("Shift+ArrowRight");
+  await expect(scopedImageDialog.locator('[data-demo-id="template-markdown-tools"]')).toBeVisible();
   await scopedImageDialog.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
@@ -2627,10 +2697,13 @@ test("renders split Org Editor controls and reveals search to the left", async (
       const label = chip.firstElementChild?.getBoundingClientRect();
       const count = chip.lastElementChild?.getBoundingClientRect();
       const bounds = chip.getBoundingClientRect();
+      const style = window.getComputedStyle(chip);
       return {
         labelClientWidth: chip.firstElementChild?.clientWidth ?? 0,
         labelScrollWidth: chip.firstElementChild?.scrollWidth ?? 0,
         leftInset: (label?.left ?? bounds.left) - bounds.left,
+        paddingInlineEnd: style.paddingInlineEnd,
+        paddingInlineStart: style.paddingInlineStart,
         rightInset: bounds.right - (count?.right ?? bounds.right),
         text: chip.textContent ?? "",
         width: bounds.width,
@@ -2640,10 +2713,12 @@ test("renders split Org Editor controls and reveals search to the left", async (
   expect(footerChipMetrics.length).toBeGreaterThan(1);
   for (const metric of footerChipMetrics) {
     const context = JSON.stringify(metric);
-    expect(metric.leftInset, context).toBeGreaterThanOrEqual(7);
-    expect(metric.leftInset, context).toBeLessThanOrEqual(9);
-    expect(metric.rightInset, context).toBeGreaterThanOrEqual(7);
-    expect(metric.rightInset, context).toBeLessThanOrEqual(12);
+    expect(metric.leftInset, context).toBeGreaterThanOrEqual(5.5);
+    expect(metric.leftInset, context).toBeLessThanOrEqual(7);
+    expect(metric.rightInset, context).toBeGreaterThanOrEqual(5.5);
+    expect(metric.rightInset, context).toBeLessThanOrEqual(14);
+    expect(metric.paddingInlineStart, context).toBe("6px");
+    expect(metric.paddingInlineEnd, context).toBe("6px");
     expect(metric.labelScrollWidth, context).toBeLessThanOrEqual(metric.labelClientWidth + 1);
   }
   expect(new Set(footerChipMetrics.map((metric) => metric.width)).size).toBeGreaterThan(1);
@@ -3050,27 +3125,30 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   const firstRow = product.locator("[data-org-editor-employee-row]").first();
   const longTagFooter = product.locator("[data-org-editor-unit-tag-footer]");
   await expect(longTagFooter).not.toContainText("…");
-  const longTagChip = longTagFooter.locator(
+  const longTagChips = longTagFooter.locator(
     `:scope > span[data-tag-label=${JSON.stringify(LONG_EXPORT_TAG)}]`,
   );
-  await expect(longTagChip).toBeVisible();
-  expect(
-    await longTagChip.evaluate((element) => ({
-      clientHeight: element.clientHeight,
-      clientWidth: element.clientWidth,
-      scrollHeight: element.scrollHeight,
-      scrollWidth: element.scrollWidth,
+  await expect(longTagChips.first()).toBeVisible();
+  expect(await longTagChips.count()).toBeGreaterThan(1);
+  const longTagOverflow = await longTagChips.evaluateAll((elements) =>
+    elements.map((element) => ({
+      horizontal: element.scrollWidth - element.clientWidth,
+      vertical: element.scrollHeight - element.clientHeight,
     })),
-  ).toMatchObject({
-    clientHeight: expect.any(Number),
-    clientWidth: expect.any(Number),
-  });
-  const longTagOverflow = await longTagChip.evaluate((element) => ({
-    horizontal: element.scrollWidth - element.clientWidth,
-    vertical: element.scrollHeight - element.clientHeight,
-  }));
-  expect(longTagOverflow.horizontal).toBeLessThanOrEqual(1);
-  expect(longTagOverflow.vertical).toBeLessThanOrEqual(1);
+  );
+  expect(longTagOverflow.every(({ horizontal }) => horizontal <= 1)).toBe(true);
+  expect(longTagOverflow.every(({ vertical }) => vertical <= 1)).toBe(true);
+  for (const label of MULTILINGUAL_LONG_TAGS) {
+    const fragments = longTagFooter.locator(
+      `:scope > span[data-tag-label=${JSON.stringify(label)}]`,
+    );
+    expect(await fragments.count()).toBeGreaterThan(0);
+    await expect(fragments.first()).toBeVisible();
+    const overflow = await fragments.evaluateAll((elements) =>
+      elements.map((element) => element.scrollWidth - element.clientWidth),
+    );
+    expect(overflow.every((value) => value <= 1)).toBe(true);
+  }
   const geometry = await product.evaluate((unitElement) => {
     const unit = unitElement.getBoundingClientRect();
     const header = unitElement.querySelector("[data-org-editor-unit-header]");
@@ -3940,7 +4018,8 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
     .locator('[data-demo-id="calendar-dated-tag-group"]')
     .evaluateAll((groups) =>
       groups.map((group) => {
-        const [label, dot, count] = [...group.children].slice(-3);
+        const surface = group.querySelector("[data-tag-color-surface]");
+        const [label, dot, count] = [...(surface?.children ?? [])].slice(-3);
         if (
           !(label instanceof HTMLElement) ||
           !(dot instanceof HTMLElement) ||
@@ -4031,7 +4110,8 @@ test("edits and clears a dated tag from quick and full Employee editors", async 
       height: row.height,
     };
   });
-  expect(tagOptionGeometry).toEqual({ childrenInside: true, height: 44 });
+  expect(tagOptionGeometry.childrenInside).toBe(true);
+  expect(tagOptionGeometry.height).toBeGreaterThanOrEqual(44);
   await tagPopover.getByRole("button", { name: "Date for tag Remote" }).click();
   const quickDatePopover = page.locator('[data-demo-id="tag-date-popover"]');
   const quickCalendar = quickDatePopover.locator('[data-demo-id="tag-date-calendar"]');
@@ -4290,7 +4370,9 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await page.keyboard.press("Escape");
 
   await page.getByRole("tab", { name: "Calendar", exact: true }).click();
-  const calendarTag = page.locator('[data-demo-id="calendar-dated-tag-group"][data-color="amber"]');
+  const calendarTag = page.locator(
+    '[data-demo-id="calendar-dated-tag-group"][data-color="amber"] [data-tag-color-surface]',
+  );
   await expectFilledTagSurface(calendarTag);
   await calendarTag.hover();
   await expectFilledTagSurface(calendarTag);

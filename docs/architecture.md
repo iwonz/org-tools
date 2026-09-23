@@ -44,8 +44,12 @@ resolves built-in Unit and Employee fields plus custom fields, evaluates the exi
 conditional grammar, joins arrays with `; `, removes dynamically empty rows, and preserves authored
 internal blank rows. It then parses only inline Markdown into a shared rich-line model. Employee and
 custom-field values enter that model as text nodes, so their punctuation cannot become formatting.
-Tags and compound assignments remain semantic groups: DOM renders the existing colored Tag chips
-and `Position · Unit` pills, while Canvas paints the same compact treatments. `{position}` and
+Tags and compound assignments remain semantic groups. A platform-neutral inline layout places text,
+Markdown runs, Tags, and `Position · Unit` assignments in source order on shared visual rows. It
+wraps by word and grapheme and emits content-sized fragment rectangles. DOM renders those fragments
+with cloned decoration while Canvas paints the same rectangles. Normal surfaces use 11 px type,
+16 px line height, 8 px horizontal and 2 px vertical padding, 6 px radius, and 4 px gaps; Editor and
+PNG use 9 px type, 12 px line height, 6 px horizontal padding, 6 px radius, and 2 px gaps. `{position}` and
 `{unitName}` remain ordinary text values. List and fallback contexts
 aggregate system-View assignments in structural order; one Unit or Editor row resolves only that
 Unit. `isBoss` is a condition-only boolean; visible text belongs in a ternary branch. Plain
@@ -313,10 +317,11 @@ omit every transient selection, target outline, anchor, resize, rotation,
 Bezier, marquee, and placement affordance.
 
 Org Editor PNG output also uses the same pure card geometry as the live canvas for Unit widths, 72 px
-headers, roster padding, centered avatars, Employee text columns, compact tag packing, variable row
-heights, and hierarchy anchors. The selected export font measures one immutable tag layout per
-Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
-drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
+headers, roster padding, centered avatars, Employee text columns, compact inline fragments, variable
+row heights, and hierarchy anchors. Each Employee receives one immutable rich layout that DOM,
+geometry, and PNG consume. An oversized semantic value becomes several content-sized decorated
+fragments, and the resulting height drives rows, Unit bounds, hit testing, anchors, and connections.
+Its deterministic canvas painter keeps Unit identity,
 Employee summary, Employee-format inline Markdown, native Employee Tags and compound assignments,
 direct-membership Tag footer, Tag tonal colors, boss treatment, and persistent
 active-View distribution row tones while excluding Static/Live membership type, transient
@@ -330,9 +335,10 @@ card presentation aligned. Every later persistent canvas element, anchor behavio
 stable Unit/Employee card presentation change must define and test its applicable DOM and PNG
 behavior in the same change.
 Image template tokens exclude avatar bytes, while painted avatars remain available.
-Unit footer chips use one deterministic mixed-script glyph metric plus equal fixed insets for their
-live width, grapheme-safe multi-line wrapping, row packing, card bounds, connections, collision
-geometry, and PNG painting. The count suffix stays indivisible and no footer label uses an ellipsis.
+Unit footer Tags use the shared compact fragment layout with one deterministic mixed-script glyph
+metric for DOM and PNG row packing, card bounds, connections, and collision geometry. Every wrapped
+part owns only its content width and cloned decoration. The count suffix stays indivisible and no
+footer label uses an ellipsis.
 This keeps short summaries content-sized and long summaries complete without a font-loading
 measurement pass or a second layout commit.
 Editor JSON and Template use the same formatter and sortable field controls as Data Download while

@@ -9,6 +9,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   isSafeEmployeeDisplayHref,
+  layoutEmployeeDisplayRichLines,
   renderEmployeeDisplayLines,
   renderEmployeeDisplayRichLines,
   wrapEmployeeDisplayRichLines,
@@ -195,6 +196,50 @@ describe("Employee display formats", () => {
       },
     ]);
     expect(lines[1]?.text).toBe("Lead · Product; Advisor · Research");
+  });
+
+  test("lays Markdown, Tags, following text, and positions into one shared inline flow", () => {
+    const contexts = [createOrgUnitContext(unitPosition(2, "Product", "Lead", true))];
+    const lines = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee: { ...employee, tags: employee.tags.slice(0, 1) },
+      format: "**Name** {tags} next {positions}",
+      unitContexts: contexts,
+    });
+    const layout = layoutEmployeeDisplayRichLines(lines, {
+      availableWidth: 260,
+      density: "compact",
+      direction: "ltr",
+      font: "system-ui",
+      locale: "en",
+    });
+
+    expect(layout.lines).toHaveLength(1);
+    expect(layout.lines[0]?.fragments.map((fragment) => fragment.type)).toEqual([
+      "text",
+      "text",
+      "tag",
+      "text",
+      "position",
+    ]);
+    expect(layout.lines[0]?.fragments.at(-1)).toMatchObject({
+      text: "Lead · Product",
+      type: "position",
+    });
+    expect(
+      layout.lines[0]?.fragments.every(
+        (fragment, index, fragments) => index === 0 || fragment.x >= (fragments[index - 1]?.x ?? 0),
+      ),
+    ).toBe(true);
+    expect(
+      layoutEmployeeDisplayRichLines(lines, {
+        availableWidth: 260,
+        density: "compact",
+        direction: "ltr",
+        font: "system-ui",
+        locale: "en",
+      }),
+    ).toBe(layout);
   });
 
   test("keeps position and Unit tokens as ordinary text and localizes missing assignments", () => {

@@ -21,7 +21,7 @@ import {
   HiOutlineClipboardDocument,
 } from "react-icons/hi2";
 
-import { templateFormatTokenDescriptionKeys } from "@/components/export-template-settings";
+import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
 import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
 import { TemplateFormatInput } from "@/components/template-format-input";
 import { Button } from "@/components/ui/button";
@@ -46,11 +46,6 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { UiTextKey } from "@/i18n/messages";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
-import {
-  EMPLOYEE_DISPLAY_POSITIONS_KEY,
-  isEmployeeDisplayPositionsKey,
-} from "@/lib/custom-employee-fields";
-import { exportEmployeeFields } from "@/lib/export-format";
 import type { OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
 import { getOrgEditorCanvasCssFontFamily } from "@/lib/org-editor-canvas";
 import {
@@ -62,7 +57,6 @@ import {
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
   type OrgEditorExportTitleAlign,
-  orgEditorTemplateUnitFields,
 } from "@/lib/org-editor-export";
 import { downloadBlob } from "@/lib/org-file";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -120,27 +114,7 @@ export function OrgEditorViewImageExportDialog({
   const [previewSize, setPreviewSize] = useState({ height: 0, width: 0 });
   const [status, setStatus] = useState<"copied" | "error" | "saved" | null>(null);
   const employeeFormatTokens = useMemo(
-    () =>
-      [
-        ...exportEmployeeFields,
-        ...orgEditorTemplateUnitFields,
-        ...(store.employeeFieldDefinitions.some((field) => isEmployeeDisplayPositionsKey(field.key))
-          ? []
-          : [
-              {
-                key: EMPLOYEE_DISPLAY_POSITIONS_KEY,
-                label: EMPLOYEE_DISPLAY_POSITIONS_KEY,
-              },
-            ]),
-        ...store.employeeFieldDefinitions.map((field) => ({ key: field.key, label: field.name })),
-      ]
-        .filter((field) => field.key !== "avatarBase64Url")
-        .map((field) => ({
-          description: templateFormatTokenDescriptionKeys[field.key]
-            ? t(templateFormatTokenDescriptionKeys[field.key] as UiTextKey)
-            : field.label,
-          key: field.key,
-        })),
+    () => createEmployeeDisplayFormatTokens(store.employeeFieldDefinitions, t),
     [store.employeeFieldDefinitions, t],
   );
 
@@ -479,6 +453,7 @@ export function OrgEditorViewImageExportDialog({
             <TemplateFormatInput
               dataDemoId="org-editor-view-image-employee-format"
               id="org-editor-view-image-employee-format"
+              inlineMarkdownTools
               label={t("Employee format")}
               onChange={(employeeFormat) => update({ employeeFormat })}
               tokens={employeeFormatTokens}

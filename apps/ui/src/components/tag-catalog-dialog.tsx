@@ -19,6 +19,7 @@ import { EmployeeCardList, EmployeeIdentity } from "@/components/employee-card-l
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { HighlightedText } from "@/components/highlighted-text";
 import { TagColorPicker } from "@/components/tag-color-picker";
+import { TagSurface } from "@/components/tag-surface";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,7 +44,6 @@ import { Label } from "@/components/ui/label";
 import { useTagCatalogDrag } from "@/components/use-tag-catalog-drag";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
-import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
 import { normalizeTagSearchValue } from "@/lib/tag-order";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -161,38 +161,28 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
           <HiOutlineBars3 className="size-4" />
         </button>
         <div
-          className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
           data-demo-id="tag-catalog-identity"
         >
-          <div
-            className={cn(
-              "inline-flex min-w-0 max-w-full rounded-md px-2 py-0.5 text-sm font-medium",
-              tagColorSurfaceClassName(tag.color),
-            )}
-            data-tag-color={tag.color ?? "none"}
-            data-tag-color-surface
-            style={customTagColorSurfaceStyle(tag.color)}
-          >
-            <HighlightedText
-              className="truncate"
-              queryTokens={[normalizeTagSearchValue(query)]}
-              text={tag.label}
-            />
-          </div>
-          <span
-            className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-            data-demo-id="tag-catalog-employee-count"
-          >
-            {countText("employees", { count: count.employees })}
-          </span>
-          {count.dated > 0 && (
+          <TagSurface className="font-medium" color={tag.color}>
+            <HighlightedText queryTokens={[normalizeTagSearchValue(query)]} text={tag.label} />
+          </TagSurface>
+          <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap">
             <span
               className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-              data-demo-id="tag-catalog-dated-count"
+              data-demo-id="tag-catalog-employee-count"
             >
-              {t("With date: {count}", { count: count.dated })}
+              {countText("employees", { count: count.employees })}
             </span>
-          )}
+            {count.dated > 0 && (
+              <span
+                className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+                data-demo-id="tag-catalog-dated-count"
+              >
+                {t("With date: {count}", { count: count.dated })}
+              </span>
+            )}
+          </span>
         </div>
         <Button
           aria-label={t("View Employees with this Tag")}

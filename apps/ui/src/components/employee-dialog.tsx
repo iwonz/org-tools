@@ -31,6 +31,7 @@ import { AvatarCropDialog } from "@/components/avatar-crop-dialog";
 import { EmployeeTagDateText } from "@/components/employee-tag-date-popover";
 import { EmployeeTagPickerPanel } from "@/components/employee-tag-picker";
 import { MultiTagSelect, type MultiTagSelectOption } from "@/components/multi-tag-select";
+import { TagSurface } from "@/components/tag-surface";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -1007,12 +1008,9 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                         </span>
                       ) : (
                         orderedDraftTags.map((tag) => (
-                          <span
-                            className="max-w-full break-words whitespace-normal rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground"
-                            key={tag.label.toLocaleLowerCase("en-US")}
-                          >
+                          <TagSurface color={tag.color} key={tag.label.toLocaleLowerCase("en-US")}>
                             <EmployeeTagDateText date={tag.date} label={tag.label} />
-                          </span>
+                          </TagSurface>
                         ))
                       )}
                       <HiOutlineChevronDown className="ms-auto size-4 shrink-0 text-muted-foreground" />
