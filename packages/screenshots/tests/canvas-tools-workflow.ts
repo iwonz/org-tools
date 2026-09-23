@@ -875,7 +875,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 
-  await product.click({ button: "right", position: { x: 20, y: 20 } });
+  await product.click({ button: "right", position: { x: 200, y: 60 } });
   await page.locator('[data-demo-id="org-editor-export-action"]').click();
   const unitDialog = page.locator('[data-demo-id="org-editor-export-dialog"]');
   await expect(unitDialog).toBeVisible();

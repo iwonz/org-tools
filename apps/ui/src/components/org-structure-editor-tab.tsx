@@ -1,7 +1,6 @@
 "use client";
 
 import type {
-  CustomEmployeeFieldDefinition,
   Employee,
   EmployeeId,
   EmployeeSearchDocument,
@@ -68,6 +67,7 @@ import {
 
 import { ActionIconButton } from "@/components/action-icon-button";
 import { EmployeeAvatar } from "@/components/employee-avatar";
+import { EmployeeDisplayContent } from "@/components/employee-card-list";
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { EmployeePlacementDialog } from "@/components/employee-placement-dialog";
 import { EmployeeSourcePicker } from "@/components/employee-source-picker";
@@ -135,7 +135,7 @@ import {
   getEditorEmployeeOtherUnitIds,
 } from "@/lib/editor-distribution";
 import { createUuid } from "@/lib/employee-data";
-import { renderEmployeeDisplayLines } from "@/lib/employee-display";
+import { renderEmployeeDisplayRichLines } from "@/lib/employee-display";
 import {
   countEmployeeIdsInSelection,
   countEmployeeIdsNotInSelection,
@@ -158,6 +158,7 @@ import {
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForDisplayLines,
+  getOrgEditorEmployeeRowHeightForRichLines,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
   getOrgEditorEmployeeTextMaxWidth,
@@ -1306,7 +1307,6 @@ function OrgEditorEmployeeDragPreview({
 }
 
 function OrgEditorNode({
-  customEmployeeFieldDefinitions,
   employeeDisplayFormat,
   viewSettings,
   distributionStyles,
@@ -1314,6 +1314,7 @@ function OrgEditorNode({
   distributionUnitIdsByEmployeeId,
   placementUnitIdsByEmployeeId,
   employeeById,
+  queryTokens,
   geometryRevision: _geometryRevision,
   isConnectionDropTarget,
   isCanvasArrowToolActive,
@@ -1340,7 +1341,6 @@ function OrgEditorNode({
   unit,
   visibleWorldRect,
 }: {
-  customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[];
   employeeDisplayFormat: string;
   viewSettings: OrgEditorViewSettings;
   distributionStyles: {
@@ -1351,6 +1351,7 @@ function OrgEditorNode({
   distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   placementUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
+  queryTokens: string[];
   geometryRevision: number;
   isConnectionDropTarget: boolean;
   isCanvasArrowToolActive: boolean;
@@ -1717,25 +1718,9 @@ function OrgEditorNode({
               const employeeUnitPosition = employee?.unitPositions.find(
                 (unitPosition) => unitPosition.unitId === unit.id,
               );
-              const employeeDisplayLines = employee
-                ? renderEmployeeDisplayLines({
-                    bossLabel: t("Manager"),
-                    customEmployeeFieldDefinitions,
-                    employee,
-                    format: employeeDisplayFormat,
-                    unitContexts: employeeUnitPosition
-                      ? [createOrgUnitContext(employeeUnitPosition)]
-                      : [],
-                  })
-                : [employeeName];
-              const employeeDisplayLineEntries = (() => {
-                const occurrences = new Map<string, number>();
-                return employeeDisplayLines.map((line) => {
-                  const occurrence = (occurrences.get(line) ?? 0) + 1;
-                  occurrences.set(line, occurrence);
-                  return { key: `${line}:${occurrence}`, line };
-                });
-              })();
+              const employeeDisplayUnitContexts = employeeUnitPosition
+                ? [createOrgUnitContext(employeeUnitPosition)]
+                : [];
               const distributionLabel =
                 distributionStatus === "assigned"
                   ? t("Distributed to {count} other Units", {
@@ -1821,21 +1806,25 @@ function OrgEditorNode({
                       className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pe-1"
                       data-org-editor-employee-content
                     >
-                      {employeeDisplayLineEntries.map(({ key, line }, lineIndex) => (
-                        <span
+                      {employee ? (
+                        <EmployeeDisplayContent
                           className={cn(
-                            "block truncate leading-4",
-                            lineIndex === 0 ? "font-medium" : "text-[11px] text-muted-foreground",
+                            "w-full gap-0.5",
                             employeeSelected &&
                               !distributionStatus &&
-                              lineIndex > 0 &&
-                              "text-primary-foreground/80",
+                              "text-primary-foreground [&_a]:text-primary-foreground [&_[data-tag-color-surface]]:text-primary-foreground",
                           )}
-                          key={key}
-                        >
-                          {line}
-                        </span>
-                      ))}
+                          compact
+                          density="editor"
+                          employee={employee}
+                          format={employeeDisplayFormat}
+                          interactiveLinks={false}
+                          queryTokens={queryTokens}
+                          unitContexts={employeeDisplayUnitContexts}
+                        />
+                      ) : (
+                        <span className="truncate">{employeeName}</span>
+                      )}
                     </span>
                   </button>
                   {employee && placementUnitCount > 1 && (
@@ -1929,7 +1918,6 @@ function OrgEditorNode({
 const MemoizedOrgEditorNode = memo(
   OrgEditorNode,
   (previous: Parameters<typeof OrgEditorNode>[0], next: Parameters<typeof OrgEditorNode>[0]) =>
-    previous.customEmployeeFieldDefinitions === next.customEmployeeFieldDefinitions &&
     previous.employeeDisplayFormat === next.employeeDisplayFormat &&
     previous.unit === next.unit &&
     previous.viewSettings === next.viewSettings &&
@@ -1938,6 +1926,7 @@ const MemoizedOrgEditorNode = memo(
     previous.distributionUnitIdsByEmployeeId === next.distributionUnitIdsByEmployeeId &&
     previous.placementUnitIdsByEmployeeId === next.placementUnitIdsByEmployeeId &&
     previous.employeeById === next.employeeById &&
+    previous.queryTokens === next.queryTokens &&
     previous.geometryRevision === next.geometryRevision &&
     previous.isConnectionDropTarget === next.isConnectionDropTarget &&
     previous.isCanvasArrowToolActive === next.isCanvasArrowToolActive &&
@@ -2877,16 +2866,30 @@ export const OrgStructureEditorTab = observer(() => {
           const unitPosition = employee?.unitPositions.find(
             (position) => position.unitId === unit.id,
           );
-          const lineCount = employee
-            ? renderEmployeeDisplayLines({
+          const richLines = employee
+            ? renderEmployeeDisplayRichLines({
                 bossLabel: t("Manager"),
                 customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
                 employee,
                 format: store.employeeDisplayFormats.editor,
                 unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
-              }).length
-            : 1;
-          heights.set(row.key, getOrgEditorEmployeeRowHeightForDisplayLines(lineCount));
+              })
+            : [];
+          heights.set(
+            row.key,
+            employee
+              ? getOrgEditorEmployeeRowHeightForRichLines(richLines, availableWidth, (tag) =>
+                  tag.date
+                    ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
+                        day: "numeric",
+                        month: "short",
+                        timeZone: "UTC",
+                        year: "numeric",
+                      })}`
+                    : tag.label,
+                )
+              : getOrgEditorEmployeeRowHeightForDisplayLines(1),
+          );
           continue;
         }
         const tags = openPositionTagsById.get(row.openPosition.id) ?? [];
@@ -5683,7 +5686,6 @@ export const OrgStructureEditorTab = observer(() => {
             {renderCanvasElementLayer("behindUnits")}
             {visibleUnits.map((unit) => (
               <MemoizedOrgEditorNode
-                customEmployeeFieldDefinitions={store.employeeFieldDefinitions}
                 employeeDisplayFormat={store.employeeDisplayFormats.editor}
                 viewSettings={viewSettings}
                 distributionStyles={distributionStyles}
@@ -5695,6 +5697,7 @@ export const OrgStructureEditorTab = observer(() => {
                     : ordinaryUnitIdsByEmployeeId
                 }
                 employeeById={employeeById}
+                queryTokens={orgEditorSearchTokens}
                 geometryRevision={unitGeometryRevision}
                 isConnectionDropTarget={connectionDropTargetUnit?.id === unit.id}
                 isCanvasArrowToolActive={activeCanvasTool === "arrow"}

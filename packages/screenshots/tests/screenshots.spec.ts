@@ -359,6 +359,15 @@ test("captures the complete Employee workflow", async ({ page }) => {
   let dialog = page.getByRole("dialog", { name: "Employee model", exact: true });
   await dialog.getByRole("tab", { name: "Display", exact: true }).click();
   await expect(dialog.locator('[data-demo-id="employee-display-employees"]')).toBeVisible();
+  const displayFormat = dialog.locator("#employee-display-employees-format");
+  await displayFormat.fill("**{fullName}**\n{position}\n{tags}");
+  await displayFormat.evaluate((element) => {
+    const textarea = element as HTMLTextAreaElement;
+    textarea.focus();
+    textarea.setSelectionRange(2, 11);
+  });
+  await displayFormat.press("Shift+ArrowRight");
+  await expect(dialog.locator('[data-demo-id="template-markdown-tools"]')).toBeVisible();
   await capture(page, "employees-model");
   await dialog.getByRole("tab", { name: "Model", exact: true }).click();
   await dialog.getByRole("button", { name: /Department/u }).click();

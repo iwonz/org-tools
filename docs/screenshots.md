@@ -144,9 +144,12 @@ Compound matching.
 [![Employee model](screenshots/feature-employees-model.png)](screenshots/feature-employees-model.png)
 
 Configure the four saved Employee-card formats and inspect their real contextual previews on the
-Display tab. The following Value and Template frames retain coverage of the Model tab.
+Display tab. The frame shows the thematic tabs, flat sections, native position and Tag treatments,
+inline Markdown preview, and the selection formatting menu. The following Value and Template frames
+retain coverage of the Model tab.
 
-Capabilities: Display formats, Token suggestions, Contextual previews, Atomic draft save.
+Capabilities: Display formats, Markdown tools, Native Tags and positions, Contextual previews,
+Atomic draft save.
 
 ### Custom Value field
 
@@ -659,8 +662,12 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm Employee model exposes accessible switches for Required, Multiple selection, and custom
   options; Required rows have no field background, border, radius, or padding. Employee editing can
   commit a shared custom option and a dated Composite record. Confirm the Display tab previews and
-  saves all four formats together, dismissal discards drafts, fallback cards use Employees, Editor
-  and both PNG dialogs use their assigned formats, and image-dialog edits remain local.
+  saves all four formats together, shows thematic tab icons and flat sections, formats a selected
+  range by keyboard-accessible Markdown actions, validates link protocols, coexists with `@`
+  suggestions, and discards dismissed drafts. Confirm all lines share normal base typography,
+  colored dated Tags and neutral position badges survive Markdown, fallback cards use Employees,
+  Editor links remain inert, Editor and both PNG dialogs use their assigned formats, wrapped chips
+  share DOM/PNG geometry, and image-dialog edits remain local.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,
   effective density, and clamping copy while Copy/Save remain unchanged.

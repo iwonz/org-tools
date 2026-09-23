@@ -1,5 +1,6 @@
 import type { Employee, OrgEditorUnit } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
+import type { EmployeeDisplayLine } from "@/lib/employee-display";
 
 import {
   buildOrgEditorUnitEmployeeSummaryById,
@@ -9,7 +10,9 @@ import {
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeDisplayLineBaselines,
+  getOrgEditorEmployeeRichVisualLineCount,
   getOrgEditorEmployeeRowHeightForDisplayLines,
+  getOrgEditorEmployeeRowHeightForRichLines,
   getOrgEditorEmployeeRowHeightForTagLabels,
   getOrgEditorEmployeeRowLayout,
   getOrgEditorEmployeeRowStackLayout,
@@ -86,6 +89,53 @@ describe("Org Editor Employee display geometry", () => {
         unitY: 100,
       }),
     ).toEqual([214, 230, 246]);
+  });
+
+  test("expands rich rows for wrapped native Tags and position badges", () => {
+    const lines: EmployeeDisplayLine[] = [
+      {
+        nodes: [
+          {
+            explicitLink: false,
+            fieldName: "fullName",
+            href: null,
+            marks: { bold: false, code: false, italic: false, strike: false },
+            text: "Avery Stone",
+            type: "text",
+          },
+        ],
+        text: "Avery Stone",
+      },
+      {
+        nodes: [
+          {
+            tags: [
+              {
+                color: "blue",
+                date: null,
+                label: "Design systems",
+                tagId: "00000000-0000-4000-8000-000000000001",
+              },
+              {
+                color: "teal",
+                date: "2031-03-02",
+                label: "Remote research",
+                tagId: "00000000-0000-4000-8000-000000000002",
+              },
+            ],
+            type: "tags",
+          },
+        ],
+        text: "Design systems; Remote research",
+      },
+    ];
+    expect(getOrgEditorEmployeeRichVisualLineCount(lines, 90)).toBe(3);
+    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 90)).toBe(64);
+    expect(
+      getOrgEditorEmployeeRichVisualLineCount(lines, 120, (tag) =>
+        tag.date ? `${tag.label} · 2 Mar` : tag.label,
+      ),
+    ).toBeGreaterThanOrEqual(3);
   });
 });
 

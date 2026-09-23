@@ -653,6 +653,14 @@
     "Add record": "Add record",
     "Select options": "Select options",
     "Create option “{name}”": "Create option “{name}”",
-    "Composite primary values must be unique.": "Composite primary values must be unique."
+    "Composite primary values must be unique.": "Composite primary values must be unique.",
+    "Markdown formatting": "Markdown formatting",
+    "Italic": "Italic",
+    "Strikethrough": "Strikethrough",
+    "Inline code": "Inline code",
+    "Link": "Link",
+    "Link URL": "Link URL",
+    "Remove link": "Remove link",
+    "Enter a valid http, https, mailto, or tel link": "Enter a valid http, https, mailto, or tel link"
   }
 }

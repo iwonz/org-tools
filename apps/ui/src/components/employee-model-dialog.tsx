@@ -11,7 +11,9 @@ import type {
 } from "@org-tools/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  HiOutlineCircleStack,
   HiOutlineCodeBracket,
+  HiOutlineEye,
   HiOutlinePlus,
   HiOutlineSquares2X2,
   HiOutlineTrash,
@@ -271,8 +273,14 @@ export function EmployeeModelDialog({
               value={activeTab}
             >
               <TabsList className="justify-start">
-                <TabsTrigger value="model">{t("Model")}</TabsTrigger>
-                <TabsTrigger value="display">{t("Display")}</TabsTrigger>
+                <TabsTrigger data-demo-id="employee-model-tab-model" value="model">
+                  <HiOutlineCircleStack aria-hidden="true" className="size-4" />
+                  {t("Model")}
+                </TabsTrigger>
+                <TabsTrigger data-demo-id="employee-model-tab-display" value="display">
+                  <HiOutlineEye aria-hidden="true" className="size-4" />
+                  {t("Display")}
+                </TabsTrigger>
               </TabsList>
               <TabsContent className="grid gap-5" value="model">
                 <section className="grid gap-2">
@@ -924,13 +932,14 @@ export function EmployeeModelDialog({
                       : previewUnitContexts;
                   return (
                     <section
-                      className="grid gap-3 rounded-lg bg-muted/35 p-4"
+                      className="grid gap-3"
                       data-demo-id={`employee-display-${key}`}
                       key={key}
                     >
                       <h3 className="text-sm font-medium">{t(label)}</h3>
                       <TemplateFormatInput
                         id={`employee-display-${key}-format`}
+                        inlineMarkdownTools
                         label={t("Format")}
                         onChange={(format) =>
                           setDisplayDraft((current) => ({ ...current, [key]: format }))

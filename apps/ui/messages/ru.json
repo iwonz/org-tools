@@ -653,6 +653,14 @@
     "Add record": "Добавить запись",
     "Select options": "Выберите варианты",
     "Create option “{name}”": "Создать вариант «{name}»",
-    "Composite primary values must be unique.": "Значения первичного ключа составного поля должны быть уникальными."
+    "Composite primary values must be unique.": "Значения первичного ключа составного поля должны быть уникальными.",
+    "Markdown formatting": "Форматирование Markdown",
+    "Italic": "Курсив",
+    "Strikethrough": "Зачёркнутый",
+    "Inline code": "Встроенный код",
+    "Link": "Ссылка",
+    "Link URL": "Адрес ссылки",
+    "Remove link": "Удалить ссылку",
+    "Enter a valid http, https, mailto, or tel link": "Введите корректную ссылку http, https, mailto или tel"
   }
 }

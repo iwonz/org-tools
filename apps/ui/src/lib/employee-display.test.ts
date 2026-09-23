@@ -7,7 +7,11 @@ import type {
 } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
-import { renderEmployeeDisplayLines } from "@/lib/employee-display";
+import {
+  isSafeEmployeeDisplayHref,
+  renderEmployeeDisplayLines,
+  renderEmployeeDisplayRichLines,
+} from "@/lib/employee-display";
 import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { OrgStore } from "@/stores/org-store";
 
@@ -106,6 +110,100 @@ describe("Employee display formats", () => {
         unitContexts: [],
       }),
     ).toEqual(["Level: Staff"]);
+  });
+
+  test("renders inline Markdown without interpreting Employee values", () => {
+    const richEmployee = {
+      ...employee,
+      fullName: "**Avery** <script>alert(1)</script>",
+    };
+    const lines = renderEmployeeDisplayRichLines({
+      bossLabel: "Manager",
+      customEmployeeFieldDefinitions: [],
+      employee: richEmployee,
+      format:
+        "**Name:** {fullName} _detail_ ~~old~~ `code` [Profile](https://example.test/profile)",
+      unitContexts: [],
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ marks: expect.objectContaining({ bold: true }), text: "Name:" }),
+        expect.objectContaining({
+          fieldName: "fullName",
+          marks: expect.objectContaining({ bold: false }),
+          text: "**Avery** <script>alert(1)</script>",
+        }),
+        expect.objectContaining({
+          marks: expect.objectContaining({ italic: true }),
+          text: "detail",
+        }),
+        expect.objectContaining({ marks: expect.objectContaining({ strike: true }), text: "old" }),
+        expect.objectContaining({ marks: expect.objectContaining({ code: true }), text: "code" }),
+        expect.objectContaining({
+          explicitLink: true,
+          href: "https://example.test/profile",
+          text: "Profile",
+        }),
+      ]),
+    );
+  });
+
+  test("keeps Tags and positions semantic inside Markdown", () => {
+    const contexts = [
+      createOrgUnitContext(unitPosition(2, "Product", "Lead", true)),
+      createOrgUnitContext(unitPosition(3, "Research", "Advisor")),
+    ];
+    const lines = renderEmployeeDisplayRichLines({
+      bossLabel: "Manager",
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "**{tags}**\n[{position}](https://example.test)",
+      unitContexts: contexts,
+    });
+    expect(lines[0]?.nodes).toEqual([{ tags: employee.tags, type: "tags" }]);
+    expect(lines[1]?.nodes).toEqual([
+      {
+        positions: [
+          { label: "Lead", unitContext: contexts[0] },
+          { label: "Advisor", unitContext: contexts[1] },
+        ],
+        type: "positions",
+      },
+    ]);
+  });
+
+  test("keeps unsafe links and unsupported Markdown inert", () => {
+    const lines = renderEmployeeDisplayRichLines({
+      bossLabel: "Manager",
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "[Unsafe](javascript:alert(1))\n![Remote](https://example.test/image.png)\n# literal",
+      unitContexts: [],
+    });
+    expect(lines[0]?.nodes).toEqual([
+      expect.objectContaining({ explicitLink: true, href: null, text: "Unsafe" }),
+    ]);
+    expect(lines[1]?.text).toContain("![Remote]");
+    expect(lines[2]?.text).toBe("# literal");
+    expect(isSafeEmployeeDisplayHref("mailto:avery@example.test")).toBe(true);
+    expect(isSafeEmployeeDisplayHref("tel:+15550100")).toBe(true);
+    expect(isSafeEmployeeDisplayHref("javascript:alert(1)")).toBe(false);
+    expect(isSafeEmployeeDisplayHref("/relative")).toBe(false);
+  });
+
+  test("keeps incomplete inline Markdown as visible text", () => {
+    const lines = renderEmployeeDisplayRichLines({
+      bossLabel: "Manager",
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "**unfinished _format [link](broken",
+      unitContexts: [],
+    });
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.text).toBe("**unfinished _format [link](broken");
+    expect(lines[0]?.nodes.every((node) => node.type !== "text" || node.href === null)).toBe(true);
   });
 
   test("rewrites and protects custom fields referenced by saved formats", () => {

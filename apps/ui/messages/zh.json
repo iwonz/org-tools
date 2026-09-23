@@ -653,6 +653,14 @@
     "Add record": "添加记录",
     "Select options": "选择选项",
     "Create option “{name}”": "创建选项“{name}”",
-    "Composite primary values must be unique.": "复合字段的主键值必须唯一。"
+    "Composite primary values must be unique.": "复合字段的主键值必须唯一。",
+    "Markdown formatting": "Markdown 格式",
+    "Italic": "斜体",
+    "Strikethrough": "删除线",
+    "Inline code": "行内代码",
+    "Link": "链接",
+    "Link URL": "链接地址",
+    "Remove link": "移除链接",
+    "Enter a valid http, https, mailto, or tel link": "请输入有效的 http、https、mailto 或 tel 链接"
   }
 }

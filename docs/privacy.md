@@ -35,8 +35,10 @@ Composite schemas and records, their validation, and their derived Calendar even
 the same in-memory or loopback boundary. New custom options remain transient dialog data until the
 complete Employee save succeeds. Employee display formats and their previews resolve only the
 current local catalog and View context. Display drafts and image-dialog overrides remain in dialog
-memory until their explicit Save or dismissal, and rendering a format creates no navigation or
-remote lookup. Export
+memory until their explicit Save or dismissal. Their inline Markdown parser never executes HTML,
+loads images, or interprets Markdown from resolved Employee values. Only explicit `http`, `https`,
+`mailto`, and `tel` links can navigate from list cards after a user action; Editor and image links
+remain inert. Rendering or previewing a format creates no remote lookup. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
 the full Tag color palette, independent opacity control, and exact HTML Keyword, HEX, RGB, or RGBA

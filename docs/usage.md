@@ -61,10 +61,13 @@ control.
   and zero or more records; every populated Composite date appears in Calendar. **Employee model**
   keeps these definitions on **Model** and adds **Display**, where four saved formats control cards
   in Employees, Units, Editor, and Editor image output. Each format supports `@` suggestions,
-  `{token}` fields, and conditions. It can use built-in Employee and Unit fields, Tags, or any custom
-  field. Every nonempty result line is shown in order to the right of the avatar; the first is the
-  primary line and the rest are secondary lines. Empty formats are valid. Changes remain a local
-  draft until **Save** commits all four together. Cards outside those four named contexts use the
+  `{token}` fields, conditions, and inline bold, italic, strikethrough, code, or links. Selecting
+  text opens the local formatting menu; its link editor accepts only `http`, `https`, `mailto`, or
+  `tel` addresses. It can use built-in Employee and Unit fields, Tags, or any custom field. Every
+  nonempty result line is shown in order to the right of the avatar with the same base size, color,
+  and normal weight. Markdown supplies any emphasis. `{tags}` retains colored and dated chips, while
+  `{position}` retains neutral bordered badges even inside Markdown. Empty formats are valid.
+  Changes remain a local draft until **Save** commits all four together. Cards outside those four named contexts use the
   Employees format;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading
   deletion. Its flat rows expose Eye, Color, Edit, and Delete: Eye opens current full Employee cards,
@@ -123,8 +126,9 @@ control.
   distributed** colors through the shared palette, exact input, and opacity draft. Green and amber
   are the defaults; the distributed color also controls placement lines and endpoint markers.
   Employee display lines keep the normal theme text color for both distribution statuses,
-  including selected rows. The Editor row height grows with the saved line count and shares its
-  clipping and geometry with PNG. Each image dialog starts from the Editor-export format; edits in
+  including selected rows. Safe Markdown links are styled but inert on the canvas. The Editor row
+  height grows with rich text lines and wrapped Tag or position chips and shares its clipping,
+  hit-testing, anchors, and geometry with PNG. Each image dialog starts from the Editor-export format; edits in
   the dialog are temporary and do not update the Employee model. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.

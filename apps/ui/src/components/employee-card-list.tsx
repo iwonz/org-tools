@@ -8,6 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { HiOutlineInformationCircle } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
+import { EmployeeTags } from "@/components/employee-tags";
 import { HighlightedText } from "@/components/highlighted-text";
 import { MiddleDot } from "@/components/middle-dot";
 import { useUiText } from "@/i18n/use-ui-text";
@@ -191,16 +192,22 @@ function EmployeeAvatarWithBossMarker({
 }
 
 export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
+  className,
   compact = false,
+  density = "card",
   employee,
   format,
+  interactiveLinks = true,
   onUnitContextClick,
   queryTokens = [],
   unitContexts,
 }: {
+  className?: string;
   compact?: boolean;
+  density?: "card" | "editor";
   employee: Employee;
   format?: string;
+  interactiveLinks?: boolean;
   onUnitContextClick?: (unitContext: EmployeeUnitContext) => void;
   queryTokens?: string[];
   unitContexts?: readonly EmployeeUnitContext[];
@@ -218,59 +225,133 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   });
   const mailtoUrl = createMailtoUrl(employee.email);
   const profileUrl = createEmployeeProfileUrl(employee.profileUrl);
-  const lineClassName = (index: number) =>
-    cn(
-      "block min-w-0 truncate",
-      index === 0
-        ? compact
-          ? "text-sm font-medium"
-          : "text-sm font-semibold"
-        : "text-xs text-muted-foreground",
-    );
+  const lineClassName = cn(
+    "flex min-w-0 flex-wrap items-center overflow-hidden font-normal",
+    density === "editor" ? "text-xs leading-4" : "text-sm leading-5",
+  );
   const actionClassName =
-    "rounded-sm outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring";
+    "max-w-full truncate rounded-sm text-signal underline underline-offset-2 outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring";
+  const textClassName = (node: (typeof lines)[number]["nodes"][number]) =>
+    node.type === "text"
+      ? cn(
+          "min-w-0 max-w-full truncate",
+          node.marks.bold && "font-semibold",
+          node.marks.italic && "italic",
+          node.marks.strike && "line-through",
+          node.marks.code && "rounded-sm bg-muted px-1 py-0.5 font-mono text-[0.9em]",
+          node.explicitLink && node.href && "text-signal underline underline-offset-2",
+        )
+      : undefined;
 
   return (
-    <div className="grid min-w-0 gap-1" data-employee-display-content>
+    <div className={cn("grid min-w-0 gap-1", className)} data-employee-display-content>
       {lines.map((line, index) => {
         const key = `${index}:${line.text}`;
         return (
-          <span className={lineClassName(index)} key={key}>
-            {line.parts.map((part, partIndex) => {
-              const partKey = `${partIndex}:${part.fieldName ?? "literal"}`;
-              if (part.fieldName === "email" && mailtoUrl) {
+          <span className={lineClassName} key={key}>
+            {line.nodes.map((node, nodeIndex) => {
+              const nodeKey = `${nodeIndex}:${node.type}`;
+              if (node.type === "tags") {
+                return (
+                  <EmployeeTags
+                    compact={compact}
+                    density={density === "editor" ? "canvas" : "default"}
+                    inline
+                    key={nodeKey}
+                    queryTokens={queryTokens}
+                    tags={node.tags}
+                  />
+                );
+              }
+              if (node.type === "positions") {
+                return (
+                  <span className="inline-flex max-w-full flex-wrap gap-1" key={nodeKey}>
+                    {node.positions.map(({ label, unitContext }) => (
+                      <span
+                        className={cn(
+                          "inline-flex max-w-full items-center rounded-md border bg-muted font-medium text-foreground",
+                          density === "editor"
+                            ? "px-1.5 py-0 text-[9px] leading-3"
+                            : "px-2 py-1 text-xs leading-snug",
+                        )}
+                        data-employee-position-badge
+                        key={unitContext.id}
+                        title={`${label} · ${unitContext.unitFullPath}`}
+                      >
+                        <span className="truncate">
+                          <HighlightedText queryTokens={queryTokens} text={label} />
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                );
+              }
+              if (node.explicitLink) {
+                if (!node.href || !interactiveLinks) {
+                  return (
+                    <span
+                      className={textClassName(node)}
+                      data-employee-markdown-link={node.href ? "inert" : "unsafe"}
+                      key={nodeKey}
+                    >
+                      <HighlightedText queryTokens={queryTokens} text={node.text} />
+                    </span>
+                  );
+                }
+                const isExternal = /^https?:/iu.test(node.href);
                 return (
                   <a
-                    className={actionClassName}
+                    className={cn(actionClassName, textClassName(node))}
+                    data-employee-markdown-link="interactive"
+                    href={node.href}
+                    key={nodeKey}
+                    onClick={(event) => event.stopPropagation()}
+                    {...(isExternal
+                      ? {
+                          referrerPolicy: "no-referrer" as const,
+                          rel: "noopener noreferrer",
+                          target: "_blank",
+                        }
+                      : {})}
+                  >
+                    <HighlightedText queryTokens={queryTokens} text={node.text} />
+                  </a>
+                );
+              }
+              if (interactiveLinks && node.fieldName === "email" && mailtoUrl) {
+                return (
+                  <a
+                    className={cn(actionClassName, textClassName(node))}
                     href={mailtoUrl}
-                    key={partKey}
+                    key={nodeKey}
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <HighlightedText queryTokens={queryTokens} text={part.text} />
+                    <HighlightedText queryTokens={queryTokens} text={node.text} />
                   </a>
                 );
               }
               if (
-                (part.fieldName === "fullName" || part.fieldName === "profileUrl") &&
-                profileUrl
+                (node.fieldName === "fullName" || node.fieldName === "profileUrl") &&
+                profileUrl &&
+                interactiveLinks
               ) {
                 return (
                   <a
-                    className={actionClassName}
+                    className={cn(actionClassName, textClassName(node))}
                     href={profileUrl}
-                    key={partKey}
+                    key={nodeKey}
                     onClick={(event) => event.stopPropagation()}
                     referrerPolicy="no-referrer"
                     rel="noopener noreferrer"
                     target="_blank"
                   >
-                    <HighlightedText queryTokens={queryTokens} text={part.text} />
+                    <HighlightedText queryTokens={queryTokens} text={node.text} />
                   </a>
                 );
               }
-              if (part.fieldName === "unitName" && onUnitContextClick) {
+              if (node.fieldName === "unitName" && onUnitContextClick && interactiveLinks) {
                 return (
-                  <span key={partKey}>
+                  <span className={textClassName(node)} key={nodeKey}>
                     {resolvedUnitContexts.map((unitContext, unitIndex) => (
                       <span key={unitContext.id}>
                         {unitIndex > 0 && "; "}
@@ -289,7 +370,11 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                   </span>
                 );
               }
-              return <HighlightedText key={partKey} queryTokens={queryTokens} text={part.text} />;
+              return (
+                <span className={textClassName(node)} key={nodeKey}>
+                  <HighlightedText queryTokens={queryTokens} text={node.text} />
+                </span>
+              );
             })}
           </span>
         );

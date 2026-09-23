@@ -1,6 +1,7 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTag,
   EmployeeTagColor,
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
@@ -16,6 +17,7 @@ import type {
   Unit,
 } from "@org-tools/types";
 import { createUuid } from "@/lib/employee-data";
+import type { EmployeeDisplayLine } from "@/lib/employee-display";
 
 export const ORG_EDITOR_UNIT_MIN_WIDTH = 280;
 export const ORG_EDITOR_UNIT_HEADER_HEIGHT = 72;
@@ -442,6 +444,42 @@ export const getOrgEditorEmployeeRowHeightForDisplayLines = (lineCount: number) 
     ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
     Math.max(0, lineCount) * ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT +
       ORG_EDITOR_EMPLOYEE_CONTENT_VERTICAL_PADDING,
+  );
+
+export const getOrgEditorEmployeeRichVisualLineCount = (
+  lines: readonly EmployeeDisplayLine[],
+  availableWidth: number,
+  formatTag: (tag: EmployeeTag) => string = (tag) => tag.label,
+) =>
+  lines.reduce((total, line) => {
+    let lineRows = 1;
+    for (const node of line.nodes) {
+      if (node.type === "tags") {
+        lineRows = Math.max(
+          lineRows,
+          packOrgEditorTagLabels(node.tags.map(formatTag), availableWidth),
+        );
+      }
+      if (node.type === "positions") {
+        lineRows = Math.max(
+          lineRows,
+          packOrgEditorTagLabels(
+            node.positions.map((position) => position.label),
+            availableWidth,
+          ),
+        );
+      }
+    }
+    return total + lineRows;
+  }, 0);
+
+export const getOrgEditorEmployeeRowHeightForRichLines = (
+  lines: readonly EmployeeDisplayLine[],
+  availableWidth: number,
+  formatTag?: (tag: EmployeeTag) => string,
+) =>
+  getOrgEditorEmployeeRowHeightForDisplayLines(
+    getOrgEditorEmployeeRichVisualLineCount(lines, availableWidth, formatTag),
   );
 
 export const getOrgEditorEmployeeDisplayLineBaselines = ({

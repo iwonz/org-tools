@@ -213,9 +213,9 @@ export async function exerciseTagGrouping(page: Page) {
     .locator('[data-demo-id="employees-list"] article')
     .filter({ hasText: "Blair Example" });
   await expect(bothCard).toBeVisible();
-  await expect(bothCard.locator("[data-employee-display-content]")).toContainText(
-    "Priority Alpha; Priority Zulu",
-  );
+  const nativeTags = bothCard.locator("[data-employee-display-content] [data-tag-color-surface]");
+  await expect(nativeTags.filter({ hasText: "Priority Alpha" })).toHaveCount(1);
+  await expect(nativeTags.filter({ hasText: "Priority Zulu" })).toHaveCount(1);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect.poll(rowIds).toEqual(groupedOrder);
   await page.evaluate(() => {

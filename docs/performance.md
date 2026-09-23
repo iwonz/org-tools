@@ -37,8 +37,11 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   values, and Composite Calendar dates are flattened once during the same organization-index build.
 - Resolve each mounted Employee card from one saved contextual format and already indexed Unit
   contexts. Format output is bounded by the persisted format and field values, drops empty lines,
-  and does not add catalog scans. Editor and PNG compute the same line-count height once per row and
-  feed it into the existing prefix-offset pass, so multiline cards preserve O(n) geometry work.
+  and does not add catalog scans. A 256-entry least-recently-used cache stores parsed Markdown trees
+  by the resolved template structure without retaining organization values. Native Tag and position
+  nodes reuse bounded chip packing. Editor and PNG compute the same rich-line and wrapped-chip height
+  once per row and feed it into the existing prefix-offset pass, so formatted cards preserve O(n)
+  geometry work.
 - Cache derived structures by View document revision and global Employee/Tag/field references.
   Materialize only the system View, active Editor View, and selected Download View at once.
 - Build the active View's direct `EmployeeId → UnitId[]` distribution index only when materialized
@@ -50,7 +53,7 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   same complete memoized index and enabled-Unit set, so Unit-only and subtree status remains correct
   without rebuilding or rescanning the active View for each preview.
 - Virtualize discriminated Employee/open-position Unit rows, Unit-aware pickers, filter options,
-  Analytics rows, and event dialogs. Stable row keys share cached measured heights and prefix
+  Analytics rows, and event dialogs. Stable row keys share cached rich-line heights and prefix
   offsets. The prefix sum includes one four-pixel gap before every row after the first, so DOM,
   virtual windows, hit testing, anchors, Unit bounds, hierarchy placement, and PNG reuse one O(n)
   geometry pass without per-row margins or measurements. Open-position anchor and drop hit testing

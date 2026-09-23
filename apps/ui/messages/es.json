@@ -653,6 +653,14 @@
     "Add record": "Añadir registro",
     "Select options": "Seleccionar opciones",
     "Create option “{name}”": "Crear opción «{name}»",
-    "Composite primary values must be unique.": "Los valores de la clave principal compuesta deben ser únicos."
+    "Composite primary values must be unique.": "Los valores de la clave principal compuesta deben ser únicos.",
+    "Markdown formatting": "Formato Markdown",
+    "Italic": "Cursiva",
+    "Strikethrough": "Tachado",
+    "Inline code": "Código en línea",
+    "Link": "Enlace",
+    "Link URL": "URL del enlace",
+    "Remove link": "Eliminar enlace",
+    "Enter a valid http, https, mailto, or tel link": "Introduce un enlace http, https, mailto o tel válido"
   }
 }

@@ -22,7 +22,9 @@ export async function exerciseViewSettings(page: Page) {
   const originalHeight = await card.evaluate((element) => element.clientHeight);
   const nameColors = () =>
     card
-      .locator("[data-org-editor-employee-content] > span:first-child")
+      .locator(
+        "[data-org-editor-employee-content] [data-employee-display-content] > span:first-child",
+      )
       .evaluateAll((names) =>
         Array.from(new Set(names.map((name) => getComputedStyle(name).color))),
       );

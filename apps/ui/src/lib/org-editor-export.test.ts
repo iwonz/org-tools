@@ -220,6 +220,11 @@ describe("Org Editor image export", () => {
     expect(requests).toContain("700 31px Lobster, Georgia, serif");
     expect(requests).toContain('400 27px Georgia, "Times New Roman", serif');
     expect(requests.some((request) => request.includes("Montserrat"))).toBe(true);
+    expect(
+      requests.some(
+        (request) => request.startsWith("italic 700 12px") && request.includes("Montserrat"),
+      ),
+    ).toBe(true);
   });
 
   test("localizes every dated tag and expands PNG rows with compact export geometry", () => {
@@ -281,6 +286,19 @@ describe("Org Editor image export", () => {
     );
 
     expect(layout.chips.map((chip) => chip.color)).toEqual(["teal", "#7c3aed80", null]);
+  });
+
+  test("preserves the neutral bordered treatment for position chips", () => {
+    const layout = createOrgEditorExportEmployeeTagLayout(
+      [{ bordered: true, color: null, label: "Product Lead" }],
+      120,
+    );
+
+    expect(layout.chips[0]).toMatchObject({
+      bordered: true,
+      color: null,
+      lines: ["Product Lead"],
+    });
   });
 
   test("shares compact tag and Employee-row geometry with the live canvas", () => {

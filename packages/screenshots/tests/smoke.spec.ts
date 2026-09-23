@@ -1701,12 +1701,23 @@ test("edits contextual Employee card formats with live previews and local image 
 
   await page.locator('[data-demo-id="employee-model-button"]').click();
   let modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
+  await expect(modelDialog.locator('[data-demo-id="employee-model-tab-model"] svg')).toBeVisible();
   await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  await expect(
+    modelDialog.locator('[data-demo-id="employee-model-tab-display"] svg'),
+  ).toBeVisible();
   for (const key of ["employees", "units", "editor", "editorExport"]) {
-    await expect(modelDialog.locator(`[data-demo-id="employee-display-${key}"]`)).toBeVisible();
+    const section = modelDialog.locator(`[data-demo-id="employee-display-${key}"]`);
+    await expect(section).toBeVisible();
+    await expect(section).toHaveCSS("padding", "0px");
+    await expectTransparentBackground(section);
     await expect(
       modelDialog.locator(`[data-demo-id="employee-display-${key}-preview"] article`),
     ).toHaveAccessibleName(/\S/u);
+    await expect(modelDialog.locator(`[data-demo-id="employee-display-${key}-preview"]`)).toHaveCSS(
+      "border-top-width",
+      "1px",
+    );
   }
 
   const employeesFormat = modelDialog.locator("#employee-display-employees-format");
@@ -1714,6 +1725,54 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(
     modelDialog.locator('[data-demo-id="employee-display-employees-preview"]'),
   ).toContainText("Draft only");
+  const previewLines = modelDialog.locator(
+    '[data-demo-id="employee-display-employees-preview"] [data-employee-display-content] > span',
+  );
+  await expect(previewLines).toHaveCount(2);
+  expect(
+    await previewLines.nth(0).evaluate((element) => getComputedStyle(element).fontWeight),
+  ).toBe(await previewLines.nth(1).evaluate((element) => getComputedStyle(element).fontWeight));
+
+  await employeesFormat.fill("Avery Draft");
+  await employeesFormat.evaluate((element) => {
+    const textarea = element as HTMLTextAreaElement;
+    textarea.focus();
+    textarea.setSelectionRange(0, 4);
+  });
+  await employeesFormat.press("Shift+ArrowRight");
+  const markdownTools = modelDialog.locator('[data-demo-id="template-markdown-tools"]');
+  await expect(markdownTools).toBeVisible();
+  await markdownTools.getByRole("button", { name: "Bold", exact: true }).click();
+  await expect(employeesFormat).toHaveValue("**Avery** Draft");
+  await markdownTools.getByRole("button", { name: "Link", exact: true }).click();
+  const linkEditor = markdownTools.locator('[data-demo-id="template-link-editor"]');
+  const linkUrl = linkEditor.getByLabel("Link URL", { exact: true });
+  await linkUrl.fill("javascript:alert(1)");
+  await linkEditor.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(linkEditor.getByRole("alert")).toBeVisible();
+  await expect(employeesFormat).toHaveValue("**Avery** Draft");
+  await linkUrl.fill("https://example.test/people/avery");
+  await linkEditor.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(employeesFormat).toHaveValue("**[Avery](https://example.test/people/avery)** Draft");
+  await markdownTools.getByRole("button", { name: "Link", exact: true }).click();
+  await linkEditor.getByLabel("Link URL", { exact: true }).fill("mailto:avery@example.test");
+  await linkEditor.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(employeesFormat).toHaveValue("**[Avery](mailto:avery@example.test)** Draft");
+  await markdownTools.getByRole("button", { name: "Link", exact: true }).click();
+  await linkEditor.getByRole("button", { name: "Remove link", exact: true }).click();
+  await expect(employeesFormat).toHaveValue("**Avery** Draft");
+  await markdownTools.getByRole("button", { name: "Bold", exact: true }).focus();
+  await page.keyboard.press("Escape");
+  await expect(markdownTools).toBeHidden();
+  await employeesFormat.evaluate((element) => {
+    const textarea = element as HTMLTextAreaElement;
+    textarea.focus();
+    textarea.setSelectionRange(2, 6);
+  });
+  await employeesFormat.press("Shift+ArrowRight");
+  await expect(markdownTools).toBeVisible();
+  await modelDialog.locator('[data-demo-id="employee-model-tab-display"]').click();
+  await expect(markdownTools).toBeHidden();
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
   await page.locator('[data-demo-id="employee-model-button"]').click();
@@ -1733,15 +1792,27 @@ test("edits contextual Employee card formats with live previews and local image 
 
   await modelDialog
     .locator("#employee-display-employees-format")
-    .fill("{fullName} · {email}\nEmployee card");
+    .fill(
+      "**{fullName}** · [{email}](mailto:{email})\n[Directory](https://example.test/directory)\nEmployee card\n{tags}",
+    );
   await modelDialog
     .locator("#employee-display-units-format")
-    .fill("{fullName}\n{position} · {unitName}\nUnit card");
+    .fill("{fullName}\n**{position}** · {unitName}\nUnit card");
   await modelDialog
     .locator("#employee-display-editor-format")
-    .fill("{fullName}\n{tags}\nEditor card");
-  const imageFormat = "{fullName} {isBoss ? '· {isBoss}' : ''}\n{department}\nExport card";
+    .fill("_{fullName}_\n{tags}\n[Editor card](https://example.test/editor)");
+  const imageFormat = "{fullName} {isBoss ? '· {isBoss}' : ''}\n{position}\n{tags}\n`Export card`";
   await modelDialog.locator("#employee-display-editorExport-format").fill(imageFormat);
+  await expect(
+    modelDialog
+      .locator('[data-demo-id="employee-display-employees-preview"] [data-tag-color-surface]')
+      .first(),
+  ).toBeVisible();
+  await expect(
+    modelDialog.locator(
+      '[data-demo-id="employee-display-units-preview"] [data-employee-position-badge]',
+    ),
+  ).toBeVisible();
   await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
@@ -1753,7 +1824,13 @@ test("edits contextual Employee card formats with live previews and local image 
   ).toHaveAttribute("href", "https://example.test/profiles/avery-stone");
   await expect(
     employeeCard.getByRole("link", { name: "avery.stone@example.test", exact: true }),
-  ).toHaveAttribute("href", /^mailto:avery\.stone%40example\.test$/u);
+  ).toHaveAttribute("href", "mailto:avery.stone@example.test");
+  const directoryLink = employeeCard.getByRole("link", { name: "Directory", exact: true });
+  await expect(directoryLink).toHaveAttribute("href", "https://example.test/directory");
+  await expect(directoryLink).toHaveAttribute("referrerpolicy", "no-referrer");
+  await expect(directoryLink).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(employeeCard.locator('[data-employee-markdown-link="interactive"]')).toHaveCount(2);
+  await expect(employeeCard.locator("[data-tag-color-surface]").first()).toBeVisible();
   await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("Avery");
   await expect(employeeCard.locator("mark").first()).toHaveText("Avery");
   await page.locator('[data-demo-id="employees-search"]').getByRole("searchbox").fill("");
@@ -1767,6 +1844,12 @@ test("edits contextual Employee card formats with live previews and local image 
     "Unit card",
   );
   await expect(
+    page
+      .locator('[data-demo-id="unit-employee-card"]')
+      .first()
+      .locator("[data-employee-position-badge]"),
+  ).toBeVisible();
+  await expect(
     page.locator('[data-demo-id="unit-employee-card"]').first().getByRole("button", {
       name: "Product",
       exact: true,
@@ -1776,6 +1859,9 @@ test("edits contextual Employee card formats with live previews and local image 
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   const editorRow = page.locator("[data-org-editor-employee-row]").first();
   await expect(editorRow).toContainText("Editor card");
+  await expect(editorRow.locator('[data-employee-markdown-link="inert"]')).toBeVisible();
+  await expect(editorRow.locator("a")).toHaveCount(0);
+  await expect(editorRow.locator("[data-tag-color-surface]").first()).toBeVisible();
   expect(
     await editorRow.evaluate((element) => element.getBoundingClientRect().height),
   ).toBeGreaterThan(48);
@@ -1802,7 +1888,7 @@ test("edits contextual Employee card formats with live previews and local image 
             .__employeeDisplayPaintedText ?? [],
       ),
     )
-    .toEqual(expect.arrayContaining(["Product", "Export card"]));
+    .toEqual(expect.arrayContaining(["Product Lead", "Design", "Export card"]));
   await imageDialog.getByLabel("Employee format", { exact: true }).fill("{fullName}\nLocal image");
   await expect(imageDialog.locator('[data-demo-id="org-editor-view-image-preview"]')).toBeVisible();
   await expect
@@ -2986,10 +3072,8 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
       (window as typeof window & { __orgToolsExportPaintedText?: string[] })
         .__orgToolsExportPaintedText ?? [],
   );
-  expect(paintedText.some((text) => text.startsWith("Remote; Engineering; Accessibility"))).toBe(
-    true,
-  );
-  expect(paintedText.some((text) => text.includes("Sep 1, 2026"))).toBe(false);
+  expect(paintedText).toEqual(expect.arrayContaining(["Remote", "Engineering", "Accessibility"]));
+  expect(paintedText.some((text) => text.includes("Sep 1, 2026"))).toBe(true);
   expect(paintedText).not.toContain("Live");
   expect(paintedText).not.toContain("Static");
   expect(paintedText).not.toContain("Dynamic");

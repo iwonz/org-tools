@@ -11,12 +11,14 @@ export function EmployeeTags({
   className,
   compact = false,
   density = "default",
+  inline = false,
   queryTokens = [],
   tags,
 }: {
   className?: string;
   compact?: boolean;
   density?: "canvas" | "default";
+  inline?: boolean;
   queryTokens?: string[];
   tags: EmployeeTag[];
 }) {
@@ -26,8 +28,10 @@ export function EmployeeTags({
   const isCanvas = density === "canvas";
   const visibleTags = tags;
 
+  const Root = inline ? "span" : "div";
+
   return (
-    <div
+    <Root
       className={cn(
         "flex min-w-0 flex-wrap gap-1",
         compact && "items-start",
@@ -82,6 +86,6 @@ export function EmployeeTags({
           </span>
         </span>
       ))}
-    </div>
+    </Root>
   );
 }

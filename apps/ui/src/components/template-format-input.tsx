@@ -1,11 +1,28 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { HiOutlineInformationCircle } from "react-icons/hi2";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  HiOutlineBold,
+  HiOutlineCodeBracket,
+  HiOutlineInformationCircle,
+  HiOutlineItalic,
+  HiOutlineLink,
+  HiOutlineStrikethrough,
+} from "react-icons/hi2";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useUiText } from "@/i18n/use-ui-text";
+import {
+  applyTemplateFormatMarkdownLink,
+  findTemplateFormatMarkdownLink,
+  removeTemplateFormatMarkdownLink,
+  type TemplateFormatEdit,
+  type TemplateFormatSelection,
+  toggleTemplateFormatMarkdown,
+} from "@/lib/template-format-markdown";
 import {
   type ActiveTemplateFormatQuery,
   getActiveTemplateFormatQuery,
@@ -70,6 +87,7 @@ const caretCoordinates = (textarea: HTMLTextAreaElement, caret: number) => {
 export function TemplateFormatInput({
   dataDemoId,
   id,
+  inlineMarkdownTools = false,
   label,
   onChange,
   tokens,
@@ -77,6 +95,7 @@ export function TemplateFormatInput({
 }: {
   dataDemoId?: string;
   id: string;
+  inlineMarkdownTools?: boolean;
   label: string;
   onChange: (value: string) => void;
   tokens: TemplateFormatToken[];
@@ -84,10 +103,15 @@ export function TemplateFormatInput({
 }) {
   const t = useUiText();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState<ActiveTemplateFormatQuery | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [position, setPosition] = useState({ left: 8, top: 72 });
-  const pendingCaretRef = useRef<number | null>(null);
+  const [markdownPosition, setMarkdownPosition] = useState({ left: 8, top: 72 });
+  const [markdownSelection, setMarkdownSelection] = useState<TemplateFormatSelection | null>(null);
+  const [linkDraft, setLinkDraft] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState(false);
+  const pendingSelectionRef = useRef<TemplateFormatSelection | null>(null);
 
   const matches = useMemo(() => {
     if (!query) return [];
@@ -99,6 +123,7 @@ export function TemplateFormatInput({
     );
   }, [query, tokens]);
   const open = query !== null && matches.length > 0;
+  const markdownOpen = inlineMarkdownTools && markdownSelection !== null;
 
   const refreshQuery = useCallback((nextValue: string, caret: number) => {
     const nextQuery = getActiveTemplateFormatQuery(nextValue, caret);
@@ -109,13 +134,59 @@ export function TemplateFormatInput({
     }
   }, []);
 
+  const refreshMarkdownSelection = useCallback(
+    (textarea: HTMLTextAreaElement) => {
+      if (!inlineMarkdownTools) return false;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      if (start === end) {
+        setMarkdownSelection(null);
+        setLinkDraft(null);
+        setLinkError(false);
+        return false;
+      }
+      setMarkdownSelection({ end, start });
+      setMarkdownPosition(caretCoordinates(textarea, end));
+      setQuery(null);
+      return true;
+    },
+    [inlineMarkdownTools],
+  );
+
+  useEffect(() => {
+    if (!markdownOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && rootRef.current?.contains(target)) return;
+      setMarkdownSelection(null);
+      setLinkDraft(null);
+      setLinkError(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [markdownOpen]);
+
+  useEffect(() => {
+    if (!markdownOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setMarkdownSelection(null);
+      setLinkDraft(null);
+      setLinkError(false);
+    };
+    window.addEventListener("keydown", handleEscape, true);
+    return () => window.removeEventListener("keydown", handleEscape, true);
+  }, [markdownOpen]);
+
   useLayoutEffect(() => {
-    const caret = pendingCaretRef.current;
+    const selection = pendingSelectionRef.current;
     const textarea = textareaRef.current;
-    if (caret === null || !textarea) return;
-    pendingCaretRef.current = null;
+    if (!selection || !textarea) return;
+    pendingSelectionRef.current = null;
     textarea.focus();
-    textarea.setSelectionRange(caret, caret);
+    textarea.setSelectionRange(selection.start, selection.end);
   });
 
   const insertToken = useCallback(
@@ -123,15 +194,54 @@ export function TemplateFormatInput({
       if (!query) return;
       const inserted = `{${token.key}}`;
       const nextValue = replaceTemplateFormatQuery(value, query, token.key);
-      pendingCaretRef.current = query.start + inserted.length;
+      const caret = query.start + inserted.length;
+      pendingSelectionRef.current = { end: caret, start: caret };
       setQuery(null);
       onChange(nextValue);
     },
     [onChange, query, value],
   );
 
+  const applyMarkdownEdit = useCallback(
+    (edit: TemplateFormatEdit) => {
+      pendingSelectionRef.current = edit.selection;
+      setMarkdownSelection(edit.selection);
+      setLinkDraft(null);
+      setLinkError(false);
+      onChange(edit.value);
+    },
+    [onChange],
+  );
+
+  const toggleMarkdown = (delimiter: "**" | "_" | "`" | "~~") => {
+    if (!markdownSelection) return;
+    applyMarkdownEdit(toggleTemplateFormatMarkdown(value, markdownSelection, delimiter));
+  };
+
+  const openLinkEditor = () => {
+    if (!markdownSelection) return;
+    setLinkDraft(findTemplateFormatMarkdownLink(value, markdownSelection)?.url ?? "");
+    setLinkError(false);
+  };
+
+  const applyLink = () => {
+    if (!markdownSelection || linkDraft === null) return;
+    const edit = applyTemplateFormatMarkdownLink(value, markdownSelection, linkDraft);
+    if (!edit) {
+      setLinkError(true);
+      return;
+    }
+    applyMarkdownEdit(edit);
+  };
+
+  const removeLink = () => {
+    if (!markdownSelection) return;
+    const edit = removeTemplateFormatMarkdownLink(value, markdownSelection);
+    if (edit) applyMarkdownEdit(edit);
+  };
+
   return (
-    <div className="grid min-w-0 gap-2" data-demo-id={dataDemoId}>
+    <div className="grid min-w-0 gap-2" data-demo-id={dataDemoId} ref={rootRef}>
       <div className="flex items-center gap-1.5">
         <Label htmlFor={id}>{label}</Label>
         <span className="group relative inline-flex">
@@ -168,9 +278,16 @@ export function TemplateFormatInput({
             const nextValue = event.currentTarget.value;
             const caret = event.currentTarget.selectionStart;
             onChange(nextValue);
+            setMarkdownSelection(null);
+            setLinkDraft(null);
+            setLinkError(false);
             refreshQuery(nextValue, caret);
           }}
-          onClick={(event) => refreshQuery(value, event.currentTarget.selectionStart)}
+          onClick={(event) => {
+            if (!refreshMarkdownSelection(event.currentTarget)) {
+              refreshQuery(value, event.currentTarget.selectionStart);
+            }
+          }}
           onKeyDown={(event) => {
             const action = getTemplateFormatKeyAction(event.key, open);
             if (action === "move-next" || action === "move-previous") {
@@ -189,14 +306,26 @@ export function TemplateFormatInput({
               if (event.key !== "Tab") event.preventDefault();
               setQuery(null);
             }
+            if (event.key === "Escape" && markdownOpen) {
+              event.preventDefault();
+              setMarkdownSelection(null);
+              setLinkDraft(null);
+              setLinkError(false);
+            }
           }}
           onKeyUp={(event) => {
+            if (refreshMarkdownSelection(event.currentTarget)) return;
             if (
               ["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab", "Backspace"].includes(event.key)
             ) {
               return;
             }
             refreshQuery(event.currentTarget.value, event.currentTarget.selectionStart);
+          }}
+          onSelect={(event) => {
+            if (!refreshMarkdownSelection(event.currentTarget)) {
+              refreshQuery(value, event.currentTarget.selectionStart);
+            }
           }}
           placeholder={t("Type @ to add tokens")}
           ref={textareaRef}
@@ -232,6 +361,105 @@ export function TemplateFormatInput({
                 </span>
               </button>
             ))}
+          </div>
+        )}
+        {markdownOpen && (
+          <div
+            aria-label={t("Markdown formatting")}
+            className="absolute z-[75] grid max-w-[calc(100%-1rem)] gap-2 rounded-lg border border-border/80 bg-popover p-1.5 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]"
+            data-demo-id="template-markdown-tools"
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              event.stopPropagation();
+              setMarkdownSelection(null);
+              setLinkDraft(null);
+              setLinkError(false);
+            }}
+            onMouseDown={(event) => {
+              if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
+            }}
+            role="toolbar"
+            style={{ left: markdownPosition.left, top: markdownPosition.top }}
+          >
+            <div className="flex items-center gap-1">
+              {[
+                { delimiter: "**" as const, icon: HiOutlineBold, label: t("Bold") },
+                { delimiter: "_" as const, icon: HiOutlineItalic, label: t("Italic") },
+                {
+                  delimiter: "~~" as const,
+                  icon: HiOutlineStrikethrough,
+                  label: t("Strikethrough"),
+                },
+                { delimiter: "`" as const, icon: HiOutlineCodeBracket, label: t("Inline code") },
+              ].map(({ delimiter, icon: Icon, label: actionLabel }) => (
+                <Button
+                  aria-label={actionLabel}
+                  className="size-8 p-0"
+                  key={delimiter}
+                  onClick={() => toggleMarkdown(delimiter)}
+                  title={actionLabel}
+                  type="button"
+                  variant="ghost"
+                >
+                  <Icon className="size-4" />
+                </Button>
+              ))}
+              <Button
+                aria-label={t("Link")}
+                className="size-8 p-0"
+                data-demo-id="template-markdown-link-action"
+                onClick={openLinkEditor}
+                title={t("Link")}
+                type="button"
+                variant="ghost"
+              >
+                <HiOutlineLink className="size-4" />
+              </Button>
+            </div>
+            {linkDraft !== null && (
+              <div className="grid w-72 max-w-full gap-2 p-1" data-demo-id="template-link-editor">
+                <Label htmlFor={`${id}-markdown-link-url`}>{t("Link URL")}</Label>
+                <Input
+                  aria-invalid={linkError}
+                  id={`${id}-markdown-link-url`}
+                  onChange={(event) => {
+                    setLinkDraft(event.currentTarget.value);
+                    setLinkError(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      applyLink();
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setLinkDraft(null);
+                      setLinkError(false);
+                      pendingSelectionRef.current = markdownSelection;
+                    }
+                  }}
+                  placeholder="https://example.test"
+                  value={linkDraft}
+                />
+                {linkError && (
+                  <span className="text-xs text-destructive" role="alert">
+                    {t("Enter a valid http, https, mailto, or tel link")}
+                  </span>
+                )}
+                <div className="flex justify-end gap-1">
+                  {markdownSelection &&
+                    findTemplateFormatMarkdownLink(value, markdownSelection) !== null && (
+                      <Button onClick={removeLink} size="sm" type="button" variant="ghost">
+                        {t("Remove link")}
+                      </Button>
+                    )}
+                  <Button onClick={applyLink} size="sm" type="button">
+                    {t("Apply")}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

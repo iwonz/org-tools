@@ -653,6 +653,14 @@
     "Add record": "إضافة سجل",
     "Select options": "تحديد الخيارات",
     "Create option “{name}”": "إنشاء الخيار «{name}»",
-    "Composite primary values must be unique.": "يجب أن تكون قيم المفتاح الأساسي المركب فريدة."
+    "Composite primary values must be unique.": "يجب أن تكون قيم المفتاح الأساسي المركب فريدة.",
+    "Markdown formatting": "تنسيق Markdown",
+    "Italic": "مائل",
+    "Strikethrough": "يتوسطه خط",
+    "Inline code": "رمز مضمّن",
+    "Link": "رابط",
+    "Link URL": "عنوان الرابط",
+    "Remove link": "إزالة الرابط",
+    "Enter a valid http, https, mailto, or tel link": "أدخل رابط http أو https أو mailto أو tel صالحًا"
   }
 }
