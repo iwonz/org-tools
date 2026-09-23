@@ -153,8 +153,8 @@ describe("Org Editor Employee display geometry", () => {
         text: "Design systems; Remote research",
       },
     ];
-    expect(getOrgEditorEmployeeRichVisualLineCount(lines, 90)).toBe(3);
-    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 90)).toBe(64);
+    expect(getOrgEditorEmployeeRichVisualLineCount(lines, 90)).toBe(5);
+    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 90)).toBe(130);
     expect(
       getOrgEditorEmployeeRichVisualLineCount(lines, 120, (tag) =>
         tag.date ? `${tag.label} · 2 Mar` : tag.label,
@@ -194,7 +194,7 @@ describe("Org Editor Employee display geometry", () => {
     ];
 
     expect(getOrgEditorEmployeeRichVisualLineCount(lines, 80)).toBe(4);
-    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 80)).toBe(80);
+    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 80)).toBe(114);
   });
 });
 
@@ -322,12 +322,13 @@ describe("Org Editor variable Employee geometry", () => {
 
   test("keeps card content on one shared visual grid", () => {
     expect(ORG_EDITOR_EMPLOYEE_TAG_STYLE).toEqual({
-      fontSize: 9,
-      gap: 2,
-      height: 12,
-      horizontalPadding: 6,
+      fontSize: 11,
+      gap: 6,
+      height: 20,
+      horizontalPadding: 8,
+      lineHeight: 16,
       radius: 6,
-      widthPerCharacter: 5.2,
+      verticalPadding: 2,
     });
     expect(getOrgEditorEmployeeTextMaxWidth(280)).toBe(214);
     expect(
@@ -343,8 +344,8 @@ describe("Org Editor variable Employee geometry", () => {
       avatarX: 51,
       avatarY: 153,
       rowTop: 129,
-      tagY: 156,
-      textBaselineY: 151,
+      tagY: 152,
+      textBaselineY: 147,
       textMaxWidth: 214,
       textX: 69,
     });
@@ -469,7 +470,7 @@ describe("Org Editor mixed Unit rows", () => {
 });
 
 describe("Org Editor Unit Tag footer", () => {
-  test("sizes mixed-script chips by content with equal compact insets", () => {
+  test("sizes mixed-script chips by content with equal universal insets", () => {
     const chip = (label: string, count = 1, availableWidth = 264) =>
       getOrgEditorUnitTagFooterChipWidth({ count, label }, availableWidth);
 
@@ -479,7 +480,7 @@ describe("Org Editor Unit Tag footer", () => {
     expect(chip("团队")).toBeGreaterThan(chip("UI"));
     expect(chip("فريق")).toBeGreaterThan(40);
     expect(chip("A very long Tag name", 12, 72)).toBeLessThanOrEqual(72);
-    expect(ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING).toBe(6);
+    expect(ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING).toBe(8);
 
     const summaries = ["TeamLead", "Vue", "Backend", "PHP"].map((label, index) => ({
       color: null,
@@ -488,7 +489,9 @@ describe("Org Editor Unit Tag footer", () => {
       tagId: `tag-${index}`,
     }));
     expect(getOrgEditorUnitTagFooterHeight(summaries, 264)).toBe(
-      ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 + ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
+      ORG_EDITOR_UNIT_TAG_FOOTER_PADDING * 2 +
+        ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT * 2 +
+        ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap,
     );
   });
 
@@ -514,9 +517,9 @@ describe("Org Editor Unit Tag footer", () => {
         .join("")
         .replace(/\s+/gu, ""),
     ).toBe(label.normalize("NFC").replace(/\s+/gu, ""));
-    expect(chipLayouts.flatMap((chip) => chip.lines).some((line) => line.suffix === "· 12")).toBe(
-      true,
-    );
+    expect(
+      chipLayouts.flatMap((chip) => chip.lines).some((line) => line.suffix?.trim() === "· 12"),
+    ).toBe(true);
     expect(chipLayouts.flatMap((chip) => chip.lines).some((line) => line.label.includes("…"))).toBe(
       false,
     );

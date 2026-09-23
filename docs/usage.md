@@ -102,10 +102,11 @@ control.
   scroll; release inside to save the shown position. Escape or release outside cancels the move. A filtered
   move inserts the Tag relative to its target in the full catalog. All Tag chips, pickers, Calendar
   groups, and export values follow that order; searching does not promote matching chips. New Tags
-  append, and renaming or recoloring retains position. Tag surfaces use the same normal or compact
-  metrics throughout cards, previews, forms, pickers, filters, the catalog, Calendar, Editor, and
-  PNG. A long label wraps by word and then grapheme; each wrapped part keeps its own content-sized
-  tonal background, padding, radius, date or count suffix, and interaction target.
+  append, and renaming or recoloring retains position. Tag surfaces use the same 11 px type, 16 px
+  line height, 8 px horizontal and 2 px vertical padding, 6 px radius, and 6 px two-axis gaps
+  throughout cards, previews, forms, pickers, filters, the catalog, Calendar, Editor, and PNG. A
+  long label wraps by word and then grapheme; each wrapped part keeps its own content-sized tonal
+  background, padding, radius, date or count suffix, and interaction target.
   **Unknown year** stores `1900` so Calendar can retain the known recurring day and month. Avatar cropping produces a local 512 by 512 image, preferring
   WebP and falling back to PNG when the browser cannot encode WebP. **Add Employee** is in the shared
   header. The tag field keeps every draft chip in one wrapping picker and commits it only with the
@@ -211,7 +212,7 @@ control.
   direct-membership Tag summary footer, persistent distribution row tones, and hierarchy connections
   while retaining a light export palette and configurable output styling. Unit-only and subtree
   images determine distribution status from the complete active View, including assignments outside
-  the image scope. Footer chips use equal compact insets and follow their own label/count width rather
+  the image scope. Footer chips use the universal insets and follow their own label/count width rather
   than reserving trailing space. Long footer and Employee-row Tags wrap into content-sized decorated
   fragments without an ellipsis or full-width colored remainder, including mixed scripts and emoji;
   the count suffix stays together. Static/Live

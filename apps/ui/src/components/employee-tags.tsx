@@ -1,9 +1,18 @@
 "use client";
 
 import type { EmployeeTag } from "@org-tools/types";
+import { useEffect, useSyncExternalStore } from "react";
 import { HighlightedText } from "@/components/highlighted-text";
+import { useAppLocale } from "@/components/locale-provider";
 import { TagSurface } from "@/components/tag-surface";
 import { useAppFormatter } from "@/i18n/use-ui-text";
+import {
+  employeeDisplayTextMeasureEngine,
+  ensureEmployeeDisplayFontsReady,
+  getEmployeeDisplayMeasurementRevision,
+  getEmployeeDisplayUiFontFamily,
+  subscribeEmployeeDisplayTextMeasurements,
+} from "@/lib/employee-display-measure";
 import { normalizeSearchValue } from "@/lib/search-index";
 import { layoutInlineSurfaces, TAG_SURFACE_METRICS } from "@/lib/tag-surface";
 import { cn } from "@/lib/utils";
@@ -11,7 +20,7 @@ import { cn } from "@/lib/utils";
 export function EmployeeTags({
   className,
   compact = false,
-  density = "default",
+  includeYear = false,
   inline = false,
   queryTokens = [],
   tags,
@@ -19,38 +28,50 @@ export function EmployeeTags({
 }: {
   className?: string;
   compact?: boolean;
-  density?: "canvas" | "default";
+  includeYear?: boolean;
   inline?: boolean;
   queryTokens?: string[];
   tags: EmployeeTag[];
   wrapWidth?: number;
 }) {
   const format = useAppFormatter();
+  const { locale } = useAppLocale();
+  const measurementRevision = useSyncExternalStore(
+    subscribeEmployeeDisplayTextMeasurements,
+    getEmployeeDisplayMeasurementRevision,
+    getEmployeeDisplayMeasurementRevision,
+  );
+  useEffect(() => {
+    void ensureEmployeeDisplayFontsReady(locale);
+  }, [locale]);
   if (tags.length === 0) return null;
 
-  const isCanvas = density === "canvas";
-  const surfaceDensity = isCanvas ? "compact" : "normal";
-  const metrics = TAG_SURFACE_METRICS[surfaceDensity];
   const visibleTags = tags;
-  const formattedTags = visibleTags.map((tag) =>
+  const suffixes = visibleTags.map((tag) =>
     tag.date
-      ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
+      ? ` · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
           day: "numeric",
           month: "short",
           timeZone: "UTC",
-          ...(isCanvas ? { year: "numeric" as const } : {}),
+          ...(includeYear ? { year: "numeric" as const } : {}),
         })}`
-      : tag.label,
+      : "",
   );
-  const visualLayout =
-    wrapWidth && isCanvas
-      ? layoutInlineSurfaces({
-          availableWidth: wrapWidth,
-          density: "compact",
-          measureText: (value) => value.length * 5.2,
-          texts: formattedTags,
-        })
-      : null;
+  const formattedTags = visibleTags.map((tag, index) => `${tag.label}${suffixes[index] ?? ""}`);
+  const visualLayout = wrapWidth
+    ? layoutInlineSurfaces({
+        availableWidth: wrapWidth,
+        measureText: (value) =>
+          employeeDisplayTextMeasureEngine.measure(value, {
+            fontFamily: getEmployeeDisplayUiFontFamily(),
+            fontSize: TAG_SURFACE_METRICS.fontSize,
+            fontWeight: 400,
+          }),
+        suffixes,
+        texts: visibleTags.map((tag) => tag.label),
+      })
+    : null;
+  void measurementRevision;
 
   const Root = inline ? "span" : "div";
 
@@ -58,7 +79,7 @@ export function EmployeeTags({
     return (
       <Root
         className={cn("relative block min-w-0", className)}
-        data-employee-tags-density={density}
+        data-employee-tags-density="universal"
         data-employee-tags-hidden-count={0}
         style={{ height: visualLayout.height }}
         title={formattedTags.join(", ")}
@@ -77,7 +98,6 @@ export function EmployeeTags({
             <TagSurface
               className="absolute inline-flex items-center whitespace-nowrap"
               color={tag.color}
-              density="compact"
               key={`${tag.tagId ?? normalizeSearchValue(tag.label)}:${fragment.row}:${fragment.start}:${fragment.end}`}
               style={{
                 height: fragment.height,
@@ -87,7 +107,7 @@ export function EmployeeTags({
               }}
             >
               {labelText && <HighlightedText queryTokens={queryTokens} text={labelText} />}
-              {suffixText && <span className="opacity-75">{suffixText}</span>}
+              {suffixText && <span className="whitespace-pre opacity-75">{suffixText}</span>}
             </TagSurface>
           );
         })}
@@ -97,8 +117,13 @@ export function EmployeeTags({
 
   return (
     <Root
-      className={cn(inline ? "min-w-0" : "block min-w-0", compact && "align-top", className)}
-      data-employee-tags-density={density}
+      className={cn(
+        "min-w-0 flex-wrap gap-[6px]",
+        inline ? "inline-flex" : "flex",
+        compact && "align-top",
+        className,
+      )}
+      data-employee-tags-density="universal"
       data-employee-tags-hidden-count={0}
       title={visibleTags
         .map((tag) =>
@@ -115,9 +140,7 @@ export function EmployeeTags({
         <TagSurface
           className="align-baseline"
           color={tag.color}
-          density={surfaceDensity}
           key={normalizeSearchValue(tag.label)}
-          style={{ marginInlineEnd: index + 1 < visibleTags.length ? metrics.gap : undefined }}
           title={
             tag.date
               ? format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
@@ -128,9 +151,7 @@ export function EmployeeTags({
           }
         >
           <HighlightedText queryTokens={queryTokens} text={tag.label} />
-          {formattedTags[index]?.slice(tag.label.length) && (
-            <span className="opacity-75">{formattedTags[index]?.slice(tag.label.length)}</span>
-          )}
+          {suffixes[index] && <span className="whitespace-pre opacity-75">{suffixes[index]}</span>}
         </TagSurface>
       ))}
     </Root>

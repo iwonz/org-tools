@@ -668,12 +668,14 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   Display Save button, keeps spacing only between visual rows, shows thematic tab icons and flat sections, formats a selected
   range by keyboard-accessible Markdown actions, validates link protocols, coexists with `@`
   suggestions, and retains accepted changes after dismissal. Confirm all lines share normal base typography,
+  Reset uses normal weight, username and email suffixes remain fully visible,
   colored dated Tags and compound `Position · Unit` pills survive Markdown, plain email stays
   unlinked until explicitly marked up, all ordinary tokens stay unlinked, only the Unit segment of
   `{positions}` links in Employees and Units, fallback cards use Employees with inert Unit segments, Editor links remain inert,
   Editor and both PNG dialogs use their assigned formats, all six visual inputs share `@`, Enter,
   and Markdown selection tools without `{field}` button catalogs, and wrapped Tag and assignment
-  fragments share DOM/PNG order, geometry, typography, color, padding, radius, and gaps. Image-dialog
+  fragments share the universal 11/16/8/2/6 metrics, 6 px two-axis gaps, exact date/count trailing
+  inset, and DOM/PNG order, geometry, typography, and color. Image-dialog
   edits remain local.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,

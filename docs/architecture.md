@@ -46,12 +46,14 @@ internal blank rows. It then parses only inline Markdown into a shared rich-line
 custom-field values enter that model as text nodes, so their punctuation cannot become formatting.
 Tags and compound assignments remain semantic groups. A platform-neutral inline layout places text,
 Markdown runs, Tags, and `Position · Unit` assignments in source order on shared visual rows. It
-wraps by word and grapheme and emits content-sized fragment rectangles. DOM renders those fragments
-with cloned decoration while Canvas paints the same rectangles. Normal surfaces use 11 px type,
-16 px line height, 8 px horizontal and 2 px vertical padding, 6 px radius, and 4 px gaps; Editor and
-PNG use 9 px type, 12 px line height, 6 px horizontal padding, 6 px radius, and 2 px gaps. The
-configured display gap is inserted only between adjacent measured visual rows; it contributes no
-outer space and cannot change a single-row height. `{position}`, `{unitName}`, `{fullName}`,
+wraps by word and grapheme and emits content-sized fragment rectangles. A bounded Canvas cache
+measures the actual UI or selected image font, weight, style, and code family; it is invalidated
+after bundled fonts load. DOM renders those fragments without constraining glyphs to an approximate
+fragment width, while Canvas paints the same rectangles. Every Tag and assignment surface uses
+11 px type, 16 px line height, 8 px horizontal and 2 px vertical padding, 6 px radius, and 6 px row
+and column gaps. A Tag or assignment continuation uses the fixed 6 px gap. The configured display
+gap applies to authored, blank, and ordinary wrapped rows, contributes no outer space, and cannot
+change a single-row height. `{position}`, `{unitName}`, `{fullName}`,
 `{profileUrl}`, `{email}`, and custom tokens remain ordinary text values. List and fallback contexts
 aggregate system-View assignments in structural order; one Unit or Editor row resolves only that
 Unit. `isBoss` is a condition-only boolean; visible text belongs in a ternary branch. Plain
@@ -327,7 +329,7 @@ omit every transient selection, target outline, anchor, resize, rotation,
 Bezier, marquee, and placement affordance.
 
 Org Editor PNG output also uses the same pure card geometry as the live canvas for Unit widths, 72 px
-headers, roster padding, centered avatars, Employee text columns, compact inline fragments, variable
+headers, roster padding, centered avatars, Employee text columns, universal inline fragments, variable
 row heights, and hierarchy anchors. Each Employee receives one immutable rich layout that DOM,
 geometry, and PNG consume. An oversized semantic value becomes several content-sized decorated
 fragments, and the resulting height drives rows, Unit bounds, hit testing, anchors, and connections.
@@ -345,12 +347,10 @@ card presentation aligned. Every later persistent canvas element, anchor behavio
 stable Unit/Employee card presentation change must define and test its applicable DOM and PNG
 behavior in the same change.
 Image template tokens exclude avatar bytes, while painted avatars remain available.
-Unit footer Tags use the shared compact fragment layout with one deterministic mixed-script glyph
-metric for DOM and PNG row packing, card bounds, connections, and collision geometry. Every wrapped
-part owns only its content width and cloned decoration. The count suffix stays indivisible and no
-footer label uses an ellipsis.
-This keeps short summaries content-sized and long summaries complete without a font-loading
-measurement pass or a second layout commit.
+Unit footer Tags use the shared actual-font fragment layout for DOM and PNG row packing, card bounds,
+connections, and collision geometry. Every wrapped part owns only its content width and cloned
+decoration. The count suffix stays indivisible with the shared 8 px trailing inset and no footer
+label uses an ellipsis. The bounded measurement cache prevents repeated per-row Canvas work.
 Editor JSON and Template use the same formatter and sortable field controls as Data Download while
 limiting Employees and assignments to Unit-only or subtree scope.
 

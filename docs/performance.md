@@ -41,8 +41,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   and does not add catalog scans. A 256-entry least-recently-used cache stores parsed Markdown trees
   by the resolved template structure without retaining organization values. Native Tag and compound
   assignment nodes reuse bounded chip packing based on the complete `Position · Unit` projection.
-  A weakly owned cache keeps at most eight width, locale, direction, density, and font variants for
-  one resolved rich-line source. The shared word/grapheme packer stays linear in output size.
+  A weakly owned cache keeps at most eight width, locale, direction, text-mode, and font variants for
+  one resolved rich-line source. One bounded 32,768-entry Canvas cache measures the actual family,
+  size, weight, style, and text and clears after bundled fonts load. The shared word/grapheme packer
+  stays linear in output size.
   Editor computes one rich fragment layout per row and passes it to DOM rendering, geometry, and
   PNG; the configured-gap height feeds the existing prefix-offset pass, so formatted cards preserve O(n)
   geometry work.
@@ -99,9 +101,10 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   anchor set while emphasizing the nearest candidate.
 - Paint the adaptive Editor grid as a constant-cost CSS background and snap coordinate-producing
   commands to the 24-unit document grid. Direct-Employee Tag summaries are indexed per materialized
-  View; a deterministic glyph-aware width packs intrinsic short Tag fragments and grapheme-safe long labels,
-  and the cached wrapped footer heights participate in the same geometry pass without DOM
-measurement. DOM and PNG consume the same content-sized fragment rectangles and indivisible count suffix. Disabling the View Tag
+  View; actual cached local-font widths pack intrinsic short Tag fragments and grapheme-safe long
+  labels, and the cached wrapped footer heights participate in the same geometry pass without DOM
+measurement. DOM and PNG consume the same content-sized fragment rectangles, 6 px row/column gaps,
+and indivisible date or count suffix. Disabling the View Tag
   cloud sets every footer height to zero, including cached geometry. Distribution color drafts stay
   local to the open picker; shared light/dark/canvas tonal values are derived from one color
   calculation, and each included PNG row performs only indexed status and cached-color lookups.
@@ -127,8 +130,9 @@ pass per organization revision; UI-only changes reuse the result. Its drill-down
 rather than detached Employee arrays. Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, a constant-size Tag
 indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same
 display-line heights and prefix geometry. Mounted list cards measure their information-column width
-with `ResizeObserver` and reuse the same bounded layout cache; virtual rows remeasure only after the
-resolved height changes. Focused Display setters skip identical values, while the existing latest-
+with `ResizeObserver` and reuse the same bounded layout cache; font readiness, width, locale,
+direction, content, or selected image font invalidates the applicable measurements and virtual rows
+remeasure only after the resolved height changes. Focused Display setters skip identical values, while the existing latest-
 snapshot writer coalesces valid keystroke updates. Open-position rows continue to use deterministic Tag
 packing. Image export measures each included open-position Tag once
 with the loaded output font, retains complete multi-line chip layouts, and builds one immutable

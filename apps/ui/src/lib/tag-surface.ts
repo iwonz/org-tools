@@ -1,28 +1,14 @@
 export const TAG_SURFACE_METRICS = {
-  compact: {
-    fontSize: 9,
-    gap: 2,
-    horizontalPadding: 6,
-    lineHeight: 12,
-    radius: 6,
-    verticalPadding: 0,
-  },
-  normal: {
-    fontSize: 11,
-    gap: 4,
-    horizontalPadding: 8,
-    lineHeight: 16,
-    radius: 6,
-    verticalPadding: 2,
-  },
+  fontSize: 11,
+  gap: 6,
+  horizontalPadding: 8,
+  lineHeight: 16,
+  radius: 6,
+  verticalPadding: 2,
 } as const;
 
-export type TagSurfaceDensity = keyof typeof TAG_SURFACE_METRICS;
-
-export const getTagSurfaceHeight = (density: TagSurfaceDensity) => {
-  const metrics = TAG_SURFACE_METRICS[density];
-  return metrics.lineHeight + metrics.verticalPadding * 2;
-};
+export const getTagSurfaceHeight = () =>
+  TAG_SURFACE_METRICS.lineHeight + TAG_SURFACE_METRICS.verticalPadding * 2;
 
 export const getTextGraphemes = (value: string, locale?: string) => {
   if (typeof Intl.Segmenter === "function") {
@@ -80,7 +66,6 @@ export type InlineSurfaceLayout = {
 
 export const layoutInlineSurfaces = ({
   availableWidth,
-  density,
   direction = "ltr",
   locale,
   measureText,
@@ -88,7 +73,6 @@ export const layoutInlineSurfaces = ({
   texts,
 }: {
   availableWidth: number;
-  density: TagSurfaceDensity;
   direction?: "ltr" | "rtl";
   locale?: string;
   measureText: (value: string) => number;
@@ -96,8 +80,8 @@ export const layoutInlineSurfaces = ({
   texts: readonly string[];
 }): InlineSurfaceLayout => {
   if (texts.length === 0 || availableWidth <= 0) return { fragments: [], height: 0, rowCount: 0 };
-  const metrics = TAG_SURFACE_METRICS[density];
-  const fragmentHeight = getTagSurfaceHeight(density);
+  const metrics = TAG_SURFACE_METRICS;
+  const fragmentHeight = getTagSurfaceHeight();
   const fragments: InlineSurfaceLayoutFragment[] = [];
   let row = 0;
   let usedWidth = 0;
@@ -116,6 +100,16 @@ export const layoutInlineSurfaces = ({
     while (rest) {
       const gap = usedWidth > 0 ? metrics.gap : 0;
       let maxTextWidth = availableWidth - usedWidth - gap - metrics.horizontalPadding * 2;
+      const fullRowTextWidth = availableWidth - metrics.horizontalPadding * 2;
+      if (
+        usedWidth > 0 &&
+        measureText(rest) <= fullRowTextWidth &&
+        measureText(rest) > maxTextWidth
+      ) {
+        row += 1;
+        usedWidth = 0;
+        continue;
+      }
       if (maxTextWidth <= 0 && usedWidth > 0) {
         row += 1;
         usedWidth = 0;
@@ -182,12 +176,32 @@ export const layoutInlineSurfaces = ({
         continue;
       }
     }
-    appendFragmentedText(
-      itemIndex,
-      suffix.trimStart(),
-      true,
-      sourceText.normalize("NFC").trim().length,
+    const atomicSuffix = suffix.trimStart();
+    const atomicSuffixWidth = Math.min(
+      availableWidth,
+      Math.max(
+        metrics.horizontalPadding * 2 + 1,
+        measureText(atomicSuffix) + metrics.horizontalPadding * 2,
+      ),
     );
+    if (measureText(atomicSuffix) + metrics.horizontalPadding * 2 <= availableWidth) {
+      if (usedWidth > 0) row += 1;
+      usedWidth = atomicSuffixWidth;
+      fragments.push({
+        continued: true,
+        end: sourceText.normalize("NFC").trim().length + suffix.length,
+        height: fragmentHeight,
+        itemIndex,
+        row,
+        start: sourceText.normalize("NFC").trim().length,
+        text: atomicSuffix,
+        width: atomicSuffixWidth,
+        x: 0,
+        y: row * (fragmentHeight + metrics.gap),
+      });
+      continue;
+    }
+    appendFragmentedText(itemIndex, atomicSuffix, true, sourceText.normalize("NFC").trim().length);
   }
 
   if (direction === "rtl") {

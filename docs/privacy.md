@@ -47,7 +47,7 @@ Units cards. Fallback cards, Editor, and image links remain inert. Rendering or 
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
 shared text, Markdown, Tag, assignment, and suffix layout runs locally from the current width,
-locale, direction, density, and selected local font without font, measurement, or rendering requests;
+locale, direction, and selected local font without font, measurement, or rendering requests;
 the full Tag color palette, independent opacity control, and exact HTML Keyword, HEX, RGB, or RGBA
 parser run locally and persist only semantic names or canonical lowercase six- or eight-digit HEX
 without contacting a palette, color, or asset service. Color and opacity stay in Popover memory until

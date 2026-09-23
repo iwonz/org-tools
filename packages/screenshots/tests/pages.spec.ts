@@ -247,12 +247,12 @@ test("runs the complete state editor at the repository base path without APIs or
     );
   expect(footerChipInsets.length).toBeGreaterThan(1);
   for (const inset of footerChipInsets) {
-    expect(inset.left).toBeGreaterThanOrEqual(5.5);
-    expect(inset.left).toBeLessThanOrEqual(7);
-    expect(inset.right).toBeGreaterThanOrEqual(5.5);
-    expect(inset.right).toBeLessThanOrEqual(14);
-    expect(inset.paddingInlineStart).toBe("6px");
-    expect(inset.paddingInlineEnd).toBe("6px");
+    expect(inset.left).toBeGreaterThanOrEqual(7.5);
+    expect(inset.left).toBeLessThanOrEqual(8.5);
+    expect(inset.right).toBeGreaterThanOrEqual(7.5);
+    expect(inset.right).toBeLessThanOrEqual(8.5);
+    expect(inset.paddingInlineStart).toBe("8px");
+    expect(inset.paddingInlineEnd).toBe("8px");
     expect(inset.labelScrollWidth).toBeLessThanOrEqual(inset.labelClientWidth + 1);
   }
 

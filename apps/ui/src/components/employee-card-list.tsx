@@ -4,7 +4,14 @@ import type { Employee, EmployeeId, EmployeeUnitPosition, UnitId } from "@org-to
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { observer } from "mobx-react-lite";
 import type { DragEvent, KeyboardEvent, ReactNode } from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { HiOutlineInformationCircle } from "react-icons/hi2";
 
 import { EmployeeAvatar } from "@/components/employee-avatar";
@@ -18,6 +25,13 @@ import {
   layoutEmployeeDisplayRichLines,
   renderEmployeeDisplayLineDetails,
 } from "@/lib/employee-display";
+import {
+  employeeDisplayTextMeasureEngine,
+  ensureEmployeeDisplayFontsReady,
+  getEmployeeDisplayMeasurementRevision,
+  getEmployeeDisplayUiFontFamily,
+  subscribeEmployeeDisplayTextMeasurements,
+} from "@/lib/employee-display-measure";
 import { createMailtoUrl } from "@/lib/employee-links";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { TAG_SURFACE_METRICS } from "@/lib/tag-surface";
@@ -237,6 +251,14 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   const appFormat = useAppFormatter();
   const contentRef = useRef<HTMLDivElement>(null);
   const [measuredWrapWidth, setMeasuredWrapWidth] = useState<number | null>(null);
+  const measurementRevision = useSyncExternalStore(
+    subscribeEmployeeDisplayTextMeasurements,
+    getEmployeeDisplayMeasurementRevision,
+    getEmployeeDisplayMeasurementRevision,
+  );
+  useEffect(() => {
+    void ensureEmployeeDisplayFontsReady(store.locale);
+  }, [store.locale]);
   const resolvedUnitContexts =
     unitContexts ?? store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
   const richLines = renderEmployeeDisplayLineDetails({
@@ -266,8 +288,8 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
     (resolvedWrapWidth
       ? layoutEmployeeDisplayRichLines(richLines, {
           availableWidth: resolvedWrapWidth,
-          density: density === "editor" ? "compact" : "normal",
           direction: store.locale === "ar" ? "rtl" : "ltr",
+          font: getEmployeeDisplayUiFontFamily(),
           formatTag: (tag) =>
             tag.date
               ? `${tag.label} · ${appFormat.dateTime(new Date(`${tag.date}T00:00:00Z`), {
@@ -279,6 +301,9 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
               : tag.label,
           lineGap: resolvedLineGap,
           locale: store.locale,
+          measureText: employeeDisplayTextMeasureEngine.measure,
+          measurementRevision,
+          textMode: density === "editor" ? "editor" : "card",
         })
       : null);
   const lines = richLines;
@@ -335,9 +360,13 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                 left: fragment.x,
                 position: "absolute" as const,
                 top: 0,
-                width: fragment.width,
               };
               if (fragment.type === "text") {
+                const textFragmentStyle = {
+                  ...fragmentStyle,
+                  minWidth: fragment.width,
+                  whiteSpace: "nowrap" as const,
+                };
                 const content = <HighlightedText queryTokens={queryTokens} text={fragment.text} />;
                 if (fragment.node.explicitLink && fragment.node.href && interactiveLinks) {
                   const isExternal = /^https?:/iu.test(fragment.node.href);
@@ -348,7 +377,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                       href={fragment.node.href}
                       key={key}
                       onClick={(event) => event.stopPropagation()}
-                      style={fragmentStyle}
+                      style={textFragmentStyle}
                       {...(isExternal
                         ? {
                             referrerPolicy: "no-referrer" as const,
@@ -372,7 +401,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                         : undefined
                     }
                     key={key}
-                    style={fragmentStyle}
+                    style={textFragmentStyle}
                   >
                     {content}
                   </span>
@@ -383,9 +412,8 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                   <TagSurface
                     className="inline-flex items-center whitespace-nowrap"
                     color={fragment.tag.color}
-                    density={visualLayout.density}
                     key={key}
-                    style={fragmentStyle}
+                    style={{ ...fragmentStyle, width: fragment.width }}
                   >
                     <HighlightedText queryTokens={queryTokens} text={fragment.text} />
                   </TagSurface>
@@ -423,15 +451,14 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                     </button>
                   );
                 }
-                return <span className={rangeClassName}>{content}</span>;
+                return <span className={cn(rangeClassName, "whitespace-pre")}>{content}</span>;
               };
               return (
                 <TagSurface
                   className="inline-flex items-center whitespace-nowrap"
                   data-employee-position-assignment
-                  density={visualLayout.density}
                   key={key}
-                  style={fragmentStyle}
+                  style={{ ...fragmentStyle, width: fragment.width }}
                   title={`${fragment.position.label} · ${fragment.position.unitContext.unitFullPath}`}
                   variant="position"
                 >
@@ -475,7 +502,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                 return (
                   <EmployeeTags
                     compact={compact}
-                    density={density === "editor" ? "canvas" : "default"}
+                    includeYear={density === "editor"}
                     inline
                     key={nodeKey}
                     queryTokens={queryTokens}
@@ -489,13 +516,12 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                     {node.positions.map(({ label, unitContext }, positionIndex) => (
                       <TagSurface
                         className="align-baseline"
-                        density={density === "editor" ? "compact" : "normal"}
                         data-employee-position-assignment
                         key={unitContext.id}
                         style={{
                           marginInlineEnd:
                             positionIndex + 1 < node.positions.length
-                              ? TAG_SURFACE_METRICS[density === "editor" ? "compact" : "normal"].gap
+                              ? TAG_SURFACE_METRICS.gap
                               : undefined,
                         }}
                         title={`${label} · ${unitContext.unitFullPath}`}

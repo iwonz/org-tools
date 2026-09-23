@@ -8,18 +8,20 @@ import {
   isEmployeeDisplayPositionsKey,
   normalizeCustomEmployeeFieldKey,
 } from "@/lib/custom-employee-fields";
+import {
+  DEFAULT_EMPLOYEE_DISPLAY_FONT_FAMILY,
+  EMPLOYEE_DISPLAY_MONOSPACE_FONT_FAMILY,
+  type EmployeeDisplayFontStyle,
+  type EmployeeDisplayTextMeasure,
+  employeeDisplayTextMeasureEngine,
+} from "@/lib/employee-display-measure";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import {
   asExportText,
   exportEmployeeFieldByKey,
   getExportEmployeeFieldValue,
 } from "@/lib/export-format";
-import {
-  getTagSurfaceHeight,
-  TAG_SURFACE_METRICS,
-  type TagSurfaceDensity,
-  takeFittingText,
-} from "@/lib/tag-surface";
+import { getTagSurfaceHeight, TAG_SURFACE_METRICS, takeFittingText } from "@/lib/tag-surface";
 import {
   renderTemplateFormatParts,
   type TemplateFieldResolver,
@@ -466,8 +468,14 @@ export const renderEmployeeDisplayLines = (options: EmployeeDisplayRenderOptions
   renderEmployeeDisplayRichLines(options).map((line) => line.text);
 
 export const measureEmployeeDisplayTextNode = (node: EmployeeDisplayTextNode) => {
-  const widthPerCharacter = node.marks.code ? 7 : node.marks.bold ? 6.4 : 6.1;
-  return node.text.length * widthPerCharacter;
+  return employeeDisplayTextMeasureEngine.measure(node.text, {
+    fontFamily: node.marks.code
+      ? EMPLOYEE_DISPLAY_MONOSPACE_FONT_FAMILY
+      : DEFAULT_EMPLOYEE_DISPLAY_FONT_FAMILY,
+    fontSize: 14 * (node.marks.code ? 0.9 : 1),
+    fontStyle: node.marks.italic ? "italic" : "normal",
+    fontWeight: node.marks.bold ? 600 : 400,
+  });
 };
 
 export const wrapEmployeeDisplayRichLines = (
@@ -570,6 +578,7 @@ export type EmployeeDisplayVisualFragment =
 export type EmployeeDisplayVisualLine = {
   blank?: true;
   fragments: EmployeeDisplayVisualFragment[];
+  gapAfter: number;
   height: number;
   text: string;
   width: number;
@@ -577,35 +586,41 @@ export type EmployeeDisplayVisualLine = {
 };
 
 export type EmployeeDisplayVisualLayout = {
-  density: TagSurfaceDensity;
   direction: "ltr" | "rtl";
   height: number;
   lines: EmployeeDisplayVisualLine[];
+  textMode: EmployeeDisplayTextMode;
 };
 
-const defaultEmployeeDisplayMeasure = (
-  text: string,
-  density: TagSurfaceDensity,
-  node?: EmployeeDisplayTextNode,
-) => {
-  if (node) {
-    const widthPerCharacter = node.marks.code ? 7.2 : node.marks.bold ? 6.7 : 6.4;
-    return [...text].length * widthPerCharacter + (node.marks.code ? 4 : 0);
-  }
-  return [...text].length * (density === "compact" ? 5.2 : 6.1);
-};
+export type EmployeeDisplayTextMode = "card" | "editor";
 
-type EmployeeDisplayMeasure = typeof defaultEmployeeDisplayMeasure;
+const getEmployeeDisplayTextStyle = (
+  fontFamily: string,
+  mode: EmployeeDisplayTextMode,
+  node: EmployeeDisplayTextNode,
+): EmployeeDisplayFontStyle => ({
+  fontFamily: node.marks.code ? EMPLOYEE_DISPLAY_MONOSPACE_FONT_FAMILY : fontFamily,
+  fontSize: (mode === "editor" ? 12 : 14) * (node.marks.code ? 0.9 : 1),
+  fontStyle: node.marks.italic ? "italic" : "normal",
+  fontWeight: node.marks.bold ? 600 : 400,
+});
+
+const getTagTextStyle = (fontFamily: string, fontWeight = 400): EmployeeDisplayFontStyle => ({
+  fontFamily,
+  fontSize: TAG_SURFACE_METRICS.fontSize,
+  fontStyle: "normal",
+  fontWeight,
+});
 
 const EMPLOYEE_DISPLAY_LAYOUT_CACHE_LIMIT = 8;
 const employeeDisplayLayoutCache = new WeakMap<
   readonly EmployeeDisplayLine[],
   Map<string, EmployeeDisplayVisualLayout>
 >();
-const employeeDisplayMeasureIds = new WeakMap<EmployeeDisplayMeasure, number>();
+const employeeDisplayMeasureIds = new WeakMap<EmployeeDisplayTextMeasure, number>();
 let nextEmployeeDisplayMeasureId = 1;
 
-const getEmployeeDisplayMeasureId = (measureText: EmployeeDisplayMeasure) => {
+const getEmployeeDisplayMeasureId = (measureText: EmployeeDisplayTextMeasure) => {
   const existing = employeeDisplayMeasureIds.get(measureText);
   if (existing) return existing;
   const id = nextEmployeeDisplayMeasureId;
@@ -618,28 +633,30 @@ export const layoutEmployeeDisplayRichLines = (
   sourceLines: readonly EmployeeDisplayLine[],
   {
     availableWidth,
-    density = "compact",
     direction = "ltr",
     font = "system-ui",
     formatTag = (tag) => tag.label,
     lineGap = 0,
     locale = "en",
-    measureText = defaultEmployeeDisplayMeasure,
+    measureText = employeeDisplayTextMeasureEngine.measure,
+    measurementRevision = 0,
+    textMode = "editor",
   }: {
     availableWidth: number;
-    density?: TagSurfaceDensity;
     direction?: "ltr" | "rtl";
     font?: string;
     formatTag?: (tag: EmployeeTag) => string;
     lineGap?: number;
     locale?: string;
-    measureText?: EmployeeDisplayMeasure;
+    measureText?: EmployeeDisplayTextMeasure;
+    measurementRevision?: number;
+    textMode?: EmployeeDisplayTextMode;
   },
 ): EmployeeDisplayVisualLayout => {
   const safeWidth = Math.max(1, availableWidth);
-  const metrics = TAG_SURFACE_METRICS[density];
-  const baseLineHeight = density === "compact" ? 16 : 20;
-  const surfaceHeight = getTagSurfaceHeight(density);
+  const metrics = TAG_SURFACE_METRICS;
+  const baseLineHeight = textMode === "editor" ? 16 : 20;
+  const surfaceHeight = getTagSurfaceHeight();
   const lines: EmployeeDisplayVisualLine[] = [];
   const formattedTagText = new Map<EmployeeTag, string>();
   const getFormattedTagText = (tag: EmployeeTag) => {
@@ -651,12 +668,13 @@ export const layoutEmployeeDisplayRichLines = (
   };
   const cacheKey = JSON.stringify([
     safeWidth,
-    density,
+    textMode,
     direction,
     font,
     lineGap,
     locale,
     getEmployeeDisplayMeasureId(measureText),
+    measurementRevision,
     sourceLines.map((line) => [
       Boolean(line.blank),
       line.nodes.map((node) =>
@@ -685,15 +703,24 @@ export const layoutEmployeeDisplayRichLines = (
 
   for (const sourceLine of sourceLines) {
     if (sourceLine.blank) {
-      lines.push({ blank: true, fragments: [], height: baseLineHeight, text: "", width: 0, y: 0 });
+      lines.push({
+        blank: true,
+        fragments: [],
+        gapAfter: lineGap,
+        height: baseLineHeight,
+        text: "",
+        width: 0,
+        y: 0,
+      });
       continue;
     }
     let fragments: EmployeeDisplayVisualFragment[] = [];
     let width = 0;
-    const pushLine = () => {
+    const pushLine = (gapAfter = lineGap) => {
       if (fragments.length === 0) return;
       lines.push({
         fragments,
+        gapAfter,
         height: Math.max(baseLineHeight, ...fragments.map((fragment) => fragment.height)),
         text: fragments
           .map((fragment) => fragment.text)
@@ -711,15 +738,21 @@ export const layoutEmployeeDisplayRichLines = (
         if (fragments.length === 0) rest = rest.trimStart();
         if (!rest) break;
         const remainingWidth = Math.max(1, safeWidth - width);
-        const fitted = takeFittingText(rest, remainingWidth, (value) =>
-          measureText(value, density, node),
+        const style = getEmployeeDisplayTextStyle(font, textMode, node);
+        const fitted = takeFittingText(
+          rest,
+          remainingWidth,
+          (value) => measureText(value, style) + (node.marks.code ? 4 : 0),
         );
         if (!fitted.text && fragments.length > 0) {
           pushLine();
           continue;
         }
         const text = fitted.text || rest;
-        const textWidth = Math.min(remainingWidth, measureText(text, density, node));
+        const textWidth = Math.min(
+          remainingWidth,
+          measureText(text, style) + (node.marks.code ? 4 : 0),
+        );
         fragments.push({
           height: baseLineHeight,
           node,
@@ -733,6 +766,34 @@ export const layoutEmployeeDisplayRichLines = (
         if (rest) pushLine();
       }
     };
+    const measureSurfaceText = (
+      type: "position" | "tag",
+      value: EmployeeDisplayPosition | EmployeeTag,
+      text: string,
+      sourceStart: number,
+    ) => {
+      if (type === "tag") return measureText(text, getTagTextStyle(font));
+      const position = value as EmployeeDisplayPosition;
+      const positionEnd = position.label.length;
+      const separatorEnd = positionEnd + 3;
+      const sourceEnd = sourceStart + text.length;
+      let measured = 0;
+      const ranges = [
+        { end: positionEnd, start: 0, weight: 500 },
+        { end: separatorEnd, start: positionEnd, weight: 400 },
+        { end: Number.POSITIVE_INFINITY, start: separatorEnd, weight: 400 },
+      ];
+      for (const range of ranges) {
+        const from = Math.max(sourceStart, range.start);
+        const to = Math.min(sourceEnd, range.end);
+        if (from >= to) continue;
+        measured += measureText(
+          text.slice(from - sourceStart, to - sourceStart),
+          getTagTextStyle(font, range.weight),
+        );
+      }
+      return measured;
+    };
     const appendSurfacePart = (
       type: "position" | "tag",
       value: EmployeeDisplayPosition | EmployeeTag,
@@ -745,21 +806,32 @@ export const layoutEmployeeDisplayRichLines = (
       let continued = initialContinued;
       while (rest) {
         const gap = width > 0 ? metrics.gap : 0;
-        let maxTextWidth = safeWidth - width - gap - metrics.horizontalPadding * 2;
+        const borderWidth = type === "position" ? 2 : 0;
+        let maxTextWidth = safeWidth - width - gap - metrics.horizontalPadding * 2 - borderWidth;
+        const fullRowTextWidth = safeWidth - metrics.horizontalPadding * 2 - borderWidth;
+        const measuredRest = measureSurfaceText(type, value, rest, start);
+        if (width > 0 && measuredRest <= fullRowTextWidth && measuredRest > maxTextWidth) {
+          pushLine(metrics.gap);
+          continue;
+        }
         if (maxTextWidth <= 0 && fragments.length > 0) {
-          pushLine();
+          pushLine(metrics.gap);
           continue;
         }
         maxTextWidth = Math.max(1, maxTextWidth);
-        const fitted = takeFittingText(rest, maxTextWidth, (text) => measureText(text, density));
+        const fitted = takeFittingText(rest, maxTextWidth, (text) =>
+          measureSurfaceText(type, value, text, start),
+        );
         if (!fitted.text && fragments.length > 0) {
-          pushLine();
+          pushLine(metrics.gap);
           continue;
         }
         const text = fitted.text || rest;
         const fragmentWidth = Math.min(
           safeWidth,
-          measureText(text, density) + metrics.horizontalPadding * 2,
+          measureSurfaceText(type, value, text, start) +
+            metrics.horizontalPadding * 2 +
+            borderWidth,
         );
         const x = width + gap;
         const common = {
@@ -780,7 +852,7 @@ export const layoutEmployeeDisplayRichLines = (
         start += text.length + Math.max(0, rest.length - fitted.rest.length - text.length);
         rest = fitted.rest;
         continued = true;
-        if (rest) pushLine();
+        if (rest) pushLine(metrics.gap);
       }
     };
     const appendSurface = (
@@ -801,7 +873,9 @@ export const layoutEmployeeDisplayRichLines = (
         const combinedText = `${lastFragment.text}${suffix}`;
         const combinedWidth = Math.min(
           safeWidth,
-          measureText(combinedText, density) + metrics.horizontalPadding * 2,
+          measureSurfaceText(type, value, combinedText, lastFragment.start) +
+            metrics.horizontalPadding * 2 +
+            (type === "position" ? 2 : 0),
         );
         if (lastFragment.x + combinedWidth <= safeWidth) {
           lastFragment.text = combinedText;
@@ -811,7 +885,26 @@ export const layoutEmployeeDisplayRichLines = (
           return;
         }
       }
-      appendSurfacePart(type, value, suffix.trimStart(), label.length, true);
+      const atomicSuffix = suffix.trimStart();
+      const atomicSuffixWidth =
+        measureSurfaceText(type, value, atomicSuffix, label.length) + metrics.horizontalPadding * 2;
+      if (atomicSuffixWidth <= safeWidth) {
+        if (fragments.length > 0) pushLine(metrics.gap);
+        fragments.push({
+          continued: true,
+          end: label.length + suffix.length,
+          height: surfaceHeight,
+          start: label.length,
+          tag: value as EmployeeTag,
+          text: atomicSuffix,
+          type: "tag",
+          width: atomicSuffixWidth,
+          x: 0,
+        });
+        width = atomicSuffixWidth;
+        return;
+      }
+      appendSurfacePart(type, value, atomicSuffix, label.length, true);
     };
 
     for (const node of sourceLine.nodes) {
@@ -839,14 +932,14 @@ export const layoutEmployeeDisplayRichLines = (
   let layoutHeight = 0;
   for (const [index, line] of lines.entries()) {
     line.y = layoutHeight;
-    layoutHeight += line.height + (index + 1 < lines.length ? lineGap : 0);
+    layoutHeight += line.height + (index + 1 < lines.length ? line.gapAfter : 0);
   }
 
   const layout: EmployeeDisplayVisualLayout = {
-    density,
     direction,
     height: layoutHeight,
     lines,
+    textMode,
   };
   const nextCache = sourceCache ?? new Map<string, EmployeeDisplayVisualLayout>();
   nextCache.set(cacheKey, layout);

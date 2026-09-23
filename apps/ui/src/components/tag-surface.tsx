@@ -2,24 +2,22 @@ import type { EmployeeTagColor } from "@org-tools/types";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { customTagColorSurfaceStyle, tagColorSurfaceClassName } from "@/lib/tag-color";
-import { TAG_SURFACE_METRICS, type TagSurfaceDensity } from "@/lib/tag-surface";
+import { TAG_SURFACE_METRICS } from "@/lib/tag-surface";
 import { cn } from "@/lib/utils";
 
 export function TagSurface({
   children,
   className,
   color,
-  density = "normal",
   style,
   title,
   variant = "tag",
   ...props
 }: Omit<ComponentPropsWithoutRef<"span">, "color"> & {
   color?: EmployeeTagColor | null | undefined;
-  density?: TagSurfaceDensity;
   variant?: "position" | "tag";
 }) {
-  const metrics = TAG_SURFACE_METRICS[density];
+  const metrics = TAG_SURFACE_METRICS;
   return (
     <span
       {...props}
@@ -32,7 +30,7 @@ export function TagSurface({
       )}
       data-tag-color={variant === "tag" ? (color ?? "none") : undefined}
       data-tag-color-surface={variant === "tag" ? true : undefined}
-      data-tag-surface-density={density}
+      data-tag-surface-density="universal"
       style={{
         ...customTagColorSurfaceStyle(variant === "tag" ? color : null),
         borderRadius: metrics.radius,

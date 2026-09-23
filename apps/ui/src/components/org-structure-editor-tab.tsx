@@ -36,6 +36,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import {
   HiOutlineArrowDownTray,
@@ -142,6 +143,13 @@ import {
   renderEmployeeDisplayRichLines,
 } from "@/lib/employee-display";
 import {
+  employeeDisplayTextMeasureEngine,
+  ensureEmployeeDisplayFontsReady,
+  getEmployeeDisplayMeasurementRevision,
+  getEmployeeDisplayUiFontFamily,
+  subscribeEmployeeDisplayTextMeasurements,
+} from "@/lib/employee-display-measure";
+import {
   countEmployeeIdsInSelection,
   countEmployeeIdsNotInSelection,
 } from "@/lib/employee-selection";
@@ -183,7 +191,6 @@ import {
   ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
-  ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP,
   ORG_EDITOR_UNIT_VERTICAL_GAP,
   type OrgEditorUnitEmployeeSummary,
   type OrgEditorUnitTagSummary,
@@ -1688,7 +1695,7 @@ function OrgEditorNode({
                             positionSelected && "[&_span]:text-primary-foreground",
                           )}
                           compact
-                          density="canvas"
+                          includeYear
                           tags={tags}
                           wrapWidth={getOrgEditorEmployeeTextMaxWidth(unitWidth)}
                         />
@@ -1892,7 +1899,6 @@ function OrgEditorNode({
               className="absolute inline-flex max-w-full items-center whitespace-nowrap"
               color={chip.color}
               data-tag-label={chip.label}
-              density="compact"
               key={chip.id}
               style={{
                 height: chip.height,
@@ -1905,14 +1911,7 @@ function OrgEditorNode({
                 <span className="inline-flex min-w-0 whitespace-nowrap" key={line.id}>
                   {line.label && <span>{line.label}</span>}
                   {line.suffix && (
-                    <span
-                      className="shrink-0 opacity-70"
-                      style={{
-                        marginInlineStart: line.label ? ORG_EDITOR_UNIT_TAG_FOOTER_COUNT_GAP : 0,
-                      }}
-                    >
-                      {line.suffix}
-                    </span>
+                    <span className="shrink-0 whitespace-pre opacity-70">{line.suffix}</span>
                   )}
                 </span>
               ))}
@@ -2432,6 +2431,14 @@ export const OrgStructureEditorTab = observer(() => {
   const countText = useCountText();
   const format = useAppFormatter();
   const store = useOrgStore();
+  const measurementRevision = useSyncExternalStore(
+    subscribeEmployeeDisplayTextMeasurements,
+    getEmployeeDisplayMeasurementRevision,
+    getEmployeeDisplayMeasurementRevision,
+  );
+  useEffect(() => {
+    void ensureEmployeeDisplayFontsReady(store.locale);
+  }, [store.locale]);
   const units = store.editorUnits;
   const editor = store.orgEditor;
   const viewSettings = editor.settings;
@@ -2898,8 +2905,8 @@ export const OrgStructureEditorTab = observer(() => {
                 }),
                 {
                   availableWidth,
-                  density: "compact",
                   direction: textDirection,
+                  font: getEmployeeDisplayUiFontFamily(),
                   formatTag: (tag) =>
                     tag.date
                       ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
@@ -2911,6 +2918,9 @@ export const OrgStructureEditorTab = observer(() => {
                       : tag.label,
                   lineGap: store.employeeDisplayLineGaps.editor,
                   locale: store.locale,
+                  measureText: employeeDisplayTextMeasureEngine.measure,
+                  measurementRevision,
+                  textMode: "editor",
                 },
               )
             : null;
@@ -2927,7 +2937,7 @@ export const OrgStructureEditorTab = observer(() => {
           continue;
         }
         const tags = openPositionTagsById.get(row.openPosition.id) ?? [];
-        const labels = tags.map((tag) =>
+        const formattedTags = tags.map((tag) =>
           tag.date
             ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
                 day: "numeric",
@@ -2937,7 +2947,14 @@ export const OrgStructureEditorTab = observer(() => {
               })}`
             : tag.label,
         );
-        heights.set(row.key, getOrgEditorEmployeeRowHeightForTagLabels(labels, availableWidth));
+        heights.set(
+          row.key,
+          getOrgEditorEmployeeRowHeightForTagLabels(
+            tags.map((tag) => tag.label),
+            availableWidth,
+            tags.map((tag, index) => formattedTags[index]?.slice(tag.label.length) ?? ""),
+          ),
+        );
       }
       geometryByUnitId.set(unit.id, { heights, layouts, orderedRows });
     }
@@ -2946,6 +2963,7 @@ export const OrgStructureEditorTab = observer(() => {
     displayUnits,
     employeeById,
     format,
+    measurementRevision,
     openPositionTagsById,
     store.employeeDisplayFormats.editor,
     store.employeeDisplayLineGaps.editor,

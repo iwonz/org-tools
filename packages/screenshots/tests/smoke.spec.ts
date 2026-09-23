@@ -1739,7 +1739,18 @@ test("edits contextual Employee card formats with live previews and local image 
 }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
-  await replaceWithSyntheticState(page);
+  const displayState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
+  const measuredEmployee = displayState.organization.employees[0];
+  if (!measuredEmployee) throw new Error("Synthetic Employee is unavailable.");
+  measuredEmployee.username = "vkteam";
+  measuredEmployee.email = "avery.stone@vkteam.ru";
+  const displayImportDialog = await openImportDialog(page, {
+    buffer: Buffer.from(JSON.stringify(displayState)),
+    mimeType: "application/json",
+    name: "employee-display-measurement.json",
+  });
+  await displayImportDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await expect(displayImportDialog).toBeHidden();
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
 
   await page.locator('[data-demo-id="employee-model-button"]').click();
@@ -1753,14 +1764,30 @@ test("edits contextual Employee card formats with live previews and local image 
     '[data-demo-id="employee-display-employees-preview"]',
   );
   await expect(
-    defaultEmployeesPreview.getByText("avery.stone@example.test", { exact: true }),
+    defaultEmployeesPreview.getByText("avery.stone@vkteam.ru", { exact: true }),
   ).toBeVisible();
   await expect(
     defaultEmployeesPreview.getByRole("link", {
-      name: "avery.stone@example.test",
+      name: "avery.stone@vkteam.ru",
       exact: true,
     }),
   ).toHaveCount(0);
+  await expect(defaultEmployeesPreview.getByText("vkteam", { exact: true })).toBeVisible();
+  for (const value of ["vkteam", "avery.stone@vkteam.ru"]) {
+    const renderedValue = defaultEmployeesPreview.getByText(value, { exact: true });
+    expect(
+      await renderedValue.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const textBounds = range.getBoundingClientRect();
+        const lineBounds = element.parentElement?.getBoundingClientRect();
+        return {
+          completeText: element.textContent,
+          fits: lineBounds ? textBounds.right <= lineBounds.right + 0.5 : false,
+        };
+      }),
+    ).toEqual({ completeText: value, fits: true });
+  }
   await expect(
     defaultEmployeesPreview.locator("[data-employee-position-assignment]").first(),
   ).toBeVisible();
@@ -1795,6 +1822,10 @@ test("edits contextual Employee card formats with live previews and local image 
     await expect(
       modelDialog.locator(`[data-demo-id="employee-display-${key}-reset"]`),
     ).toBeVisible();
+    await expect(modelDialog.locator(`[data-demo-id="employee-display-${key}-reset"]`)).toHaveCSS(
+      "font-weight",
+      "400",
+    );
     const formatInput = modelDialog.locator(`#employee-display-${key}-format`);
     await formatInput.fill("@full");
     await expect(section.locator('[data-demo-id="template-token-suggestions"]')).toContainText(
@@ -1970,6 +2001,58 @@ test("edits contextual Employee card formats with live previews and local image 
       .locator('[data-demo-id="employee-display-employees-preview"] [data-tag-color-surface]')
       .first(),
   ).toBeVisible();
+  const previewTagSurfaces = modelDialog.locator(
+    '[data-demo-id="employee-display-employees-preview"] [data-tag-color-surface]',
+  );
+  expect(
+    await previewTagSurfaces.first().evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        borderRadius: style.borderRadius,
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        paddingBottom: style.paddingBottom,
+        paddingLeft: style.paddingLeft,
+        paddingRight: style.paddingRight,
+        paddingTop: style.paddingTop,
+      };
+    }),
+  ).toEqual({
+    borderRadius: "6px",
+    fontSize: "11px",
+    lineHeight: "16px",
+    paddingBottom: "2px",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    paddingTop: "2px",
+  });
+  const previewTagGeometry = await previewTagSurfaces.evaluateAll((elements) =>
+    elements.map((element) => {
+      const bounds = element.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const content = range.getBoundingClientRect();
+      return {
+        bottom: bounds.bottom,
+        left: bounds.left,
+        right: bounds.right,
+        rightInset: bounds.right - content.right,
+        top: bounds.top,
+      };
+    }),
+  );
+  expect(previewTagGeometry[0]?.rightInset).toBeCloseTo(8, 0);
+  if (previewTagGeometry.length > 1) {
+    const first = previewTagGeometry[0];
+    const second = previewTagGeometry[1];
+    if (first && second) {
+      const gap =
+        Math.abs(second.top - first.top) < 1
+          ? second.left - first.right
+          : second.top - first.bottom;
+      expect(gap).toBeCloseTo(6, 0);
+    }
+  }
   await expect(
     modelDialog.locator(
       '[data-demo-id="employee-display-units-preview"] [data-employee-position-assignment]',
@@ -1986,8 +2069,8 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(employeeCard).toHaveAccessibleName(/\S/u);
   await expect(employeeCard.getByRole("link", { name: "Avery Stone", exact: true })).toHaveCount(0);
   await expect(
-    employeeCard.getByRole("link", { name: "avery.stone@example.test", exact: true }),
-  ).toHaveAttribute("href", "mailto:avery.stone@example.test");
+    employeeCard.getByRole("link", { name: "avery.stone@vkteam.ru", exact: true }),
+  ).toHaveAttribute("href", "mailto:avery.stone@vkteam.ru");
   await expect(
     employeeCard.getByText("https://example.test/profiles/avery-stone", { exact: true }),
   ).toBeVisible();
@@ -2035,7 +2118,34 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(editorRow.locator('[data-employee-markdown-link="inert"]')).toBeVisible();
   await expect(editorRow.locator("a")).toHaveCount(0);
   await expect(editorRow.getByRole("button", { name: "Product", exact: true })).toHaveCount(0);
-  await expect(editorRow.locator("[data-tag-color-surface]").first()).toBeVisible();
+  const editorTagSurface = editorRow.locator("[data-tag-color-surface]").first();
+  await expect(editorTagSurface).toBeVisible();
+  expect(
+    await editorTagSurface.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return [
+        style.fontSize,
+        style.lineHeight,
+        style.paddingLeft,
+        style.paddingRight,
+        style.paddingTop,
+        style.paddingBottom,
+        style.borderRadius,
+      ];
+    }),
+  ).toEqual(["11px", "16px", "8px", "8px", "2px", "2px", "6px"]);
+  const footerTagSurface = page
+    .locator("[data-org-editor-unit-tag-footer] [data-tag-label]")
+    .first();
+  await expect(footerTagSurface).toBeVisible();
+  expect(
+    await footerTagSurface.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return bounds.right - range.getBoundingClientRect().right;
+    }),
+  ).toBeCloseTo(8, 0);
   expect(
     await editorRow.evaluate((element) => element.getBoundingClientRect().height),
   ).toBeGreaterThan(48);
@@ -2792,12 +2902,12 @@ test("renders split Org Editor controls and reveals search to the left", async (
   expect(footerChipMetrics.length).toBeGreaterThan(1);
   for (const metric of footerChipMetrics) {
     const context = JSON.stringify(metric);
-    expect(metric.leftInset, context).toBeGreaterThanOrEqual(5.5);
-    expect(metric.leftInset, context).toBeLessThanOrEqual(7);
-    expect(metric.rightInset, context).toBeGreaterThanOrEqual(5.5);
-    expect(metric.rightInset, context).toBeLessThanOrEqual(14);
-    expect(metric.paddingInlineStart, context).toBe("6px");
-    expect(metric.paddingInlineEnd, context).toBe("6px");
+    expect(metric.leftInset, context).toBeGreaterThanOrEqual(7.5);
+    expect(metric.leftInset, context).toBeLessThanOrEqual(8.5);
+    expect(metric.rightInset, context).toBeGreaterThanOrEqual(7.5);
+    expect(metric.rightInset, context).toBeLessThanOrEqual(8.5);
+    expect(metric.paddingInlineStart, context).toBe("8px");
+    expect(metric.paddingInlineEnd, context).toBe("8px");
     expect(metric.labelScrollWidth, context).toBeLessThanOrEqual(metric.labelClientWidth + 1);
   }
   expect(new Set(footerChipMetrics.map((metric) => metric.width)).size).toBeGreaterThan(1);

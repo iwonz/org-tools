@@ -215,13 +215,13 @@ Editor membership removal SHALL affect only the active View.
 The Employee model SHALL retain field configuration under an icon-labeled Model tab and expose an
 icon-labeled Display tab containing flat Employees section, Units section, Editor card, and Editor
 export card format sections. Each format SHALL use the shared token input with inline Markdown tools,
-a 0-24 pixel integer number input for line spacing, a localized Reset text action, and a bordered
-live destination preview. Every valid format or gap change MUST update the corresponding stored value
-immediately. Closing the dialog MUST retain accepted Display changes, and the Display tab MUST NOT
-offer a separate Save action. Model-tab custom-field drafts MUST retain their existing explicit Save
-workflow. New organizations MUST initialize Employees and Units formats with `{fullName}`,
-`{username}`, `{email}`, `{positions}`, and `{tags}` on separate lines and MUST initialize every line
-gap to 4 pixels.
+a 0-24 pixel integer number input for line spacing, a localized normal-weight Reset text action, and
+a bordered live destination preview. Every valid format or gap change MUST update the corresponding
+stored value immediately. Closing the dialog MUST retain accepted Display changes, and the Display
+tab MUST NOT offer a separate Save action. Model-tab custom-field drafts MUST retain their existing
+explicit Save workflow. New organizations MUST initialize Employees and Units formats with
+`{fullName}`, `{username}`, `{email}`, `{positions}`, and `{tags}` on separate lines and MUST
+initialize every line gap to 4 pixels.
 
 The default Editor-export format MUST embed the Manager translation for the creation locale inside
 an `isBoss` ternary. A later locale change MUST NOT rewrite that stored user format. Reset MUST derive
@@ -246,7 +246,7 @@ change another format or any line gap.
 
 #### Scenario: Reset one format
 - **WHEN** a user activates Reset for one Display section after changing its format and line gap
-- **THEN** only that format becomes the current locale's maintained default while its line gap and every other section remain unchanged
+- **THEN** only that format becomes the current locale's maintained default, the action uses normal font weight, and its line gap and every other section remain unchanged
 
 #### Scenario: Inspect the Display layout
 - **WHEN** the Employee model opens either top-level tab
@@ -300,19 +300,19 @@ Employee cards SHALL render authored format lines as inline Markdown containing 
 bold, italic, strike, inline code, safe links, native Tag surfaces, and native compound assignment
 surfaces. Internal source-authored blank lines between visible content SHALL reserve one empty row;
 leading and trailing blank lines and lines emptied only by absent values or false conditions SHALL
-be omitted. Ordinary text MUST wrap by words to the available width with grapheme fallback for an
-oversized uninterrupted value. Every line in one context SHALL use the same base size, color, and
-normal weight; Markdown alone controls text emphasis.
+be omitted. Ordinary text MUST be measured with its actual target font, wrap by words with grapheme
+fallback for an oversized uninterrupted value, and remain complete without fragment-level clipping.
+Every line in one context SHALL use the same base size, color, and normal weight; Markdown alone
+controls text emphasis.
 
-The selected pixel gap SHALL exist only between adjacent visible visual rows, including authored
-blank rows and rows created by automatic wrapping. It MUST add no space before the first row or
-after the last row and MUST have no effect on the height of a single row. Total content height MUST
-equal the sum of visual-row heights plus the gap multiplied by one less than the visible row count.
 Text, Tags, and assignments MUST participate in one inline flow without a semantic token forcing a
 new row. A long semantic surface SHALL split into content-sized decorated line fragments; every
 fragment MUST retain the logical surface's padding, radius, color, and applicable border without
 painting unused width after its content. Assignment fragments MUST retain emphasized position text,
-a middle dot, and secondary Unit text. Avatar, boss marker, card actions, search highlighting, safe
+a middle dot, and secondary Unit text. A boundary that continues a Tag or assignment flow MUST use a
+6 pixel vertical gap. Every authored, blank, conditionally resolved, or ordinary text-wrap boundary
+MUST use the selected format line gap. Neither kind MUST add space before the first or after the last
+row, and one row MUST receive no gap. Avatar, boss marker, card actions, search highlighting, safe
 explicit Markdown navigation, and the full-name accessible label MUST remain available independently
 of formatted content.
 
@@ -330,15 +330,19 @@ styled but inert in Editor and PNG.
 
 #### Scenario: Preserve authored rows
 - **WHEN** visible format lines contain an internal blank line and long text exceeding card width
-- **THEN** the blank row remains, the text wraps by words or graphemes, and configured gaps appear only between the resulting visual rows
+- **THEN** the blank row remains, the text wraps by actual-font word or grapheme measurements, and the configured gap appears between the resulting non-semantic rows
+
+#### Scenario: Preserve complete identity values
+- **WHEN** a username, email, URL, or custom value contains narrow and wide glyphs and still fits the available row
+- **THEN** every final glyph remains visible and the value is neither truncated nor clipped to an estimated fragment width
 
 #### Scenario: Space one visual row
 - **WHEN** a resolved card contains exactly one visual row at line gaps 0, 4, and 24
 - **THEN** its information-column height is identical at every gap
 
-#### Scenario: Space several visual rows
-- **WHEN** a resolved card contains multiple explicit, empty, wrapped, Tag, or assignment rows
-- **THEN** its height equals the sum of row heights plus one configured gap between each adjacent pair and no outer gap
+#### Scenario: Space mixed visual rows
+- **WHEN** a resolved card contains authored, empty, ordinary wrapped, Tag continuation, or assignment continuation rows
+- **THEN** each semantic continuation uses 6 pixels, each other internal boundary uses the selected line gap, and no outer gap is present
 
 #### Scenario: Drop dynamic empty rows
 - **WHEN** a complete source line contains only an absent field or a false conditional branch
@@ -350,7 +354,7 @@ styled but inert in Editor and PNG.
 
 #### Scenario: Render ordinary tokens without links
 - **WHEN** a format contains `{position}`, `{unitName}`, `{fullName}`, `{profileUrl}`, `{email}`, or a custom token outside Markdown link syntax
-- **THEN** each resolved value is ordinary text with no navigation target
+- **THEN** each resolved value is ordinary complete text with no navigation target
 
 #### Scenario: Render an explicit Markdown link
 - **WHEN** an interactive list-card format contains an ordinary token inside a safe Markdown link
@@ -370,7 +374,7 @@ styled but inert in Editor and PNG.
 
 #### Scenario: Preserve inline native fields
 - **WHEN** a format contains Markdown text before and after `{tags}` or `{positions}`
-- **THEN** every value shares the available row, wrapping only when its measured fragments no longer fit
+- **THEN** every value shares the available row, wrapping only when its actual measured fragments no longer fit
 
 #### Scenario: Wrap one long Tag
 - **WHEN** one Tag label is wider than the information column

@@ -261,12 +261,12 @@ describe("Org Editor image export", () => {
     expect(requests.some((request) => request.includes("Montserrat"))).toBe(true);
     expect(
       requests.some(
-        (request) => request.startsWith("italic 700 12px") && request.includes("Montserrat"),
+        (request) => request.startsWith("italic 600 12px") && request.includes("Montserrat"),
       ),
     ).toBe(true);
   });
 
-  test("localizes every dated tag and expands PNG rows with compact export geometry", () => {
+  test("localizes every dated tag and expands PNG rows with universal Tag geometry", () => {
     const taggedEmployee: Employee = {
       ...employee,
       tags: [
@@ -284,12 +284,18 @@ describe("Org Editor image export", () => {
     expect(getOrgEditorExportEmployeeTags(taggedEmployee, "en")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ color: "blue", label: "Alpha" }),
-        expect.objectContaining({ color: "#7c3aed80", label: "Last day · Sep 1, 2026" }),
+        expect.objectContaining({
+          color: "#7c3aed80",
+          label: "Last day",
+          suffix: " · Sep 1, 2026",
+        }),
       ]),
     );
-    expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBe(38);
-    expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90)).toBeCloseTo(43.2);
-    expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(4);
+    expect(getOrgEditorExportEmployeeTagChipWidth("Alpha", 90)).toBeGreaterThan(40);
+    expect(getOrgEditorExportEmployeeTagChipWidth("Mentor", 90)).toBeGreaterThan(
+      getOrgEditorExportEmployeeTagChipWidth("Alpha", 90),
+    );
+    expect(getOrgEditorExportEmployeeTagRowCount(english, 90)).toBe(5);
     expect(getOrgEditorExportEmployeeRowHeight(taggedEmployee, "en", 90)).toBeGreaterThan(76);
   });
 
@@ -328,7 +334,11 @@ describe("Org Editor image export", () => {
       180,
     );
 
-    expect(layout.chips.map((chip) => chip.color)).toEqual(["teal", "#7c3aed80", null]);
+    expect(
+      [0, 1, 2].map(
+        (itemIndex) => layout.chips.find((chip) => chip.itemIndex === itemIndex)?.color,
+      ),
+    ).toEqual(["teal", "#7c3aed80", null]);
   });
 
   test("preserves the neutral bordered treatment for position chips", () => {

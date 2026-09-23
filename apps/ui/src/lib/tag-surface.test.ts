@@ -14,7 +14,6 @@ describe("shared inline surface layout", () => {
   ])("wraps %s by words and graphemes without losing content", (label) => {
     const layout = layoutInlineSurfaces({
       availableWidth: 60,
-      density: "compact",
       locale: "en",
       measureText: measure,
       texts: [label],
@@ -33,20 +32,31 @@ describe("shared inline surface layout", () => {
   test("keeps a short final fragment content-sized", () => {
     const layout = layoutInlineSurfaces({
       availableWidth: 60,
-      density: "compact",
       measureText: measure,
       texts: ["abcdefghijk"],
     });
 
     expect(layout.fragments).toHaveLength(2);
-    expect(layout.fragments[0]?.width).toBe(60);
-    expect(layout.fragments[1]?.width).toBe(30);
+    expect(layout.fragments[0]?.width).toBe(58);
+    expect(layout.fragments[1]?.width).toBe(40);
+  });
+
+  test("moves a short Tag to the next row instead of orphaning its last grapheme", () => {
+    const layout = layoutInlineSurfaces({
+      availableWidth: 130,
+      measureText: measure,
+      texts: ["Engineering", "Mentor"],
+    });
+
+    expect(layout.fragments.map(({ row, text }) => ({ row, text }))).toEqual([
+      { row: 0, text: "Engineering" },
+      { row: 1, text: "Mentor" },
+    ]);
   });
 
   test("keeps a counter suffix whole on the last fragment or its own fragment", () => {
     const layout = layoutInlineSurfaces({
       availableWidth: 72,
-      density: "compact",
       measureText: measure,
       suffixes: [" · 12"],
       texts: ["Long employee tag"],
@@ -56,36 +66,45 @@ describe("shared inline surface layout", () => {
     expect(suffixFragments).toHaveLength(1);
     expect(suffixFragments[0]?.text.endsWith("· 12")).toBe(true);
     expect(suffixFragments[0]?.text.match(/·/gu)).toHaveLength(1);
+    const suffixFragment = suffixFragments[0];
+    if (!suffixFragment) throw new Error("Expected an atomic counter suffix.");
+    expect(suffixFragment.width - measure(suffixFragment.text)).toBe(
+      TAG_SURFACE_METRICS.horizontalPadding * 2,
+    );
+    expect(
+      layout.fragments
+        .filter((fragment) => fragment.row > 0)
+        .every(
+          (fragment) =>
+            fragment.y === fragment.row * (getTagSurfaceHeight() + TAG_SURFACE_METRICS.gap),
+        ),
+    ).toBe(true);
   });
 
-  test("uses the centralized normal and compact metrics", () => {
-    const compact = layoutInlineSurfaces({
+  test("uses the centralized universal metrics", () => {
+    const layout = layoutInlineSurfaces({
       availableWidth: 200,
-      density: "compact",
-      measureText: measure,
-      texts: ["Alpha"],
-    });
-    const normal = layoutInlineSurfaces({
-      availableWidth: 200,
-      density: "normal",
       measureText: measure,
       texts: ["Alpha"],
     });
 
-    expect(compact.fragments[0]).toMatchObject({
-      height: getTagSurfaceHeight("compact"),
-      width: measure("Alpha") + TAG_SURFACE_METRICS.compact.horizontalPadding * 2,
+    expect(layout.fragments[0]).toMatchObject({
+      height: getTagSurfaceHeight(),
+      width: measure("Alpha") + TAG_SURFACE_METRICS.horizontalPadding * 2,
     });
-    expect(normal.fragments[0]).toMatchObject({
-      height: getTagSurfaceHeight("normal"),
-      width: measure("Alpha") + TAG_SURFACE_METRICS.normal.horizontalPadding * 2,
+    expect(TAG_SURFACE_METRICS).toEqual({
+      fontSize: 11,
+      gap: 6,
+      horizontalPadding: 8,
+      lineHeight: 16,
+      radius: 6,
+      verticalPadding: 2,
     });
   });
 
   test("mirrors geometry for RTL while preserving semantic order", () => {
     const leftToRight = layoutInlineSurfaces({
       availableWidth: 180,
-      density: "normal",
       direction: "ltr",
       locale: "ar",
       measureText: measure,
@@ -93,7 +112,6 @@ describe("shared inline surface layout", () => {
     });
     const rightToLeft = layoutInlineSurfaces({
       availableWidth: 180,
-      density: "normal",
       direction: "rtl",
       locale: "ar",
       measureText: measure,

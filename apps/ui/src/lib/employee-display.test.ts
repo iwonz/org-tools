@@ -116,6 +116,42 @@ describe("Employee display formats", () => {
     ).toEqual(["Avery", "Stone", "", "Long", "words", "wrap", "abcde", "fghij"]);
   });
 
+  test.each([
+    "avery.stone@example.test",
+    "avery.stone@example.ru",
+    "vkteam",
+    "\u0448\u0438\u0440\u043e\u043a\u0438\u0439.\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c@example.test",
+    "\u7528\u6237@example.test",
+    "team\ud83d\ude80@example.test",
+  ])("preserves every measured character while wrapping %s", (value) => {
+    const source = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee: { ...employee, email: value, username: value },
+      format: "{email}",
+      unitContexts: [],
+    });
+    const measureText = (text: string, style: { fontSize: number }) =>
+      [...text].reduce(
+        (width, character) => width + style.fontSize * (/[mMwW@%]/u.test(character) ? 0.92 : 0.47),
+        0,
+      );
+    const layout = layoutEmployeeDisplayRichLines(source, {
+      availableWidth: 74,
+      measureText,
+      textMode: "card",
+    });
+
+    expect(
+      layout.lines
+        .flatMap((line) => line.fragments)
+        .map((fragment) => fragment.text)
+        .join(""),
+    ).toBe(value);
+    expect(
+      layout.lines.flatMap((line) => line.fragments).every((fragment) => fragment.width <= 74),
+    ).toBe(true);
+  });
+
   test("renders custom fields and conditionals through the shared grammar", () => {
     const definition: CustomEmployeeFieldDefinition = {
       allowCustomOptions: false,
@@ -208,7 +244,6 @@ describe("Employee display formats", () => {
     });
     const layout = layoutEmployeeDisplayRichLines(lines, {
       availableWidth: 260,
-      density: "compact",
       direction: "ltr",
       font: "system-ui",
       locale: "en",
@@ -234,12 +269,35 @@ describe("Employee display formats", () => {
     expect(
       layoutEmployeeDisplayRichLines(lines, {
         availableWidth: 260,
-        density: "compact",
         direction: "ltr",
         font: "system-ui",
         locale: "en",
       }),
     ).toBe(layout);
+  });
+
+  test("moves a complete short Tag instead of orphaning its final grapheme", () => {
+    const source = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee: {
+        ...employee,
+        tags: [
+          { color: null, date: null, label: "Engineering", tagId: uuid(30) },
+          { color: null, date: null, label: "Mentor", tagId: uuid(31) },
+        ],
+      },
+      format: "{tags}",
+      unitContexts: [],
+    });
+    const layout = layoutEmployeeDisplayRichLines(source, {
+      availableWidth: 130,
+      measureText: (text) => [...text].length * 6,
+      textMode: "editor",
+    });
+
+    expect(
+      layout.lines.map((line) => line.fragments.map((fragment) => fragment.text).join("")),
+    ).toEqual(["Engineering", "Mentor"]);
   });
 
   test("adds line gaps only between measured visual rows", () => {
@@ -251,13 +309,13 @@ describe("Employee display formats", () => {
     });
     const singleAtZero = layoutEmployeeDisplayRichLines(singleSource, {
       availableWidth: 400,
-      density: "normal",
       lineGap: 0,
+      textMode: "card",
     });
     const singleAtTwentyFour = layoutEmployeeDisplayRichLines(singleSource, {
       availableWidth: 400,
-      density: "normal",
       lineGap: 24,
+      textMode: "card",
     });
     expect(singleAtZero.lines).toHaveLength(1);
     expect(singleAtTwentyFour.height).toBe(singleAtZero.height);
@@ -271,8 +329,8 @@ describe("Employee display formats", () => {
     });
     const multipleAtFour = layoutEmployeeDisplayRichLines(multipleSource, {
       availableWidth: 400,
-      density: "normal",
       lineGap: 4,
+      textMode: "card",
     });
     expect(multipleAtFour.lines).toHaveLength(3);
     expect(multipleAtFour.lines.map((line) => line.y)).toEqual([0, 24, 48]);
@@ -280,14 +338,38 @@ describe("Employee display formats", () => {
 
     const wrappedAtTwentyFour = layoutEmployeeDisplayRichLines(singleSource, {
       availableWidth: 32,
-      density: "normal",
       lineGap: 24,
+      textMode: "card",
     });
     expect(wrappedAtTwentyFour.lines.length).toBeGreaterThan(1);
     expect(wrappedAtTwentyFour.height).toBe(
       wrappedAtTwentyFour.lines.reduce((sum, line) => sum + line.height, 0) +
         24 * (wrappedAtTwentyFour.lines.length - 1),
     );
+
+    const semanticSource = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee: {
+        ...employee,
+        tags: [{ color: null, date: "2030-12-31", label: "A long semantic tag" }],
+      },
+      format: "{tags}",
+      unitContexts: [],
+    });
+    const semanticLayout = layoutEmployeeDisplayRichLines(semanticSource, {
+      availableWidth: 64,
+      formatTag: (tag) => `${tag.label} · Dec 31, 2030`,
+      lineGap: 24,
+      measureText: (text) => text.length * 5,
+      textMode: "card",
+    });
+    expect(semanticLayout.lines.length).toBeGreaterThan(1);
+    expect(
+      semanticLayout.lines.slice(1).map((line, index) => {
+        const previous = semanticLayout.lines[index];
+        return line.y - (previous?.y ?? 0) - (previous?.height ?? 0);
+      }),
+    ).toEqual(Array(semanticLayout.lines.length - 1).fill(6));
   });
 
   test("keeps every ordinary navigation-like token as plain text", () => {

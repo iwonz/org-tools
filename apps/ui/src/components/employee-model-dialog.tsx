@@ -1022,7 +1022,7 @@ export const EmployeeModelDialog = observer(function EmployeeModelDialog({
                         label={t("Format")}
                         labelAction={
                           <Button
-                            className="h-auto p-0 text-sm"
+                            className="h-auto p-0 text-sm font-normal"
                             data-demo-id={`employee-display-${key}-reset`}
                             onClick={() => store.resetEmployeeDisplayFormat(key)}
                             type="button"
