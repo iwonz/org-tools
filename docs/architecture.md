@@ -42,11 +42,12 @@ and Editor image output. The shared renderer resolves built-in Unit and Employee
 fields, evaluates the existing token and conditional grammar, joins arrays with `; `, and removes
 empty trimmed lines. It then parses only inline Markdown into a shared rich-line model. Employee and
 custom-field values enter that model as text nodes, so their punctuation cannot become formatting.
-Tags and positions remain semantic groups: DOM renders the existing colored Tag chips and neutral
-position badges, while Canvas paints the same compact treatments. List and fallback contexts
+Tags and compound assignments remain semantic groups: DOM renders the existing colored Tag chips
+and `Position · Unit` pills, while Canvas paints the same compact treatments. `{position}` and
+`{unitName}` remain ordinary text values. List and fallback contexts
 aggregate system-View assignments in structural order; one Unit or Editor row resolves only that
-Unit. Safe explicit links override field navigation in lists and remain styled but inert in Editor
-and PNG. A custom-field key rename rewrites all four templates in the same action, and a referenced
+Unit. Plain `{email}` remains text; an explicit safe Markdown link can add `mailto:` navigation in
+lists and remains styled but inert in Editor and PNG. A custom-field key rename rewrites all four templates in the same action, and a referenced
 custom field cannot be deleted. The Editor DOM and PNG renderer share rich-line counts, wrapped chip
 rows, row heights, offsets, text width, Unit bounds, hit testing, and anchors. Image dialogs clone
 the saved Editor-export format into transient settings.
@@ -312,7 +313,7 @@ headers, roster padding, centered avatars, Employee text columns, compact tag pa
 heights, and hierarchy anchors. The selected export font measures one immutable tag layout per
 Employee; an oversized label wraps in full inside one taller chip, and the resulting block height
 drives rows, Unit bounds, and connections. Its deterministic canvas painter keeps Unit identity,
-Employee summary, Employee-format inline Markdown, native Employee Tags and positions,
+Employee summary, Employee-format inline Markdown, native Employee Tags and compound assignments,
 direct-membership Tag footer, Tag tonal colors, boss treatment, and persistent
 active-View distribution row tones while excluding Static/Live membership type, transient
 selection, hover, focus, handles, menus, placement paths, and endpoint markers. Distribution status

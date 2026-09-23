@@ -36,8 +36,9 @@ the same in-memory or loopback boundary. New custom options remain transient dia
 complete Employee save succeeds. Employee display formats and their previews resolve only the
 current local catalog and View context. Display drafts and image-dialog overrides remain in dialog
 memory until their explicit Save or dismissal. Their inline Markdown parser never executes HTML,
-loads images, or interprets Markdown from resolved Employee values. Only explicit `http`, `https`,
-`mailto`, and `tel` links can navigate from list cards after a user action; Editor and image links
+loads images, or interprets Markdown from resolved Employee values. Plain fields, including
+`{email}`, never create navigation. Only explicit `http`, `https`, `mailto`, and `tel` Markdown
+links can navigate from list cards after a user action; Editor and image links
 remain inert. Rendering or previewing a format creates no remote lookup. Export
 validates and downloads the complete state only after an explicit user action. Structured JSON field
 ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
@@ -53,8 +54,8 @@ persists organization data. Custom Views contain references to the same global E
 never duplicate profile or avatar payloads. Organization records are never
 copied to browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs;
 remote avatars are never fetched. Crop encoding prefers WebP and falls back only to the browser's
-local PNG canvas encoder; neither path uploads the source or result. Profile and email navigation
-require direct user actions and referrer protection.
+local PNG canvas encoder; neither path uploads the source or result. Profile navigation and
+explicit email links require direct user actions and referrer protection.
 
 Open positions remain inside their owning View and Unit. Their titles, nullable named/custom
 background colors, and global Tag references use the same complete State, loopback SQLite, and

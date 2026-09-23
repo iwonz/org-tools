@@ -5,6 +5,7 @@ import { gfm } from "micromark-extension-gfm";
 
 import {
   evaluateCustomEmployeeFields,
+  isEmployeeDisplayPositionsKey,
   normalizeCustomEmployeeFieldKey,
 } from "@/lib/custom-employee-fields";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
@@ -35,6 +36,7 @@ export type EmployeeDisplayRenderOptions = {
   customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[];
   employee: Employee;
   format: string;
+  positionNotSpecifiedLabel?: string;
   unitContexts: readonly EmployeeUnitContext[];
 };
 
@@ -68,6 +70,9 @@ export type EmployeeDisplayPositionsNode = {
   positions: EmployeeDisplayPosition[];
   type: "positions";
 };
+
+export const getEmployeeDisplayPositionText = (position: EmployeeDisplayPosition) =>
+  `${position.label} · ${position.unitContext.unitName}`;
 
 export type EmployeeDisplayNode =
   | EmployeeDisplayPositionsNode
@@ -166,6 +171,7 @@ const createEmployeeDisplayFieldResolver = ({
   bossLabel,
   customEmployeeFieldDefinitions,
   employee,
+  positionNotSpecifiedLabel = "Position not specified",
   unitContexts,
 }: Omit<EmployeeDisplayRenderOptions, "format">): TemplateFieldResolver => {
   const customValues = evaluateCustomEmployeeFields(employee, customEmployeeFieldDefinitions);
@@ -179,6 +185,15 @@ const createEmployeeDisplayFieldResolver = ({
     const customDefinition = customDefinitionByKey.get(normalizeCustomEmployeeFieldKey(fieldName));
     if (customDefinition) {
       return { known: true, value: customValues.get(customDefinition.id) ?? null };
+    }
+    if (isEmployeeDisplayPositionsKey(fieldName)) {
+      return {
+        known: true,
+        value: unitContexts.map(
+          (unitContext) =>
+            `${unitContext.position || positionNotSpecifiedLabel} · ${unitContext.unitName}`,
+        ),
+      };
     }
     if (exportEmployeeFieldByKey.has(fieldName as ExportEmployeeFieldKey)) {
       return {
@@ -271,12 +286,16 @@ const replaceMarkers = (value: string, fields: readonly TemplateFormatPart[]) =>
 const materializeMarkdownLine = ({
   employee,
   fields,
+  positionNotSpecifiedLabel,
   skeleton,
+  supportsSemanticPositions,
   unitContexts,
 }: {
   employee: Employee;
   fields: readonly TemplateFormatPart[];
+  positionNotSpecifiedLabel: string;
   skeleton: string;
+  supportsSemanticPositions: boolean;
   unitContexts: readonly EmployeeUnitContext[];
 }): EmployeeDisplayLine | null => {
   const { source, tree } = getMarkdownTree(skeleton);
@@ -296,10 +315,15 @@ const materializeMarkdownLine = ({
       const field = fields[Number(match[1])];
       if (field?.fieldName === "tags") {
         if (employee.tags.length > 0) nodes.push({ tags: [...employee.tags], type: "tags" });
-      } else if (field?.fieldName === "position") {
-        const positions = unitContexts.flatMap((unitContext) =>
-          unitContext.position ? [{ label: unitContext.position, unitContext }] : [],
-        );
+      } else if (
+        field?.fieldName &&
+        supportsSemanticPositions &&
+        isEmployeeDisplayPositionsKey(field.fieldName)
+      ) {
+        const positions = unitContexts.map((unitContext) => ({
+          label: unitContext.position || positionNotSpecifiedLabel,
+          unitContext,
+        }));
         if (positions.length > 0) nodes.push({ positions, type: "positions" });
       } else if (field) {
         appendTextNode(nodes, {
@@ -364,7 +388,7 @@ const materializeMarkdownLine = ({
     .map((node) => {
       if (node.type === "text") return node.text;
       if (node.type === "tags") return node.tags.map((tag) => tag.label).join("; ");
-      return node.positions.map((position) => position.label).join("; ");
+      return node.positions.map(getEmployeeDisplayPositionText).join("; ");
     })
     .join("")
     .trim();
@@ -375,6 +399,9 @@ export const renderEmployeeDisplayRichLines = (
   options: EmployeeDisplayRenderOptions,
 ): EmployeeDisplayLine[] =>
   splitEmployeeDisplayParts(renderEmployeeDisplayParts(options)).flatMap((parts) => {
+    const supportsSemanticPositions = !options.customEmployeeFieldDefinitions.some((definition) =>
+      isEmployeeDisplayPositionsKey(definition.key),
+    );
     const fields: TemplateFormatPart[] = [];
     const skeleton = parts
       .map((part) => {
@@ -387,7 +414,9 @@ export const renderEmployeeDisplayRichLines = (
     const line = materializeMarkdownLine({
       employee: options.employee,
       fields,
+      positionNotSpecifiedLabel: options.positionNotSpecifiedLabel ?? "Position not specified",
       skeleton,
+      supportsSemanticPositions,
       unitContexts: options.unitContexts,
     });
     return line ? [line] : [];

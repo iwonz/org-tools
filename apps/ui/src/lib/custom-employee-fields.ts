@@ -14,6 +14,7 @@ import { sha256Hex } from "@/lib/employee-id";
 import { renderTemplateFormat } from "@/lib/template-format";
 
 export const CUSTOM_EMPLOYEE_FIELD_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
+export const EMPLOYEE_DISPLAY_POSITIONS_KEY = "positions";
 
 export const BUILT_IN_EMPLOYEE_TEMPLATE_KEYS = [
   "id",
@@ -40,6 +41,8 @@ const normalizeDefinitionIdentity = (value: string) =>
 
 export const normalizeCustomEmployeeFieldName = normalizeDefinitionIdentity;
 export const normalizeCustomEmployeeFieldKey = normalizeDefinitionIdentity;
+export const isEmployeeDisplayPositionsKey = (value: string) =>
+  normalizeCustomEmployeeFieldKey(value) === EMPLOYEE_DISPLAY_POSITIONS_KEY;
 
 export const extractTemplateFieldKeys = (template: string): string[] => {
   const keys = new Set<string>();

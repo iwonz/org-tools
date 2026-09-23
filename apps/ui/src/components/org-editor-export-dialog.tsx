@@ -56,6 +56,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
+  EMPLOYEE_DISPLAY_POSITIONS_KEY,
+  isEmployeeDisplayPositionsKey,
+} from "@/lib/custom-employee-fields";
+import {
   countTemplateOutputLines,
   createExportPreview,
   createExportTextAsync,
@@ -162,6 +166,7 @@ export function OrgEditorExportDialog({
   const locale = useLocale();
   const countText = useCountText();
   const localizedManagerLabel = t("Manager");
+  const positionNotSpecifiedLabel = t("Position not specified");
   const [scope, setScope] = useState<OrgEditorExportScope>("subtree");
   const [activeTab, setActiveTab] = useState<OrgEditorExportTab>("image");
   const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() =>
@@ -235,6 +240,14 @@ export function OrgEditorExportDialog({
   const visibleImageEmployeeFields = useMemo(
     () => [
       ...visibleEmployeeFields.filter((field) => field.key !== "avatarBase64Url"),
+      ...(store.employeeFieldDefinitions.some((field) => isEmployeeDisplayPositionsKey(field.key))
+        ? []
+        : [
+            {
+              key: EMPLOYEE_DISPLAY_POSITIONS_KEY,
+              label: EMPLOYEE_DISPLAY_POSITIONS_KEY,
+            },
+          ]),
       ...store.employeeFieldDefinitions.map((field) => ({ key: field.key, label: field.name })),
     ],
     [store.employeeFieldDefinitions, visibleEmployeeFields],
@@ -372,6 +385,7 @@ export function OrgEditorExportDialog({
       layoutMode,
       locale,
       maxCanvasPixels: ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
+      positionNotSpecifiedLabel,
       rootUnit: unit,
       scope,
       settings: imageSettings,
@@ -413,6 +427,7 @@ export function OrgEditorExportDialog({
     layoutMode,
     locale,
     open,
+    positionNotSpecifiedLabel,
     scope,
     store.employeeFieldDefinitions,
     tagOrder,
@@ -460,6 +475,7 @@ export function OrgEditorExportDialog({
       layoutMode,
       locale,
       rootUnit: unit,
+      positionNotSpecifiedLabel,
       scope,
       settings: imageSettings,
       tagOrder,

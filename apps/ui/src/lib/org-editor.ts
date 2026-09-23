@@ -17,7 +17,7 @@ import type {
   Unit,
 } from "@org-tools/types";
 import { createUuid } from "@/lib/employee-data";
-import type { EmployeeDisplayLine } from "@/lib/employee-display";
+import { type EmployeeDisplayLine, getEmployeeDisplayPositionText } from "@/lib/employee-display";
 
 export const ORG_EDITOR_UNIT_MIN_WIDTH = 280;
 export const ORG_EDITOR_UNIT_HEADER_HEIGHT = 72;
@@ -464,7 +464,7 @@ export const getOrgEditorEmployeeRichVisualLineCount = (
         lineRows = Math.max(
           lineRows,
           packOrgEditorTagLabels(
-            node.positions.map((position) => position.label),
+            node.positions.map(getEmployeeDisplayPositionText),
             availableWidth,
           ),
         );

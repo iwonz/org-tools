@@ -2872,6 +2872,7 @@ export const OrgStructureEditorTab = observer(() => {
                 customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
                 employee,
                 format: store.employeeDisplayFormats.editor,
+                positionNotSpecifiedLabel: t("Position not specified"),
                 unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
               })
             : [];

@@ -38,8 +38,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
 - Resolve each mounted Employee card from one saved contextual format and already indexed Unit
   contexts. Format output is bounded by the persisted format and field values, drops empty lines,
   and does not add catalog scans. A 256-entry least-recently-used cache stores parsed Markdown trees
-  by the resolved template structure without retaining organization values. Native Tag and position
-  nodes reuse bounded chip packing. Editor and PNG compute the same rich-line and wrapped-chip height
+  by the resolved template structure without retaining organization values. Native Tag and compound
+  assignment nodes reuse bounded chip packing based on the complete `Position · Unit` projection.
+  Editor and PNG compute the same rich-line and wrapped-chip height
   once per row and feed it into the existing prefix-offset pass, so formatted cards preserve O(n)
   geometry work.
 - Cache derived structures by View document revision and global Employee/Tag/field references.

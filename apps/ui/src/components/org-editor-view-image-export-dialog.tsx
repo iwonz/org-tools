@@ -46,6 +46,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { UiTextKey } from "@/i18n/messages";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
+import {
+  EMPLOYEE_DISPLAY_POSITIONS_KEY,
+  isEmployeeDisplayPositionsKey,
+} from "@/lib/custom-employee-fields";
 import { exportEmployeeFields } from "@/lib/export-format";
 import type { OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
 import { getOrgEditorCanvasCssFontFamily } from "@/lib/org-editor-canvas";
@@ -104,6 +108,7 @@ export function OrgEditorViewImageExportDialog({
   const locale = useLocale();
   const countText = useCountText();
   const managerLabel = t("Manager");
+  const positionNotSpecifiedLabel = t("Position not specified");
   const previousManagerLabel = useRef(managerLabel);
   const [settings, setSettings] = useState(() =>
     createDefaultOrgEditorImageExportSettings(
@@ -122,6 +127,14 @@ export function OrgEditorViewImageExportDialog({
       [
         ...exportEmployeeFields,
         ...orgEditorTemplateUnitFields,
+        ...(store.employeeFieldDefinitions.some((field) => isEmployeeDisplayPositionsKey(field.key))
+          ? []
+          : [
+              {
+                key: EMPLOYEE_DISPLAY_POSITIONS_KEY,
+                label: EMPLOYEE_DISPLAY_POSITIONS_KEY,
+              },
+            ]),
         ...store.employeeFieldDefinitions.map((field) => ({ key: field.key, label: field.name })),
       ]
         .filter((field) => field.key !== "avatarBase64Url")
@@ -179,6 +192,7 @@ export function OrgEditorViewImageExportDialog({
         layoutMode,
         locale,
         maxCanvasPixels,
+        positionNotSpecifiedLabel,
         rootUnit: null,
         scope: "view",
         settings,
@@ -199,6 +213,7 @@ export function OrgEditorViewImageExportDialog({
       formatUnitSummary,
       layoutMode,
       locale,
+      positionNotSpecifiedLabel,
       settings,
       tagOrder,
       tagDefinitions,

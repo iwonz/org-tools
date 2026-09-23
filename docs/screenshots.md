@@ -144,11 +144,11 @@ Compound matching.
 [![Employee model](screenshots/feature-employees-model.png)](screenshots/feature-employees-model.png)
 
 Configure the four saved Employee-card formats and inspect their real contextual previews on the
-Display tab. The frame shows the thematic tabs, flat sections, native position and Tag treatments,
+Display tab. The frame shows the thematic tabs, flat sections, native assignment and Tag treatments,
 inline Markdown preview, and the selection formatting menu. The following Value and Template frames
 retain coverage of the Model tab.
 
-Capabilities: Display formats, Markdown tools, Native Tags and positions, Contextual previews,
+Capabilities: Display formats, Markdown tools, Native Tags and assignments, Contextual previews,
 Atomic draft save.
 
 ### Custom Value field
@@ -665,8 +665,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   saves all four formats together, shows thematic tab icons and flat sections, formats a selected
   range by keyboard-accessible Markdown actions, validates link protocols, coexists with `@`
   suggestions, and discards dismissed drafts. Confirm all lines share normal base typography,
-  colored dated Tags and neutral position badges survive Markdown, fallback cards use Employees,
-  Editor links remain inert, Editor and both PNG dialogs use their assigned formats, wrapped chips
+  colored dated Tags and compound `Position · Unit` pills survive Markdown, plain email stays
+  unlinked until explicitly marked up, fallback cards use Employees, Editor links remain inert,
+  Editor and both PNG dialogs use their assigned formats, wrapped chips
   share DOM/PNG geometry, and image-dialog edits remain local.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,

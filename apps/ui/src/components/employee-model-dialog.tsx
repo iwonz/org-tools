@@ -54,6 +54,8 @@ import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useMessageText, useUiText } from "@/i18n/use-ui-text";
 import {
   BUILT_IN_EMPLOYEE_TEMPLATE_KEYS,
+  EMPLOYEE_DISPLAY_POSITIONS_KEY,
+  isEmployeeDisplayPositionsKey,
   wouldCreateTemplateDependencyCycle,
 } from "@/lib/custom-employee-fields";
 import { createUuid } from "@/lib/employee-data";
@@ -177,16 +179,26 @@ export function EmployeeModelDialog({
     ],
     [draft, store.employeeFieldDefinitions],
   );
-  const displayTokenOptions = useMemo(
-    () => [
+  const displayTokenOptions = useMemo(() => {
+    const hasCustomPositionsKey = store.employeeFieldDefinitions.some((field) =>
+      isEmployeeDisplayPositionsKey(field.key),
+    );
+    return [
       ...BUILT_IN_EMPLOYEE_TEMPLATE_KEYS.map((key) => ({ description: key, key })),
+      ...(hasCustomPositionsKey
+        ? []
+        : [
+            {
+              description: EMPLOYEE_DISPLAY_POSITIONS_KEY,
+              key: EMPLOYEE_DISPLAY_POSITIONS_KEY,
+            },
+          ]),
       ...store.employeeFieldDefinitions.map((field) => ({
         description: field.name,
         key: field.key,
       })),
-    ],
-    [store.employeeFieldDefinitions],
-  );
+    ];
+  }, [store.employeeFieldDefinitions]);
   const previewEmployee =
     store.units?.allEmployees.find(
       (employee) => (store.employeeUnitContextsByEmployeeId.get(employee.id)?.length ?? 0) > 0,

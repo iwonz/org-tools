@@ -1,5 +1,7 @@
-import type { Employee, OrgEditorUnit } from "@org-tools/types";
+import type { Employee, EmployeeUnitPosition, OrgEditorUnit } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
+import type { EmployeeDisplayPosition } from "@/lib/employee-display";
+import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import {
   getOrgEditorEmployeeRowSurfaceBounds,
   getOrgEditorEmployeeTextMaxWidth,
@@ -16,6 +18,7 @@ import { createOrgEditorStickerElement, createOrgEditorTextElement } from "@/lib
 import {
   buildOrgEditorExportRows,
   createDefaultOrgEditorImageExportSettings,
+  createOrgEditorExportEmployeePositionLayout,
   createOrgEditorExportEmployeeTagLayout,
   createOrgEditorExportFileBaseName,
   createOrgEditorImageRenderPlan,
@@ -78,6 +81,38 @@ const unit: OrgEditorUnit = {
 };
 
 describe("Org Editor image export", () => {
+  test("packs compound Employee assignments as single-line pills", () => {
+    const createPosition = (
+      unitId: string,
+      unitName: string,
+      label: string,
+    ): EmployeeDisplayPosition => {
+      const unitPosition = {
+        isBoss: false,
+        parentId: null,
+        position: label,
+        unitId,
+        unitName,
+        unitPath: { fullName: unitName, ids: [unitId], names: [unitName] },
+      } as EmployeeUnitPosition;
+      return { label, unitContext: createOrgUnitContext(unitPosition) };
+    };
+    const positions = [
+      createPosition("00000000-0000-4000-8000-000000000021", "Product", "Lead"),
+      createPosition("00000000-0000-4000-8000-000000000022", "Research and Development", "Advisor"),
+    ];
+    const layout = createOrgEditorExportEmployeePositionLayout(positions, 96);
+
+    expect(layout.rowCount).toBe(2);
+    expect(layout.chips.map((chip) => chip.lines)).toEqual([
+      ["Lead · Product"],
+      ["Advisor · Research and Development"],
+    ]);
+    expect(layout.chips.every((chip) => chip.height === ORG_EDITOR_EMPLOYEE_TAG_STYLE.height)).toBe(
+      true,
+    );
+  });
+
   test("uses only a validated embedded avatar", () => {
     expect(getEmployeeCanvasAvatarUrl(employee)).toBe(employee.avatarBase64Url);
     expect(

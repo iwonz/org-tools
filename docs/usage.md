@@ -66,7 +66,9 @@ control.
   `tel` addresses. It can use built-in Employee and Unit fields, Tags, or any custom field. Every
   nonempty result line is shown in order to the right of the avatar with the same base size, color,
   and normal weight. Markdown supplies any emphasis. `{tags}` retains colored and dated chips, while
-  `{position}` retains neutral bordered badges even inside Markdown. Empty formats are valid.
+  `{positions}` renders every contextual assignment as a bordered `Position · Unit` pill.
+  `{position}` and `{unitName}` remain ordinary `; `-joined text. `{email}` is ordinary text until
+  an author adds an explicit link such as `[{email}](mailto:{email})`. Empty formats are valid.
   Changes remain a local draft until **Save** commits all four together. Cards outside those four named contexts use the
   Employees format;
   **Tags** manages normalized labels, filled color treatments, usage counts, rename, and cascading

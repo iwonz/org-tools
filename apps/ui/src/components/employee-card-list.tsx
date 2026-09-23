@@ -221,9 +221,9 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
     customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
     employee,
     format: format ?? store.employeeDisplayFormats.employees,
+    positionNotSpecifiedLabel: t("Position not specified"),
     unitContexts: resolvedUnitContexts,
   });
-  const mailtoUrl = createMailtoUrl(employee.email);
   const profileUrl = createEmployeeProfileUrl(employee.profileUrl);
   const lineClassName = cn(
     "flex min-w-0 flex-wrap items-center overflow-hidden font-normal",
@@ -269,18 +269,41 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                     {node.positions.map(({ label, unitContext }) => (
                       <span
                         className={cn(
-                          "inline-flex max-w-full items-center rounded-md border bg-muted font-medium text-foreground",
+                          "inline-flex max-w-full items-center rounded-md border bg-muted text-muted-foreground",
                           density === "editor"
                             ? "px-1.5 py-0 text-[9px] leading-3"
                             : "px-2 py-1 text-xs leading-snug",
                         )}
-                        data-employee-position-badge
+                        data-employee-position-assignment
                         key={unitContext.id}
                         title={`${label} · ${unitContext.unitFullPath}`}
                       >
-                        <span className="truncate">
+                        <span className="min-w-0 truncate font-medium text-foreground">
                           <HighlightedText queryTokens={queryTokens} text={label} />
                         </span>
+                        <MiddleDot {...(density === "editor" ? { className: "mx-0.5" } : {})} />
+                        {interactiveLinks && onUnitContextClick ? (
+                          <button
+                            className="min-w-0 cursor-pointer truncate rounded-sm text-left outline-none transition-colors hover:bg-accent hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onUnitContextClick(unitContext);
+                            }}
+                            type="button"
+                          >
+                            <HighlightedText
+                              queryTokens={queryTokens}
+                              text={unitContext.unitName}
+                            />
+                          </button>
+                        ) : (
+                          <span className="min-w-0 truncate">
+                            <HighlightedText
+                              queryTokens={queryTokens}
+                              text={unitContext.unitName}
+                            />
+                          </span>
+                        )}
                       </span>
                     ))}
                   </span>
@@ -313,18 +336,6 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
                           target: "_blank",
                         }
                       : {})}
-                  >
-                    <HighlightedText queryTokens={queryTokens} text={node.text} />
-                  </a>
-                );
-              }
-              if (interactiveLinks && node.fieldName === "email" && mailtoUrl) {
-                return (
-                  <a
-                    className={cn(actionClassName, textClassName(node))}
-                    href={mailtoUrl}
-                    key={nodeKey}
-                    onClick={(event) => event.stopPropagation()}
                   >
                     <HighlightedText queryTokens={queryTokens} text={node.text} />
                   </a>

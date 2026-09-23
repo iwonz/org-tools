@@ -26,6 +26,7 @@ import { type AnalyticsResult, buildAnalytics } from "@/lib/analytics";
 import { buildOrganizationStructureWithResolution } from "@/lib/build-organization-structure";
 import {
   extractTemplateFieldKeys,
+  isEmployeeDisplayPositionsKey,
   normalizeCustomEmployeeFieldKey,
   normalizeCustomEmployeeFieldValue,
   rewriteTemplateFieldKey,
@@ -1340,6 +1341,10 @@ export class OrgStore {
     const normalized = cloneEmployeeFieldDefinition(definition);
     normalized.name = normalized.name.trim();
     normalized.key = normalized.key.trim();
+    const previousUsesPositionsKey = previous ? isEmployeeDisplayPositionsKey(previous.key) : false;
+    if (isEmployeeDisplayPositionsKey(normalized.key) && !previousUsesPositionsKey) {
+      throw new LocalizedError(uiMessage("Custom Employee field is invalid."));
+    }
     if (normalized.kind === "value") {
       normalized.options = normalized.options.map((option) => ({
         ...option,

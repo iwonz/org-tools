@@ -1,6 +1,7 @@
-import type { Employee, OrgEditorUnit } from "@org-tools/types";
+import type { Employee, EmployeeUnitPosition, OrgEditorUnit } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 import type { EmployeeDisplayLine } from "@/lib/employee-display";
+import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 
 import {
   buildOrgEditorUnitEmployeeSummaryById,
@@ -91,7 +92,7 @@ describe("Org Editor Employee display geometry", () => {
     ).toEqual([214, 230, 246]);
   });
 
-  test("expands rich rows for wrapped native Tags and position badges", () => {
+  test("expands rich rows for wrapped native Tags", () => {
     const lines: EmployeeDisplayLine[] = [
       {
         nodes: [
@@ -136,6 +137,41 @@ describe("Org Editor Employee display geometry", () => {
         tag.date ? `${tag.label} · 2 Mar` : tag.label,
       ),
     ).toBeGreaterThanOrEqual(3);
+  });
+
+  test("measures compound assignment text before wrapping whole pills", () => {
+    const createUnitContext = (value: number, unitName: string, position: string) =>
+      createOrgUnitContext({
+        isBoss: false,
+        parentId: null,
+        position,
+        unitId: `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`,
+        unitName,
+        unitPath: {
+          fullName: unitName,
+          ids: [`00000000-0000-4000-8000-${String(value).padStart(12, "0")}`],
+          names: [unitName],
+        },
+      } as EmployeeUnitPosition);
+    const product = createUnitContext(20, "Product", "Lead");
+    const research = createUnitContext(21, "Research", "Advisor");
+    const lines: EmployeeDisplayLine[] = [
+      {
+        nodes: [
+          {
+            positions: [
+              { label: "Lead", unitContext: product },
+              { label: "Advisor", unitContext: research },
+            ],
+            type: "positions",
+          },
+        ],
+        text: "Lead · Product; Advisor · Research",
+      },
+    ];
+
+    expect(getOrgEditorEmployeeRichVisualLineCount(lines, 80)).toBe(2);
+    expect(getOrgEditorEmployeeRowHeightForRichLines(lines, 80)).toBe(48);
   });
 });
 

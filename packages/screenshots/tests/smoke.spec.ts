@@ -1350,8 +1350,8 @@ test("atomically imports, directly exports, automatically writes, and reloads st
   expect(exportedState.organization.employeeDisplayFormats).toEqual({
     editor: "{fullName}\n{tags}",
     editorExport: "{fullName} {isBoss ? '· {isBoss}' : ''}\n{tags}",
-    employees: "{fullName}\n{username}\n{email}\n{position}\n{unitName}\n{tags}",
-    units: "{fullName}\n{username}\n{email}\n{position}\n{unitName}\n{tags}",
+    employees: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
+    units: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
   });
 
   await page.waitForTimeout(500);
@@ -1703,6 +1703,21 @@ test("edits contextual Employee card formats with live previews and local image 
   let modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
   await expect(modelDialog.locator('[data-demo-id="employee-model-tab-model"] svg')).toBeVisible();
   await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
+  const defaultEmployeesPreview = modelDialog.locator(
+    '[data-demo-id="employee-display-employees-preview"]',
+  );
+  await expect(
+    defaultEmployeesPreview.getByText("avery.stone@example.test", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    defaultEmployeesPreview.getByRole("link", {
+      name: "avery.stone@example.test",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    defaultEmployeesPreview.locator("[data-employee-position-assignment]").first(),
+  ).toBeVisible();
   await expect(
     modelDialog.locator('[data-demo-id="employee-model-tab-display"] svg'),
   ).toBeVisible();
@@ -1782,13 +1797,14 @@ test("edits contextual Employee card formats with live previews and local image 
     /Draft only/u,
   );
 
-  await modelDialog.locator("#employee-display-employees-format").fill("@dep");
+  const displayEmployeesFormat = modelDialog.locator("#employee-display-employees-format");
+  await displayEmployeesFormat.fill("@positions");
   const suggestions = modelDialog.locator('[data-demo-id="template-token-suggestions"]');
+  await expect(suggestions).toContainText("{positions}");
+  await displayEmployeesFormat.fill("@dep");
   await expect(suggestions).toContainText("{department}");
-  await modelDialog.locator("#employee-display-employees-format").press("Enter");
-  await expect(modelDialog.locator("#employee-display-employees-format")).toHaveValue(
-    "{department}",
-  );
+  await displayEmployeesFormat.press("Enter");
+  await expect(displayEmployeesFormat).toHaveValue("{department}");
 
   await modelDialog
     .locator("#employee-display-employees-format")
@@ -1797,11 +1813,11 @@ test("edits contextual Employee card formats with live previews and local image 
     );
   await modelDialog
     .locator("#employee-display-units-format")
-    .fill("{fullName}\n**{position}** · {unitName}\nUnit card");
+    .fill("{fullName}\n{positions}\nUnit card");
   await modelDialog
     .locator("#employee-display-editor-format")
     .fill("_{fullName}_\n{tags}\n[Editor card](https://example.test/editor)");
-  const imageFormat = "{fullName} {isBoss ? '· {isBoss}' : ''}\n{position}\n{tags}\n`Export card`";
+  const imageFormat = "{fullName} {isBoss ? '· {isBoss}' : ''}\n{positions}\n{tags}\n`Export card`";
   await modelDialog.locator("#employee-display-editorExport-format").fill(imageFormat);
   await expect(
     modelDialog
@@ -1810,7 +1826,7 @@ test("edits contextual Employee card formats with live previews and local image 
   ).toBeVisible();
   await expect(
     modelDialog.locator(
-      '[data-demo-id="employee-display-units-preview"] [data-employee-position-badge]',
+      '[data-demo-id="employee-display-units-preview"] [data-employee-position-assignment]',
     ),
   ).toBeVisible();
   await modelDialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -1847,7 +1863,7 @@ test("edits contextual Employee card formats with live previews and local image 
     page
       .locator('[data-demo-id="unit-employee-card"]')
       .first()
-      .locator("[data-employee-position-badge]"),
+      .locator("[data-employee-position-assignment]"),
   ).toBeVisible();
   await expect(
     page.locator('[data-demo-id="unit-employee-card"]').first().getByRole("button", {

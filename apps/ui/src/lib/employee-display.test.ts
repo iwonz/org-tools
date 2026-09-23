@@ -149,7 +149,7 @@ describe("Employee display formats", () => {
     );
   });
 
-  test("keeps Tags and positions semantic inside Markdown", () => {
+  test("keeps Tags and compound assignments semantic inside Markdown", () => {
     const contexts = [
       createOrgUnitContext(unitPosition(2, "Product", "Lead", true)),
       createOrgUnitContext(unitPosition(3, "Research", "Advisor")),
@@ -158,7 +158,7 @@ describe("Employee display formats", () => {
       bossLabel: "Manager",
       customEmployeeFieldDefinitions: [],
       employee,
-      format: "**{tags}**\n[{position}](https://example.test)",
+      format: "**{tags}**\n[{positions}](https://example.test)",
       unitContexts: contexts,
     });
     expect(lines[0]?.nodes).toEqual([{ tags: employee.tags, type: "tags" }]);
@@ -171,6 +171,114 @@ describe("Employee display formats", () => {
         type: "positions",
       },
     ]);
+    expect(lines[1]?.text).toBe("Lead · Product; Advisor · Research");
+  });
+
+  test("keeps position and Unit tokens as ordinary text and localizes missing assignments", () => {
+    const contexts = [
+      createOrgUnitContext(unitPosition(2, "Product", "Lead")),
+      createOrgUnitContext(unitPosition(3, "Research", null)),
+    ];
+    const lines = renderEmployeeDisplayRichLines({
+      bossLabel: "Manager",
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "**{position}**\n*{unitName}*\n{positions}",
+      positionNotSpecifiedLabel: "No position",
+      unitContexts: contexts,
+    });
+
+    expect(lines[0]?.nodes).toEqual([
+      expect.objectContaining({
+        fieldName: "position",
+        marks: expect.objectContaining({ bold: true }),
+        text: "Lead",
+        type: "text",
+      }),
+    ]);
+    expect(lines[1]?.nodes).toEqual([
+      expect.objectContaining({
+        fieldName: "unitName",
+        marks: expect.objectContaining({ italic: true }),
+        text: "Product; Research",
+        type: "text",
+      }),
+    ]);
+    expect(lines[2]?.nodes).toEqual([
+      {
+        positions: [
+          { label: "Lead", unitContext: contexts[0] },
+          { label: "No position", unitContext: contexts[1] },
+        ],
+        type: "positions",
+      },
+    ]);
+    expect(lines[2]?.text).toBe("Lead · Product; No position · Research");
+  });
+
+  test("keeps plain email inert and supports an explicit mailto Markdown link", () => {
+    const lines = renderEmployeeDisplayRichLines({
+      bossLabel: "Manager",
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "{email}\n[{email}](mailto:{email})",
+      unitContexts: [],
+    });
+
+    expect(lines[0]?.nodes).toEqual([
+      expect.objectContaining({
+        explicitLink: false,
+        fieldName: "email",
+        href: null,
+        text: "avery.stone@example.test",
+      }),
+    ]);
+    expect(lines[1]?.nodes).toEqual([
+      expect.objectContaining({
+        explicitLink: true,
+        fieldName: "email",
+        href: "mailto:avery.stone@example.test",
+        text: "avery.stone@example.test",
+      }),
+    ]);
+  });
+
+  test("preserves a legacy custom positions key and reserves it for new fields", () => {
+    const legacyDefinition: CustomEmployeeFieldDefinition = {
+      allowCustomOptions: false,
+      id: uuid(20),
+      key: "positions",
+      kind: "value",
+      multiple: false,
+      name: "Legacy positions",
+      options: [],
+      required: false,
+      valueType: "text",
+    };
+    const contexts = [createOrgUnitContext(unitPosition(2, "Product", "Lead"))];
+    expect(
+      renderEmployeeDisplayRichLines({
+        bossLabel: "Manager",
+        customEmployeeFieldDefinitions: [legacyDefinition],
+        employee,
+        format: "{positions}",
+        unitContexts: contexts,
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        nodes: [expect.objectContaining({ text: "Staff", type: "text" })],
+        text: "Staff",
+      }),
+    ]);
+
+    const store = new OrgStore();
+    store.employeeFieldDefinitions = [legacyDefinition];
+    expect(() =>
+      store.saveEmployeeFieldDefinition({ ...legacyDefinition, name: "Legacy assignments" }),
+    ).not.toThrow();
+    expect(() =>
+      store.saveEmployeeFieldDefinition({ ...legacyDefinition, id: uuid(21), name: "Assignments" }),
+    ).toThrow("Custom Employee field is invalid.");
   });
 
   test("keeps unsafe links and unsupported Markdown inert", () => {
