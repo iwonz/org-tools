@@ -25,6 +25,13 @@ export type EmployeeDisplayFormats = {
   units: string;
 };
 
+export type EmployeeDisplayLineGaps = {
+  editor: number;
+  editorExport: number;
+  employees: number;
+  units: number;
+};
+
 export type OrgToolsEmployeeFilters = {
   birthday: { day: number; month: number; year: number } | null;
   customFields: EmployeeCustomFieldFilter[];
@@ -158,6 +165,7 @@ export type OrgToolsUiState = {
 export type OrgToolsState = {
   organization: {
     employeeDisplayFormats: EmployeeDisplayFormats;
+    employeeDisplayLineGaps: EmployeeDisplayLineGaps;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
     tags: EmployeeTagDefinition[];

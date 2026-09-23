@@ -2,6 +2,8 @@ import type { CustomEmployeeFieldDefinition, Employee } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
 import {
+  EMPLOYEE_CONTEXT_FIELD_KEYS,
+  EMPLOYEE_TEMPLATE_FIELD_KEYS,
   evaluateCustomEmployeeFields,
   getCustomEmployeeFieldFilterValues,
   md5Hex,
@@ -33,6 +35,30 @@ const employee: Employee = {
 };
 
 describe("custom Employee fields", () => {
+  test("separates Employee-owned Template fields from Unit display context", () => {
+    expect(EMPLOYEE_TEMPLATE_FIELD_KEYS).toEqual([
+      "id",
+      "firstName",
+      "lastName",
+      "fullName",
+      "gender",
+      "username",
+      "profileUrl",
+      "email",
+      "phone",
+      "birthday",
+      "tags",
+      "tagDates",
+    ]);
+    expect(EMPLOYEE_CONTEXT_FIELD_KEYS).toEqual([
+      "unitId",
+      "unitName",
+      "unitFullPath",
+      "position",
+      "isBoss",
+    ]);
+  });
+
   test("matches standard MD5 vectors and hashes UTF-8 rendered values", () => {
     expect(md5Hex("")).toBe("d41d8cd98f00b204e9800998ecf8427e");
     expect(md5Hex("abc")).toBe("900150983cd24fb0d6963f7d28e17f72");

@@ -2,7 +2,11 @@ import type { CustomEmployeeFieldDefinition, EditableEmployeeFields } from "@org
 import { describe, expect, test } from "vitest";
 
 import { isUuid } from "@/lib/employee-data";
-import { DEFAULT_EMPLOYEE_DISPLAY_FORMATS } from "@/lib/employee-display-defaults";
+import {
+  createDefaultEmployeeDisplayFormats,
+  DEFAULT_EMPLOYEE_DISPLAY_FORMATS,
+  DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS,
+} from "@/lib/employee-display-defaults";
 import { isEmployeeId } from "@/lib/employee-id";
 import { createEmptyEmployeeSearchFilters } from "@/lib/employee-search";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
@@ -69,6 +73,7 @@ describe("OrgToolsState", () => {
     expect(store.units?.roots).toEqual([]);
     const organization = store.createOrgToolsState().organization;
     expect(organization.employeeDisplayFormats).toEqual(DEFAULT_EMPLOYEE_DISPLAY_FORMATS);
+    expect(organization.employeeDisplayLineGaps).toEqual(DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS);
     expect(organization.employeeFieldDefinitions).toEqual([]);
     expect(organization.employees).toEqual([]);
     expect(organization.tags).toEqual([]);
@@ -109,6 +114,32 @@ describe("OrgToolsState", () => {
     };
     invalid.organization.employeeDisplayFormats.editor = null;
     expect(() => parseOrgToolsState(invalid)).toThrow("invalid top-level structure");
+  });
+
+  test("localizes default boss ternaries and requires bounded Employee line gaps", () => {
+    for (const locale of ["ar", "en", "es", "fr", "ru", "zh"] as const) {
+      const state = createBlankOrgToolsState("system", locale);
+      expect(state.organization.employeeDisplayFormats).toEqual(
+        createDefaultEmployeeDisplayFormats(locale),
+      );
+      expect(state.organization.employeeDisplayLineGaps).toEqual(
+        DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS,
+      );
+    }
+
+    const state = createBlankOrgToolsState();
+    state.organization.employeeDisplayLineGaps.editor = 24;
+    expect(parseOrgToolsState(state).organization.employeeDisplayLineGaps.editor).toBe(24);
+    for (const invalidGap of [-1, 1.5, 25]) {
+      const invalid = structuredClone(state);
+      invalid.organization.employeeDisplayLineGaps.editor = invalidGap;
+      expect(() => parseOrgToolsState(invalid)).toThrow("invalid top-level structure");
+    }
+    const missing = structuredClone(state) as unknown as {
+      organization: { employeeDisplayLineGaps: Record<string, unknown> };
+    };
+    delete missing.organization.employeeDisplayLineGaps.units;
+    expect(() => parseOrgToolsState(missing)).toThrow("invalid top-level structure");
   });
 
   test("round-trips exact canvas elements and rejects missing, unsafe, or cyclic shapes", () => {

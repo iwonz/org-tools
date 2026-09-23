@@ -160,7 +160,6 @@
     "Units section": "Teams section",
     "Editor card": "Editor card",
     "Editor export card": "Editor export card",
-    "Built-in fields": "Built-in fields",
     "Custom fields": "Custom fields",
     "Add field": "Add field",
     "No custom fields": "No custom fields yet",
@@ -345,7 +344,6 @@
     "System": "System",
     "Tags": "Tags",
     "Template": "Template",
-    "The boss value cannot be empty.": "The boss value cannot be empty.",
     "Theme": "Theme",
     "Today": "Today",
     "The structure does not have any Units yet": "The structure does not have any Units yet",
@@ -384,7 +382,6 @@
     "Mint": "Mint",
     "No Unit is selected for export.": "No Unit is selected for export.",
     "No Unit selected": "No Unit selected",
-    "Provide a value for the {isBoss} token.": "Provide a value for the {isBoss} token.",
     "Rose": "Rose",
     "Text copied to the clipboard": "Text copied to the clipboard",
     "Text export saved": "Text export saved",
@@ -454,7 +451,6 @@
     "Unit": "Unit",
     "{label}: {count}": "{label}: {count}",
     "{count} in the current format": "{count} in the current format",
-    "isBoss value": "isBoss value",
     "Download": "Download",
     "Create the first Employee to start building your organization.": "Create the first Employee to start building your organization.",
     "Go to Employees": "Go to Employees",
@@ -661,6 +657,10 @@
     "Link": "Link",
     "Link URL": "Link URL",
     "Remove link": "Remove link",
-    "Enter a valid http, https, mailto, or tel link": "Enter a valid http, https, mailto, or tel link"
+    "Enter a valid http, https, mailto, or tel link": "Enter a valid http, https, mailto, or tel link",
+    "Employee fields": "Employee fields",
+    "Unit context fields": "Unit context fields",
+    "Display only": "Display only",
+    "Line spacing": "Line spacing"
   }
 }

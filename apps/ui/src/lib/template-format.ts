@@ -186,7 +186,7 @@ export const renderTemplateFormatParts = ({
   resolveField,
   template,
 }: {
-  formatValue?: (value: unknown) => string;
+  formatValue?: (value: unknown, fieldName: string) => string;
   maxDepth?: number;
   resolveField: TemplateFieldResolver;
   template: string;
@@ -234,7 +234,7 @@ export const renderTemplateFormatParts = ({
         const resolvedField = resolveField(expression.fieldName);
         append(
           result,
-          resolvedField.known ? formatValue(resolvedField.value) : rawToken,
+          resolvedField.known ? formatValue(resolvedField.value, expression.fieldName) : rawToken,
           resolvedField.known ? expression.fieldName : null,
         );
         cursor = closeIndex + 1;

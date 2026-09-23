@@ -7,6 +7,7 @@ import type {
   CustomEmployeeValueType,
   Employee,
   EmployeeDisplayFormats,
+  EmployeeDisplayLineGaps,
   EmployeeFieldId,
 } from "@org-tools/types";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -54,7 +55,9 @@ import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useMessageText, useUiText } from "@/i18n/use-ui-text";
 import {
   BUILT_IN_EMPLOYEE_TEMPLATE_KEYS,
+  EMPLOYEE_CONTEXT_FIELD_KEYS,
   EMPLOYEE_DISPLAY_POSITIONS_KEY,
+  EMPLOYEE_TEMPLATE_FIELD_KEYS,
   isEmployeeDisplayPositionsKey,
   wouldCreateTemplateDependencyCycle,
 } from "@/lib/custom-employee-fields";
@@ -164,10 +167,13 @@ export function EmployeeModelDialog({
   const [displayDraft, setDisplayDraft] = useState<EmployeeDisplayFormats>(() => ({
     ...store.employeeDisplayFormats,
   }));
+  const [lineGapDraft, setLineGapDraft] = useState<EmployeeDisplayLineGaps>(() => ({
+    ...store.employeeDisplayLineGaps,
+  }));
   const previousOpenRef = useRef(false);
   const tokenOptions = useMemo(
     () => [
-      ...BUILT_IN_EMPLOYEE_TEMPLATE_KEYS.map((key) => ({ description: key, key })),
+      ...EMPLOYEE_TEMPLATE_FIELD_KEYS.map((key) => ({ description: key, key })),
       ...store.employeeFieldDefinitions
         .filter((field) => field.id !== draft?.id)
         .filter(
@@ -221,9 +227,10 @@ export function EmployeeModelDialog({
     if (open && !previousOpenRef.current) {
       setActiveTab("model");
       setDisplayDraft({ ...store.employeeDisplayFormats });
+      setLineGapDraft({ ...store.employeeDisplayLineGaps });
     }
     previousOpenRef.current = open;
-  }, [open, store.employeeDisplayFormats]);
+  }, [open, store.employeeDisplayFormats, store.employeeDisplayLineGaps]);
   const setDraftKind = (kind: "composite" | "template" | "value") => {
     if (!draft || draft.kind === kind) return;
     const next: CustomEmployeeFieldDefinition =
@@ -296,11 +303,29 @@ export function EmployeeModelDialog({
               </TabsList>
               <TabsContent className="grid gap-5" value="model">
                 <section className="grid gap-2">
-                  <h3 className="text-sm font-medium">{t("Built-in fields")}</h3>
+                  <h3 className="text-sm font-medium">{t("Employee fields")}</h3>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {BUILT_IN_EMPLOYEE_TEMPLATE_KEYS.map((key) => (
+                    {EMPLOYEE_TEMPLATE_FIELD_KEYS.map((key) => (
                       <div className="rounded-md bg-muted/45 px-3 py-2" key={key}>
                         <div className="text-sm font-medium">{key}</div>
+                        <code className="text-xs text-muted-foreground">{`{${key}}`}</code>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                <section className="grid gap-2">
+                  <h3 className="text-sm font-medium">{t("Unit context fields")}</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {[...EMPLOYEE_CONTEXT_FIELD_KEYS, EMPLOYEE_DISPLAY_POSITIONS_KEY].map((key) => (
+                      <div className="rounded-md bg-muted/45 px-3 py-2" key={key}>
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <span>{key}</span>
+                          {key === EMPLOYEE_DISPLAY_POSITIONS_KEY && (
+                            <span className="rounded-full bg-background px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                              {t("Display only")}
+                            </span>
+                          )}
+                        </div>
                         <code className="text-xs text-muted-foreground">{`{${key}}`}</code>
                       </div>
                     ))}
@@ -960,6 +985,34 @@ export function EmployeeModelDialog({
                         value={displayDraft[key]}
                       />
                       <div className="grid gap-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor={`employee-display-${key}-line-gap`}>
+                            {t("Line spacing")}
+                          </Label>
+                          <output
+                            className="tabular-nums text-sm text-muted-foreground"
+                            htmlFor={`employee-display-${key}-line-gap`}
+                          >
+                            {lineGapDraft[key]} px
+                          </output>
+                        </div>
+                        <input
+                          aria-label={t("Line spacing")}
+                          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+                          data-demo-id={`employee-display-${key}-line-gap`}
+                          id={`employee-display-${key}-line-gap`}
+                          max={24}
+                          min={0}
+                          onChange={(event) => {
+                            const lineGap = Number(event.currentTarget.value);
+                            setLineGapDraft((current) => ({ ...current, [key]: lineGap }));
+                          }}
+                          step={1}
+                          type="range"
+                          value={lineGapDraft[key]}
+                        />
+                      </div>
+                      <div className="grid gap-2">
                         <Label>{t("Preview")}</Label>
                         <div
                           className={
@@ -972,6 +1025,7 @@ export function EmployeeModelDialog({
                           <EmployeeCard
                             className="hover:bg-transparent active:bg-transparent"
                             displayFormat={displayDraft[key]}
+                            displayLineGap={lineGapDraft[key]}
                             displayUnitContexts={unitContexts}
                             employee={employee}
                             variant={isEditor ? "compact" : "list"}
@@ -983,7 +1037,7 @@ export function EmployeeModelDialog({
                 })}
                 <div className="flex justify-end">
                   <Button
-                    onClick={() => store.setEmployeeDisplayFormats(displayDraft)}
+                    onClick={() => store.setEmployeeDisplaySettings(displayDraft, lineGapDraft)}
                     type="button"
                   >
                     {t("Save")}

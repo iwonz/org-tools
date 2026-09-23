@@ -82,6 +82,8 @@ describe("Org Editor Employee display geometry", () => {
     expect(getOrgEditorEmployeeRowHeightForDisplayLines(0)).toBe(48);
     expect(getOrgEditorEmployeeRowHeightForDisplayLines(2)).toBe(48);
     expect(getOrgEditorEmployeeRowHeightForDisplayLines(3)).toBe(64);
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(3, 4)).toBe(72);
+    expect(getOrgEditorEmployeeRowHeightForDisplayLines(3, 24)).toBe(112);
     expect(
       getOrgEditorEmployeeDisplayLineBaselines({
         employeeRowHeight: 64,
@@ -90,6 +92,24 @@ describe("Org Editor Employee display geometry", () => {
         unitY: 100,
       }),
     ).toEqual([214, 230, 246]);
+    expect(
+      getOrgEditorEmployeeDisplayLineBaselines({
+        employeeRowHeight: 72,
+        employeeRowOffset: 12,
+        lineCount: 3,
+        lineGap: 4,
+        unitY: 100,
+      }),
+    ).toEqual([214, 234, 254]);
+    expect(
+      getOrgEditorEmployeeDisplayLineBaselines({
+        employeeRowHeight: 112,
+        employeeRowOffset: 12,
+        lineCount: 3,
+        lineGap: 24,
+        unitY: 100,
+      }),
+    ).toEqual([214, 254, 294]);
   });
 
   test("expands rich rows for wrapped native Tags", () => {

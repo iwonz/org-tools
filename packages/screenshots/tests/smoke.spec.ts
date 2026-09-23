@@ -1349,9 +1349,15 @@ test("atomically imports, directly exports, automatically writes, and reloads st
   expect(exportedState.organization.employees).toHaveLength(4);
   expect(exportedState.organization.employeeDisplayFormats).toEqual({
     editor: "{fullName}\n{tags}",
-    editorExport: "{fullName} {isBoss ? '· {isBoss}' : ''}\n{tags}",
+    editorExport: "{fullName} {isBoss ? '· Manager' : ''}\n{tags}",
     employees: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
     units: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
+  });
+  expect(exportedState.organization.employeeDisplayLineGaps).toEqual({
+    editor: 4,
+    editorExport: 4,
+    employees: 4,
+    units: 4,
   });
 
   await page.waitForTimeout(500);
@@ -1376,6 +1382,11 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
     ui: OrgToolsState["ui"];
   };
   delete obsoleteDisplayState.organization.employeeDisplayFormats;
+  const obsoleteLineGapState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as {
+    organization: Partial<OrgToolsState["organization"]>;
+    ui: OrgToolsState["ui"];
+  };
+  delete obsoleteLineGapState.organization.employeeDisplayLineGaps;
 
   const rejectedFiles = [
     {
@@ -1404,6 +1415,14 @@ test("rejects malformed, partial, generic, and oversized imports without mutatio
         buffer: Buffer.from(JSON.stringify(obsoleteDisplayState)),
         mimeType: "application/json",
         name: "obsolete-display-state.json",
+      },
+    },
+    {
+      error: "Only a complete Org Tools state can be imported.",
+      file: {
+        buffer: Buffer.from(JSON.stringify(obsoleteLineGapState)),
+        mimeType: "application/json",
+        name: "obsolete-line-gap-state.json",
       },
     },
     {
@@ -1524,6 +1543,13 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   await modelEditor.getByRole("button", { name: "Token suggestions help", exact: true }).focus();
   await expect(modelEditor.getByRole("tooltip")).toBeVisible();
   await expect(modelEditor.getByRole("tooltip")).toContainText("Type @ to open token suggestions.");
+  const templateFormat = modelEditor.getByLabel("Format", { exact: true });
+  await templateFormat.fill("@");
+  const templateSuggestions = modelEditor.locator('[data-demo-id="template-token-suggestions"]');
+  await expect(templateSuggestions).toBeVisible();
+  await expect(templateSuggestions.getByText("{fullName}", { exact: true })).toBeVisible();
+  await expect(templateSuggestions.getByText("{unitId}", { exact: true })).toHaveCount(0);
+  await expect(templateSuggestions.getByText("{positions}", { exact: true })).toHaveCount(0);
   await modelEditor.getByRole("button", { name: "Cancel", exact: true }).click();
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
@@ -1702,6 +1728,9 @@ test("edits contextual Employee card formats with live previews and local image 
   await page.locator('[data-demo-id="employee-model-button"]').click();
   let modelDialog = page.getByRole("dialog", { name: "Employee model", exact: true });
   await expect(modelDialog.locator('[data-demo-id="employee-model-tab-model"] svg')).toBeVisible();
+  await expect(modelDialog.getByText("Employee fields", { exact: true })).toBeVisible();
+  await expect(modelDialog.getByText("Unit context fields", { exact: true })).toBeVisible();
+  await expect(modelDialog.getByText("Display only", { exact: true })).toBeVisible();
   await modelDialog.getByRole("tab", { name: "Display", exact: true }).click();
   const defaultEmployeesPreview = modelDialog.locator(
     '[data-demo-id="employee-display-employees-preview"]',
@@ -1733,17 +1762,27 @@ test("edits contextual Employee card formats with live previews and local image 
       "border-top-width",
       "1px",
     );
+    await expect(
+      modelDialog.locator(`[data-demo-id="employee-display-${key}-line-gap"]`),
+    ).toHaveValue("4");
   }
 
   const employeesFormat = modelDialog.locator("#employee-display-employees-format");
-  await employeesFormat.fill("{fullName}\nDraft only");
+  await employeesFormat.fill("{fullName}\n\nDraft only");
+  await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("12");
   await expect(
     modelDialog.locator('[data-demo-id="employee-display-employees-preview"]'),
   ).toContainText("Draft only");
   const previewLines = modelDialog.locator(
     '[data-demo-id="employee-display-employees-preview"] [data-employee-display-content] > span',
   );
-  await expect(previewLines).toHaveCount(2);
+  await expect(previewLines).toHaveCount(3);
+  await expect(previewLines.nth(1)).toHaveAttribute("data-employee-display-blank", "true");
+  await expect(
+    modelDialog.locator(
+      '[data-demo-id="employee-display-employees-preview"] [data-employee-display-content]',
+    ),
+  ).toHaveCSS("row-gap", "12px");
   expect(
     await previewLines.nth(0).evaluate((element) => getComputedStyle(element).fontWeight),
   ).toBe(await previewLines.nth(1).evaluate((element) => getComputedStyle(element).fontWeight));
@@ -1796,11 +1835,17 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(modelDialog.locator("#employee-display-employees-format")).not.toHaveValue(
     /Draft only/u,
   );
+  await expect(
+    modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]'),
+  ).toHaveValue("4");
 
   const displayEmployeesFormat = modelDialog.locator("#employee-display-employees-format");
   await displayEmployeesFormat.fill("@positions");
   const suggestions = modelDialog.locator('[data-demo-id="template-token-suggestions"]');
   await expect(suggestions).toContainText("{positions}");
+  await displayEmployeesFormat.fill("@unit");
+  await expect(suggestions).toContainText("{unitId}");
+  await expect(suggestions).toContainText("{unitName}");
   await displayEmployeesFormat.fill("@dep");
   await expect(suggestions).toContainText("{department}");
   await displayEmployeesFormat.press("Enter");
@@ -1817,8 +1862,12 @@ test("edits contextual Employee card formats with live previews and local image 
   await modelDialog
     .locator("#employee-display-editor-format")
     .fill("_{fullName}_\n{tags}\n[Editor card](https://example.test/editor)");
-  const imageFormat = "{fullName} {isBoss ? '· {isBoss}' : ''}\n{positions}\n{tags}\n`Export card`";
+  const imageFormat = "{fullName} {isBoss ? '· Manager' : ''}\n{positions}\n{tags}\n`Export card`";
   await modelDialog.locator("#employee-display-editorExport-format").fill(imageFormat);
+  await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("12");
+  await modelDialog.locator('[data-demo-id="employee-display-units-line-gap"]').fill("6");
+  await modelDialog.locator('[data-demo-id="employee-display-editor-line-gap"]').fill("8");
+  await modelDialog.locator('[data-demo-id="employee-display-editorExport-line-gap"]').fill("10");
   await expect(
     modelDialog
       .locator('[data-demo-id="employee-display-employees-preview"] [data-tag-color-surface]')
@@ -1834,6 +1883,10 @@ test("edits contextual Employee card formats with live previews and local image 
 
   const employeeCard = page.locator('[data-demo-id="employees-list"] article').first();
   await expect(employeeCard).toContainText("Employee card");
+  await expect(employeeCard.locator("[data-employee-display-content]")).toHaveCSS(
+    "row-gap",
+    "12px",
+  );
   await expect(employeeCard).toHaveAccessibleName(/\S/u);
   await expect(
     employeeCard.getByRole("link", { name: "Avery Stone", exact: true }),
@@ -3097,7 +3150,7 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await exportDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
-  await expect(exportDialog.getByLabel("isBoss value", { exact: true })).toHaveValue("Manager");
+  await expect(exportDialog.locator("#org-editor-export-image-boss-label")).toHaveCount(0);
   await expect(
     exportDialog.getByRole("button", { name: "avatarBase64Url", exact: true }),
   ).toHaveCount(0);

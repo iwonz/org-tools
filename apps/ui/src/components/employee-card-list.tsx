@@ -12,7 +12,10 @@ import { EmployeeTags } from "@/components/employee-tags";
 import { HighlightedText } from "@/components/highlighted-text";
 import { MiddleDot } from "@/components/middle-dot";
 import { useUiText } from "@/i18n/use-ui-text";
-import { renderEmployeeDisplayLineDetails } from "@/lib/employee-display";
+import {
+  renderEmployeeDisplayLineDetails,
+  wrapEmployeeDisplayRichLines,
+} from "@/lib/employee-display";
 import { createEmployeeProfileUrl, createMailtoUrl } from "@/lib/employee-links";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { cn } from "@/lib/utils";
@@ -29,6 +32,7 @@ type EmployeeCardListProps = {
   className?: string;
   dataDemoId?: string;
   displayFormat?: string;
+  displayLineGap?: number;
   displayUnitContexts?: (employee: Employee) => EmployeeUnitContext[];
   employees?: Employee[];
   emptyState?: ReactNode;
@@ -63,6 +67,7 @@ type EmployeeCardProps = {
   className?: string;
   dataDemoId?: string;
   displayFormat?: string;
+  displayLineGap?: number;
   displayUnitContexts?: readonly EmployeeUnitContext[];
   draggable?: boolean;
   employee: Employee;
@@ -197,44 +202,49 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   density = "card",
   employee,
   format,
+  lineGap,
   interactiveLinks = true,
   onUnitContextClick,
   queryTokens = [],
   unitContexts,
+  wrapWidth,
 }: {
   className?: string;
   compact?: boolean;
   density?: "card" | "editor";
   employee: Employee;
   format?: string;
+  lineGap?: number;
   interactiveLinks?: boolean;
   onUnitContextClick?: (unitContext: EmployeeUnitContext) => void;
   queryTokens?: string[];
   unitContexts?: readonly EmployeeUnitContext[];
+  wrapWidth?: number;
 }) {
   const store = useOrgStore();
   const t = useUiText();
   const resolvedUnitContexts =
     unitContexts ?? store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
-  const lines = renderEmployeeDisplayLineDetails({
-    bossLabel: t("Manager"),
+  const richLines = renderEmployeeDisplayLineDetails({
     customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
     employee,
     format: format ?? store.employeeDisplayFormats.employees,
     positionNotSpecifiedLabel: t("Position not specified"),
     unitContexts: resolvedUnitContexts,
   });
+  const lines = wrapWidth ? wrapEmployeeDisplayRichLines(richLines, wrapWidth) : richLines;
+  const resolvedLineGap = lineGap ?? store.employeeDisplayLineGaps.employees;
   const profileUrl = createEmployeeProfileUrl(employee.profileUrl);
   const lineClassName = cn(
     "flex min-w-0 flex-wrap items-center overflow-hidden font-normal",
     density === "editor" ? "text-xs leading-4" : "text-sm leading-5",
   );
   const actionClassName =
-    "max-w-full truncate rounded-sm text-signal underline underline-offset-2 outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring";
+    "max-w-full break-words rounded-sm text-signal underline underline-offset-2 outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring";
   const textClassName = (node: (typeof lines)[number]["nodes"][number]) =>
     node.type === "text"
       ? cn(
-          "min-w-0 max-w-full truncate",
+          "min-w-0 max-w-full break-words whitespace-pre-wrap",
           node.marks.bold && "font-semibold",
           node.marks.italic && "italic",
           node.marks.strike && "line-through",
@@ -244,11 +254,25 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
       : undefined;
 
   return (
-    <div className={cn("grid min-w-0 gap-1", className)} data-employee-display-content>
+    <div
+      className={cn("grid min-w-0", className)}
+      data-employee-display-content
+      style={{ rowGap: resolvedLineGap }}
+    >
       {lines.map((line, index) => {
         const key = `${index}:${line.text}`;
         return (
-          <span className={lineClassName} key={key}>
+          <span
+            aria-hidden={line.blank ? "true" : undefined}
+            className={lineClassName}
+            data-employee-display-blank={line.blank ? "true" : undefined}
+            key={key}
+            style={{
+              lineHeight: `${(density === "editor" ? 16 : 20) + resolvedLineGap}px`,
+              marginBottom: -resolvedLineGap,
+              minHeight: line.blank ? (density === "editor" ? 16 : 20) : undefined,
+            }}
+          >
             {line.nodes.map((node, nodeIndex) => {
               const nodeKey = `${nodeIndex}:${node.type}`;
               if (node.type === "tags") {
@@ -400,6 +424,7 @@ export const EmployeeCard = observer(function EmployeeCard({
   className,
   dataDemoId,
   displayFormat,
+  displayLineGap,
   displayUnitContexts,
   draggable = false,
   employee,
@@ -450,6 +475,7 @@ export const EmployeeCard = observer(function EmployeeCard({
             employee={employee}
             queryTokens={queryTokens}
             {...(displayFormat === undefined ? {} : { format: displayFormat })}
+            {...(displayLineGap === undefined ? {} : { lineGap: displayLineGap })}
             {...(displayUnitContexts === undefined ? {} : { unitContexts: displayUnitContexts })}
             {...(onUnitContextClick ? { onUnitContextClick } : {})}
           />
@@ -493,6 +519,7 @@ export const EmployeeCard = observer(function EmployeeCard({
           employee={employee}
           queryTokens={queryTokens}
           {...(displayFormat === undefined ? {} : { format: displayFormat })}
+          {...(displayLineGap === undefined ? {} : { lineGap: displayLineGap })}
           {...(displayUnitContexts === undefined ? {} : { unitContexts: displayUnitContexts })}
           {...(onUnitContextClick ? { onUnitContextClick } : {})}
         />
@@ -514,6 +541,7 @@ export function EmployeeCardList({
   className,
   dataDemoId,
   displayFormat,
+  displayLineGap,
   displayUnitContexts,
   employees = EMPTY_EMPLOYEES,
   emptyState,
@@ -617,6 +645,7 @@ export function EmployeeCardList({
                   {...(onUnitContextClick ? { onUnitContextClick } : {})}
                   {...(cardClassName ? { className: cardClassName } : {})}
                   {...(displayFormat === undefined ? {} : { displayFormat })}
+                  {...(displayLineGap === undefined ? {} : { displayLineGap })}
                   {...(displayUnitContexts === undefined
                     ? {}
                     : { displayUnitContexts: displayUnitContexts(employee) })}

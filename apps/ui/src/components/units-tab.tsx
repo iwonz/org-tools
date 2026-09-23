@@ -95,12 +95,14 @@ const setTransparentDragImage = (event: DragEvent<HTMLElement>) => {
 
 function UnitEmployeeDragPreview({
   displayFormat,
+  displayLineGap,
   employee,
   initialPoint,
   previewRef,
   unitContexts,
 }: {
   displayFormat: string;
+  displayLineGap: number;
   employee: Employee;
   initialPoint: EmployeeDragPoint;
   previewRef: RefObject<HTMLDivElement | null>;
@@ -122,6 +124,7 @@ function UnitEmployeeDragPreview({
       <EmployeeCard
         className="bg-transparent"
         displayFormat={displayFormat}
+        displayLineGap={displayLineGap}
         displayUnitContexts={unitContexts}
         employee={employee}
         variant="compact"
@@ -561,6 +564,7 @@ export const UnitsTab = observer(() => {
             className="flex-1 p-0"
             dataDemoId="units-employee-cards"
             displayFormat={store.employeeDisplayFormats.units}
+            displayLineGap={store.employeeDisplayLineGaps.units}
             displayUnitContexts={(employee) =>
               (store.employeeUnitContextsByEmployeeId.get(employee.id) ?? []).filter(
                 (context) => context.unitId === selectedUnit.id,
@@ -608,6 +612,7 @@ export const UnitsTab = observer(() => {
       {draggedEmployee && employeeDragPoint && (
         <UnitEmployeeDragPreview
           displayFormat={store.employeeDisplayFormats.units}
+          displayLineGap={store.employeeDisplayLineGaps.units}
           employee={draggedEmployee}
           initialPoint={employeeDragPoint}
           previewRef={dragPreviewRef}

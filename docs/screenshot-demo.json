@@ -155,12 +155,13 @@
     "featured": false,
     "title": "Employee model",
     "file": "feature-employees-model.png",
-    "description": "Inspect built-in Employee, Unit, and Tag tokens together with the configured custom Value and Template fields.",
+    "description": "Configure contextual card formats with authored and automatic wrapping, per-destination line spacing, Markdown, native Tags, and assignment pills.",
     "capabilities": [
-      "Built-in fields",
-      "Custom fields",
-      "Stable token keys",
-      "Value and Template kinds"
+      "Display formats",
+      "Line wrapping",
+      "Line spacing",
+      "Markdown",
+      "Contextual preview"
     ]
   },
   {
@@ -512,7 +513,7 @@
       "Density and silent clamping",
       "Title and background",
       "Five local fonts",
-      "Localized boss label",
+      "Employee line spacing",
       "Token suggestions",
       "Conditional Employee format"
     ]

@@ -18,6 +18,7 @@ The public JSON value has exactly two top-level properties:
 type OrgToolsState = {
   organization: {
     employeeDisplayFormats: EmployeeDisplayFormats;
+    employeeDisplayLineGaps: EmployeeDisplayLineGaps;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
     employees: OrganizationEmployee[];
     tags: EmployeeTagDefinition[];
@@ -37,20 +38,23 @@ live per View in the bounded
 writes therefore do not serialize Employees or structural documents. Open surfaces, notifications,
 search suggestions, and unfinished forms are transient.
 
-The required `employeeDisplayFormats` object stores one template for Employees, Units, Editor DOM,
-and Editor image output. The shared renderer resolves built-in Unit and Employee fields plus custom
-fields, evaluates the existing token and conditional grammar, joins arrays with `; `, and removes
-empty trimmed lines. It then parses only inline Markdown into a shared rich-line model. Employee and
+The required `employeeDisplayFormats` and `employeeDisplayLineGaps` objects store one template and
+one bounded pixel gap for Employees, Units, Editor DOM, and Editor image output. The shared renderer
+resolves built-in Unit and Employee fields plus custom fields, evaluates the existing token and
+conditional grammar, joins arrays with `; `, removes dynamically empty rows, and preserves authored
+internal blank rows. It then parses only inline Markdown into a shared rich-line model. Employee and
 custom-field values enter that model as text nodes, so their punctuation cannot become formatting.
 Tags and compound assignments remain semantic groups: DOM renders the existing colored Tag chips
 and `Position · Unit` pills, while Canvas paints the same compact treatments. `{position}` and
 `{unitName}` remain ordinary text values. List and fallback contexts
 aggregate system-View assignments in structural order; one Unit or Editor row resolves only that
-Unit. Plain `{email}` remains text; an explicit safe Markdown link can add `mailto:` navigation in
+Unit. `isBoss` is a condition-only boolean; visible text belongs in a ternary branch. Plain
+`{email}` remains text; an explicit safe Markdown link can add `mailto:` navigation in
 lists and remains styled but inert in Editor and PNG. A custom-field key rename rewrites all four templates in the same action, and a referenced
-custom field cannot be deleted. The Editor DOM and PNG renderer share rich-line counts, wrapped chip
-rows, row heights, offsets, text width, Unit bounds, hit testing, and anchors. Image dialogs clone
-the saved Editor-export format into transient settings.
+custom field cannot be deleted. The Editor DOM and PNG renderer share word/character wrapping,
+authored blank rows, line gaps, rich-line counts, wrapped chip rows, row heights, offsets, text
+width, Unit bounds, hit testing, and anchors. Image dialogs clone the saved Editor-export format and
+line gap into transient settings.
 
 Each View owns required `structure.settings`: `groupByTag` and `showTagCloud` default to true;
 `distributedColor` and `undistributedColor` default to green and amber and use non-null named or

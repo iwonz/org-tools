@@ -32,7 +32,6 @@ export const EMPLOYEE_DISPLAY_UNIT_FIELD_KEYS = [
 export type EmployeeDisplayUnitFieldKey = (typeof EMPLOYEE_DISPLAY_UNIT_FIELD_KEYS)[number];
 
 export type EmployeeDisplayRenderOptions = {
-  bossLabel: string;
   customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[];
   employee: Employee;
   format: string;
@@ -74,12 +73,19 @@ export type EmployeeDisplayPositionsNode = {
 export const getEmployeeDisplayPositionText = (position: EmployeeDisplayPosition) =>
   `${position.label} · ${position.unitContext.unitName}`;
 
+const getEmployeeDisplayNodeText = (node: EmployeeDisplayNode) => {
+  if (node.type === "text") return node.text;
+  if (node.type === "tags") return node.tags.map((tag) => tag.label).join("; ");
+  return node.positions.map(getEmployeeDisplayPositionText).join("; ");
+};
+
 export type EmployeeDisplayNode =
   | EmployeeDisplayPositionsNode
   | EmployeeDisplayTagsNode
   | EmployeeDisplayTextNode;
 
 export type EmployeeDisplayLine = {
+  blank?: true;
   nodes: EmployeeDisplayNode[];
   text: string;
 };
@@ -151,7 +157,6 @@ const getMarkdownTree = (skeleton: string) => {
 const getUnitDisplayValue = (
   contexts: readonly EmployeeUnitContext[],
   fieldName: EmployeeDisplayUnitFieldKey,
-  bossLabel: string,
 ) => {
   switch (fieldName) {
     case "unitId":
@@ -163,12 +168,11 @@ const getUnitDisplayValue = (
     case "position":
       return contexts.flatMap((context) => (context.position ? [context.position] : []));
     case "isBoss":
-      return contexts.some((context) => context.isBoss) ? bossLabel : "";
+      return contexts.some((context) => context.isBoss);
   }
 };
 
 const createEmployeeDisplayFieldResolver = ({
-  bossLabel,
   customEmployeeFieldDefinitions,
   employee,
   positionNotSpecifiedLabel = "Position not specified",
@@ -204,22 +208,18 @@ const createEmployeeDisplayFieldResolver = ({
     if (EMPLOYEE_DISPLAY_UNIT_FIELD_KEYS.includes(fieldName as EmployeeDisplayUnitFieldKey)) {
       return {
         known: true,
-        value: getUnitDisplayValue(
-          unitContexts,
-          fieldName as EmployeeDisplayUnitFieldKey,
-          bossLabel,
-        ),
+        value: getUnitDisplayValue(unitContexts, fieldName as EmployeeDisplayUnitFieldKey),
       };
     }
     return { known: false };
   };
 };
 
-const renderEmployeeDisplayParts = (options: EmployeeDisplayRenderOptions) =>
+const renderEmployeeDisplayParts = (options: EmployeeDisplayRenderOptions, template: string) =>
   renderTemplateFormatParts({
-    formatValue: asExportText,
+    formatValue: (value, fieldName) => (fieldName === "isBoss" ? "" : asExportText(value)),
     resolveField: createEmployeeDisplayFieldResolver(options),
-    template: options.format,
+    template,
   });
 
 const splitEmployeeDisplayParts = (parts: readonly TemplateFormatPart[]) => {
@@ -397,8 +397,12 @@ const materializeMarkdownLine = ({
 
 export const renderEmployeeDisplayRichLines = (
   options: EmployeeDisplayRenderOptions,
-): EmployeeDisplayLine[] =>
-  splitEmployeeDisplayParts(renderEmployeeDisplayParts(options)).flatMap((parts) => {
+): EmployeeDisplayLine[] => {
+  const sourceLines = options.format.replace(/\r\n?/gu, "\n").split("\n");
+  const lines = sourceLines.map((sourceLine): EmployeeDisplayLine | "blank" | null => {
+    if (!sourceLine.trim()) return "blank";
+    const parts = splitEmployeeDisplayParts(renderEmployeeDisplayParts(options, sourceLine))[0];
+    if (!parts) return null;
     const supportsSemanticPositions = !options.customEmployeeFieldDefinitions.some((definition) =>
       isEmployeeDisplayPositionsKey(definition.key),
     );
@@ -419,8 +423,25 @@ export const renderEmployeeDisplayRichLines = (
       supportsSemanticPositions,
       unitContexts: options.unitContexts,
     });
-    return line ? [line] : [];
+    return line;
   });
+  const firstContentIndex = lines.findIndex((line) => line !== null && line !== "blank");
+  if (firstContentIndex === -1) return [];
+  let lastContentIndex = firstContentIndex;
+  for (let index = firstContentIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line !== null && line !== "blank") lastContentIndex = index;
+  }
+  return lines.flatMap((line, index) => {
+    if (line === null) return [];
+    if (line === "blank") {
+      return index > firstContentIndex && index < lastContentIndex
+        ? [{ blank: true, nodes: [], text: "" } satisfies EmployeeDisplayLine]
+        : [];
+    }
+    return [line];
+  });
+};
 
 export const renderEmployeeDisplayText = (options: EmployeeDisplayRenderOptions) =>
   renderEmployeeDisplayRichLines(options)
@@ -437,3 +458,73 @@ export const renderEmployeeDisplayLineDetails = renderEmployeeDisplayRichLines;
 
 export const renderEmployeeDisplayLines = (options: EmployeeDisplayRenderOptions) =>
   renderEmployeeDisplayRichLines(options).map((line) => line.text);
+
+export const measureEmployeeDisplayTextNode = (node: EmployeeDisplayTextNode) => {
+  const widthPerCharacter = node.marks.code ? 7 : node.marks.bold ? 6.4 : 6.1;
+  return node.text.length * widthPerCharacter;
+};
+
+export const wrapEmployeeDisplayRichLines = (
+  lines: readonly EmployeeDisplayLine[],
+  availableWidth: number,
+  measureText: (node: EmployeeDisplayTextNode) => number = measureEmployeeDisplayTextNode,
+): EmployeeDisplayLine[] => {
+  if (availableWidth <= 0) return [...lines];
+  const wrapped: EmployeeDisplayLine[] = [];
+  const pushNodes = (nodes: EmployeeDisplayNode[]) => {
+    if (nodes.length === 0) return;
+    wrapped.push({ nodes, text: nodes.map(getEmployeeDisplayNodeText).join("").trimEnd() });
+  };
+  for (const line of lines) {
+    if (line.blank) {
+      wrapped.push(line);
+      continue;
+    }
+    let rowNodes: EmployeeDisplayNode[] = [];
+    let rowWidth = 0;
+    const flush = () => {
+      pushNodes(rowNodes);
+      rowNodes = [];
+      rowWidth = 0;
+    };
+    for (const node of line.nodes) {
+      if (node.type !== "text") {
+        if (rowNodes.length > 0) flush();
+        wrapped.push({ nodes: [node], text: getEmployeeDisplayNodeText(node) });
+        continue;
+      }
+      for (const token of node.text.match(/\s+|\S+/gu) ?? []) {
+        const whitespace = /^\s+$/u.test(token);
+        if (whitespace && rowNodes.length === 0) continue;
+        const tokenNode = { ...node, text: token };
+        const tokenWidth = measureText(tokenNode);
+        if (rowNodes.length > 0 && rowWidth + tokenWidth > availableWidth) {
+          flush();
+          if (whitespace) continue;
+        }
+        if (!whitespace && tokenWidth > availableWidth) {
+          let chunk = "";
+          for (const character of token) {
+            const candidate = `${chunk}${character}`;
+            if (chunk && measureText({ ...node, text: candidate }) > availableWidth) {
+              appendTextNode(rowNodes, { ...node, text: chunk });
+              flush();
+              chunk = character;
+            } else {
+              chunk = candidate;
+            }
+          }
+          if (chunk) {
+            appendTextNode(rowNodes, { ...node, text: chunk });
+            rowWidth = measureText({ ...node, text: chunk });
+          }
+          continue;
+        }
+        appendTextNode(rowNodes, { ...node, text: token });
+        rowWidth += tokenWidth;
+      }
+    }
+    flush();
+  }
+  return wrapped;
+};

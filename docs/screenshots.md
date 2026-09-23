@@ -144,12 +144,12 @@ Compound matching.
 [![Employee model](screenshots/feature-employees-model.png)](screenshots/feature-employees-model.png)
 
 Configure the four saved Employee-card formats and inspect their real contextual previews on the
-Display tab. The frame shows the thematic tabs, flat sections, native assignment and Tag treatments,
-inline Markdown preview, and the selection formatting menu. The following Value and Template frames
+Display tab. The frame shows the thematic tabs, flat sections, per-format line-spacing sliders,
+wrapped Markdown, native assignment and Tag treatments, and the selection formatting menu. The following Value and Template frames
 retain coverage of the Model tab.
 
-Capabilities: Display formats, Markdown tools, Native Tags and assignments, Contextual previews,
-Atomic draft save.
+Capabilities: Display formats, Line wrapping and spacing, Markdown tools, Native Tags and
+assignments, Contextual previews, Atomic draft save.
 
 ### Custom Value field
 
@@ -450,11 +450,12 @@ Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, U
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Configure 1x/2x/3x density, background presets, title, the five local fonts, spacing, localized
-boss label, and `@`-assisted conditional Employee card content beside the complete View preview.
+Configure 1x/2x/3x density, background presets, title, the five local fonts, spacing, and
+`@`-assisted conditional Employee card content beside the complete View preview. Employee rows use
+the saved Editor-export line spacing.
 
 Capabilities: Density and silent clamping, Fit/manual preview, Background, Title and font, Spacing
-and alignment, Boss label, Employee card content.
+and alignment, Employee line spacing, Employee card content.
 
 ## Analytics
 

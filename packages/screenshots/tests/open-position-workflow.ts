@@ -200,6 +200,8 @@ export async function exerciseOpenPositions(page: Page) {
 
   const attachedBounds = await attachedSticker.boundingBox();
   if (!attachedBounds) throw new Error("Attached Sticker geometry is unavailable.");
+  const positionBounds = await position.locator("..").boundingBox();
+  if (!positionBounds) throw new Error("Open position row geometry is unavailable.");
   await position.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Replace with Employee", exact: true }).click();
   dialog = page.getByRole("dialog");
@@ -209,12 +211,18 @@ export async function exerciseOpenPositions(page: Page) {
   await jordanCard.getByRole("button", { name: "Add", exact: true }).click();
   await dialog.getByRole("button", { name: "Add", exact: true }).last().click();
   await expect(position).toHaveCount(0);
-  await expect(
-    productUnit.locator('[data-org-editor-employee-row][title="Jordan Reed"]'),
-  ).toBeVisible();
+  const replacedEmployee = productUnit.locator(
+    '[data-org-editor-employee-row][title="Jordan Reed"]',
+  );
+  await expect(replacedEmployee).toBeVisible();
+  const replacedEmployeeBounds = await replacedEmployee.boundingBox();
+  if (!replacedEmployeeBounds) throw new Error("Replacement Employee geometry is unavailable.");
   const replacedBounds = await attachedSticker.boundingBox();
   expect(replacedBounds?.x).toBeCloseTo(attachedBounds.x, 0);
-  expect(replacedBounds?.y).toBeCloseTo(attachedBounds.y, 0);
+  expect(replacedBounds?.y).toBeCloseTo(
+    attachedBounds.y + (replacedEmployeeBounds.height - positionBounds.height) / 2,
+    0,
+  );
 
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(position).toContainText("Staff Engineer");

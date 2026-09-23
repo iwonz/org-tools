@@ -94,9 +94,9 @@ accessibility names. User data and source field paths SHALL remain verbatim.
 All six bundled locales SHALL provide matching non-empty messages for JSON and Template tabs, Unit and
 Tag collection controls, the unified sortable field list, drag handles, nested field names,
 exclusions, bounded-preview metadata, build progress, validation, clipboard feedback, direct State
-Export errors, Editor scope icons, image alignment accessibility names, and the default boss label.
-Russian SHALL consistently use its localized Template label and localized manager boss default;
-English SHALL consistently label them `Template` and `Manager`.
+Export errors, Editor scope icons, image alignment accessibility names, and conditional Employee
+format controls. Russian SHALL consistently use its localized Template label and Manager literal
+in newly created default formats; English SHALL consistently label them `Template` and `Manager`.
 
 Editor export SHALL omit redundant Preview labels and the removed expanded-image Open action while
 retaining localized accessible names for controls that render only an icon.
@@ -143,19 +143,32 @@ filesystem or parser messages MUST NOT be rendered.
 - **THEN** the machine token and user-authored value remain verbatim while surrounding product copy is localized
 
 ### Requirement: Employee schema and Tag management are completely localized
-All six bundled locales SHALL translate model dialogs, field kinds, value types, hashing,
-requiredness, option lifecycle, the Tag edit dialog, full-spectrum palette label, exact color input
-types and validation, custom-color value, named Tag colors, counts, duplicate review columns,
-validation, accessible names, and custom filter controls without raw keys or fallback English in
-another locale. Standard HTML color keywords and canonical color values SHALL remain technical input.
+All six bundled locales SHALL translate model dialogs, Employee and Unit-context field-group
+headings, display-only token help, line-spacing controls and pixel readouts, field kinds, value
+types, hashing, requiredness, option lifecycle, the Tag edit dialog, full-spectrum palette label,
+exact color input types and validation, custom-color value, named Tag colors, counts, duplicate
+review columns, validation, accessible names, and custom filter controls without raw keys or
+fallback English in another locale. Standard HTML color keywords, canonical color values, template
+tokens, and numeric pixel values SHALL remain technical input.
+
+The obsolete image-export boss-label field and its validation copy MUST be absent from every
+catalog. New blank State MUST embed each creation locale's existing Manager translation in the
+default `isBoss` ternary without later locale-driven rewriting.
 
 #### Scenario: Audit localized Tag color controls
 - **WHEN** localization validation opens Tag editing and its color dropdown in each supported locale
 - **THEN** the edit dialog, full palette, exact input types, validation, custom color value, No color, named presets, and accessibility names use that locale except technical color values
 
+#### Scenario: Audit Employee display controls
+- **WHEN** localization validation opens Employee Model and Display in each supported locale
+- **THEN** both field groups, display-only marker, every line-gap slider, and numeric readout use that catalog while technical tokens and pixel numbers remain unchanged
+
+#### Scenario: Create localized boss defaults
+- **WHEN** blank State is created in each supported locale
+- **THEN** its Editor-export ternary contains that catalog's Manager translation and no boss-label control appears in either image dialog
+
 #### Scenario: Audit Russian management surfaces
-- **WHEN** localization validation opens Employee model, Tags, Tag editing, Employee form, Import review, filters,
-  output settings, and Calendar
+- **WHEN** localization validation opens Employee model, Tags, Tag editing, Employee form, Import review, filters, output settings, and Calendar
 - **THEN** every owned visible and accessible string uses the Russian catalog except allowed data and technical names
 
 ### Requirement: Calendar navigation and weekdays are localized
@@ -278,4 +291,3 @@ in all six bundled locale catalogs with identical placeholders and no obsolete k
 #### Scenario: Open Display in every locale
 - **WHEN** the user opens Employee model, selects Display, and edits Markdown in any supported locale
 - **THEN** every visible label, validation message, tooltip, and accessible name uses that locale catalog
-

@@ -160,7 +160,6 @@
     "Units section": "Section Équipes",
     "Editor card": "Carte dans l'éditeur",
     "Editor export card": "Carte dans l'export de l'éditeur",
-    "Built-in fields": "Champs intégrés",
     "Custom fields": "Champs personnalisés",
     "Add field": "Ajouter un champ",
     "No custom fields": "Pas encore de champs personnalisés",
@@ -345,7 +344,6 @@
     "System": "Système",
     "Tags": "Étiquettes",
     "Template": "Modèle",
-    "The boss value cannot be empty.": "La valeur patron ne peut pas être vide.",
     "Theme": "Thème",
     "Today": "Aujourd'hui",
     "The structure does not have any Units yet": "La structure n'a pas encore d'Unités",
@@ -384,7 +382,6 @@
     "Mint": "Menthe",
     "No Unit is selected for export.": "Aucune unité n'est sélectionnée pour l'exportation.",
     "No Unit selected": "Aucune unité sélectionnée",
-    "Provide a value for the {isBoss} token.": "Fournir une valeur pour le jeton. · {isBoss}",
     "Rose": "Rose",
     "Text copied to the clipboard": "Texte copié dans le presse-papiers",
     "Text export saved": "Exportation de texte enregistrée",
@@ -454,7 +451,6 @@
     "Unit": "Unité",
     "{label}: {count}": ": · {label} · {count}",
     "{count} in the current format": "dans le format actuel · {count}",
-    "isBoss value": "valeur isBoss",
     "Download": "Télécharger",
     "Create the first Employee to start building your organization.": "Créez le premier employé à commencer à bâtir votre organisation.",
     "Go to Employees": "Aller aux employés",
@@ -661,6 +657,10 @@
     "Link": "Lien",
     "Link URL": "URL du lien",
     "Remove link": "Supprimer le lien",
-    "Enter a valid http, https, mailto, or tel link": "Saisissez un lien http, https, mailto ou tel valide"
+    "Enter a valid http, https, mailto, or tel link": "Saisissez un lien http, https, mailto ou tel valide",
+    "Employee fields": "Champs de l’employé",
+    "Unit context fields": "Champs contextuels de l’unité",
+    "Display only": "Affichage uniquement",
+    "Line spacing": "Interligne"
   }
 }

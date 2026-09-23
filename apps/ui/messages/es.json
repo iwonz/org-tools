@@ -160,7 +160,6 @@
     "Units section": "Sección Equipos",
     "Editor card": "Tarjeta en el Editor",
     "Editor export card": "Tarjeta en la exportación del Editor",
-    "Built-in fields": "Campos incorporados",
     "Custom fields": "Campos aduaneros",
     "Add field": "Agregar campo",
     "No custom fields": "Aún no hay campos personalizados",
@@ -345,7 +344,6 @@
     "System": "Sistema",
     "Tags": "Etiquetas",
     "Template": "Plantilla",
-    "The boss value cannot be empty.": "El valor jefe no puede estar vacío.",
     "Theme": "Tema",
     "Today": "Hoy",
     "The structure does not have any Units yet": "La estructura todavía no tiene Unidades",
@@ -384,7 +382,6 @@
     "Mint": "Menta",
     "No Unit is selected for export.": "No se selecciona una unidad para la exportación.",
     "No Unit selected": "No se ha seleccionado ninguna unidad",
-    "Provide a value for the {isBoss} token.": "Proporcionar un valor para la ficha. · {isBoss}",
     "Rose": "Rosa",
     "Text copied to the clipboard": "Texto copiado al portapapeles",
     "Text export saved": "Exportación de texto",
@@ -454,7 +451,6 @@
     "Unit": "Dependencia",
     "{label}: {count}": ": · {label} · {count}",
     "{count} in the current format": "en el formato actual · {count}",
-    "isBoss value": "Valor isBoss",
     "Download": "Descargar",
     "Create the first Employee to start building your organization.": "Crea el primer Empleado para empezar a construir tu organización.",
     "Go to Employees": "Ve a los empleados",
@@ -661,6 +657,10 @@
     "Link": "Enlace",
     "Link URL": "URL del enlace",
     "Remove link": "Eliminar enlace",
-    "Enter a valid http, https, mailto, or tel link": "Introduce un enlace http, https, mailto o tel válido"
+    "Enter a valid http, https, mailto, or tel link": "Introduce un enlace http, https, mailto o tel válido",
+    "Employee fields": "Campos de empleado",
+    "Unit context fields": "Campos de contexto de unidad",
+    "Display only": "Solo visualización",
+    "Line spacing": "Interlineado"
   }
 }

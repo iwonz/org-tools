@@ -439,10 +439,11 @@ export const getOrgEditorEmployeeRowHeightForTagLabels = (
   Math.max(0, packOrgEditorTagLabels(labels, availableWidth) - 1) *
     ORG_EDITOR_EMPLOYEE_TAG_ROW_HEIGHT;
 
-export const getOrgEditorEmployeeRowHeightForDisplayLines = (lineCount: number) =>
+export const getOrgEditorEmployeeRowHeightForDisplayLines = (lineCount: number, lineGap = 0) =>
   Math.max(
     ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
     Math.max(0, lineCount) * ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT +
+      Math.max(0, lineCount - 1) * lineGap +
       ORG_EDITOR_EMPLOYEE_CONTENT_VERTICAL_PADDING,
   );
 
@@ -477,20 +478,24 @@ export const getOrgEditorEmployeeRowHeightForRichLines = (
   lines: readonly EmployeeDisplayLine[],
   availableWidth: number,
   formatTag?: (tag: EmployeeTag) => string,
+  lineGap = 0,
 ) =>
   getOrgEditorEmployeeRowHeightForDisplayLines(
     getOrgEditorEmployeeRichVisualLineCount(lines, availableWidth, formatTag),
+    lineGap,
   );
 
 export const getOrgEditorEmployeeDisplayLineBaselines = ({
   employeeRowHeight,
   employeeRowOffset,
   lineCount,
+  lineGap = 0,
   unitY,
 }: {
   employeeRowHeight: number;
   employeeRowOffset: number;
   lineCount: number;
+  lineGap?: number;
   unitY: number;
 }) => {
   const rowTop =
@@ -499,13 +504,14 @@ export const getOrgEditorEmployeeDisplayLineBaselines = ({
     ORG_EDITOR_UNIT_HEADER_HEIGHT +
     ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING +
     employeeRowOffset;
-  const contentHeight = lineCount * ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT;
+  const contentHeight =
+    lineCount * ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT + Math.max(0, lineCount - 1) * lineGap;
   const contentTop = rowTop + (employeeRowHeight - contentHeight) / 2;
   return Array.from(
     { length: lineCount },
     (_, index) =>
       contentTop +
-      index * ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT +
+      index * (ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT + lineGap) +
       (ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT + ORG_EDITOR_EMPLOYEE_NAME_FONT_SIZE) / 2 -
       1,
   );

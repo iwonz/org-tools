@@ -87,7 +87,6 @@ import {
   ORG_EDITOR_EXPORT_GRADIENTS,
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
-  orgEditorTemplateContainsBossToken,
 } from "@/lib/org-editor-export";
 import { copyTextToClipboard, downloadBlob, downloadText } from "@/lib/org-file";
 import { normalizeSearchValue } from "@/lib/search-index";
@@ -165,18 +164,16 @@ export function OrgEditorExportDialog({
   const store = useOrgStore();
   const locale = useLocale();
   const countText = useCountText();
-  const localizedManagerLabel = t("Manager");
   const positionNotSpecifiedLabel = t("Position not specified");
   const [scope, setScope] = useState<OrgEditorExportScope>("subtree");
   const [activeTab, setActiveTab] = useState<OrgEditorExportTab>("image");
   const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() =>
     createDefaultOrgEditorImageExportSettings(
-      localizedManagerLabel,
       store.employeeDisplayFormats.editorExport,
+      store.employeeDisplayLineGaps.editorExport,
     ),
   );
   const previousImageOpenRef = useRef(false);
-  const previousLocalizedManagerLabelRef = useRef(localizedManagerLabel);
   const [templateFormat, setTemplateFormat] = useState(DEFAULT_TEMPLATE_FORMAT);
   const [removeEmptyTemplateLines, setRemoveEmptyTemplateLines] = useState(false);
   const [rowMode, setRowMode] = useState<ExportRowMode>("allUnits");
@@ -206,17 +203,6 @@ export function OrgEditorExportDialog({
   const [previewError, setPreviewError] = useState<UiTextKey | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewSize, setPreviewSize] = useState({ height: 0, width: 0 });
-  useEffect(() => {
-    const previousLocalizedManagerLabel = previousLocalizedManagerLabelRef.current;
-    if (previousLocalizedManagerLabel === localizedManagerLabel) return;
-
-    setImageSettings((currentSettings) =>
-      currentSettings.imageBossLabel === previousLocalizedManagerLabel
-        ? { ...currentSettings, imageBossLabel: localizedManagerLabel }
-        : currentSettings,
-    );
-    previousLocalizedManagerLabelRef.current = localizedManagerLabel;
-  }, [localizedManagerLabel]);
   const formatUnitSummary = useCallback(
     (summary: OrgEditorUnitEmployeeSummary) => {
       const direct = countText("employees", { count: summary.directCount });
@@ -258,10 +244,11 @@ export function OrgEditorExportDialog({
       setImageSettings((current) => ({
         ...current,
         employeeFormat: store.employeeDisplayFormats.editorExport,
+        employeeLineGap: store.employeeDisplayLineGaps.editorExport,
       }));
     }
     previousImageOpenRef.current = open;
-  }, [open, store.employeeDisplayFormats.editorExport]);
+  }, [open, store.employeeDisplayFormats.editorExport, store.employeeDisplayLineGaps.editorExport]);
   const exportRows = useMemo(() => {
     if (!unit) return [];
 
@@ -330,9 +317,6 @@ export function OrgEditorExportDialog({
       }),
     [jsonSettings, store.employeeFieldDefinitions],
   );
-  const hasImageBossToken = orgEditorTemplateContainsBossToken(imageSettings.employeeFormat);
-  const isImageBossLabelValid =
-    !hasImageBossToken || imageSettings.imageBossLabel.trim().length > 0;
   const textPreview = useMemo(
     () =>
       createExportPreview({
@@ -353,21 +337,10 @@ export function OrgEditorExportDialog({
     ],
   );
   const canExportText = exportRows.length > 0 && (activeTab !== "json" || jsonValidation.isValid);
-  const canExportImage = Boolean(unit) && isImageBossLabelValid;
+  const canExportImage = Boolean(unit);
 
   useEffect(() => {
     if (!open || !unit || activeTab !== "image") return;
-
-    if (!isImageBossLabelValid) {
-      setIsPreviewLoading(false);
-      setPreviewUrl((currentUrl) => {
-        if (currentUrl) URL.revokeObjectURL(currentUrl);
-        return null;
-      });
-      setPreviewSize({ height: 0, width: 0 });
-      setPreviewError("Provide a value for the {isBoss} token.");
-      return;
-    }
 
     let isCancelled = false;
 
@@ -423,7 +396,6 @@ export function OrgEditorExportDialog({
     employeeById,
     formatUnitSummary,
     imageSettings,
-    isImageBossLabelValid,
     layoutMode,
     locale,
     open,
@@ -871,26 +843,6 @@ export function OrgEditorExportDialog({
                       value={imageSettings.employeeFormat}
                     />
                   </div>
-                  {hasImageBossToken && (
-                    <div className="grid max-w-sm gap-2">
-                      <Label htmlFor="org-editor-export-image-boss-label">
-                        {t("isBoss value")}
-                      </Label>
-                      <Input
-                        aria-invalid={!isImageBossLabelValid}
-                        id="org-editor-export-image-boss-label"
-                        onChange={(event) =>
-                          updateImageSettings({ imageBossLabel: event.currentTarget.value })
-                        }
-                        value={imageSettings.imageBossLabel}
-                      />
-                      {!isImageBossLabelValid && (
-                        <p className="text-xs text-destructive">
-                          {t("The boss value cannot be empty.")}
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </section>
             </TabsContent>

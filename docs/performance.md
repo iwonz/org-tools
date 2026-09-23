@@ -36,11 +36,13 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   Multi-option filters reuse resolved label arrays, Composite filters reuse only indexed primary
   values, and Composite Calendar dates are flattened once during the same organization-index build.
 - Resolve each mounted Employee card from one saved contextual format and already indexed Unit
-  contexts. Format output is bounded by the persisted format and field values, drops empty lines,
+  contexts. Format output is bounded by the persisted format and field values, drops dynamically
+  empty lines, preserves only authored internal blank rows,
   and does not add catalog scans. A 256-entry least-recently-used cache stores parsed Markdown trees
   by the resolved template structure without retaining organization values. Native Tag and compound
   assignment nodes reuse bounded chip packing based on the complete `Position · Unit` projection.
-  Editor and PNG compute the same rich-line and wrapped-chip height
+  A bounded text-width cache and shared word/character packer keep wrapping linear in output size.
+  Editor and PNG compute the same rich-line, configured-gap, and wrapped-chip height
   once per row and feed it into the existing prefix-offset pass, so formatted cards preserve O(n)
   geometry work.
 - Cache derived structures by View document revision and global Employee/Tag/field references.

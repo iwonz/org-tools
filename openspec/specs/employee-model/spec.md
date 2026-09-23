@@ -213,27 +213,31 @@ Editor membership removal SHALL affect only the active View.
 ### Requirement: Employee model owns card display formats
 The Employee model SHALL retain field configuration under an icon-labeled Model tab and expose an
 icon-labeled Display tab containing flat Employees section, Units section, Editor card, and Editor
-export card format sections. Each format SHALL use the shared token input with inline Markdown tools
-and a bordered live destination preview. The four-value draft MUST commit atomically on Save and MUST
-be discarded when the dialog closes without saving. New organizations MUST initialize Employees and
+export card format sections. Each format SHALL use the shared token input with inline Markdown tools,
+a 0-24 pixel integer line-gap slider with a numeric pixel readout, and a bordered live destination
+preview. The four format strings and four line gaps MUST commit atomically on Save and MUST be
+discarded when the dialog closes without saving. New organizations MUST initialize Employees and
 Units formats with `{fullName}`, `{username}`, `{email}`, `{positions}`, and `{tags}` on separate
-lines while retaining the existing Editor and Editor-export defaults.
+lines and MUST initialize every line gap to 4 pixels.
+
+The default Editor-export format MUST embed the Manager translation for the creation locale inside
+an `isBoss` ternary. A later locale change MUST NOT rewrite that stored user format.
 
 #### Scenario: Preview and save display formats
-- **WHEN** a user edits formats and saves the Display tab
-- **THEN** every preview updates before Save and all four persisted formats change in one organization mutation
+- **WHEN** a user edits formats or line gaps and saves the Display tab
+- **THEN** every preview updates before Save and all eight persisted values change in one organization mutation
 
 #### Scenario: Cancel display changes
-- **WHEN** a user edits a format and closes the dialog without saving
-- **THEN** no display format or organization revision changes
+- **WHEN** a user edits a format or line gap and closes the dialog without saving
+- **THEN** no display setting or organization revision changes
 
 #### Scenario: Inspect the Display layout
 - **WHEN** the Employee model opens either top-level tab
 - **THEN** Model and Display show thematic accessible icons and each Display section has no enclosing fill, rounding, or padding while its preview retains its boundary and card spacing
 
 #### Scenario: Create a new organization
-- **WHEN** blank State is created
-- **THEN** Employees and Units formats use the compound `{positions}` token without rewriting any format loaded from State
+- **WHEN** blank State is created in a supported locale
+- **THEN** Employees and Units use `{positions}`, all line gaps equal 4, and Editor export contains that locale's Manager literal inside an `isBoss` ternary
 
 ### Requirement: Employee display formats use contextual template values
 Each format MUST use the existing `@`, `{token}`, and conditional grammar and offer built-in
@@ -242,8 +246,9 @@ custom field while excluding avatar data. Ordinary array values, including `{pos
 `{unitName}`, SHALL join with `; ` and Composite values SHALL use their existing deterministic text
 serialization. `{tags}` MUST retain ordered Tag objects and `{positions}` MUST retain every ordered
 contextual assignment as a semantic display group. Employees and fallback cards MUST aggregate
-every system-View assignment in structural order and treat `isBoss` as true when any assignment is
-managed. Units, Editor, and PNG rows MUST resolve Unit fields from the one containing Unit.
+every system-View assignment in structural order and resolve `isBoss` to boolean true when any
+assignment is managed. Units, Editor, and PNG rows MUST resolve Unit fields from the one containing
+Unit. Direct `{isBoss}` output MUST be empty; visible boss text MUST be authored in a ternary branch.
 
 #### Scenario: Render one Employee in different contexts
 - **WHEN** one Employee belongs to multiple system Units and appears inside one selected Unit
@@ -256,6 +261,10 @@ managed. Units, Editor, and PNG rows MUST resolve Unit fields from the one conta
 #### Scenario: Render an assignment without a position
 - **WHEN** a contextual assignment has no position and the format contains `{positions}`
 - **THEN** its pill uses the localized missing-position label followed by a middle dot and the Unit name
+
+#### Scenario: Render boss conditionally
+- **WHEN** a boss row uses `{isBoss ? 'Manager' : ''}` and another row uses direct `{isBoss}`
+- **THEN** the ternary renders its literal while the direct token produces no visible text
 
 #### Scenario: Preserve an existing custom positions key
 - **WHEN** loaded State already defines a custom field whose normalized key is `positions`
@@ -270,22 +279,36 @@ managed. Units, Editor, and PNG rows MUST resolve Unit fields from the one conta
 - **THEN** all previews render a transient synthetic example without persisting it
 
 ### Requirement: Employee cards render configured information columns
-Employee cards SHALL render each non-empty format line as inline Markdown containing ordinary text,
+Employee cards SHALL render authored format lines as inline Markdown containing ordinary text,
 bold, italic, strike, inline code, safe links, native Tag chips, and native compound assignment
-pills. Every line in one context SHALL use the same base size, color, and normal weight; Markdown
-alone controls text emphasis. Text SHALL truncate horizontally while semantic Tag and assignment
-groups MAY wrap complete chips. Each assignment pill MUST render the position with foreground
-emphasis, a middle dot, and the Unit name with secondary styling. Avatar, boss marker, card actions,
-search highlighting, safe explicit profile, Markdown and Unit navigation, and the full-name
-accessible label MUST remain available independently of formatted content. `{email}` MUST remain
-ordinary text unless an author places it in an explicit safe Markdown link.
+pills. Internal source-authored blank lines between visible content SHALL reserve one empty row;
+leading and trailing blank lines and lines emptied only by absent values or false conditions SHALL
+be omitted. Ordinary text MUST wrap by words to the available width with character fallback for an
+oversized uninterrupted value. Every line in one context SHALL use the same base size, color, and
+normal weight; Markdown alone controls text emphasis.
+
+The selected pixel gap SHALL separate text and format rows without trailing space after the final
+row. Semantic Tag and assignment groups MAY wrap complete chips while retaining their native
+internal geometry. Each assignment pill MUST render the position with foreground emphasis, a
+middle dot, and the Unit name with secondary styling. Avatar, boss marker, card actions, search
+highlighting, safe explicit profile, Markdown and Unit navigation, and the full-name accessible
+label MUST remain available independently of formatted content. `{email}` MUST remain ordinary
+text unless an author places it in an explicit safe Markdown link.
 
 #### Scenario: Use the Employees fallback format
 - **WHEN** an Employee card is outside Employees, Units, Editor canvas, and Editor PNG contexts
-- **THEN** it renders the Employees-section rich format
+- **THEN** it renders the Employees format and Employees line gap
+
+#### Scenario: Preserve authored rows
+- **WHEN** visible format lines contain an internal blank line and long text exceeding card width
+- **THEN** the blank row remains, the text wraps by words or characters, and only configured inter-row gaps are added
+
+#### Scenario: Drop dynamic empty rows
+- **WHEN** a complete source line contains only an absent field or a false conditional branch
+- **THEN** that line contributes no visible row or spacing
 
 #### Scenario: Render an empty format
-- **WHEN** the applicable saved format produces no visible text, Tags, or assignments
+- **WHEN** the applicable saved format produces no visible text, Tags, assignments, or internal blank row between content
 - **THEN** the information column is empty while the avatar, accessible name, and actions remain usable
 
 #### Scenario: Preserve native fields
@@ -341,3 +364,18 @@ any other value. Removing a link MUST preserve its label text.
 - **WHEN** Link Apply receives an invalid or unsupported destination
 - **THEN** localized feedback remains in the transient editor and the format draft is unchanged
 
+### Requirement: Built-in Employee fields expose their scope
+The Employee model SHALL show Employee-owned fields separately from Unit-context fields. The
+Employee group MUST contain `id`, `firstName`, `lastName`, `fullName`, `gender`, `username`,
+`profileUrl`, `email`, `phone`, `birthday`, `tags`, and `tagDates`. The Unit-context group MUST
+contain `unitId`, `unitName`, `unitFullPath`, `position`, display-only `positions`, and `isBoss`.
+Custom Template fields MUST suggest only Employee-owned and custom fields, while Employee display
+formats MUST suggest both groups and every applicable custom field.
+
+#### Scenario: Inspect built-in fields
+- **WHEN** the Model tab is open
+- **THEN** Employee and Unit-context tokens appear under separate localized headings and `positions` is identified as display-only
+
+#### Scenario: Edit a custom Template field
+- **WHEN** its token suggestions open
+- **THEN** unavailable Unit-context and display-only tokens are absent while Employee-owned and safe custom dependencies remain available

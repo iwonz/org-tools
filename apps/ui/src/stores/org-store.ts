@@ -5,6 +5,7 @@ import type {
   CustomEmployeeOptionDraft,
   EditableEmployeeFields,
   EmployeeDisplayFormats,
+  EmployeeDisplayLineGaps,
   EmployeeFieldId,
   EmployeeId,
   EmployeeTag,
@@ -37,7 +38,10 @@ import {
   createUuid,
   normalizeEditableEmployeeFields,
 } from "@/lib/employee-data";
-import { DEFAULT_EMPLOYEE_DISPLAY_FORMATS } from "@/lib/employee-display-defaults";
+import {
+  DEFAULT_EMPLOYEE_DISPLAY_FORMATS,
+  DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS,
+} from "@/lib/employee-display-defaults";
 import { createEmployeeIdentityKey } from "@/lib/employee-id";
 import type { EmployeeSearchFilters } from "@/lib/employee-search";
 import { type EmployeeTagUpdate, normalizeEmployeeTags } from "@/lib/employee-tags";
@@ -162,6 +166,7 @@ const cloneEmployeeFieldDefinition = (
 
 export class OrgStore {
   employeeDisplayFormats: EmployeeDisplayFormats = { ...DEFAULT_EMPLOYEE_DISPLAY_FORMATS };
+  employeeDisplayLineGaps: EmployeeDisplayLineGaps = { ...DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS };
   employeeFieldDefinitions: CustomEmployeeFieldDefinition[] = [];
   tagDefinitions: EmployeeTagDefinition[] = [];
   organizationEmployees: OrganizationEmployee[] = [];
@@ -238,6 +243,7 @@ export class OrgStore {
         uiOrgStructure: observable.ref,
         organizationEmployees: observable.shallow,
         employeeDisplayFormats: observable.ref,
+        employeeDisplayLineGaps: observable.ref,
         employeeFieldDefinitions: observable.shallow,
         tagDefinitions: observable.shallow,
       },
@@ -262,6 +268,7 @@ export class OrgStore {
     return [
       this.organizationEmployees,
       this.employeeDisplayFormats,
+      this.employeeDisplayLineGaps,
       this.employeeFieldDefinitions,
       this.tagDefinitions,
       this.orgViews.viewRecords,
@@ -490,6 +497,7 @@ export class OrgStore {
 
       this.organizationEmployees = nextEmployees;
       this.employeeDisplayFormats = { ...state.organization.employeeDisplayFormats };
+      this.employeeDisplayLineGaps = { ...state.organization.employeeDisplayLineGaps };
       this.employeeFieldDefinitions = structuredClone(state.organization.employeeFieldDefinitions);
       this.tagDefinitions = structuredClone(state.organization.tags);
       this.exportSession.synchronizeCustomFields(this.employeeFieldDefinitions);
@@ -1690,6 +1698,7 @@ export class OrgStore {
   createOrganizationState(): OrgToolsState["organization"] {
     return {
       employeeDisplayFormats: { ...this.employeeDisplayFormats },
+      employeeDisplayLineGaps: { ...this.employeeDisplayLineGaps },
       employeeFieldDefinitions: this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition),
       employees: this.organizationEmployees.map((employee) => ({
         ...employee,
@@ -1700,8 +1709,16 @@ export class OrgStore {
     };
   }
 
-  setEmployeeDisplayFormats(formats: EmployeeDisplayFormats): void {
+  setEmployeeDisplaySettings(
+    formats: EmployeeDisplayFormats,
+    lineGaps: EmployeeDisplayLineGaps,
+  ): void {
     this.employeeDisplayFormats = { ...formats };
+    this.employeeDisplayLineGaps = { ...lineGaps };
+  }
+
+  setEmployeeDisplayFormats(formats: EmployeeDisplayFormats): void {
+    this.setEmployeeDisplaySettings(formats, this.employeeDisplayLineGaps);
   }
 
   createDurableUiState(): OrgToolsState["ui"] {

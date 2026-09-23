@@ -11,6 +11,7 @@ import {
   isSafeEmployeeDisplayHref,
   renderEmployeeDisplayLines,
   renderEmployeeDisplayRichLines,
+  wrapEmployeeDisplayRichLines,
 } from "@/lib/employee-display";
 import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { OrgStore } from "@/stores/org-store";
@@ -62,16 +63,14 @@ describe("Employee display formats", () => {
     const format = " {fullName} \n{position}\n{unitName}\n{isBoss}\n\n{tags}";
     expect(
       renderEmployeeDisplayLines({
-        bossLabel: "Manager",
         customEmployeeFieldDefinitions: [],
         employee,
         format,
         unitContexts: contexts,
       }),
-    ).toEqual(["Avery Stone", "Lead; Advisor", "Product; Research", "Manager", "Design; Mentor"]);
+    ).toEqual(["Avery Stone", "Lead; Advisor", "Product; Research", "", "Design; Mentor"]);
     expect(
       renderEmployeeDisplayLines({
-        bossLabel: "Manager",
         customEmployeeFieldDefinitions: [],
         employee,
         format: "{position}\n{unitName}\n{isBoss}",
@@ -80,13 +79,40 @@ describe("Employee display formats", () => {
     ).toEqual(["Advisor", "Research"]);
     expect(
       renderEmployeeDisplayLines({
-        bossLabel: "Manager",
         customEmployeeFieldDefinitions: [],
         employee,
         format: "\n  \n",
         unitContexts: contexts,
       }),
     ).toEqual([]);
+    expect(
+      renderEmployeeDisplayLines({
+        customEmployeeFieldDefinitions: [],
+        employee,
+        format: "{isBoss ? 'Manager' : 'Contributor'}\n{isBoss}",
+        unitContexts: contexts,
+      }),
+    ).toEqual(["Manager"]);
+  });
+
+  test("preserves intentional blank rows and wraps words with character fallback", () => {
+    const lines = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "{fullName}\n\nLong words wrap\n{phone}\nabcdefghij",
+      unitContexts: [],
+    });
+    expect(lines.map((line) => ({ blank: line.blank ?? false, text: line.text }))).toEqual([
+      { blank: false, text: "Avery Stone" },
+      { blank: true, text: "" },
+      { blank: false, text: "Long words wrap" },
+      { blank: false, text: "abcdefghij" },
+    ]);
+    expect(
+      wrapEmployeeDisplayRichLines(lines, 25, (node) => node.text.length * 5).map(
+        (line) => line.text,
+      ),
+    ).toEqual(["Avery", "Stone", "", "Long", "words", "wrap", "abcde", "fghij"]);
   });
 
   test("renders custom fields and conditionals through the shared grammar", () => {
@@ -103,7 +129,6 @@ describe("Employee display formats", () => {
     };
     expect(
       renderEmployeeDisplayLines({
-        bossLabel: "Manager",
         customEmployeeFieldDefinitions: [definition],
         employee,
         format: "{level ? 'Level: {level}' : ''}\n{phone}",
@@ -118,7 +143,6 @@ describe("Employee display formats", () => {
       fullName: "**Avery** <script>alert(1)</script>",
     };
     const lines = renderEmployeeDisplayRichLines({
-      bossLabel: "Manager",
       customEmployeeFieldDefinitions: [],
       employee: richEmployee,
       format:
@@ -155,7 +179,6 @@ describe("Employee display formats", () => {
       createOrgUnitContext(unitPosition(3, "Research", "Advisor")),
     ];
     const lines = renderEmployeeDisplayRichLines({
-      bossLabel: "Manager",
       customEmployeeFieldDefinitions: [],
       employee,
       format: "**{tags}**\n[{positions}](https://example.test)",
@@ -180,7 +203,6 @@ describe("Employee display formats", () => {
       createOrgUnitContext(unitPosition(3, "Research", null)),
     ];
     const lines = renderEmployeeDisplayRichLines({
-      bossLabel: "Manager",
       customEmployeeFieldDefinitions: [],
       employee,
       format: "**{position}**\n*{unitName}*\n{positions}",
@@ -218,7 +240,6 @@ describe("Employee display formats", () => {
 
   test("keeps plain email inert and supports an explicit mailto Markdown link", () => {
     const lines = renderEmployeeDisplayRichLines({
-      bossLabel: "Manager",
       customEmployeeFieldDefinitions: [],
       employee,
       format: "{email}\n[{email}](mailto:{email})",
@@ -258,7 +279,6 @@ describe("Employee display formats", () => {
     const contexts = [createOrgUnitContext(unitPosition(2, "Product", "Lead"))];
     expect(
       renderEmployeeDisplayRichLines({
-        bossLabel: "Manager",
         customEmployeeFieldDefinitions: [legacyDefinition],
         employee,
         format: "{positions}",
@@ -283,7 +303,6 @@ describe("Employee display formats", () => {
 
   test("keeps unsafe links and unsupported Markdown inert", () => {
     const lines = renderEmployeeDisplayRichLines({
-      bossLabel: "Manager",
       customEmployeeFieldDefinitions: [],
       employee,
       format: "[Unsafe](javascript:alert(1))\n![Remote](https://example.test/image.png)\n# literal",
@@ -302,7 +321,6 @@ describe("Employee display formats", () => {
 
   test("keeps incomplete inline Markdown as visible text", () => {
     const lines = renderEmployeeDisplayRichLines({
-      bossLabel: "Manager",
       customEmployeeFieldDefinitions: [],
       employee,
       format: "**unfinished _format [link](broken",

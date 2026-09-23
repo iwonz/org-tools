@@ -30,11 +30,13 @@ into the system View; the source, bounded
 richest-record preview, virtualized source-to-target mapping, pending custom fields, and duplicate choices are discarded when the modal closes. Birthday
 validation is local and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without
 inferring one. Employee UUID creation, duplicate-key normalization, custom Template evaluation, and
-optional MD5 or SHA-256 output all run locally. Multi-option catalogs, user-created choices,
+optional MD5 or SHA-256 output all run locally. Employee and Unit-context token scopes, `isBoss`
+condition evaluation, authored blank rows, text wrapping, and per-destination line gaps are also
+computed locally. Multi-option catalogs, user-created choices,
 Composite schemas and records, their validation, and their derived Calendar events remain inside
 the same in-memory or loopback boundary. New custom options remain transient dialog data until the
-complete Employee save succeeds. Employee display formats and their previews resolve only the
-current local catalog and View context. Display drafts and image-dialog overrides remain in dialog
+complete Employee save succeeds. Employee display formats, line gaps, and their previews resolve
+only the current local catalog and View context. Display drafts and image-dialog overrides remain in dialog
 memory until their explicit Save or dismissal. Their inline Markdown parser never executes HTML,
 loads images, or interprets Markdown from resolved Employee values. Plain fields, including
 `{email}`, never create navigation. Only explicit `http`, `https`, `mailto`, and `tel` Markdown

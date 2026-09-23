@@ -2,9 +2,15 @@
   "organization": {
     "employeeDisplayFormats": {
       "editor": "{fullName}\n{tags}",
-      "editorExport": "{fullName} {isBoss ? '· {isBoss}' : ''}\n{tags}",
+      "editorExport": "{fullName} {isBoss ? '· Manager' : ''}\n{tags}",
       "employees": "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
       "units": "{fullName}\n{username}\n{email}\n{positions}\n{tags}"
+    },
+    "employeeDisplayLineGaps": {
+      "editor": 4,
+      "editorExport": 4,
+      "employees": 4,
+      "units": 4
     },
     "employeeFieldDefinitions": [
       {

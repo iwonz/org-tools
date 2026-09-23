@@ -62,7 +62,6 @@ import {
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
   type OrgEditorExportTitleAlign,
-  orgEditorTemplateContainsBossToken,
   orgEditorTemplateUnitFields,
 } from "@/lib/org-editor-export";
 import { downloadBlob } from "@/lib/org-file";
@@ -107,13 +106,11 @@ export function OrgEditorViewImageExportDialog({
   const store = useOrgStore();
   const locale = useLocale();
   const countText = useCountText();
-  const managerLabel = t("Manager");
   const positionNotSpecifiedLabel = t("Position not specified");
-  const previousManagerLabel = useRef(managerLabel);
   const [settings, setSettings] = useState(() =>
     createDefaultOrgEditorImageExportSettings(
-      managerLabel,
       store.employeeDisplayFormats.editorExport,
+      store.employeeDisplayLineGaps.editorExport,
     ),
   );
   const previousImageOpenRef = useRef(false);
@@ -152,20 +149,11 @@ export function OrgEditorViewImageExportDialog({
       setSettings((current) => ({
         ...current,
         employeeFormat: store.employeeDisplayFormats.editorExport,
+        employeeLineGap: store.employeeDisplayLineGaps.editorExport,
       }));
     }
     previousImageOpenRef.current = open;
-  }, [open, store.employeeDisplayFormats.editorExport]);
-
-  useEffect(() => {
-    if (previousManagerLabel.current === managerLabel) return;
-    setSettings((current) =>
-      current.imageBossLabel === previousManagerLabel.current
-        ? { ...current, imageBossLabel: managerLabel }
-        : current,
-    );
-    previousManagerLabel.current = managerLabel;
-  }, [managerLabel]);
+  }, [open, store.employeeDisplayFormats.editorExport, store.employeeDisplayLineGaps.editorExport]);
 
   const formatUnitSummary = useCallback(
     (summary: OrgEditorUnitEmployeeSummary) => {
@@ -176,9 +164,6 @@ export function OrgEditorViewImageExportDialog({
     },
     [countText],
   );
-  const validBossLabel =
-    !orgEditorTemplateContainsBossToken(settings.employeeFormat) ||
-    settings.imageBossLabel.trim().length > 0;
   const hasContent = units.length > 0 || canvasElements.length > 0;
   const render = useCallback(
     (maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS) =>
@@ -223,7 +208,7 @@ export function OrgEditorViewImageExportDialog({
   );
 
   useEffect(() => {
-    if (!open || !validBossLabel) return;
+    if (!open) return;
     if (!hasContent) {
       setPreviewLoading(false);
       setPreviewError(false);
@@ -256,7 +241,7 @@ export function OrgEditorViewImageExportDialog({
     return () => {
       cancelled = true;
     };
-  }, [hasContent, open, render, validBossLabel]);
+  }, [hasContent, open, render]);
 
   useEffect(() => {
     if (open) return;
@@ -499,16 +484,6 @@ export function OrgEditorViewImageExportDialog({
               tokens={employeeFormatTokens}
               value={settings.employeeFormat}
             />
-            {orgEditorTemplateContainsBossToken(settings.employeeFormat) && (
-              <div className="grid gap-2">
-                <Label>{t("isBoss value")}</Label>
-                <Input
-                  aria-invalid={!validBossLabel}
-                  onChange={(event) => update({ imageBossLabel: event.currentTarget.value })}
-                  value={settings.imageBossLabel}
-                />
-              </div>
-            )}
           </section>
         </DialogBody>
         <DialogFooter className="items-center sm:justify-between">
@@ -527,7 +502,7 @@ export function OrgEditorViewImageExportDialog({
           </p>
           <div className="flex gap-2">
             <Button
-              disabled={!hasContent || !validBossLabel || previewLoading}
+              disabled={!hasContent || previewLoading}
               onClick={() => void copy()}
               type="button"
               variant="outline"
@@ -536,7 +511,7 @@ export function OrgEditorViewImageExportDialog({
               {t("Copy")}
             </Button>
             <Button
-              disabled={!hasContent || !validBossLabel || previewLoading}
+              disabled={!hasContent || previewLoading}
               onClick={() => void save()}
               type="button"
             >

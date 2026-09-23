@@ -23,6 +23,7 @@ import {
   type EmployeeDisplayPosition,
   getEmployeeDisplayPositionText,
   renderEmployeeDisplayRichLines,
+  wrapEmployeeDisplayRichLines,
 } from "@/lib/employee-display";
 import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { getEmployeeInitials } from "@/lib/employee-utils";
@@ -91,11 +92,7 @@ import {
   getStickerColorStyle,
   getTagColorCanvasStyle,
 } from "@/lib/tag-color";
-import {
-  renderTemplateFormat,
-  type TemplateFieldValue,
-  templateReferencesField,
-} from "@/lib/template-format";
+import { renderTemplateFormat, type TemplateFieldValue } from "@/lib/template-format";
 import type { ExportEmployeeFieldKey, ExportRowMode } from "@/stores/org-store";
 
 export type OrgEditorExportScope = "subtree" | "unit";
@@ -121,8 +118,8 @@ export type OrgEditorImageExportSettings = {
   background: OrgEditorImageBackground;
   density: OrgEditorImageDensity;
   employeeFormat: string;
+  employeeLineGap: number;
   fontFamily: string;
-  imageBossLabel: string;
   padding: number;
   title: string;
   titleAlign: OrgEditorExportTitleAlign;
@@ -190,8 +187,7 @@ export const ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS = 32_000_000;
 export const ORG_EDITOR_EXPORT_MAX_CANVAS_SIDE = 16_384;
 export const ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT = 160;
 export const ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS = 8_000_000;
-export const ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT = "{fullName} {isBoss ? '· {isBoss}' : ''}";
-export const ORG_EDITOR_DEFAULT_BOSS_LABEL = "Manager";
+export const ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT = "{fullName} {isBoss ? '· Manager' : ''}";
 
 export const getOrgEditorExportOpenPositionRowOutline = ({
   employeeRowHeight,
@@ -512,14 +508,14 @@ export const orgEditorTemplateUnitFields: Array<{
 ];
 
 export const createDefaultOrgEditorImageExportSettings = (
-  imageBossLabel = ORG_EDITOR_DEFAULT_BOSS_LABEL,
   employeeFormat = ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT,
+  employeeLineGap = 4,
 ): OrgEditorImageExportSettings => ({
   background: { type: "transparent" },
   density: 2,
   employeeFormat,
+  employeeLineGap,
   fontFamily: ORG_EDITOR_EXPORT_FONTS[0]?.family ?? "system-ui",
-  imageBossLabel,
   padding: 20,
   title: "",
   titleAlign: "left",
@@ -597,9 +593,6 @@ export const getOrgEditorExportUnits = ({
 
   return units.filter((unit) => unitIds.has(unit.id));
 };
-
-export const orgEditorTemplateContainsBossToken = (templateFormat: string) =>
-  templateReferencesField(templateFormat, "isBoss");
 
 export const getEmployeeCanvasAvatarUrl = (employee: Employee | undefined) =>
   isSafeAvatarBase64Url(employee?.avatarBase64Url) ? employee.avatarBase64Url : null;
@@ -1489,13 +1482,11 @@ const paintImageBackground = (
 
 const createOrgEditorTemplateFieldResolver =
   ({
-    bossLabel,
     employee,
     isBoss,
     position,
     unitName,
   }: {
-    bossLabel: string;
     employee: Employee | undefined;
     isBoss: boolean;
     position: string | null;
@@ -1513,20 +1504,18 @@ const createOrgEditorTemplateFieldResolver =
 
     if (fieldName === "unitName") return { known: true, value: unitName };
     if (fieldName === "position") return { known: true, value: position ?? "" };
-    if (fieldName === "isBoss") return { known: true, value: isBoss ? bossLabel : "" };
+    if (fieldName === "isBoss") return { known: true, value: isBoss };
 
     return { known: false };
   };
 
 const renderOrgEditorTemplate = ({
-  bossLabel,
   employee,
   format,
   isBoss,
   position,
   unitName,
 }: {
-  bossLabel: string;
   employee: Employee | undefined;
   format: string;
   isBoss: boolean;
@@ -1534,9 +1523,8 @@ const renderOrgEditorTemplate = ({
   unitName: string;
 }) =>
   renderTemplateFormat({
-    formatValue: asExportText,
+    formatValue: (value, fieldName) => (fieldName === "isBoss" ? "" : asExportText(value)),
     resolveField: createOrgEditorTemplateFieldResolver({
-      bossLabel,
       employee,
       isBoss,
       position,
@@ -1622,14 +1610,16 @@ export const createOrgEditorImageExportResult = async ({
       const employee = employeeById.get(row.employeeId);
       if (!employee) return [];
       const unitPosition = employee.unitPositions.find((position) => position.unitId === unit.id);
-      return renderEmployeeDisplayRichLines({
-        bossLabel: settings.imageBossLabel.trim(),
-        customEmployeeFieldDefinitions,
-        employee,
-        format: settings.employeeFormat,
-        positionNotSpecifiedLabel,
-        unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
-      });
+      return wrapEmployeeDisplayRichLines(
+        renderEmployeeDisplayRichLines({
+          customEmployeeFieldDefinitions,
+          employee,
+          format: settings.employeeFormat,
+          positionNotSpecifiedLabel,
+          unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
+        }),
+        availableTagWidth,
+      );
     });
     const employeeTagLayouts = rows.map((row) => {
       const tags =
@@ -1653,6 +1643,7 @@ export const createOrgEditorImageExportResult = async ({
             employeeDisplayLines[index] ?? [],
             availableTagWidth,
             (tag) => getOrgEditorExportTagLabels([tag], locale)[0] ?? tag.label,
+            settings.employeeLineGap,
           )
         : getOrgEditorExportEmployeeRowHeightForTagLayout(
             employeeTagLayouts[index] ?? { chips: [], height: 0, rowCount: 0 },
@@ -2072,6 +2063,7 @@ export const createOrgEditorImageExportResult = async ({
           employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
           employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
           lineCount: visualLineCount,
+          lineGap: settings.employeeLineGap,
           unitY: unit.y,
         });
         let visualLineIndex = 0;
@@ -2348,18 +2340,15 @@ export const buildOrgEditorExportRows = ({
 };
 
 export const createOrgEditorTemplateText = ({
-  bossLabel,
   rows,
   templateFormat,
 }: {
-  bossLabel: string;
   rows: OrgEditorTemplateRow[];
   templateFormat: string;
 }) =>
   rows
     .map((row) =>
       renderOrgEditorTemplate({
-        bossLabel,
         employee: row.employee,
         format: templateFormat,
         isBoss: row.isBoss,

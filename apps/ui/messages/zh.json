@@ -160,7 +160,6 @@
     "Units section": "团队部分",
     "Editor card": "编辑器中的卡片",
     "Editor export card": "编辑器导出中的卡片",
-    "Built-in fields": "内置字段",
     "Custom fields": "自定义字段",
     "Add field": "添加字段",
     "No custom fields": "还没有自定义字段",
@@ -345,7 +344,6 @@
     "System": "跟随系统",
     "Tags": "标签",
     "Template": "模板",
-    "The boss value cannot be empty.": "老板值不能为空 。",
     "Theme": "主题",
     "Today": "今天",
     "The structure does not have any Units yet": "当前结构还没有团队",
@@ -384,7 +382,6 @@
     "Mint": "薄荷",
     "No Unit is selected for export.": "没有选择要导出的团队 。",
     "No Unit selected": "未选择团队",
-    "Provide a value for the {isBoss} token.": "提供符号值 。 · {isBoss}",
     "Rose": "萝丝",
     "Text copied to the clipboard": "文本复制到剪贴板",
     "Text export saved": "文本导出已保存",
@@ -454,7 +451,6 @@
     "Unit": "团队",
     "{label}: {count}": "数字 : · {label} · {count}",
     "{count} in the current format": "当前格式 · {count}",
-    "isBoss value": "是Bos 值",
     "Download": "下载",
     "Create the first Employee to start building your organization.": "创建第一个员工 开始建立你的组织。",
     "Go to Employees": "转到员工",
@@ -661,6 +657,10 @@
     "Link": "链接",
     "Link URL": "链接地址",
     "Remove link": "移除链接",
-    "Enter a valid http, https, mailto, or tel link": "请输入有效的 http、https、mailto 或 tel 链接"
+    "Enter a valid http, https, mailto, or tel link": "请输入有效的 http、https、mailto 或 tel 链接",
+    "Employee fields": "员工字段",
+    "Unit context fields": "单元上下文字段",
+    "Display only": "仅显示",
+    "Line spacing": "行间距"
   }
 }

@@ -373,9 +373,7 @@ for (const [locale, messages] of [
     await page.locator('[data-demo-id="org-editor-export-action"]').click();
     const editorExport = page.locator('[data-demo-id="org-editor-export-dialog"]');
     await expect(editorExport).toBeVisible();
-    await expect(editorExport.getByLabel(messages.Ui["isBoss value"], { exact: true })).toHaveValue(
-      messages.Ui.Manager,
-    );
+    await expect(editorExport.locator("#org-editor-export-image-boss-label")).toHaveCount(0);
     for (const scopeName of [messages.Ui["Entire subtree"], messages.Ui["Unit only"]]) {
       const scope = editorExport.getByRole("tab", { name: scopeName, exact: true });
       await expect(scope.locator("svg")).toHaveCount(1);

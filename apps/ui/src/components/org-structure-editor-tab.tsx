@@ -135,7 +135,10 @@ import {
   getEditorEmployeeOtherUnitIds,
 } from "@/lib/editor-distribution";
 import { createUuid } from "@/lib/employee-data";
-import { renderEmployeeDisplayRichLines } from "@/lib/employee-display";
+import {
+  renderEmployeeDisplayRichLines,
+  wrapEmployeeDisplayRichLines,
+} from "@/lib/employee-display";
 import {
   countEmployeeIdsInSelection,
   countEmployeeIdsNotInSelection,
@@ -1308,6 +1311,7 @@ function OrgEditorEmployeeDragPreview({
 
 function OrgEditorNode({
   employeeDisplayFormat,
+  employeeDisplayLineGap,
   viewSettings,
   distributionStyles,
   distributionEnabledUnitIds,
@@ -1342,6 +1346,7 @@ function OrgEditorNode({
   visibleWorldRect,
 }: {
   employeeDisplayFormat: string;
+  employeeDisplayLineGap: number;
   viewSettings: OrgEditorViewSettings;
   distributionStyles: {
     assigned: React.CSSProperties | undefined;
@@ -1818,9 +1823,11 @@ function OrgEditorNode({
                           density="editor"
                           employee={employee}
                           format={employeeDisplayFormat}
+                          lineGap={employeeDisplayLineGap}
                           interactiveLinks={false}
                           queryTokens={queryTokens}
                           unitContexts={employeeDisplayUnitContexts}
+                          wrapWidth={getOrgEditorEmployeeTextMaxWidth(getOrgEditorUnitWidth(unit))}
                         />
                       ) : (
                         <span className="truncate">{employeeName}</span>
@@ -1919,6 +1926,7 @@ const MemoizedOrgEditorNode = memo(
   OrgEditorNode,
   (previous: Parameters<typeof OrgEditorNode>[0], next: Parameters<typeof OrgEditorNode>[0]) =>
     previous.employeeDisplayFormat === next.employeeDisplayFormat &&
+    previous.employeeDisplayLineGap === next.employeeDisplayLineGap &&
     previous.unit === next.unit &&
     previous.viewSettings === next.viewSettings &&
     previous.distributionStyles === next.distributionStyles &&
@@ -2867,29 +2875,38 @@ export const OrgStructureEditorTab = observer(() => {
             (position) => position.unitId === unit.id,
           );
           const richLines = employee
-            ? renderEmployeeDisplayRichLines({
-                bossLabel: t("Manager"),
-                customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
-                employee,
-                format: store.employeeDisplayFormats.editor,
-                positionNotSpecifiedLabel: t("Position not specified"),
-                unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
-              })
+            ? wrapEmployeeDisplayRichLines(
+                renderEmployeeDisplayRichLines({
+                  customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
+                  employee,
+                  format: store.employeeDisplayFormats.editor,
+                  positionNotSpecifiedLabel: t("Position not specified"),
+                  unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
+                }),
+                availableWidth,
+              )
             : [];
           heights.set(
             row.key,
             employee
-              ? getOrgEditorEmployeeRowHeightForRichLines(richLines, availableWidth, (tag) =>
-                  tag.date
-                    ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
-                        day: "numeric",
-                        month: "short",
-                        timeZone: "UTC",
-                        year: "numeric",
-                      })}`
-                    : tag.label,
+              ? getOrgEditorEmployeeRowHeightForRichLines(
+                  richLines,
+                  availableWidth,
+                  (tag) =>
+                    tag.date
+                      ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
+                          day: "numeric",
+                          month: "short",
+                          timeZone: "UTC",
+                          year: "numeric",
+                        })}`
+                      : tag.label,
+                  store.employeeDisplayLineGaps.editor,
                 )
-              : getOrgEditorEmployeeRowHeightForDisplayLines(1),
+              : getOrgEditorEmployeeRowHeightForDisplayLines(
+                  1,
+                  store.employeeDisplayLineGaps.editor,
+                ),
           );
           continue;
         }
@@ -2915,6 +2932,7 @@ export const OrgStructureEditorTab = observer(() => {
     format,
     openPositionTagsById,
     store.employeeDisplayFormats.editor,
+    store.employeeDisplayLineGaps.editor,
     store.employeeFieldDefinitions,
     t,
     tagOrder,
@@ -5688,6 +5706,7 @@ export const OrgStructureEditorTab = observer(() => {
             {visibleUnits.map((unit) => (
               <MemoizedOrgEditorNode
                 employeeDisplayFormat={store.employeeDisplayFormats.editor}
+                employeeDisplayLineGap={store.employeeDisplayLineGaps.editor}
                 viewSettings={viewSettings}
                 distributionStyles={distributionStyles}
                 distributionEnabledUnitIds={distributionModeUnitIdSet}

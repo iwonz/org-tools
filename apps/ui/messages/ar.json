@@ -160,7 +160,6 @@
     "Units section": "قسم الفرق",
     "Editor card": "بطاقة في المحرر",
     "Editor export card": "بطاقة في تصدير المحرر",
-    "Built-in fields": "حقول البناء",
     "Custom fields": "الحقول العرفية",
     "Add field": "مضافا إليها:",
     "No custom fields": "لا توجد حقول عرفية حتى الآن",
@@ -345,7 +344,6 @@
     "System": "النظام",
     "Tags": "الوسوم",
     "Template": "النموذج",
-    "The boss value cannot be empty.": "لا يمكن أن تكون قيمة الزعيم فارغة",
     "Theme": "المظهر",
     "Today": "اليوم",
     "The structure does not have any Units yet": "لا يحتوي الهيكل على فرق بعد",
@@ -384,7 +382,6 @@
     "Mint": "نعناعي",
     "No Unit is selected for export.": "لم يتم تحديد فريق للتصدير.",
     "No Unit selected": "لم يتم تحديد فريق",
-    "Provide a value for the {isBoss} token.": "أدخل قيمة للرمز {isBoss}.",
     "Rose": "روز",
     "Text copied to the clipboard": "تم نسخ النص إلى الحافظة",
     "Text export saved": "تم حفظ تصدير النص",
@@ -454,7 +451,6 @@
     "Unit": "الفريق",
     "{label}: {count}": "{label}: {count}",
     "{count} in the current format": "في الشكل الحالي · {count}",
-    "isBoss value": "قيمة isBoss",
     "Download": "تحميل",
     "Create the first Employee to start building your organization.": "أنشئ أول موظف لبدء بناء مؤسستك.",
     "Go to Employees": "الانتقال إلى الموظفين",
@@ -661,6 +657,10 @@
     "Link": "رابط",
     "Link URL": "عنوان الرابط",
     "Remove link": "إزالة الرابط",
-    "Enter a valid http, https, mailto, or tel link": "أدخل رابط http أو https أو mailto أو tel صالحًا"
+    "Enter a valid http, https, mailto, or tel link": "أدخل رابط http أو https أو mailto أو tel صالحًا",
+    "Employee fields": "حقول الموظف",
+    "Unit context fields": "حقول سياق الوحدة",
+    "Display only": "للعرض فقط",
+    "Line spacing": "تباعد الأسطر"
   }
 }

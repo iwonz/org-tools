@@ -3,6 +3,7 @@ import type {
   CustomEmployeeFieldDefinition,
   CustomEmployeeFieldValue,
   EmployeeDisplayFormats,
+  EmployeeDisplayLineGaps,
   EmployeeId,
   EmployeeLiveFilterRule,
   EmployeeTagAssignment,
@@ -53,7 +54,10 @@ import {
   isUuid,
   normalizeBirthday,
 } from "@/lib/employee-data";
-import { DEFAULT_EMPLOYEE_DISPLAY_FORMATS } from "@/lib/employee-display-defaults";
+import {
+  createDefaultEmployeeDisplayFormats,
+  DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS,
+} from "@/lib/employee-display-defaults";
 import { createEmployeeIdentityKey, isEmployeeId } from "@/lib/employee-id";
 import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
@@ -1883,6 +1887,9 @@ export const parseOrgToolsUiState = (input: unknown): OrgToolsUiState => {
   return ui;
 };
 
+const isEmployeeDisplayLineGap = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 24;
+
 export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (!isRecord(input)) throw new Error("State must be a JSON object.");
   if (
@@ -1890,6 +1897,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
     !isRecord(input.organization) ||
     !hasExactKeys(input.organization, [
       "employeeDisplayFormats",
+      "employeeDisplayLineGaps",
       "employeeFieldDefinitions",
       "employees",
       "tags",
@@ -1906,6 +1914,17 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
     !isString(input.organization.employeeDisplayFormats.editorExport) ||
     !isString(input.organization.employeeDisplayFormats.employees) ||
     !isString(input.organization.employeeDisplayFormats.units) ||
+    !isRecord(input.organization.employeeDisplayLineGaps) ||
+    !hasExactKeys(input.organization.employeeDisplayLineGaps, [
+      "editor",
+      "editorExport",
+      "employees",
+      "units",
+    ]) ||
+    !isEmployeeDisplayLineGap(input.organization.employeeDisplayLineGaps.editor) ||
+    !isEmployeeDisplayLineGap(input.organization.employeeDisplayLineGaps.editorExport) ||
+    !isEmployeeDisplayLineGap(input.organization.employeeDisplayLineGaps.employees) ||
+    !isEmployeeDisplayLineGap(input.organization.employeeDisplayLineGaps.units) ||
     !Array.isArray(input.organization.employeeFieldDefinitions) ||
     !Array.isArray(input.organization.employees) ||
     !Array.isArray(input.organization.tags) ||
@@ -1932,6 +1951,12 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
         employees: input.organization.employeeDisplayFormats.employees,
         units: input.organization.employeeDisplayFormats.units,
       } satisfies EmployeeDisplayFormats,
+      employeeDisplayLineGaps: {
+        editor: input.organization.employeeDisplayLineGaps.editor,
+        editorExport: input.organization.employeeDisplayLineGaps.editorExport,
+        employees: input.organization.employeeDisplayLineGaps.employees,
+        units: input.organization.employeeDisplayLineGaps.units,
+      } satisfies EmployeeDisplayLineGaps,
       employeeFieldDefinitions,
       employees: employees as OrganizationEmployee[],
       tags,
@@ -2030,7 +2055,8 @@ export const createBlankOrgToolsState = (
   const now = currentDate.toISOString();
   return {
     organization: {
-      employeeDisplayFormats: { ...DEFAULT_EMPLOYEE_DISPLAY_FORMATS },
+      employeeDisplayFormats: createDefaultEmployeeDisplayFormats(locale),
+      employeeDisplayLineGaps: { ...DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS },
       employeeFieldDefinitions: [],
       employees: [],
       tags: [],

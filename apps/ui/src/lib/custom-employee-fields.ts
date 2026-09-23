@@ -16,7 +16,7 @@ import { renderTemplateFormat } from "@/lib/template-format";
 export const CUSTOM_EMPLOYEE_FIELD_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
 export const EMPLOYEE_DISPLAY_POSITIONS_KEY = "positions";
 
-export const BUILT_IN_EMPLOYEE_TEMPLATE_KEYS = [
+export const EMPLOYEE_TEMPLATE_FIELD_KEYS = [
   "id",
   "firstName",
   "lastName",
@@ -29,11 +29,19 @@ export const BUILT_IN_EMPLOYEE_TEMPLATE_KEYS = [
   "birthday",
   "tags",
   "tagDates",
+] as const;
+
+export const EMPLOYEE_CONTEXT_FIELD_KEYS = [
   "unitId",
   "unitName",
   "unitFullPath",
   "position",
   "isBoss",
+] as const;
+
+export const BUILT_IN_EMPLOYEE_TEMPLATE_KEYS = [
+  ...EMPLOYEE_TEMPLATE_FIELD_KEYS,
+  ...EMPLOYEE_CONTEXT_FIELD_KEYS,
 ] as const;
 
 const normalizeDefinitionIdentity = (value: string) =>

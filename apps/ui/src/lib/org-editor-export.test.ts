@@ -123,8 +123,8 @@ describe("Org Editor image export", () => {
 
   test("uses English defaults and filesystem-safe Unit names", () => {
     expect(createDefaultOrgEditorImageExportSettings()).toMatchObject({
+      employeeLineGap: 4,
       fontFamily: "system-ui",
-      imageBossLabel: "Manager",
       unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
     });
     expect(ORG_EDITOR_EXPORT_FONTS).toEqual([
@@ -134,12 +134,10 @@ describe("Org Editor image export", () => {
       { family: "Lobster", label: "Lobster" },
       { family: "Montserrat", label: "Montserrat" },
     ]);
-    expect(createDefaultOrgEditorImageExportSettings("Localized manager").imageBossLabel).toBe(
-      "Localized manager",
-    );
-    expect(
-      createDefaultOrgEditorImageExportSettings("Localized manager", "{email}").employeeFormat,
-    ).toBe("{email}");
+    expect(createDefaultOrgEditorImageExportSettings("{email}", 8)).toMatchObject({
+      employeeFormat: "{email}",
+      employeeLineGap: 8,
+    });
     expect(ORG_EDITOR_EXPORT_GRADIENTS.map(({ label }) => label)).toEqual([
       "Air",
       "Mint",
