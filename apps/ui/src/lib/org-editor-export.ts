@@ -2041,6 +2041,7 @@ export const createOrgEditorImageExportResult = async ({
       context.fillStyle = openPositionBackground?.textStyle ?? "#0f172a";
       if (row.type === "employee") {
         const layout = employeeDisplayLayouts[employeeIndex] ?? {
+          blocks: [],
           direction: "ltr",
           height: 0,
           lines: [],

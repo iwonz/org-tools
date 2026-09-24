@@ -665,7 +665,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   options; Required rows have no field background, border, radius, or padding. Employee editing can
   commit a shared custom option and a dated Composite record. Confirm the Display tab previews and
   applies each valid format or numeric gap immediately, shows Reset beside every format with no
-  Display Save button, keeps spacing only between visual rows, shows thematic tab icons and flat sections, formats a selected
+  Display Save button, uses the selected gap only between complete format blocks and ordinary text
+  wraps without outer spacing, preserves 6 px packing inside wrapped Tags and positions, shows thematic tab icons and flat sections, formats a selected
   range by keyboard-accessible Markdown actions, validates link protocols, coexists with `@`
   suggestions, and retains accepted changes after dismissal. Confirm all lines share normal base typography,
   Reset uses normal weight, username and email suffixes remain fully visible,
@@ -674,8 +675,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   `{positions}` links in Employees and Units, fallback cards use Employees with inert Unit segments, Editor links remain inert,
   Editor and both PNG dialogs use their assigned formats, all six visual inputs share `@`, Enter,
   and Markdown selection tools without `{field}` button catalogs, and wrapped Tag and assignment
-  fragments share the universal 11/16/8/2/6 metrics, 6 px two-axis gaps, exact date/count trailing
-  inset, and DOM/PNG order, geometry, typography, and color. Image-dialog
+  fragments share the universal 11/16/8/2/6 metrics, 6 px internal collection gaps, exact date/count
+  trailing inset, and DOM/PNG block order, geometry, typography, and color. Image-dialog
   edits remain local.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,

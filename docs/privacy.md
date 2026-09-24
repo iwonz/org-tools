@@ -31,8 +31,8 @@ richest-record preview, virtualized source-to-target mapping, pending custom fie
 validation is local and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without
 inferring one. Employee UUID creation, duplicate-key normalization, custom Template evaluation, and
 optional MD5 or SHA-256 output all run locally. Employee and Unit-context token scopes, `isBoss`
-condition evaluation, authored blank rows, text wrapping, and per-destination line gaps are also
-computed locally. Multi-option catalogs, user-created choices,
+condition evaluation, authored format blocks, text wrapping, per-destination outer block gaps, and
+native semantic collection gaps are also computed locally. Multi-option catalogs, user-created choices,
 Composite schemas and records, their validation, and their derived Calendar events remain inside
 the same in-memory or loopback boundary. New custom options remain transient dialog data until the
 complete Employee save succeeds. Employee display formats, line gaps, and their previews resolve

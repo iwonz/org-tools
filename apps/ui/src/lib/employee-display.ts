@@ -577,6 +577,7 @@ export type EmployeeDisplayVisualFragment =
 
 export type EmployeeDisplayVisualLine = {
   blank?: true;
+  blockY: number;
   fragments: EmployeeDisplayVisualFragment[];
   gapAfter: number;
   height: number;
@@ -585,7 +586,14 @@ export type EmployeeDisplayVisualLine = {
   y: number;
 };
 
+export type EmployeeDisplayVisualBlock = {
+  height: number;
+  lines: EmployeeDisplayVisualLine[];
+  y: number;
+};
+
 export type EmployeeDisplayVisualLayout = {
+  blocks: EmployeeDisplayVisualBlock[];
   direction: "ltr" | "rtl";
   height: number;
   lines: EmployeeDisplayVisualLine[];
@@ -657,6 +665,7 @@ export const layoutEmployeeDisplayRichLines = (
   const metrics = TAG_SURFACE_METRICS;
   const baseLineHeight = textMode === "editor" ? 16 : 20;
   const surfaceHeight = getTagSurfaceHeight();
+  const blocks: EmployeeDisplayVisualBlock[] = [];
   const lines: EmployeeDisplayVisualLine[] = [];
   const formattedTagText = new Map<EmployeeTag, string>();
   const getFormattedTagText = (tag: EmployeeTag) => {
@@ -702,9 +711,11 @@ export const layoutEmployeeDisplayRichLines = (
   }
 
   for (const sourceLine of sourceLines) {
+    const blockLines: EmployeeDisplayVisualLine[] = [];
     if (sourceLine.blank) {
-      lines.push({
+      blockLines.push({
         blank: true,
+        blockY: 0,
         fragments: [],
         gapAfter: lineGap,
         height: baseLineHeight,
@@ -712,13 +723,16 @@ export const layoutEmployeeDisplayRichLines = (
         width: 0,
         y: 0,
       });
+      blocks.push({ height: baseLineHeight, lines: blockLines, y: 0 });
+      lines.push(...blockLines);
       continue;
     }
     let fragments: EmployeeDisplayVisualFragment[] = [];
     let width = 0;
     const pushLine = (gapAfter = lineGap) => {
       if (fragments.length === 0) return;
-      lines.push({
+      blockLines.push({
+        blockY: 0,
         fragments,
         gapAfter,
         height: Math.max(baseLineHeight, ...fragments.map((fragment) => fragment.height)),
@@ -919,6 +933,15 @@ export const layoutEmployeeDisplayRichLines = (
       }
     }
     pushLine();
+    if (blockLines.length > 0) {
+      let blockHeight = 0;
+      for (const [index, line] of blockLines.entries()) {
+        line.blockY = blockHeight;
+        blockHeight += line.height + (index + 1 < blockLines.length ? line.gapAfter : 0);
+      }
+      blocks.push({ height: blockHeight, lines: blockLines, y: 0 });
+      lines.push(...blockLines);
+    }
   }
 
   if (direction === "rtl") {
@@ -930,12 +953,14 @@ export const layoutEmployeeDisplayRichLines = (
   }
 
   let layoutHeight = 0;
-  for (const [index, line] of lines.entries()) {
-    line.y = layoutHeight;
-    layoutHeight += line.height + (index + 1 < lines.length ? line.gapAfter : 0);
+  for (const [index, block] of blocks.entries()) {
+    block.y = layoutHeight;
+    for (const line of block.lines) line.y = block.y + line.blockY;
+    layoutHeight += block.height + (index + 1 < blocks.length ? lineGap : 0);
   }
 
   const layout: EmployeeDisplayVisualLayout = {
+    blocks,
     direction,
     height: layoutHeight,
     lines,

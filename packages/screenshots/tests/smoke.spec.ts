@@ -1874,14 +1874,17 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(
     modelDialog.locator('[data-demo-id="employee-display-employees-preview"]'),
   ).toContainText("Draft only");
-  const previewLines = modelDialog.locator(
+  const previewBlocks = modelDialog.locator(
     '[data-demo-id="employee-display-employees-preview"] [data-employee-display-content] > span',
   );
-  await expect(previewLines).toHaveCount(3);
-  await expect(previewLines.nth(1)).toHaveAttribute("data-employee-display-blank", "true");
-  const previewGeometry = await previewLines.evaluateAll((lines) =>
-    lines.map((line) => {
-      const bounds = line.getBoundingClientRect();
+  await expect(previewBlocks).toHaveCount(3);
+  await expect(previewBlocks.nth(1).locator("[data-employee-display-visual-line]")).toHaveAttribute(
+    "data-employee-display-blank",
+    "true",
+  );
+  const previewGeometry = await previewBlocks.evaluateAll((blocks) =>
+    blocks.map((block) => {
+      const bounds = block.getBoundingClientRect();
       return { height: bounds.height, y: bounds.y };
     }),
   );
@@ -1892,8 +1895,16 @@ test("edits contextual Employee card formats with live previews and local image 
     (previewGeometry[1]?.y ?? 0) + (previewGeometry[1]?.height ?? 0) + 12,
   );
   expect(
-    await previewLines.nth(0).evaluate((element) => getComputedStyle(element).fontWeight),
-  ).toBe(await previewLines.nth(1).evaluate((element) => getComputedStyle(element).fontWeight));
+    await previewBlocks
+      .nth(0)
+      .locator("[data-employee-display-visual-line]")
+      .evaluate((element) => getComputedStyle(element).fontWeight),
+  ).toBe(
+    await previewBlocks
+      .nth(1)
+      .locator("[data-employee-display-visual-line]")
+      .evaluate((element) => getComputedStyle(element).fontWeight),
+  );
 
   await employeesFormat.fill("Avery Draft");
   await employeesFormat.evaluate((element) => {
@@ -1996,6 +2007,33 @@ test("edits contextual Employee card formats with live previews and local image 
   await modelDialog.locator('[data-demo-id="employee-display-units-line-gap"]').fill("6");
   await modelDialog.locator('[data-demo-id="employee-display-editor-line-gap"]').fill("8");
   await modelDialog.locator('[data-demo-id="employee-display-editorExport-line-gap"]').fill("10");
+  for (const [key, expectedGap] of [
+    ["employees", 12],
+    ["units", 6],
+    ["editor", 8],
+    ["editorExport", 10],
+  ] as const) {
+    const content = modelDialog.locator(
+      `[data-demo-id="employee-display-${key}-preview"] [data-employee-display-content]`,
+    );
+    await expect(content).toHaveCSS("display", "flex");
+    await expect(content).toHaveCSS("flex-direction", "column");
+    await expect(content).toHaveCSS("row-gap", `${expectedGap}px`);
+    const blockGeometry = await content
+      .locator(":scope > [data-employee-display-block]")
+      .evaluateAll((blocks) =>
+        blocks.map((block) => {
+          const bounds = block.getBoundingClientRect();
+          return { bottom: bounds.bottom, top: bounds.top };
+        }),
+      );
+    expect(blockGeometry.length).toBeGreaterThan(1);
+    for (let index = 1; index < blockGeometry.length; index += 1) {
+      expect(
+        (blockGeometry[index]?.top ?? 0) - (blockGeometry[index - 1]?.bottom ?? 0),
+      ).toBeCloseTo(expectedGap, 0);
+    }
+  }
   await expect(
     modelDialog
       .locator('[data-demo-id="employee-display-employees-preview"] [data-tag-color-surface]')
@@ -2066,6 +2104,10 @@ test("edits contextual Employee card formats with live previews and local image 
     "data-employee-display-line-gap",
     "12",
   );
+  await expect(employeeCard.locator("[data-employee-display-content]")).toHaveCSS(
+    "row-gap",
+    "12px",
+  );
   await expect(employeeCard).toHaveAccessibleName(/\S/u);
   await expect(employeeCard.getByRole("link", { name: "Avery Stone", exact: true })).toHaveCount(0);
   await expect(
@@ -2106,6 +2148,12 @@ test("edits contextual Employee card formats with live previews and local image 
       .locator("[data-employee-position-assignment]"),
   ).toBeVisible();
   await expect(
+    page
+      .locator('[data-demo-id="unit-employee-card"]')
+      .first()
+      .locator("[data-employee-display-content]"),
+  ).toHaveCSS("row-gap", "6px");
+  await expect(
     page.locator('[data-demo-id="unit-employee-card"]').first().getByRole("button", {
       name: "Product",
       exact: true,
@@ -2118,6 +2166,7 @@ test("edits contextual Employee card formats with live previews and local image 
   await expect(editorRow.locator('[data-employee-markdown-link="inert"]')).toBeVisible();
   await expect(editorRow.locator("a")).toHaveCount(0);
   await expect(editorRow.getByRole("button", { name: "Product", exact: true })).toHaveCount(0);
+  await expect(editorRow.locator("[data-employee-display-content]")).toHaveCSS("row-gap", "8px");
   const editorTagSurface = editorRow.locator("[data-tag-color-surface]").first();
   await expect(editorTagSurface).toBeVisible();
   expect(

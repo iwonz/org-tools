@@ -300,7 +300,7 @@ describe("Employee display formats", () => {
     ).toEqual(["Engineering", "Mentor"]);
   });
 
-  test("adds line gaps only between measured visual rows", () => {
+  test("separates format-block gaps from native semantic collection gaps", () => {
     const singleSource = renderEmployeeDisplayRichLines({
       customEmployeeFieldDefinitions: [],
       employee,
@@ -318,6 +318,7 @@ describe("Employee display formats", () => {
       textMode: "card",
     });
     expect(singleAtZero.lines).toHaveLength(1);
+    expect(singleAtZero.blocks).toHaveLength(1);
     expect(singleAtTwentyFour.height).toBe(singleAtZero.height);
     expect(singleAtTwentyFour.lines[0]?.y).toBe(0);
 
@@ -332,7 +333,9 @@ describe("Employee display formats", () => {
       lineGap: 4,
       textMode: "card",
     });
+    expect(multipleAtFour.blocks).toHaveLength(3);
     expect(multipleAtFour.lines).toHaveLength(3);
+    expect(multipleAtFour.blocks.map((block) => block.y)).toEqual([0, 24, 48]);
     expect(multipleAtFour.lines.map((line) => line.y)).toEqual([0, 24, 48]);
     expect(multipleAtFour.height).toBe(68);
 
@@ -346,6 +349,7 @@ describe("Employee display formats", () => {
       wrappedAtTwentyFour.lines.reduce((sum, line) => sum + line.height, 0) +
         24 * (wrappedAtTwentyFour.lines.length - 1),
     );
+    expect(wrappedAtTwentyFour.blocks).toHaveLength(1);
 
     const semanticSource = renderEmployeeDisplayRichLines({
       customEmployeeFieldDefinitions: [],
@@ -356,20 +360,97 @@ describe("Employee display formats", () => {
       format: "{tags}",
       unitContexts: [],
     });
-    const semanticLayout = layoutEmployeeDisplayRichLines(semanticSource, {
-      availableWidth: 64,
-      formatTag: (tag) => `${tag.label} · Dec 31, 2030`,
+    const semanticLayouts = [0, 4, 24].map((lineGap) =>
+      layoutEmployeeDisplayRichLines(semanticSource, {
+        availableWidth: 64,
+        formatTag: (tag) => `${tag.label} · Dec 31, 2030`,
+        lineGap,
+        measureText: (text) => [...text].length * 5,
+        textMode: "card",
+      }),
+    );
+    for (const semanticLayout of semanticLayouts) {
+      expect(semanticLayout.blocks).toHaveLength(1);
+      expect(semanticLayout.lines.length).toBeGreaterThan(1);
+      expect(
+        semanticLayout.lines.slice(1).map((line, index) => {
+          const previous = semanticLayout.lines[index];
+          return line.y - (previous?.y ?? 0) - (previous?.height ?? 0);
+        }),
+      ).toEqual(Array(semanticLayout.lines.length - 1).fill(6));
+    }
+    expect(semanticLayouts.map((layout) => layout.height)).toEqual([
+      semanticLayouts[0]?.height,
+      semanticLayouts[0]?.height,
+      semanticLayouts[0]?.height,
+    ]);
+
+    const contexts = [
+      createOrgUnitContext(unitPosition(2, "Product Engineering", "Technical Lead")),
+      createOrgUnitContext(unitPosition(3, "Research Operations", "Principal Advisor")),
+    ];
+    const blockSource = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee: {
+        ...employee,
+        tags: [
+          {
+            color: null,
+            date: "2030-12-31",
+            label: "A deliberately long semantic tag \ud83d\ude80",
+          },
+          { color: null, date: null, label: "\u7814\u7a76", tagId: uuid(32) },
+        ],
+      },
+      format: "{fullName}\n{positions}\n{tags}",
+      unitContexts: contexts,
+    });
+    for (const lineGap of [0, 4, 24]) {
+      const layout = layoutEmployeeDisplayRichLines(blockSource, {
+        availableWidth: 82,
+        formatTag: (tag) => (tag.date ? `${tag.label} · Dec 31, 2030` : tag.label),
+        lineGap,
+        measureText: (text) => [...text].length * 5,
+        textMode: "card",
+      });
+      expect(layout.blocks).toHaveLength(3);
+      expect(layout.blocks[0]?.y).toBe(0);
+      expect(
+        layout.blocks.slice(1).map((block, index) => {
+          const previous = layout.blocks[index];
+          return block.y - (previous?.y ?? 0) - (previous?.height ?? 0);
+        }),
+      ).toEqual([lineGap, lineGap]);
+      expect(layout.height).toBe(
+        layout.blocks.reduce((sum, block) => sum + block.height, 0) + lineGap * 2,
+      );
+      for (const block of layout.blocks.slice(1)) {
+        expect(block.lines.length).toBeGreaterThan(1);
+        expect(
+          block.lines.slice(1).map((line, index) => {
+            const previous = block.lines[index];
+            return line.blockY - (previous?.blockY ?? 0) - (previous?.height ?? 0);
+          }),
+        ).toEqual(Array(block.lines.length - 1).fill(6));
+        expect(block.lines.every((line) => line.y === block.y + line.blockY)).toBe(true);
+      }
+    }
+
+    const mixedSource = renderEmployeeDisplayRichLines({
+      customEmployeeFieldDefinitions: [],
+      employee,
+      format: "**Before** {tags} after {positions}",
+      unitContexts: contexts,
+    });
+    const mixedLayout = layoutEmployeeDisplayRichLines(mixedSource, {
+      availableWidth: 72,
       lineGap: 24,
-      measureText: (text) => text.length * 5,
+      measureText: (text) => [...text].length * 5,
       textMode: "card",
     });
-    expect(semanticLayout.lines.length).toBeGreaterThan(1);
-    expect(
-      semanticLayout.lines.slice(1).map((line, index) => {
-        const previous = semanticLayout.lines[index];
-        return line.y - (previous?.y ?? 0) - (previous?.height ?? 0);
-      }),
-    ).toEqual(Array(semanticLayout.lines.length - 1).fill(6));
+    expect(mixedLayout.blocks).toHaveLength(1);
+    expect(mixedLayout.lines.length).toBeGreaterThan(1);
+    expect(mixedLayout.blocks[0]?.lines.some((line) => line.gapAfter === 6)).toBe(true);
   });
 
   test("keeps every ordinary navigation-like token as plain text", () => {

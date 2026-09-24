@@ -140,9 +140,11 @@ control.
   are the defaults; the distributed color also controls placement lines and endpoint markers.
   Employee display lines keep the normal theme text color for both distribution statuses,
   including selected rows. Safe Markdown links are styled but inert on the canvas. The Editor row
-  height grows with shared rich visual rows. Text, Markdown, Tags, and assignments flow inline, and
-  each wrapped Tag or position fragment shares its order, rectangle, typography, color, spacing,
-  hit-testing, anchors, and Unit geometry with PNG. Each image dialog starts from the Editor-export format; edits in
+  height grows with shared rich format blocks. The selected display gap separates adjacent authored
+  blocks, including complete Tags and positions blocks, without adding space above the first or
+  below the last. Text, Markdown, Tags, and assignments flow inline within a block. Wrapped Tag and
+  position collections keep their own 6 px internal gap, and every fragment shares its order,
+  rectangle, typography, color, spacing, hit-testing, anchors, and Unit geometry with PNG. Each image dialog starts from the Editor-export format; edits in
   the dialog are temporary and do not update the Employee model. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.

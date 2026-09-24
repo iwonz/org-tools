@@ -42,12 +42,13 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   by the resolved template structure without retaining organization values. Native Tag and compound
   assignment nodes reuse bounded chip packing based on the complete `Position · Unit` projection.
   A weakly owned cache keeps at most eight width, locale, direction, text-mode, and font variants for
-  one resolved rich-line source. One bounded 32,768-entry Canvas cache measures the actual family,
+  one resolved rich-line source. Cached results retain both ordered format blocks and their flattened
+  global child-row coordinates without a second DOM or Canvas layout pass. One bounded 32,768-entry Canvas cache measures the actual family,
   size, weight, style, and text and clears after bundled fonts load. The shared word/grapheme packer
   stays linear in output size.
   Editor computes one rich fragment layout per row and passes it to DOM rendering, geometry, and
-  PNG; the configured-gap height feeds the existing prefix-offset pass, so formatted cards preserve O(n)
-  geometry work.
+  PNG. The configured outer block gaps and native semantic continuation gaps feed the existing
+  prefix-offset pass, so formatted cards preserve O(n) geometry work.
 - Cache derived structures by View document revision and global Employee/Tag/field references.
   Materialize only the system View, active Editor View, and selected Download View at once.
 - Build the active View's direct `EmployeeId → UnitId[]` distribution index only when materialized

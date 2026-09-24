@@ -44,16 +44,19 @@ resolves built-in Unit and Employee fields plus custom fields, evaluates the exi
 conditional grammar, joins arrays with `; `, removes dynamically empty rows, and preserves authored
 internal blank rows. It then parses only inline Markdown into a shared rich-line model. Employee and
 custom-field values enter that model as text nodes, so their punctuation cannot become formatting.
-Tags and compound assignments remain semantic groups. A platform-neutral inline layout places text,
-Markdown runs, Tags, and `Position · Unit` assignments in source order on shared visual rows. It
-wraps by word and grapheme and emits content-sized fragment rectangles. A bounded Canvas cache
+Tags and compound assignments remain semantic groups. A platform-neutral inline layout preserves
+each resolved authored line as a measured format block and places text, Markdown runs, Tags, and
+`Position · Unit` assignments in source order on shared child rows. It wraps by word and grapheme
+and emits content-sized fragment rectangles. A bounded Canvas cache
 measures the actual UI or selected image font, weight, style, and code family; it is invalidated
 after bundled fonts load. DOM renders those fragments without constraining glyphs to an approximate
 fragment width, while Canvas paints the same rectangles. Every Tag and assignment surface uses
 11 px type, 16 px line height, 8 px horizontal and 2 px vertical padding, 6 px radius, and 6 px row
-and column gaps. A Tag or assignment continuation uses the fixed 6 px gap. The configured display
-gap applies to authored, blank, and ordinary wrapped rows, contributes no outer space, and cannot
-change a single-row height. `{position}`, `{unitName}`, `{fullName}`,
+and column gaps. A Tag or assignment continuation inside one block uses the fixed 6 px gap. The
+configured display gap separates adjacent format blocks and ordinary text wraps, contributes no
+outer space, and cannot change a single-block height. List DOM renders the outer blocks as one
+vertical flex stack while Editor geometry and Canvas use the same flattened global child-row
+coordinates. `{position}`, `{unitName}`, `{fullName}`,
 `{profileUrl}`, `{email}`, and custom tokens remain ordinary text values. List and fallback contexts
 aggregate system-View assignments in structural order; one Unit or Editor row resolves only that
 Unit. `isBoss` is a condition-only boolean; visible text belongs in a ternary branch. Plain

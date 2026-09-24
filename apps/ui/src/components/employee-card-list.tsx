@@ -332,142 +332,154 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
   if (visualLayout) {
     return (
       <div
-        className={cn("relative min-w-0", className)}
+        className={cn("flex min-w-0 flex-col", className)}
         data-employee-display-content
         data-employee-display-line-gap={resolvedLineGap}
         dir={visualLayout.direction}
         ref={contentRef}
-        style={{ height: visualLayout.height }}
+        style={{ height: visualLayout.height, rowGap: resolvedLineGap }}
       >
-        {visualLayout.lines.map((line) => (
+        {visualLayout.blocks.map((block) => (
           <span
-            aria-hidden={line.blank ? "true" : undefined}
-            className={lineClassName}
-            data-employee-display-blank={line.blank ? "true" : undefined}
-            key={`${line.y}:${line.height}:${line.text}`}
-            style={{
-              height: line.height,
-              left: 0,
-              position: "absolute",
-              top: line.y,
-              width: "100%",
-            }}
+            className="relative block min-w-0 shrink-0"
+            data-employee-display-block
+            key={`${block.y}:${block.height}`}
+            style={{ height: block.height }}
           >
-            {line.fragments.map((fragment, fragmentIndex) => {
-              const key = `${fragmentIndex}:${fragment.type}:${fragment.text}`;
-              const fragmentStyle = {
-                height: fragment.height,
-                left: fragment.x,
-                position: "absolute" as const,
-                top: 0,
-              };
-              if (fragment.type === "text") {
-                const textFragmentStyle = {
-                  ...fragmentStyle,
-                  minWidth: fragment.width,
-                  whiteSpace: "nowrap" as const,
-                };
-                const content = <HighlightedText queryTokens={queryTokens} text={fragment.text} />;
-                if (fragment.node.explicitLink && fragment.node.href && interactiveLinks) {
-                  const isExternal = /^https?:/iu.test(fragment.node.href);
-                  return (
-                    <a
-                      className={cn(actionClassName, textClassName(fragment.node))}
-                      data-employee-markdown-link="interactive"
-                      href={fragment.node.href}
-                      key={key}
-                      onClick={(event) => event.stopPropagation()}
-                      style={textFragmentStyle}
-                      {...(isExternal
-                        ? {
-                            referrerPolicy: "no-referrer" as const,
-                            rel: "noopener noreferrer",
-                            target: "_blank",
-                          }
-                        : {})}
-                    >
-                      {content}
-                    </a>
-                  );
-                }
-                return (
-                  <span
-                    className={textClassName(fragment.node)}
-                    data-employee-markdown-link={
-                      fragment.node.explicitLink
-                        ? fragment.node.href
-                          ? "inert"
-                          : "unsafe"
-                        : undefined
+            {block.lines.map((line) => (
+              <span
+                aria-hidden={line.blank ? "true" : undefined}
+                className={lineClassName}
+                data-employee-display-blank={line.blank ? "true" : undefined}
+                data-employee-display-visual-line
+                key={`${line.blockY}:${line.height}:${line.text}`}
+                style={{
+                  height: line.height,
+                  left: 0,
+                  position: "absolute",
+                  top: line.blockY,
+                  width: "100%",
+                }}
+              >
+                {line.fragments.map((fragment, fragmentIndex) => {
+                  const key = `${fragmentIndex}:${fragment.type}:${fragment.text}`;
+                  const fragmentStyle = {
+                    height: fragment.height,
+                    left: fragment.x,
+                    position: "absolute" as const,
+                    top: 0,
+                  };
+                  if (fragment.type === "text") {
+                    const textFragmentStyle = {
+                      ...fragmentStyle,
+                      minWidth: fragment.width,
+                      whiteSpace: "nowrap" as const,
+                    };
+                    const content = (
+                      <HighlightedText queryTokens={queryTokens} text={fragment.text} />
+                    );
+                    if (fragment.node.explicitLink && fragment.node.href && interactiveLinks) {
+                      const isExternal = /^https?:/iu.test(fragment.node.href);
+                      return (
+                        <a
+                          className={cn(actionClassName, textClassName(fragment.node))}
+                          data-employee-markdown-link="interactive"
+                          href={fragment.node.href}
+                          key={key}
+                          onClick={(event) => event.stopPropagation()}
+                          style={textFragmentStyle}
+                          {...(isExternal
+                            ? {
+                                referrerPolicy: "no-referrer" as const,
+                                rel: "noopener noreferrer",
+                                target: "_blank",
+                              }
+                            : {})}
+                        >
+                          {content}
+                        </a>
+                      );
                     }
-                    key={key}
-                    style={textFragmentStyle}
-                  >
-                    {content}
-                  </span>
-                );
-              }
-              if (fragment.type === "tag") {
-                return (
-                  <TagSurface
-                    className="inline-flex items-center whitespace-nowrap"
-                    color={fragment.tag.color}
-                    key={key}
-                    style={{ ...fragmentStyle, width: fragment.width }}
-                  >
-                    <HighlightedText queryTokens={queryTokens} text={fragment.text} />
-                  </TagSurface>
-                );
-              }
-              const source = `${fragment.position.label} · ${fragment.position.unitContext.unitName}`;
-              const positionEnd = fragment.position.label.length;
-              const separatorEnd = positionEnd + 3;
-              const renderRange = (
-                start: number,
-                end: number,
-                rangeClassName: string,
-                unitLink = false,
-              ) => {
-                const from = Math.max(fragment.start, start);
-                const to = Math.min(fragment.end, end);
-                if (from >= to) return null;
-                const content = (
-                  <HighlightedText queryTokens={queryTokens} text={source.slice(from, to)} />
-                );
-                if (unitLink && nativePositionLinks) {
+                    return (
+                      <span
+                        className={textClassName(fragment.node)}
+                        data-employee-markdown-link={
+                          fragment.node.explicitLink
+                            ? fragment.node.href
+                              ? "inert"
+                              : "unsafe"
+                            : undefined
+                        }
+                        key={key}
+                        style={textFragmentStyle}
+                      >
+                        {content}
+                      </span>
+                    );
+                  }
+                  if (fragment.type === "tag") {
+                    return (
+                      <TagSurface
+                        className="inline-flex items-center whitespace-nowrap"
+                        color={fragment.tag.color}
+                        key={key}
+                        style={{ ...fragmentStyle, width: fragment.width }}
+                      >
+                        <HighlightedText queryTokens={queryTokens} text={fragment.text} />
+                      </TagSurface>
+                    );
+                  }
+                  const source = `${fragment.position.label} · ${fragment.position.unitContext.unitName}`;
+                  const positionEnd = fragment.position.label.length;
+                  const separatorEnd = positionEnd + 3;
+                  const renderRange = (
+                    start: number,
+                    end: number,
+                    rangeClassName: string,
+                    unitLink = false,
+                  ) => {
+                    const from = Math.max(fragment.start, start);
+                    const to = Math.min(fragment.end, end);
+                    if (from >= to) return null;
+                    const content = (
+                      <HighlightedText queryTokens={queryTokens} text={source.slice(from, to)} />
+                    );
+                    if (unitLink && nativePositionLinks) {
+                      return (
+                        <button
+                          className={cn(
+                            rangeClassName,
+                            "cursor-pointer rounded-sm text-left outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring",
+                          )}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onUnitContextClick?.(fragment.position.unitContext);
+                          }}
+                          type="button"
+                        >
+                          {content}
+                        </button>
+                      );
+                    }
+                    return <span className={cn(rangeClassName, "whitespace-pre")}>{content}</span>;
+                  };
                   return (
-                    <button
-                      className={cn(
-                        rangeClassName,
-                        "cursor-pointer rounded-sm text-left outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring",
-                      )}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onUnitContextClick?.(fragment.position.unitContext);
-                      }}
-                      type="button"
+                    <TagSurface
+                      className="inline-flex items-center whitespace-nowrap"
+                      data-employee-position-assignment
+                      key={key}
+                      style={{ ...fragmentStyle, width: fragment.width }}
+                      title={`${fragment.position.label} · ${fragment.position.unitContext.unitFullPath}`}
+                      variant="position"
                     >
-                      {content}
-                    </button>
+                      {renderRange(0, positionEnd, "font-medium text-foreground")}
+                      {renderRange(positionEnd, separatorEnd, "text-muted-foreground")}
+                      {renderRange(separatorEnd, source.length, "text-muted-foreground", true)}
+                    </TagSurface>
                   );
-                }
-                return <span className={cn(rangeClassName, "whitespace-pre")}>{content}</span>;
-              };
-              return (
-                <TagSurface
-                  className="inline-flex items-center whitespace-nowrap"
-                  data-employee-position-assignment
-                  key={key}
-                  style={{ ...fragmentStyle, width: fragment.width }}
-                  title={`${fragment.position.label} · ${fragment.position.unitContext.unitFullPath}`}
-                  variant="position"
-                >
-                  {renderRange(0, positionEnd, "font-medium text-foreground")}
-                  {renderRange(positionEnd, separatorEnd, "text-muted-foreground")}
-                  {renderRange(separatorEnd, source.length, "text-muted-foreground", true)}
-                </TagSurface>
-              );
-            })}
+                })}
+              </span>
+            ))}
           </span>
         ))}
       </div>
@@ -476,7 +488,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
 
   return (
     <div
-      className={cn("grid min-w-0", className)}
+      className={cn("flex min-w-0 flex-col", className)}
       data-employee-display-content
       data-employee-display-line-gap={resolvedLineGap}
       ref={contentRef}
@@ -488,6 +500,7 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
           <span
             aria-hidden={line.blank ? "true" : undefined}
             className={lineClassName}
+            data-employee-display-block
             data-employee-display-blank={line.blank ? "true" : undefined}
             key={key}
             style={{
@@ -512,18 +525,16 @@ export const EmployeeDisplayContent = observer(function EmployeeDisplayContent({
               }
               if (node.type === "positions") {
                 return (
-                  <span className="max-w-full" key={nodeKey}>
-                    {node.positions.map(({ label, unitContext }, positionIndex) => (
+                  <span
+                    className="inline-flex max-w-full flex-wrap"
+                    key={nodeKey}
+                    style={{ gap: TAG_SURFACE_METRICS.gap }}
+                  >
+                    {node.positions.map(({ label, unitContext }) => (
                       <TagSurface
                         className="align-baseline"
                         data-employee-position-assignment
                         key={unitContext.id}
-                        style={{
-                          marginInlineEnd:
-                            positionIndex + 1 < node.positions.length
-                              ? TAG_SURFACE_METRICS.gap
-                              : undefined,
-                        }}
                         title={`${label} · ${unitContext.unitFullPath}`}
                         variant="position"
                       >

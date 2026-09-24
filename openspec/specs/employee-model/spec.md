@@ -298,23 +298,26 @@ Unit. Direct `{isBoss}` output MUST be empty; visible boss text MUST be authored
 ### Requirement: Employee cards render configured information columns
 Employee cards SHALL render authored format lines as inline Markdown containing ordinary text,
 bold, italic, strike, inline code, safe links, native Tag surfaces, and native compound assignment
-surfaces. Internal source-authored blank lines between visible content SHALL reserve one empty row;
+surfaces. Internal source-authored blank lines between visible content SHALL reserve one empty block;
 leading and trailing blank lines and lines emptied only by absent values or false conditions SHALL
 be omitted. Ordinary text MUST be measured with its actual target font, wrap by words with grapheme
 fallback for an oversized uninterrupted value, and remain complete without fragment-level clipping.
 Every line in one context SHALL use the same base size, color, and normal weight; Markdown alone
 controls text emphasis.
 
-Text, Tags, and assignments MUST participate in one inline flow without a semantic token forcing a
-new row. A long semantic surface SHALL split into content-sized decorated line fragments; every
-fragment MUST retain the logical surface's padding, radius, color, and applicable border without
-painting unused width after its content. Assignment fragments MUST retain emphasized position text,
-a middle dot, and secondary Unit text. A boundary that continues a Tag or assignment flow MUST use a
-6 pixel vertical gap. Every authored, blank, conditionally resolved, or ordinary text-wrap boundary
-MUST use the selected format line gap. Neither kind MUST add space before the first or after the last
-row, and one row MUST receive no gap. Avatar, boss marker, card actions, search highlighting, safe
-explicit Markdown navigation, and the full-name accessible label MUST remain available independently
-of formatted content.
+Each resolved authored line MUST form one ordered format block. Adjacent format blocks MUST use the
+selected format line gap, including the boundaries above and below complete `{tags}` and
+`{positions}` blocks. No gap may appear before the first or after the last block, and one block MUST
+receive no outer gap. Text, Tags, and assignments MUST participate in one inline flow within their
+block without a semantic token forcing another block. A long semantic surface SHALL split into
+content-sized decorated line fragments; every fragment MUST retain the logical surface's padding,
+radius, color, and applicable border without painting unused width after its content. Assignment
+fragments MUST retain emphasized position text, a middle dot, and secondary Unit text. A boundary
+that continues the Tag or assignment collection inside its block MUST use the native 6 pixel
+vertical gap, independent of the selected format line gap. Ordinary text-wrap boundaries inside a
+block MUST use the selected format line gap. Avatar, boss marker, card actions, search highlighting,
+safe explicit Markdown navigation, and the full-name accessible label MUST remain available
+independently of formatted content.
 
 Every ordinary token, including `{position}`, `{unitName}`, `{fullName}`, `{profileUrl}`, `{email}`,
 and custom fields, MUST render as text without implicit navigation. `{positions}` MUST retain its
@@ -330,23 +333,27 @@ styled but inert in Editor and PNG.
 
 #### Scenario: Preserve authored rows
 - **WHEN** visible format lines contain an internal blank line and long text exceeding card width
-- **THEN** the blank row remains, the text wraps by actual-font word or grapheme measurements, and the configured gap appears between the resulting non-semantic rows
+- **THEN** the blank block remains, the text wraps by actual-font word or grapheme measurements, and the configured gap appears between adjacent blocks and ordinary text rows
 
 #### Scenario: Preserve complete identity values
 - **WHEN** a username, email, URL, or custom value contains narrow and wide glyphs and still fits the available row
 - **THEN** every final glyph remains visible and the value is neither truncated nor clipped to an estimated fragment width
 
-#### Scenario: Space one visual row
-- **WHEN** a resolved card contains exactly one visual row at line gaps 0, 4, and 24
-- **THEN** its information-column height is identical at every gap
+#### Scenario: Space one format block
+- **WHEN** a resolved card contains exactly one format block at line gaps 0, 4, and 24
+- **THEN** its outer information-column height is identical at every gap unless ordinary text inside that block wraps
 
-#### Scenario: Space mixed visual rows
-- **WHEN** a resolved card contains authored, empty, ordinary wrapped, Tag continuation, or assignment continuation rows
-- **THEN** each semantic continuation uses 6 pixels, each other internal boundary uses the selected line gap, and no outer gap is present
+#### Scenario: Space adjacent format blocks
+- **WHEN** `{fullName}`, `{positions}`, and `{tags}` resolve on three authored lines
+- **THEN** the selected format gap appears exactly once between each adjacent pair and no gap appears above or below the resulting stack
+
+#### Scenario: Preserve native semantic wrapping
+- **WHEN** Tags, dated suffixes, or assignments wrap to multiple rows inside one semantic block
+- **THEN** their internal vertical and horizontal collection gaps remain 6 pixels regardless of the selected format line gap
 
 #### Scenario: Drop dynamic empty rows
 - **WHEN** a complete source line contains only an absent field or a false conditional branch
-- **THEN** that line contributes no visible row or spacing
+- **THEN** that line contributes no format block or spacing
 
 #### Scenario: Render an empty format
 - **WHEN** the applicable saved format produces no visible text, Tags, assignments, or internal blank row between content
@@ -374,11 +381,11 @@ styled but inert in Editor and PNG.
 
 #### Scenario: Preserve inline native fields
 - **WHEN** a format contains Markdown text before and after `{tags}` or `{positions}`
-- **THEN** every value shares the available row, wrapping only when its actual measured fragments no longer fit
+- **THEN** every value shares the available block row, wrapping only when its actual measured fragments no longer fit
 
 #### Scenario: Wrap one long Tag
 - **WHEN** one Tag label is wider than the information column
-- **THEN** every grapheme remains visible in content-sized decorated fragments without a full-width trailing fill
+- **THEN** every grapheme remains visible in content-sized decorated fragments without a full-width trailing fill and continuation fragments retain the native collection gap
 
 ### Requirement: Required switches use flat rows
 Every Required switch row in Employee model SHALL have no surrounding surface fill, border-like
