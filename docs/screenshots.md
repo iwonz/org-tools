@@ -145,7 +145,7 @@ Compound matching.
 
 Configure the four saved Employee-card formats and inspect their real contextual previews on the
 Display tab. The frame shows the thematic tabs, flat sections, per-format Reset actions and numeric
-line-spacing inputs, wrapped Markdown, native assignment and Tag treatments, the selection
+line-spacing inputs, the maintained 5 px default, wrapped Markdown, native assignment and Tag treatments, the selection
 formatting menu, and no separate Display Save action. The following Value and Template frames
 retain coverage of the Model tab.
 

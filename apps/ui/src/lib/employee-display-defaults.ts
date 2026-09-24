@@ -19,15 +19,15 @@ const managerLabelByLocale: Record<AppLocale, string> = {
 export const createDefaultEmployeeDisplayFormats = (locale: AppLocale): EmployeeDisplayFormats => ({
   editor: "{fullName}\n{tags}",
   editorExport: `{fullName} {isBoss ? '· ${managerLabelByLocale[locale]}' : ''}\n{tags}`,
-  employees: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
-  units: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
+  employees: "**{fullName}** {positions} {tags}",
+  units: "**{fullName}** {positions} {tags}",
 });
 
 export const DEFAULT_EMPLOYEE_DISPLAY_FORMATS = createDefaultEmployeeDisplayFormats("en");
 
 export const DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS: EmployeeDisplayLineGaps = {
-  editor: 4,
-  editorExport: 4,
-  employees: 4,
-  units: 4,
+  editor: 5,
+  editorExport: 5,
+  employees: 5,
+  units: 5,
 };

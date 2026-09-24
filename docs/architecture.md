@@ -73,7 +73,8 @@ The Employee Display tab reads these organization values directly. Each valid fo
 integer gap edit calls a focused no-op-aware store action, so MobX observation immediately drives
 the existing coalesced SQLite writer or `BroadcastChannel` publisher. Invalid number-input text
 stays in the mounted input until blur or Enter normalizes it. Per-format Reset resolves the current
-locale's maintained default at activation time and updates only that format.
+locale's maintained default at activation time and updates only that format. Blank State starts all
+four gaps at 5 pixels and uses `**{fullName}** {positions} {tags}` for Employees and Units.
 
 Each View owns required `structure.settings`: `groupByTag` and `showTagCloud` default to true;
 `distributedColor` and `undistributedColor` default to green and amber and use non-null named or

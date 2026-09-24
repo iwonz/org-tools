@@ -84,5 +84,13 @@ describe("state change tracking", () => {
     );
     expect(store.employeeDisplayLineGaps.editorExport).toBe(19);
     expect(store.organizationChangeSequence).toBe(1);
+
+    store.setEmployeeDisplayFormat("employees", "Custom");
+    store.setEmployeeDisplayLineGap("employees", 13);
+    store.resetChangeTracking();
+    store.resetEmployeeDisplayFormat("employees");
+    expect(store.employeeDisplayFormats.employees).toBe("**{fullName}** {positions} {tags}");
+    expect(store.employeeDisplayLineGaps.employees).toBe(13);
+    expect(store.organizationChangeSequence).toBe(1);
   });
 });

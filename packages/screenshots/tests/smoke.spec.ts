@@ -1367,14 +1367,14 @@ test("atomically imports, directly exports, automatically writes, and reloads st
   expect(exportedState.organization.employeeDisplayFormats).toEqual({
     editor: "{fullName}\n{tags}",
     editorExport: "{fullName} {isBoss ? '· Manager' : ''}\n{tags}",
-    employees: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
-    units: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
+    employees: "**{fullName}** {positions} {tags}",
+    units: "**{fullName}** {positions} {tags}",
   });
   expect(exportedState.organization.employeeDisplayLineGaps).toEqual({
-    editor: 4,
-    editorExport: 4,
-    employees: 4,
-    units: 4,
+    editor: 5,
+    editorExport: 5,
+    employees: 5,
+    units: 5,
   });
 
   await page.waitForTimeout(500);
@@ -1763,6 +1763,21 @@ test("edits contextual Employee card formats with live previews and local image 
   const defaultEmployeesPreview = modelDialog.locator(
     '[data-demo-id="employee-display-employees-preview"]',
   );
+  await expect(defaultEmployeesPreview.getByText("Avery Stone", { exact: true })).toHaveCSS(
+    "font-weight",
+    "600",
+  );
+  await expect(
+    defaultEmployeesPreview.locator("[data-employee-position-assignment]").first(),
+  ).toBeVisible();
+  await expect(defaultEmployeesPreview.locator("[data-tag-color-surface]").first()).toBeVisible();
+  await expect(
+    defaultEmployeesPreview.getByText("avery.stone@vkteam.ru", { exact: true }),
+  ).toHaveCount(0);
+  await expect(defaultEmployeesPreview.getByText("vkteam", { exact: true })).toHaveCount(0);
+
+  const defaultEmployeesFormat = modelDialog.locator("#employee-display-employees-format");
+  await defaultEmployeesFormat.fill("{username}\n{email}");
   await expect(
     defaultEmployeesPreview.getByText("avery.stone@vkteam.ru", { exact: true }),
   ).toBeVisible();
@@ -1788,9 +1803,8 @@ test("edits contextual Employee card formats with live previews and local image 
       }),
     ).toEqual({ completeText: value, fits: true });
   }
-  await expect(
-    defaultEmployeesPreview.locator("[data-employee-position-assignment]").first(),
-  ).toBeVisible();
+  await modelDialog.locator('[data-demo-id="employee-display-employees-reset"]').click();
+  await expect(defaultEmployeesFormat).toHaveValue("**{fullName}** {positions} {tags}");
   await expect(
     modelDialog.locator('[data-demo-id="employee-model-tab-display"] svg'),
   ).toBeVisible();
@@ -1798,8 +1812,8 @@ test("edits contextual Employee card formats with live previews and local image 
   const defaultDisplayFormats = {
     editor: "{fullName}\n{tags}",
     editorExport: "{fullName} {isBoss ? '· Manager' : ''}\n{tags}",
-    employees: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
-    units: "{fullName}\n{username}\n{email}\n{positions}\n{tags}",
+    employees: "**{fullName}** {positions} {tags}",
+    units: "**{fullName}** {positions} {tags}",
   } as const;
   for (const key of ["employees", "units", "editor", "editorExport"]) {
     const section = modelDialog.locator(`[data-demo-id="employee-display-${key}"]`);
@@ -1815,7 +1829,7 @@ test("edits contextual Employee card formats with live previews and local image 
     );
     await expect(
       modelDialog.locator(`[data-demo-id="employee-display-${key}-line-gap"]`),
-    ).toHaveValue("4");
+    ).toHaveValue("5");
     await expect(
       modelDialog.locator(`[data-demo-id="employee-display-${key}-line-gap"]`),
     ).toHaveAttribute("type", "number");

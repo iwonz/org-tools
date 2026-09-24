@@ -122,9 +122,16 @@ describe("OrgToolsState", () => {
       expect(state.organization.employeeDisplayFormats).toEqual(
         createDefaultEmployeeDisplayFormats(locale),
       );
+      expect(state.organization.employeeDisplayFormats.employees).toBe(
+        "**{fullName}** {positions} {tags}",
+      );
+      expect(state.organization.employeeDisplayFormats.units).toBe(
+        "**{fullName}** {positions} {tags}",
+      );
       expect(state.organization.employeeDisplayLineGaps).toEqual(
         DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS,
       );
+      expect(Object.values(state.organization.employeeDisplayLineGaps)).toEqual([5, 5, 5, 5]);
     }
 
     const state = createBlankOrgToolsState();

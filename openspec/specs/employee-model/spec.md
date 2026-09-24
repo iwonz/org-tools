@@ -220,8 +220,8 @@ a bordered live destination preview. Every valid format or gap change MUST updat
 stored value immediately. Closing the dialog MUST retain accepted Display changes, and the Display
 tab MUST NOT offer a separate Save action. Model-tab custom-field drafts MUST retain their existing
 explicit Save workflow. New organizations MUST initialize Employees and Units formats with
-`{fullName}`, `{username}`, `{email}`, `{positions}`, and `{tags}` on separate lines and MUST
-initialize every line gap to 4 pixels.
+`**{fullName}** {positions} {tags}` on one authored line and MUST initialize every line gap to 5
+pixels.
 
 The default Editor-export format MUST embed the Manager translation for the creation locale inside
 an `isBoss` ternary. A later locale change MUST NOT rewrite that stored user format. Reset MUST derive
@@ -254,7 +254,7 @@ change another format or any line gap.
 
 #### Scenario: Create a new organization
 - **WHEN** blank State is created in a supported locale
-- **THEN** Employees and Units use `{positions}`, all line gaps equal 4, and Editor export contains that locale's Manager literal inside an `isBoss` ternary
+- **THEN** Employees and Units use the one-line `**{fullName}** {positions} {tags}` format, all line gaps equal 5, and Editor export contains that locale's Manager literal inside an `isBoss` ternary
 
 ### Requirement: Employee display formats use contextual template values
 Each format MUST use the existing `@`, `{token}`, and conditional grammar and offer built-in
