@@ -1,4 +1,6 @@
 import type {
+  AnalyticsDashboard,
+  AnalyticsFilterValue,
   AppLocale,
   CustomEmployeeFieldDefinition,
   CustomEmployeeFieldValue,
@@ -12,6 +14,7 @@ import type {
   EmployeeTagAssignment,
   EmployeeTagDefinition,
   OrganizationEmployee,
+  OrgToolsAnalyticsUiState,
   OrgToolsState,
   TagId,
   UiActiveTab,
@@ -21,9 +24,15 @@ import type {
   UnitId,
   ViewId,
 } from "@org-tools/types";
-import { makeAutoObservable, observable, reaction } from "mobx";
+import { makeAutoObservable, observable, reaction, toJS } from "mobx";
 import { LocalizedError, uiMessage } from "@/i18n/messages";
-import { type AnalyticsResult, buildAnalytics } from "@/lib/analytics";
+import {
+  analyticsReferencesCustomField,
+  analyticsReferencesView,
+  createEmptyAnalyticsUiState,
+  reconcileAnalyticsDefinitions,
+  reconcileAnalyticsUi,
+} from "@/lib/analytics-state";
 import { buildOrganizationStructureWithResolution } from "@/lib/build-organization-structure";
 import {
   extractTemplateFieldKeys,
@@ -82,8 +91,6 @@ import { ExportSessionStore } from "@/stores/export-session-store";
 import { OrgEditorStore, type OrgEditorUnitConfiguration } from "@/stores/org-editor-store";
 import { type NewOrgViewSource, OrgViewsStore } from "@/stores/org-views-store";
 
-type AnalyticsIdleHandle = { id: number; type: "idle" | "timeout" };
-
 type CachedViewModel = {
   documentRevision: number;
   employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
@@ -92,7 +99,6 @@ type CachedViewModel = {
   tags: EmployeeTagDefinition[];
 };
 
-export type AnalyticsBuildStatus = "building" | "idle" | "ready" | "scheduled";
 export type {
   ExportEmployeeFieldKey,
   ExportFieldDropPlacement,
@@ -107,36 +113,6 @@ export type {
   ExportTabMode,
   ExportUnitFieldKey,
 } from "@/stores/export-session-store";
-
-const requestAnalyticsIdleCallback = (callback: () => void): AnalyticsIdleHandle => {
-  if (typeof window === "undefined") {
-    callback();
-    return { id: 0, type: "timeout" };
-  }
-
-  if (typeof window.requestIdleCallback === "function") {
-    return {
-      id: window.requestIdleCallback(() => callback(), { timeout: 1500 }),
-      type: "idle",
-    };
-  }
-
-  return {
-    id: window.setTimeout(callback, 120),
-    type: "timeout",
-  };
-};
-
-const cancelAnalyticsIdleCallback = (handle: AnalyticsIdleHandle) => {
-  if (typeof window === "undefined") return;
-
-  if (handle.type === "idle" && typeof window.cancelIdleCallback === "function") {
-    window.cancelIdleCallback(handle.id);
-    return;
-  }
-
-  window.clearTimeout(handle.id);
-};
 
 const areTagsEqual = (
   firstTags: readonly EmployeeTagAssignment[],
@@ -164,6 +140,7 @@ const cloneEmployeeFieldDefinition = (
         };
 
 export class OrgStore {
+  analyticsDashboards: AnalyticsDashboard[] = [];
   employeeDisplayFormats: EmployeeDisplayFormats = { ...DEFAULT_EMPLOYEE_DISPLAY_FORMATS };
   employeeDisplayLineGaps: EmployeeDisplayLineGaps = { ...DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS };
   employeeFieldDefinitions: CustomEmployeeFieldDefinition[] = [];
@@ -183,7 +160,9 @@ export class OrgStore {
   };
   employeesUi = { filters: createEmptyEmployeeFiltersState(), query: "" };
   editorUi = { searchOpen: false, searchQuery: "" };
-  analyticsUi = { filters: createEmptyEmployeeFiltersState(), query: "" };
+  analyticsUi: OrgToolsAnalyticsUiState = createEmptyAnalyticsUiState(
+    createEmptyEmployeeFiltersState,
+  );
   calendarUi = {
     monthIndex: new Date().getMonth(),
     year: new Date().getFullYear(),
@@ -203,11 +182,6 @@ export class OrgStore {
   activeViewOrgStructure: UiOrgStructure | null = null;
   downloadViewOrgStructure: UiOrgStructure | null = null;
   downloadSourceViewId: ViewId = "";
-  analyticsResult: AnalyticsResult | null = null;
-  analyticsBuildStatus: AnalyticsBuildStatus = "idle";
-  analyticsBuildFrameId: number | null = null;
-  analyticsBuildIdleHandle: AnalyticsIdleHandle | null = null;
-  analyticsBuildToken = 0;
   sourceFileName: string | null = null;
   sourceFileSizeBytes: number | null = null;
   isApplyingState = false;
@@ -219,10 +193,7 @@ export class OrgStore {
     makeAutoObservable(
       this,
       {
-        analyticsBuildFrameId: false,
-        analyticsBuildIdleHandle: false,
-        analyticsBuildToken: false,
-        analyticsResult: observable.ref,
+        analyticsDashboards: observable.shallow,
         employeeUnitContextsByEmployeeId: observable.ref,
         employeeUnitMembershipsByEmployeeId: observable.ref,
         expandedUnitIds: observable.shallow,
@@ -266,6 +237,7 @@ export class OrgStore {
   private get organizationObservation() {
     return [
       this.organizationEmployees,
+      this.analyticsDashboards,
       this.employeeDisplayFormats,
       this.employeeDisplayLineGaps,
       this.employeeFieldDefinitions,
@@ -491,6 +463,7 @@ export class OrgStore {
             : buildView(state.ui.download.sourceViewId);
 
       this.organizationEmployees = nextEmployees;
+      this.analyticsDashboards = structuredClone(state.organization.analyticsDashboards);
       this.employeeDisplayFormats = { ...state.organization.employeeDisplayFormats };
       this.employeeDisplayLineGaps = { ...state.organization.employeeDisplayLineGaps };
       this.employeeFieldDefinitions = structuredClone(state.organization.employeeFieldDefinitions);
@@ -527,8 +500,6 @@ export class OrgStore {
       this.sourceFileSizeBytes = sourceFileSizeBytes;
       this.refreshEmployeeUnitContexts();
       this.exportSession.loadState(state.ui.download);
-      this.resetAnalyticsCache();
-      this.scheduleAnalyticsPrecompute();
     } finally {
       this.isApplyingState = previousIsApplyingState;
     }
@@ -562,8 +533,66 @@ export class OrgStore {
     this.editorUi = { ...this.editorUi, ...next };
   }
 
-  setAnalyticsUi(query: string, filters: EmployeeSearchFilters): void {
-    this.analyticsUi = { filters: structuredClone(filters), query };
+  replaceAnalyticsDashboards(
+    dashboards: readonly AnalyticsDashboard[],
+    nextUi: OrgToolsAnalyticsUiState = this.analyticsUi,
+  ): void {
+    const definitions = reconcileAnalyticsDefinitions(dashboards);
+    const analytics = reconcileAnalyticsUi(definitions, nextUi);
+    const parsed = parseOrgToolsState({
+      organization: { ...this.createOrganizationState(), analyticsDashboards: definitions },
+      ui: { ...this.createDurableUiState(), analytics },
+    });
+    this.analyticsDashboards = parsed.organization.analyticsDashboards;
+    this.analyticsUi = parsed.ui.analytics;
+  }
+
+  setAnalyticsActiveDashboard(activeDashboardId: string | null): void {
+    if (
+      activeDashboardId !== null &&
+      !this.analyticsDashboards.some((dashboard) => dashboard.id === activeDashboardId)
+    )
+      return;
+    if (this.analyticsUi.activeDashboardId === activeDashboardId) return;
+    this.analyticsUi = { ...this.analyticsUi, activeDashboardId };
+  }
+
+  setAnalyticsActiveTab(panelId: string, tabId: string): void {
+    const panel = this.analyticsDashboards
+      .flatMap((dashboard) => dashboard.panels)
+      .find((candidate) => candidate.id === panelId);
+    if (
+      !panel?.tabs.some((tab) => tab.id === tabId) ||
+      this.analyticsUi.activeTabIdsByPanelId[panelId] === tabId
+    )
+      return;
+    this.analyticsUi = {
+      ...this.analyticsUi,
+      activeTabIdsByPanelId: { ...this.analyticsUi.activeTabIdsByPanelId, [panelId]: tabId },
+    };
+  }
+
+  setAnalyticsFilterValue(widgetId: string, value: AnalyticsFilterValue): void {
+    const widget = this.analyticsDashboards
+      .flatMap((dashboard) =>
+        dashboard.panels.flatMap((panel) => panel.tabs.flatMap((tab) => tab.widgets)),
+      )
+      .find((candidate) => candidate.id === widgetId);
+    if (widget?.type !== "filter") return;
+    this.analyticsUi = {
+      ...this.analyticsUi,
+      filterValuesByWidgetId: {
+        ...this.analyticsUi.filterValuesByWidgetId,
+        [widgetId]: structuredClone(value),
+      },
+    };
+  }
+
+  setAnalyticsDrilldown(next: Partial<OrgToolsAnalyticsUiState["drilldown"]>): void {
+    this.analyticsUi = {
+      ...this.analyticsUi,
+      drilldown: { ...this.analyticsUi.drilldown, ...structuredClone(next) },
+    };
   }
 
   setCalendarUi(next: Partial<typeof this.calendarUi>): void {
@@ -578,7 +607,7 @@ export class OrgStore {
     this.activeTab = activeTab;
   }
 
-  private buildViewModel(viewId: ViewId): UiOrgStructure | null {
+  getViewModel(viewId: ViewId): UiOrgStructure | null {
     const editor = this.orgViews.editorByViewId.get(viewId);
     if (!editor) return null;
     const documentRevision = this.orgViews.getDocumentRevision(viewId);
@@ -628,13 +657,11 @@ export class OrgStore {
 
   private handleViewDocumentChange(viewId: ViewId, kind: "custom" | "system"): void {
     if (this.isApplyingState) return;
-    const structure = this.buildViewModel(viewId);
+    const structure = this.getViewModel(viewId);
     if (!structure) return;
     if (kind === "system") {
       this.uiOrgStructure = structure;
       this.refreshEmployeeUnitContexts();
-      this.resetAnalyticsCache();
-      this.scheduleAnalyticsPrecompute();
     }
     if (this.activeOrgViewId === viewId) this.activeViewOrgStructure = structure;
     if (this.downloadSourceViewId === viewId) this.downloadViewOrgStructure = structure;
@@ -643,111 +670,20 @@ export class OrgStore {
   private rebuildMainModel(): void {
     const systemViewId = this.systemOrgViewId;
     if (!systemViewId) return;
-    const systemStructure = this.buildViewModel(systemViewId);
+    const systemStructure = this.getViewModel(systemViewId);
     if (!systemStructure) return;
     this.uiOrgStructure = systemStructure;
     this.activeViewOrgStructure =
       this.activeOrgViewId === systemViewId
         ? systemStructure
-        : this.buildViewModel(this.activeOrgViewId);
+        : this.getViewModel(this.activeOrgViewId);
     this.downloadViewOrgStructure =
       this.downloadSourceViewId === systemViewId
         ? systemStructure
         : this.downloadSourceViewId === this.activeOrgViewId
           ? this.activeViewOrgStructure
-          : this.buildViewModel(this.downloadSourceViewId);
+          : this.getViewModel(this.downloadSourceViewId);
     this.refreshEmployeeUnitContexts();
-    this.resetAnalyticsCache();
-    this.scheduleAnalyticsPrecompute();
-  }
-
-  resetAnalyticsCache(): void {
-    this.clearScheduledAnalyticsBuild();
-    this.analyticsBuildToken += 1;
-    this.analyticsResult = null;
-    this.analyticsBuildStatus = "idle";
-  }
-
-  scheduleAnalyticsPrecompute(): void {
-    if (
-      !this.uiOrgStructure ||
-      this.analyticsResult ||
-      this.analyticsBuildStatus === "building" ||
-      this.analyticsBuildStatus === "scheduled"
-    ) {
-      return;
-    }
-
-    this.clearScheduledAnalyticsBuild();
-    this.analyticsBuildStatus = "scheduled";
-    const token = ++this.analyticsBuildToken;
-
-    if (typeof window === "undefined") {
-      this.buildAnalyticsResult(token);
-      return;
-    }
-
-    this.analyticsBuildFrameId = window.requestAnimationFrame(() => {
-      this.analyticsBuildFrameId = null;
-      if (token !== this.analyticsBuildToken || !this.uiOrgStructure || this.analyticsResult)
-        return;
-
-      this.analyticsBuildIdleHandle = requestAnalyticsIdleCallback(() => {
-        this.analyticsBuildIdleHandle = null;
-        this.buildAnalyticsResult(token);
-      });
-    });
-  }
-
-  ensureAnalyticsResult(): void {
-    if (!this.uiOrgStructure || this.analyticsResult || this.analyticsBuildStatus === "building") {
-      return;
-    }
-
-    this.clearScheduledAnalyticsBuild();
-    const token = ++this.analyticsBuildToken;
-    this.buildAnalyticsResult(token);
-  }
-
-  clearScheduledAnalyticsBuild(): void {
-    if (typeof window === "undefined") {
-      this.analyticsBuildFrameId = null;
-      this.analyticsBuildIdleHandle = null;
-      return;
-    }
-    if (this.analyticsBuildFrameId !== null) {
-      window.cancelAnimationFrame(this.analyticsBuildFrameId);
-      this.analyticsBuildFrameId = null;
-    }
-    if (this.analyticsBuildIdleHandle !== null) {
-      cancelAnalyticsIdleCallback(this.analyticsBuildIdleHandle);
-      this.analyticsBuildIdleHandle = null;
-    }
-  }
-
-  buildAnalyticsResult(token: number): void {
-    const units = this.uiOrgStructure;
-    if (!units || token !== this.analyticsBuildToken) {
-      if (!units) {
-        this.analyticsResult = null;
-        this.analyticsBuildStatus = "idle";
-      }
-      return;
-    }
-
-    this.analyticsBuildStatus = "building";
-    try {
-      const nextAnalytics = buildAnalytics(units.allEmployees);
-      if (token !== this.analyticsBuildToken || this.uiOrgStructure !== units) return;
-      this.analyticsResult = nextAnalytics;
-      this.analyticsBuildStatus = "ready";
-    } catch (error) {
-      console.error("Failed to build analytics.", error);
-      if (token === this.analyticsBuildToken) {
-        this.analyticsResult = null;
-        this.analyticsBuildStatus = "idle";
-      }
-    }
   }
 
   resetExportSessionState(): void {
@@ -856,12 +792,12 @@ export class OrgStore {
     if (!this.orgViews.editorByViewId.has(viewId)) return;
     this.orgViews.selectView(viewId);
     this.activeViewOrgStructure =
-      viewId === this.systemOrgViewId ? this.uiOrgStructure : this.buildViewModel(viewId);
+      viewId === this.systemOrgViewId ? this.uiOrgStructure : this.getViewModel(viewId);
   }
 
   createOrgView(name: string, source: NewOrgViewSource): ViewId {
     const viewId = this.orgViews.createView(name, source);
-    this.activeViewOrgStructure = this.buildViewModel(viewId);
+    this.activeViewOrgStructure = this.getViewModel(viewId);
     return viewId;
   }
 
@@ -870,6 +806,9 @@ export class OrgStore {
   }
 
   deleteOrgView(viewId: ViewId): void {
+    if (analyticsReferencesView(this.analyticsDashboards, viewId)) {
+      throw new LocalizedError(uiMessage("View is still in use by Analytics."));
+    }
     if (!this.orgViews.deleteView(viewId)) return;
     this.viewModelCache.delete(viewId);
     if (this.downloadSourceViewId === viewId) {
@@ -878,7 +817,7 @@ export class OrgStore {
     this.activeViewOrgStructure =
       this.activeOrgViewId === this.systemOrgViewId
         ? this.uiOrgStructure
-        : this.buildViewModel(this.activeOrgViewId);
+        : this.getViewModel(this.activeOrgViewId);
   }
 
   selectDownloadOrgView(viewId: ViewId): void {
@@ -889,7 +828,7 @@ export class OrgStore {
         ? this.uiOrgStructure
         : viewId === this.activeOrgViewId
           ? this.activeViewOrgStructure
-          : this.buildViewModel(viewId);
+          : this.getViewModel(viewId);
     this.exportSession.clearSelection();
     this.exportSession.setExcludedJsonUnitIds([]);
     this.downloadUi = {
@@ -1029,7 +968,10 @@ export class OrgStore {
       };
       this.analyticsUi = {
         ...this.analyticsUi,
-        filters: removeDeletedUnitsFromFilters(this.analyticsUi.filters),
+        drilldown: {
+          ...this.analyticsUi.drilldown,
+          filters: removeDeletedUnitsFromFilters(this.analyticsUi.drilldown.filters),
+        },
       };
     }
 
@@ -1522,6 +1464,7 @@ export class OrgStore {
     if (
       referenced ||
       referencedByDisplayFormat ||
+      analyticsReferencesCustomField(this.analyticsDashboards, fieldId) ||
       this.exportSession.selectedCustomEmployeeFieldIds.includes(fieldId) ||
       extractTemplateFieldKeys(this.exportSession.templateFormat).some(
         (key) =>
@@ -1553,7 +1496,13 @@ export class OrgStore {
     });
     this.unitsUi = { ...this.unitsUi, employeeFilters: clear(this.unitsUi.employeeFilters) };
     this.employeesUi = { ...this.employeesUi, filters: clear(this.employeesUi.filters) };
-    this.analyticsUi = { ...this.analyticsUi, filters: clear(this.analyticsUi.filters) };
+    this.analyticsUi = {
+      ...this.analyticsUi,
+      drilldown: {
+        ...this.analyticsUi.drilldown,
+        filters: clear(this.analyticsUi.drilldown.filters),
+      },
+    };
     this.downloadUi = {
       ...this.downloadUi,
       employeeFilters: clear(this.downloadUi.employeeFilters),
@@ -1633,7 +1582,13 @@ export class OrgStore {
     });
     this.unitsUi = { ...this.unitsUi, employeeFilters: clear(this.unitsUi.employeeFilters) };
     this.employeesUi = { ...this.employeesUi, filters: clear(this.employeesUi.filters) };
-    this.analyticsUi = { ...this.analyticsUi, filters: clear(this.analyticsUi.filters) };
+    this.analyticsUi = {
+      ...this.analyticsUi,
+      drilldown: {
+        ...this.analyticsUi.drilldown,
+        filters: clear(this.analyticsUi.drilldown.filters),
+      },
+    };
     this.downloadUi = {
       ...this.downloadUi,
       employeeFilters: clear(this.downloadUi.employeeFilters),
@@ -1689,6 +1644,7 @@ export class OrgStore {
 
   createOrganizationState(): OrgToolsState["organization"] {
     return {
+      analyticsDashboards: structuredClone(toJS(this.analyticsDashboards)),
       employeeDisplayFormats: { ...this.employeeDisplayFormats },
       employeeDisplayLineGaps: { ...this.employeeDisplayLineGaps },
       employeeFieldDefinitions: this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition),
@@ -1805,13 +1761,13 @@ export class OrgStore {
       this.activeViewOrgStructure =
         this.activeOrgViewId === this.systemOrgViewId
           ? this.uiOrgStructure
-          : this.buildViewModel(this.activeOrgViewId);
+          : this.getViewModel(this.activeOrgViewId);
       this.downloadViewOrgStructure =
         this.downloadSourceViewId === this.systemOrgViewId
           ? this.uiOrgStructure
           : this.downloadSourceViewId === this.activeOrgViewId
             ? this.activeViewOrgStructure
-            : this.buildViewModel(this.downloadSourceViewId);
+            : this.getViewModel(this.downloadSourceViewId);
     } finally {
       this.isApplyingState = previousIsApplyingState;
     }

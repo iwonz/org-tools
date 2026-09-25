@@ -63,6 +63,15 @@ remote avatars are never fetched. Crop encoding prefers WebP and falls back only
 local PNG canvas encoder; neither path uploads the source or result. Profile navigation and
 explicit email links require direct user actions and referrer protection.
 
+Analytics dashboard definitions and defaults remain in the same exact local organization State;
+active dashboard/tabs, current filter values, and drill-down state remain in its bounded UI
+projection. Query snapshots, results, constructor drafts, IntersectionObserver state, rendered SVG,
+and captured PNGs are transient. Recharts, its matching React runtime, and `html-to-image` are
+bundled dependencies. Analytics uses a local Worker and accepts only the current State-derived rows;
+it has no remote source, historical snapshot, telemetry path, or arbitrary query language. Image
+capture waits for bundled fonts, accepts only same-origin or data-URL images, and never fetches a
+resource or uploads a result.
+
 Open positions remain inside their owning View and Unit. Their titles, nullable named/custom
 background colors, and global Tag references use the same complete State, loopback SQLite, and
 in-memory BroadcastChannel boundaries as the rest of the Editor document. The bundled color picker

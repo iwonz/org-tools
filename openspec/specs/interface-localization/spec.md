@@ -292,3 +292,10 @@ placeholders and no obsolete keys.
 #### Scenario: Open Display in every locale
 - **WHEN** the user opens Employee model, selects Display, edits Markdown, changes a gap, or resets a format in any supported locale
 - **THEN** every visible label, validation message, tooltip, and accessible name uses that locale catalog
+
+### Requirement: Dashboard builder copy is complete in six locales
+All dashboard, panel, tab, widget, dataset, query, aggregation, filter, drill-down, export, validation, accessibility, empty, loading, error, and truncation messages SHALL exist in English, Russian, Chinese, Spanish, French, and Arabic catalogs without obsolete fixed-Analytics keys.
+
+#### Scenario: Validate all catalogs
+- **WHEN** localization completeness checks run
+- **THEN** every maintained locale has the same dashboard key set and no removed fixed-report key remains

@@ -126,10 +126,16 @@ and indivisible date or count suffix. Disabling the View Tag
   PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save
   validates at most 64 KiB of UTF-8 and commits one Unit document change.
 
-Analytics builds every count group, known birth-year index, and gender age cohort in one Employee
-pass per organization revision; UI-only changes reuse the result. Its drill-down stores stable keys
-rather than detached Employee arrays. Analytics uses bounded virtualized groups. Calendar uses seven fluid columns, a constant-size Tag
-indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same
+Analytics mounts only the active dashboard and active tab of each panel. IntersectionObserver
+starts a data query only when its widget approaches the viewport, and filter options are deferred
+until their control opens. A local Worker deduplicates equivalent revision/query/filter keys,
+ignores obsolete generations, and retains at most 96 result entries. Rows are built only for the
+requested View and explicit Employee, assignment, Tag, or Composite grain. Multi-value categories
+preserve Employee IDs for distinct counting. Tables virtualize at a 20,000-row result bound; pivots
+materialize at most 10,000 cells and report truncation. Drill-down stores bounded Employee IDs and
+re-resolves current cards. This keeps the maintained 20,000 Employee / 4,000 Unit target independent
+of inactive dashboards and tabs. Calendar uses seven fluid columns, a constant-size Tag indicator
+per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same
 display-line heights and prefix geometry. Mounted list cards measure their information-column width
 with `ResizeObserver` and reuse the same bounded layout cache; font readiness, width, locale,
 direction, content, or fixed image font invalidates the applicable measurements and virtual rows

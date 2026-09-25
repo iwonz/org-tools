@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { HiMinus, HiPlus } from "react-icons/hi2";
+import { HiMinus, HiOutlineArrowsPointingIn, HiPlus } from "react-icons/hi2";
 
 import { Button } from "@/components/ui/button";
 import { useUiText } from "@/i18n/use-ui-text";
@@ -259,6 +259,7 @@ export function OrgEditorImagePreview({
             type="button"
             variant="ghost"
           >
+            <HiOutlineArrowsPointingIn aria-hidden="true" />
             {t("Fit")}
           </Button>
         </div>

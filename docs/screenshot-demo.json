@@ -520,37 +520,50 @@
     ]
   },
   {
-    "id": "analytics",
+    "id": "analytics-dashboard",
     "module": "analytics",
     "featured": true,
-    "title": "Organization Analytics",
+    "title": "Analytics dashboard",
     "file": "demo-analytics.png",
-    "description": "Review average age and deterministic age extremes alongside sortable birth-year, position, birthday, and name distributions.",
-    "capabilities": ["Age cohorts", "Birth years", "Counts", "Sorting", "Virtualized rows"]
-  },
-  {
-    "id": "analytics-complete-groups",
-    "module": "analytics",
-    "featured": false,
-    "title": "Complete Analytics groups",
-    "file": "feature-analytics-complete-groups.png",
-    "description": "Scroll the unified Analytics surface to inspect birth-year and name distributions in bounded groups.",
+    "description": "Review a local dashboard composed from KPI, filter, chart, table, and tabbed panels.",
     "capabilities": [
-      "Birth years",
-      "Last names",
-      "Full names",
-      "Content-sized groups",
-      "Internal scrolling"
+      "Local queries",
+      "Panel grid",
+      "Tabs",
+      "Filters",
+      "Charts",
+      "Virtualized tables"
     ]
   },
   {
-    "id": "analytics-drilldown",
+    "id": "analytics-builder",
     "module": "analytics",
     "featured": false,
-    "title": "Analytics drill-down",
+    "title": "Analytics dashboard constructor",
+    "file": "feature-analytics-complete-groups.png",
+    "description": "Edit dashboard names, panel widths, tabs, widget grids, queries, and presentation in an isolated draft.",
+    "capabilities": [
+      "Atomic draft",
+      "Panel widths",
+      "Widget sizes",
+      "Drag and keyboard reorder",
+      "Query builder"
+    ]
+  },
+  {
+    "id": "analytics-image-preview",
+    "module": "analytics",
+    "featured": false,
+    "title": "Analytics PNG preview",
     "file": "feature-analytics-drilldown.png",
-    "description": "Open a distribution value to inspect matching Employee cards and their normal actions.",
-    "capabilities": ["Value drill-down", "Matching Employees", "Employee actions"]
+    "description": "Preview a local 3x PNG capture of one widget or the active tab of a complete panel.",
+    "capabilities": [
+      "Widget export",
+      "Panel export",
+      "Fixed 3x",
+      "Local DOM capture",
+      "Copy and save"
+    ]
   },
   {
     "id": "calendar",

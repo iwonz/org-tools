@@ -19,7 +19,10 @@ describe("OrgStore Editor deletion coordinator", () => {
     store.expandedUnitIds = [rootId, childId, survivingRootId];
     store.unitsUi = { ...store.unitsUi, employeeFilters: filters };
     store.employeesUi = { ...store.employeesUi, filters };
-    store.analyticsUi = { ...store.analyticsUi, filters };
+    store.analyticsUi = {
+      ...store.analyticsUi,
+      drilldown: { ...store.analyticsUi.drilldown, filters },
+    };
     store.downloadUi = {
       ...store.downloadUi,
       employeeFilters: filters,
@@ -39,7 +42,7 @@ describe("OrgStore Editor deletion coordinator", () => {
     expect(store.expandedUnitIds).toEqual([survivingRootId]);
     expect(store.unitsUi.employeeFilters.selectedUnitIds).toEqual([]);
     expect(store.employeesUi.filters.selectedUnitIds).toEqual([]);
-    expect(store.analyticsUi.filters.selectedUnitIds).toEqual([]);
+    expect(store.analyticsUi.drilldown.filters.selectedUnitIds).toEqual([]);
     expect(store.downloadUi.employeeFilters.selectedUnitIds).toEqual([]);
     expect(store.downloadUi.selectedFilters.selectedUnitIds).toEqual([]);
     expect(store.exportSession.excludedJsonUnitIds).toEqual([survivingRootId]);

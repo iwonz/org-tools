@@ -6,7 +6,6 @@ import type {
 } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
-import { buildAnalytics } from "@/lib/analytics";
 import {
   buildOrganizationStructure,
   buildOrganizationStructureWithResolution,
@@ -159,9 +158,6 @@ describe("Live Unit resolver", () => {
     expect(position(BLAIR_ID, defaultLiveId)).toBe("Developer");
     expect(position(ALEX_ID, overriddenLiveId)).toBe("QA Lead");
     expect(position(BLAIR_ID, overriddenLiveId)).toBeNull();
-    expect(buildAnalytics(structure.allEmployees).positionCounts).toEqual(
-      expect.arrayContaining([expect.objectContaining({ count: 1, label: "QA Lead" })]),
-    );
   });
 
   test("treats Without Unit as absence from manual Units while Live dependencies resolve in order", () => {

@@ -667,25 +667,20 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor-json-export");
 });
 
-test("captures Analytics overview, lower groups, and drill-down", async ({ page }) => {
+test("captures Analytics dashboard, constructor, and PNG preview", async ({ page }) => {
   await openSyntheticTab(page, "Analytics");
-  await expect(page.locator('[data-demo-id="analytics-positions"]')).toBeVisible();
-  await capture(page, "analytics");
-  const scrollArea = page.locator('[data-demo-id="analytics-scroll-area"]');
-  await scrollArea.evaluate((element) => {
-    const lastNames = element.querySelector('[data-demo-id="analytics-last-names"]');
-    if (!(lastNames instanceof HTMLElement)) throw new Error("Last-name group is unavailable.");
-    element.scrollTop +=
-      lastNames.getBoundingClientRect().top - element.getBoundingClientRect().top;
-  });
-  await expect(page.locator('[data-demo-id="analytics-full-name-duplicates"]')).toBeVisible();
-  await capture(page, "analytics-complete-groups");
-  await scrollArea.evaluate((element) => {
-    element.scrollTop = 0;
-  });
-  await page.locator('[data-demo-id="analytics-positions-view-button"]').first().click();
-  await expect(page.locator('[data-demo-id="analytics-employees-dialog"]')).toBeVisible();
-  await capture(page, "analytics-drilldown");
+  await expect(page.locator('[data-demo-id="analytics-dashboard-grid"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="analytics-widget-kpi"]')).toContainText("4");
+  await capture(page, "analytics-dashboard");
+  await page.locator('[data-demo-id="analytics-edit"]').click();
+  await expect(page.locator('[data-demo-id="analytics-builder-toolbar"]')).toBeVisible();
+  await capture(page, "analytics-builder");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Export PNG", exact: true }).first().click();
+  const exportDialog = page.locator('[data-demo-id="analytics-image-export-dialog"]');
+  await expect(exportDialog).toBeVisible();
+  await expect(exportDialog.getByAltText("Analytics dashboard", { exact: true })).toBeVisible();
+  await capture(page, "analytics-image-preview");
 });
 
 test("captures Calendar overview, day details, and dated-tag history", async ({ page }) => {

@@ -463,30 +463,30 @@ transparency, Spacing, Employee line spacing, Employee card content.
 
 ## Analytics
 
-### Organization Analytics
+### Analytics dashboard
 
 [![Organization Analytics](screenshots/demo-analytics.png)](screenshots/demo-analytics.png)
 
-Review average age and deterministic age extremes alongside sortable birth-year, position,
-birthday, and name distributions.
+Review a local dashboard composed from KPI, filter, chart, table, and tabbed panels.
 
-Capabilities: Age cohorts, Birth years, Counts, Sorting, Virtualized rows.
+Capabilities: Local queries, Panel grid, Tabs, Filters, Charts, Virtualized tables.
 
-### Complete Analytics groups
+### Analytics dashboard constructor
 
 [![Complete Analytics groups](screenshots/feature-analytics-complete-groups.png)](screenshots/feature-analytics-complete-groups.png)
 
-Scroll the unified Analytics surface to inspect birth-year and name distributions in bounded groups.
+Edit dashboard names, panel widths, tabs, widget grids, queries, and presentation in an isolated
+draft.
 
-Capabilities: Birth years, Last names, Full names, Content-sized groups, Internal scrolling.
+Capabilities: Atomic draft, Panel widths, Widget sizes, Drag and keyboard reorder, Query builder.
 
-### Analytics drill-down
+### Analytics PNG preview
 
 [![Analytics drill-down](screenshots/feature-analytics-drilldown.png)](screenshots/feature-analytics-drilldown.png)
 
-Open a distribution value to inspect matching Employee cards and their normal actions.
+Preview a local 3× PNG capture of one widget or the active tab of a complete panel.
 
-Capabilities: Value drill-down, Matching Employees, Employee actions.
+Capabilities: Widget export, Panel export, Fixed 3×, Local DOM capture, Copy and save.
 
 ## Calendar
 

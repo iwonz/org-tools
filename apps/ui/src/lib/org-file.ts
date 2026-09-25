@@ -41,7 +41,12 @@ import type {
   UnitId,
   ViewId,
 } from "@org-tools/types";
-
+import {
+  createEmptyAnalyticsUiState,
+  normalizeAnalyticsDashboards,
+  normalizeAnalyticsUiState,
+  validateAnalyticsGraph,
+} from "@/lib/analytics-state";
 import {
   normalizeCustomEmployeeFieldValue,
   validateCustomEmployeeFieldDefinitions,
@@ -1531,7 +1536,7 @@ const validateStateGraph = (state: OrgToolsState): void => {
   const unitsByViewId = new Map<ViewId, Map<UnitId, OrgEditorUnit>>();
   const elementIdsByViewId = new Map<ViewId, Set<string>>();
   const systemFilters = [
-    state.ui.analytics.filters,
+    state.ui.analytics.drilldown.filters,
     state.ui.employees.filters,
     state.ui.units.employeeFilters,
   ];
@@ -1760,6 +1765,12 @@ const validateStateGraph = (state: OrgToolsState): void => {
     throw new Error("Download references a Unit outside its source View.");
   }
   assertUniqueIds(state.ui.expandedUnitIds, "Expanded Unit IDs must be unique.");
+  validateAnalyticsGraph(
+    state.organization.analyticsDashboards,
+    state.ui.analytics,
+    state.organization.views,
+    state.organization.employeeFieldDefinitions,
+  );
 };
 
 const normalizeViewUiState = (value: unknown): OrgToolsViewUiState | null => {
@@ -1811,8 +1822,6 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
   }
   if (
     !isRecord(value.analytics) ||
-    !hasExactKeys(value.analytics, ["filters", "query"]) ||
-    !isString(value.analytics.query) ||
     !isRecord(value.calendar) ||
     !hasExactKeys(value.calendar, ["monthIndex", "year"]) ||
     !Number.isInteger(value.calendar.monthIndex) ||
@@ -1837,13 +1846,13 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
   ) {
     return null;
   }
-  const analyticsFilters = normalizeEmployeeSearchFilters(value.analytics.filters);
+  const analytics = normalizeAnalyticsUiState(value.analytics, normalizeEmployeeSearchFilters);
   const employeeFilters = normalizeEmployeeSearchFilters(value.employees.filters);
   const unitEmployeeFilters = normalizeEmployeeSearchFilters(value.units.employeeFilters);
   const download = normalizeDownloadState(value.download);
   const viewUiStates = value.editor.views.map(normalizeViewUiState);
   if (
-    !analyticsFilters ||
+    !analytics ||
     !employeeFilters ||
     !unitEmployeeFilters ||
     !download ||
@@ -1852,7 +1861,7 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
     return null;
   return {
     activeTab: value.activeTab,
-    analytics: { filters: analyticsFilters, query: value.analytics.query },
+    analytics,
     calendar: {
       monthIndex: value.calendar.monthIndex as number,
       year: value.calendar.year as number,
@@ -1893,6 +1902,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
     !hasExactKeys(input, ["organization", "ui"]) ||
     !isRecord(input.organization) ||
     !hasExactKeys(input.organization, [
+      "analyticsDashboards",
       "employeeDisplayFormats",
       "employeeDisplayLineGaps",
       "employeeFieldDefinitions",
@@ -1900,6 +1910,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
       "tags",
       "views",
     ]) ||
+    !Array.isArray(input.organization.analyticsDashboards) ||
     !isRecord(input.organization.employeeDisplayFormats) ||
     !hasExactKeys(input.organization.employeeDisplayFormats, [
       "editor",
@@ -1935,6 +1946,8 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   const tags = normalizeTagDefinitions(input.organization.tags);
   if (!employeeFieldDefinitions) throw new Error("State contains invalid custom Employee fields.");
   if (!tags) throw new Error("State contains invalid Tags.");
+  const analyticsDashboards = normalizeAnalyticsDashboards(input.organization.analyticsDashboards);
+  if (!analyticsDashboards) throw new Error("State contains invalid Analytics dashboards.");
   const employees = input.organization.employees.map(normalizeOrganizationEmployee);
   if (employees.some((employee) => !employee))
     throw new Error("State contains an invalid Employee.");
@@ -1942,6 +1955,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (views.some((view) => !view)) throw new Error("State contains an invalid View structure.");
   const state: OrgToolsState = {
     organization: {
+      analyticsDashboards,
       employeeDisplayFormats: {
         editor: input.organization.employeeDisplayFormats.editor,
         editorExport: input.organization.employeeDisplayFormats.editorExport,
@@ -2051,6 +2065,7 @@ export const createBlankOrgToolsState = (
   const now = currentDate.toISOString();
   return {
     organization: {
+      analyticsDashboards: [],
       employeeDisplayFormats: createDefaultEmployeeDisplayFormats(locale),
       employeeDisplayLineGaps: { ...DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS },
       employeeFieldDefinitions: [],
@@ -2074,7 +2089,7 @@ export const createBlankOrgToolsState = (
     },
     ui: {
       activeTab: "orgEditor",
-      analytics: { filters: createEmptyEmployeeFiltersState(), query: "" },
+      analytics: createEmptyAnalyticsUiState(createEmptyEmployeeFiltersState),
       calendar: {
         monthIndex: currentDate.getMonth(),
         year: currentDate.getFullYear(),

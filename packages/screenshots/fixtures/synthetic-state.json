@@ -32,8 +32,14 @@
         "multiple": false,
         "name": "Employment level",
         "options": [
-          { "id": "70000000-0000-4000-8000-000000000001", "label": "Senior" },
-          { "id": "70000000-0000-4000-8000-000000000002", "label": "Middle" }
+          {
+            "id": "70000000-0000-4000-8000-000000000001",
+            "label": "Senior"
+          },
+          {
+            "id": "70000000-0000-4000-8000-000000000002",
+            "label": "Middle"
+          }
         ],
         "required": false,
         "valueType": "option"
@@ -181,22 +187,66 @@
       }
     ],
     "tags": [
-      { "color": "blue", "id": "90000000-0000-4000-8000-000000000001", "label": "Design" },
-      { "color": "teal", "id": "90000000-0000-4000-8000-000000000002", "label": "Remote" },
-      { "color": "cyan", "id": "90000000-0000-4000-8000-000000000003", "label": "Engineering" },
-      { "color": "green", "id": "90000000-0000-4000-8000-000000000004", "label": "Mentor" },
-      { "color": "amber", "id": "90000000-0000-4000-8000-000000000005", "label": "Operations" },
+      {
+        "color": "blue",
+        "id": "90000000-0000-4000-8000-000000000001",
+        "label": "Design"
+      },
+      {
+        "color": "teal",
+        "id": "90000000-0000-4000-8000-000000000002",
+        "label": "Remote"
+      },
+      {
+        "color": "cyan",
+        "id": "90000000-0000-4000-8000-000000000003",
+        "label": "Engineering"
+      },
+      {
+        "color": "green",
+        "id": "90000000-0000-4000-8000-000000000004",
+        "label": "Mentor"
+      },
+      {
+        "color": "amber",
+        "id": "90000000-0000-4000-8000-000000000005",
+        "label": "Operations"
+      },
       {
         "color": "#7c3aed",
         "id": "90000000-0000-4000-8000-000000000006",
         "label": "Accessibility"
       },
-      { "color": null, "id": "90000000-0000-4000-8000-000000000007", "label": "Content" },
-      { "color": "orange", "id": "90000000-0000-4000-8000-000000000008", "label": "Discovery" },
-      { "color": null, "id": "90000000-0000-4000-8000-000000000009", "label": "Planning" },
-      { "color": "red", "id": "90000000-0000-4000-8000-000000000010", "label": "Research" },
-      { "color": null, "id": "90000000-0000-4000-8000-000000000011", "label": "Strategy" },
-      { "color": "blue", "id": "90000000-0000-4000-8000-000000000012", "label": "UX" }
+      {
+        "color": null,
+        "id": "90000000-0000-4000-8000-000000000007",
+        "label": "Content"
+      },
+      {
+        "color": "orange",
+        "id": "90000000-0000-4000-8000-000000000008",
+        "label": "Discovery"
+      },
+      {
+        "color": null,
+        "id": "90000000-0000-4000-8000-000000000009",
+        "label": "Planning"
+      },
+      {
+        "color": "red",
+        "id": "90000000-0000-4000-8000-000000000010",
+        "label": "Research"
+      },
+      {
+        "color": null,
+        "id": "90000000-0000-4000-8000-000000000011",
+        "label": "Strategy"
+      },
+      {
+        "color": "blue",
+        "id": "90000000-0000-4000-8000-000000000012",
+        "label": "UX"
+      }
     ],
     "views": [
       {
@@ -210,7 +260,10 @@
               "dash": "solid",
               "end": {
                 "attachment": {
-                  "offset": { "x": 0, "y": 0 },
+                  "offset": {
+                    "x": 0,
+                    "y": 0
+                  },
                   "target": {
                     "anchorId": "leftCenter",
                     "owner": {
@@ -222,22 +275,34 @@
                 "x": 576,
                 "y": 164
               },
-              "endControl": { "x": -56, "y": 88 },
+              "endControl": {
+                "x": -56,
+                "y": 88
+              },
               "endMarker": "arrow",
               "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
               "layer": "behindUnits",
               "start": {
                 "attachment": {
-                  "offset": { "x": 0, "y": 0 },
+                  "offset": {
+                    "x": 0,
+                    "y": 0
+                  },
                   "target": {
                     "anchorId": "rightCenter",
-                    "owner": { "type": "unit", "unitId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }
+                    "owner": {
+                      "type": "unit",
+                      "unitId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                    }
                   }
                 },
                 "x": 496,
                 "y": 164
               },
-              "startControl": { "x": 56, "y": -88 },
+              "startControl": {
+                "x": 56,
+                "y": -88
+              },
               "startMarker": "none",
               "strokeColor": "blue",
               "strokeWidth": 3,
@@ -245,7 +310,10 @@
             },
             {
               "attachment": {
-                "offset": { "x": 80, "y": 0 },
+                "offset": {
+                  "x": 80,
+                  "y": 0
+                },
                 "sourceAnchorId": "leftCenter",
                 "target": {
                   "anchorId": "rightCenter",
@@ -289,7 +357,10 @@
             },
             {
               "attachment": {
-                "offset": { "x": 0, "y": 28 },
+                "offset": {
+                  "x": 0,
+                  "y": 28
+                },
                 "sourceAnchorId": "topCenter",
                 "target": {
                   "anchorId": "bottomCenter",
@@ -430,22 +501,421 @@
         },
         "updatedAt": "2026-01-15T12:00:00.000Z"
       }
+    ],
+    "analyticsDashboards": [
+      {
+        "createdAt": "2026-01-15T12:00:00.000Z",
+        "id": "30000000-0000-4000-8000-000000000001",
+        "name": "People overview",
+        "panels": [
+          {
+            "id": "31000000-0000-4000-8000-000000000001",
+            "name": "Overview",
+            "tabs": [
+              {
+                "id": "32000000-0000-4000-8000-000000000001",
+                "name": "Summary",
+                "widgets": [
+                  {
+                    "dataset": {
+                      "kind": "assignments"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "S",
+                    "id": "33000000-0000-4000-8000-000000000001",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000003",
+                          "operation": "countRows"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Unit filter",
+                    "type": "filter",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 2,
+                    "control": "multiSelect",
+                    "defaultValue": {
+                      "from": null,
+                      "includeEmpty": false,
+                      "search": "",
+                      "to": null,
+                      "values": []
+                    },
+                    "field": "assignment.unitName",
+                    "targetWidgetIds": null
+                  },
+                  {
+                    "dataset": {
+                      "kind": "employees"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "S",
+                    "id": "33000000-0000-4000-8000-000000000002",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000001",
+                          "operation": "countRows"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Employees",
+                    "type": "kpi",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 1
+                  },
+                  {
+                    "dataset": {
+                      "kind": "assignments"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "S",
+                    "id": "33000000-0000-4000-8000-000000000003",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000002",
+                          "operation": "countRows"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Assignments capacity",
+                    "type": "gauge",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 1,
+                    "maximum": 8,
+                    "minimum": 0
+                  }
+                ]
+              }
+            ],
+            "width": 3
+          },
+          {
+            "id": "31000000-0000-4000-8000-000000000002",
+            "name": "Charts",
+            "tabs": [
+              {
+                "id": "32000000-0000-4000-8000-000000000002",
+                "name": "Distribution",
+                "widgets": [
+                  {
+                    "dataset": {
+                      "kind": "assignments"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "M",
+                    "id": "33000000-0000-4000-8000-000000000004",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [
+                        {
+                          "dateGrouping": null,
+                          "field": "assignment.unitName"
+                        }
+                      ],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000004",
+                          "operation": "countRows"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Employees by Unit",
+                    "type": "bar",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 2,
+                    "orientation": "vertical",
+                    "stacked": false
+                  },
+                  {
+                    "dataset": {
+                      "kind": "tags"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "S",
+                    "id": "33000000-0000-4000-8000-000000000005",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [
+                        {
+                          "dateGrouping": null,
+                          "field": "tag.label"
+                        }
+                      ],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000005",
+                          "operation": "countDistinctEmployees"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Employees by Tag",
+                    "type": "pie",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 1,
+                    "variant": "donut"
+                  }
+                ]
+              },
+              {
+                "id": "32000000-0000-4000-8000-000000000003",
+                "name": "Trends and pivot",
+                "widgets": [
+                  {
+                    "dataset": {
+                      "kind": "employees"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "M",
+                    "id": "33000000-0000-4000-8000-000000000006",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [
+                        {
+                          "dateGrouping": "year",
+                          "field": "employee.birthday"
+                        }
+                      ],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000006",
+                          "operation": "countRows"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Birth years",
+                    "type": "line",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 2,
+                    "variant": "area"
+                  },
+                  {
+                    "dataset": {
+                      "kind": "assignments"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "M",
+                    "id": "33000000-0000-4000-8000-000000000007",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000007",
+                          "operation": "countRows"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Unit and position matrix",
+                    "type": "pivot",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 2,
+                    "columnFields": ["assignment.position"],
+                    "rowFields": ["assignment.unitName"],
+                    "showGrandTotal": true,
+                    "showSubtotals": true
+                  }
+                ]
+              }
+            ],
+            "width": 2
+          },
+          {
+            "id": "31000000-0000-4000-8000-000000000003",
+            "name": "Details",
+            "tabs": [
+              {
+                "id": "32000000-0000-4000-8000-000000000004",
+                "name": "Employees",
+                "widgets": [
+                  {
+                    "dataset": {
+                      "kind": "employees"
+                    },
+                    "description": "Current organization snapshot",
+                    "height": "L",
+                    "id": "33000000-0000-4000-8000-000000000008",
+                    "presentation": {
+                      "numberFormat": "decimal",
+                      "palette": {
+                        "name": "categorical",
+                        "overrides": {}
+                      },
+                      "showDescription": true,
+                      "showLabels": true,
+                      "showLegend": true
+                    },
+                    "query": {
+                      "dimensions": [
+                        {
+                          "dateGrouping": null,
+                          "field": "employee.fullName"
+                        },
+                        {
+                          "dateGrouping": null,
+                          "field": "employee.email"
+                        }
+                      ],
+                      "filters": [],
+                      "measures": [
+                        {
+                          "field": null,
+                          "id": "34000000-0000-4000-8000-000000000008",
+                          "operation": "countRows"
+                        }
+                      ],
+                      "sort": null,
+                      "topN": null
+                    },
+                    "title": "Employee directory",
+                    "type": "table",
+                    "viewId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "width": 2,
+                    "showTotals": true
+                  }
+                ]
+              }
+            ],
+            "width": 1
+          }
+        ],
+        "updatedAt": "2026-01-15T12:00:00.000Z"
+      }
     ]
   },
   "ui": {
     "activeTab": "orgEditor",
     "analytics": {
-      "filters": {
-        "birthday": null,
-        "customFields": [],
-        "includeWithoutTags": false,
-        "includeWithoutUnits": false,
-        "selectedGenders": [],
-        "selectedPositions": [],
-        "selectedTags": [],
-        "selectedUnitIds": []
+      "activeDashboardId": "30000000-0000-4000-8000-000000000001",
+      "activeTabIdsByPanelId": {
+        "31000000-0000-4000-8000-000000000002": "32000000-0000-4000-8000-000000000002",
+        "31000000-0000-4000-8000-000000000003": "32000000-0000-4000-8000-000000000004",
+        "31000000-0000-4000-8000-000000000001": "32000000-0000-4000-8000-000000000001"
       },
-      "query": ""
+      "drilldown": {
+        "employeeIds": [],
+        "filters": {
+          "birthday": null,
+          "customFields": [],
+          "includeWithoutTags": false,
+          "includeWithoutUnits": false,
+          "selectedGenders": [],
+          "selectedPositions": [],
+          "selectedTags": [],
+          "selectedUnitIds": []
+        },
+        "query": "",
+        "sourceWidgetId": null
+      },
+      "filterValuesByWidgetId": {
+        "33000000-0000-4000-8000-000000000001": {
+          "from": null,
+          "includeEmpty": false,
+          "search": "",
+          "to": null,
+          "values": []
+        }
+      }
     },
     "calendar": {
       "monthIndex": 6,
@@ -505,7 +975,10 @@
         },
         "tags": {
           "collection": "tags",
-          "fields": { "label": "label", "date": "date" }
+          "fields": {
+            "label": "label",
+            "date": "date"
+          }
         },
         "units": {
           "collection": "units",

@@ -17,6 +17,7 @@ The public JSON value has exactly two top-level properties:
 ```ts
 type OrgToolsState = {
   organization: {
+    analyticsDashboards: AnalyticsDashboard[];
     employeeDisplayFormats: EmployeeDisplayFormats;
     employeeDisplayLineGaps: EmployeeDisplayLineGaps;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
@@ -387,10 +388,26 @@ cells, dedicated light/dark rose weekend tones, a horizontal dated-Tag rail, and
 Only occupied dates expose the day-dialog button; empty dates retain cell geometry without hover or
 activation. Calendar day titles are assembled from locale parts; Russian omits its abbreviated year suffix.
 
-Analytics derives birth-year counts and `all`, `male`, and `female` completed-age cohorts in the same
-linear Employee pass as the existing distributions. Missing and `1900` birthdays are excluded.
-Drill-down stores only a stable group/entry key and re-resolves current full Employee cards after an
-edit or deletion.
+Analytics stores ordered dashboard, panel, tab, widget, query, and presentation definitions under
+`organization.analyticsDashboards`. Current dashboard, active panel tabs, filter values, and
+drill-down state live under `ui.analytics`. The exact parser bounds dashboards to 32, panels to 64
+per dashboard, tabs to 16 per panel, and widgets to 32 per tab, validates every View/custom-field
+reference, and rejects filter targets outside their dashboard or targeting another filter.
+
+An Analytics edit session deep-clones every definition into one transient draft. Create, copy,
+rename, reorder, delete, and query edits stay in that draft until one Save replaces definitions and
+reconciles the UI projection atomically. Copies allocate fresh UUIDs for every descendant and remap
+their filter targets. Only the active dashboard and active tab of each panel mount. Visible data
+widgets submit current Employee, assignment, Tag-assignment, or Composite-record rows to a bundled
+Worker. The Worker executes typed predicates, multi-value grouping, date buckets, aggregations,
+sorting, Top N, tables, and pivots in bounded LRU result caches. Filter options are requested only
+when their control opens. Result Employee IDs resolve the current virtualized drill-down rather than
+retaining detached Employee objects.
+
+Recharts 3 renders locally bundled responsive SVG with its accessibility layer. Widget and active
+panel-tab PNG export clones the settled local DOM through bundled `html-to-image`, excludes edit
+chrome, retains a table's visible viewport, and applies the shared 8/32-megapixel and 16,384-pixel
+limits to its fixed 3× request.
 
 The Editor omits the shared content header. A styled View selector plus Create, Rename, and Delete
 actions occupy a top logical-start surface; the system View cannot be renamed or deleted. Search,

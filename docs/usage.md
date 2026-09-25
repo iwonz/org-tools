@@ -254,11 +254,18 @@ control.
   its preview, Copy, Save, and preview totals all describe the same filtered output.
   Unit/subtree Image export includes transitively attached annotations but excludes free or external
   ones. Editor exports always use the active View.
-- **Analytics** derives organization distributions locally without repeating the page title. It
-  reports known birth years and completed ages, including one-decimal averages plus deterministic
-  youngest and oldest Employees for everyone, men, and women. Missing birthdays and the `1900`
-  unknown-year sentinel are excluded. Every Eye drill-down uses current full Employee cards with
-  Tag, Edit, and Delete actions.
+- **Analytics** starts without dashboards. Create or copy a named dashboard, then use **Edit
+  dashboard** to compose 1/3, 2/3, or full-width panels. Every panel has named tabs and a nested
+  two-column widget grid; widgets can occupy half or full width with S, M, or L height. Save applies
+  the whole draft, while Cancel discards it. Pointer drag and adjacent keyboard controls reorder all
+  levels. Narrow screens stack both grids into one column.
+  KPI, table, pivot, bar, line/area, pie/donut, gauge, and filter widgets choose a View and current
+  Employee, assignment, Tag-assignment, or Composite-record dataset. Their query editor offers
+  dimensions, typed local filters, date grouping, row/distinct/numeric measures, sorting, Top N,
+  presentation, palette, and chart-specific settings. Active filters combine with AND and selected
+  values inside one filter combine with OR. Clicking a result opens current matching Employees in a
+  virtualized drill-down without changing filters. Widget and panel menus export their current
+  rendered content to a local PNG preview with background, padding, radius, Copy, and Save.
 - **Calendar** combines recurring birthdays and dated tags with localized weekday order, leading
   month offsets, soft rose weekend tones, a horizontal Tag rail, conditional Today navigation, event-bearing interactive dates, and Employee
   actions. Empty dates remain non-interactive and open no dialog. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each

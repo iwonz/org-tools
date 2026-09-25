@@ -891,6 +891,8 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
     await expect(tab).toHaveAttribute("aria-selected", "true");
     if (tabName === "Calendar") {
       await expect(page.locator('[data-demo-id="calendar-month-grid"]')).toBeVisible();
+    } else if (tabName === "Analytics") {
+      await expect(page.getByText("No dashboards yet", { exact: true })).toBeVisible();
     } else {
       await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
     }
@@ -2581,93 +2583,100 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("renders tonal content-sized Analytics groups with working drill-down", async ({ page }) => {
+test("builds local Analytics dashboards with draft, widgets, drill-down, and PNG", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
-  await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
-  await expect(page.locator('[data-demo-id="app-title"]')).toHaveText("Analytics");
-  await expect(page.locator('[data-demo-id="analytics-tab"] h1')).toHaveCount(0);
-  await expect(page.getByText(/Employees in the.*Units/u)).toHaveCount(0);
-
-  await expect(page.locator('[data-demo-id="analytics-header"]')).toHaveCount(0);
   const analyticsSurface = page.locator('[data-demo-id="analytics-surface"]');
   await expectFullBleedProductSurface(analyticsSurface);
-  await expectContainedBy(analyticsSurface, page.locator('[data-demo-id="analytics-scroll-area"]'));
-  expect(
-    await page.locator('[data-demo-id="analytics-grid"]').evaluate((element) => {
-      const style = window.getComputedStyle(element);
-      return { columnGap: style.columnGap, rowGap: style.rowGap };
-    }),
-  ).toEqual({ columnGap: "16px", rowGap: "16px" });
-  const positions = page.locator('[data-demo-id="analytics-positions"]');
-  await expect(positions).toHaveAttribute("data-analytics-entry-count", "4");
-  await expect(positions).toHaveAttribute("data-analytics-visible-rows", "4");
-  await expect(positions).toHaveCSS("height", "252px");
-  expect(await getBackgroundColor(positions)).not.toBe("rgba(0, 0, 0, 0)");
-  expect(await getBackgroundColor(positions.locator("thead"))).toBe(
-    await getBackgroundColor(positions),
+  await expect(page.getByText("No dashboards yet", { exact: true })).toBeVisible();
+  await page.locator('[data-demo-id="analytics-create-dashboard"]').click();
+  await expect(page.locator('[data-demo-id="analytics-builder-toolbar"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="analytics-dashboard-grid"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByText("No dashboards yet", { exact: true })).toBeVisible();
+
+  await replaceWithSyntheticState(page);
+  await page.getByRole("tab", { name: "Analytics", exact: true }).click();
+  const grid = page.locator('[data-demo-id="analytics-dashboard-grid"]');
+  await expect(grid).toBeVisible();
+  await expect(grid.locator('[data-demo-id="analytics-widget-filter"]')).toHaveCount(1);
+  await expect(grid.locator('[data-demo-id="analytics-widget-kpi"]')).toContainText("4");
+  await expect(grid.locator('[data-demo-id="analytics-widget-gauge"]')).toBeVisible();
+  await expect(grid.locator('[data-demo-id="analytics-widget-bar"]')).toBeVisible();
+  await expect(grid.locator('[data-demo-id="analytics-widget-pie"]')).toBeVisible();
+  await expect(grid.locator('[data-demo-id="analytics-widget-table"]')).toBeVisible();
+  await expect(grid.locator('[data-demo-id="analytics-widget-line"]')).toHaveCount(0);
+  await expect(grid.locator('[data-demo-id="analytics-widget-pivot"]')).toHaveCount(0);
+  const unitFilter = grid.locator('[data-demo-id="analytics-widget-filter"] select');
+  await unitFilter.focus();
+  await expect(unitFilter.getByRole("option", { name: "Platform", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Trends and pivot", exact: true }).click();
+  await expect(grid.locator('[data-demo-id="analytics-widget-line"]')).toBeVisible();
+  await expect(grid.locator('[data-demo-id="analytics-widget-pivot"]')).toBeVisible();
+  await page.getByRole("button", { name: "Distribution", exact: true }).click();
+
+  const originalName = page.getByRole("tab", { name: "People overview", exact: true });
+  await page.locator('[data-demo-id="analytics-edit"]').click();
+  const nameInput = page
+    .getByText("Dashboard name", { exact: true })
+    .locator("..")
+    .getByRole("textbox");
+  await nameInput.fill("Unsaved dashboard");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(originalName).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Unsaved dashboard", exact: true })).toHaveCount(0);
+
+  await page.locator('[data-demo-id="analytics-edit"]').click();
+  await nameInput.fill("Saved dashboard");
+  await expect(page.getByRole("button", { name: "Move down", exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Add widget", exact: true }).first().click();
+  const widgetEditor = page.locator('[data-demo-id="analytics-widget-editor"]');
+  await expect(widgetEditor).toBeVisible();
+  await expect(
+    widgetEditor.getByRole("option", { name: "KPI counter", exact: true }),
+  ).toBeAttached();
+  await expect(
+    widgetEditor.getByRole("option", { name: "Pivot table", exact: true }),
+  ).toBeAttached();
+  await expect(
+    widgetEditor.getByRole("option", { name: "Filter widget", exact: true }),
+  ).toBeAttached();
+  await widgetEditor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.locator('[data-demo-id="analytics-save"]').click();
+  await expect(page.getByRole("tab", { name: "Saved dashboard", exact: true })).toBeVisible();
+
+  const savedKpi = grid.locator('[data-demo-id="analytics-widget-kpi"]');
+  await expect(savedKpi).toContainText("4");
+  await savedKpi.locator("[data-analytics-widget-body] > button").click();
+  const drillDown = page.locator('[data-demo-id="analytics-drilldown-dialog"]');
+  await expect(drillDown).toBeVisible();
+  await expect(drillDown.locator('[data-demo-id="analytics-drilldown-list"] article')).toHaveCount(
+    4,
   );
-  await expect(positions).toHaveCSS("border-width", "0px");
-  await expect(positions).toHaveCSS("box-shadow", "none");
-  await expect(positions.locator("header")).toHaveCSS("border-bottom-width", "0px");
+  await drillDown.getByRole("button", { name: "Close", exact: true }).click();
+
+  await grid.getByRole("button", { name: "Export PNG", exact: true }).first().click();
+  const imageDialog = page.locator('[data-demo-id="analytics-image-export-dialog"]');
+  await expect(imageDialog).toBeVisible();
+  await expect(imageDialog.getByAltText("Analytics dashboard", { exact: true })).toBeVisible();
+  await expect(
+    imageDialog.getByRole("button", { name: "Fit", exact: true }).locator("svg"),
+  ).toHaveCount(1);
+  await imageDialog.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.setViewportSize({ width: 720, height: 900 });
   expect(
-    await positions.locator("[data-analytics-row]").evaluateAll((rows) =>
-      rows.map((row) => ({
-        bottom: window.getComputedStyle(row).borderBottomWidth,
-        top: window.getComputedStyle(row).borderTopWidth,
-      })),
+    await grid.evaluate(
+      (element) => window.getComputedStyle(element).gridTemplateColumns.split(" ").length,
     ),
-  ).toEqual(
-    Array.from({ length: 4 }, () => ({
-      bottom: "0px",
-      top: "0px",
-    })),
-  );
-
-  const firstRow = positions.locator("[data-analytics-row]").first();
-  const restingBackground = await firstRow.evaluate(
-    (row) => window.getComputedStyle(row).backgroundColor,
-  );
-  await firstRow.hover();
-  expect(await firstRow.evaluate((row) => window.getComputedStyle(row).backgroundColor)).not.toBe(
-    restingBackground,
-  );
-  await expect(firstRow).toHaveCSS("box-shadow", "none");
-
-  const valueHeader = positions.getByRole("columnheader", { name: /Value/u });
-  const valueSortButton = valueHeader.getByRole("button", { name: "Value", exact: true });
-  await valueSortButton.click();
-  await expect(valueHeader).toHaveAttribute("aria-sort", "ascending");
-  await expectTextBeforeTrailingIcon(valueSortButton);
-  await positions.locator('[data-demo-id="analytics-positions-view-button"]').first().click();
-  const drillDown = page.locator('[data-demo-id="analytics-employees-dialog"]');
-  await expect(drillDown).toBeVisible();
-  const drillDownCard = drillDown.locator("article").first();
-  await expect(drillDownCard.locator("[data-employee-card-actions] button")).toHaveCount(3);
-  await expect(drillDownCard.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
-  await expect(drillDownCard.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
-  await drillDown.getByRole("button", { name: "Close", exact: true }).click();
-
-  const ageSummary = page.locator('[data-demo-id="analytics-age-summary"]');
-  await expect(ageSummary).toContainText("34.7");
-  await expect(ageSummary).toContainText("33.5");
-  await expect(ageSummary).toContainText("Morgan Park");
-  await expect(ageSummary).toContainText("Riley Chen");
-  const birthYears = page.locator('[data-demo-id="analytics-birthday-years"]');
-  await expect(birthYears).toHaveAttribute("data-analytics-entry-count", "3");
-  await birthYears.locator('[data-demo-id="analytics-birthday-years-view-button"]').first().click();
-  await expect(drillDown).toBeVisible();
-  await drillDown.getByRole("button", { name: "Close", exact: true }).click();
-
-  const duplicates = page.locator('[data-demo-id="analytics-full-name-duplicates"]');
-  await expect(duplicates).toHaveAttribute("data-analytics-visible-rows", "0");
-  await expect(duplicates).toHaveCSS("height", "148px");
-  await selectDialogRadio(page, "theme-toggle", "theme-dialog", "dark");
-  await expect(page.locator("html")).toHaveClass(/dark/);
-  expect(await getBackgroundColor(positions.locator("thead"))).toBe(
-    await getBackgroundColor(positions),
-  );
+  ).toBe(1);
+  await selectDialogRadio(page, "language-toggle", "language-dialog", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(grid).toBeVisible();
   await assertLocalRequests();
 });
 
@@ -4042,7 +4051,7 @@ test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page })
   await assertLocalRequests();
 });
 
-test("caps long Analytics groups at eight virtualized rows", async ({ page }) => {
+test("virtualizes long Analytics table results", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
@@ -4075,18 +4084,14 @@ test("caps long Analytics groups at eight virtualized rows", async ({ page }) =>
   await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
   await page.getByRole("tab", { name: "Analytics", exact: true }).click();
 
-  const firstNames = page.locator('[data-demo-id="analytics-first-names"]');
-  await expect(firstNames).toHaveAttribute("data-analytics-entry-count", "16");
-  await expect(firstNames).toHaveAttribute("data-analytics-visible-rows", "8");
-  await expect(firstNames).toHaveCSS("height", "420px");
-  const scrollArea = page.locator('[data-demo-id="analytics-first-names-scroll-area"]');
-  expect(
-    await scrollArea.evaluate((element) => ({
-      clientHeight: element.clientHeight,
-      scrollHeight: element.scrollHeight,
-    })),
-  ).toMatchObject({ clientHeight: 368 });
-  expect(await scrollArea.evaluate((element) => element.scrollHeight)).toBeGreaterThan(368);
+  const table = page.locator('[data-demo-id="analytics-widget-table"]');
+  await expect(table).toBeVisible();
+  const scrollArea = table.locator("[data-analytics-table-scroll]");
+  await expect(scrollArea.locator("tbody tr").first()).toBeVisible();
+  expect(await scrollArea.evaluate((element) => element.scrollHeight)).toBeGreaterThan(
+    await scrollArea.evaluate((element) => element.clientHeight),
+  );
+  expect(await scrollArea.locator("tbody tr").count()).toBeLessThan(16);
   await assertLocalRequests();
 });
 

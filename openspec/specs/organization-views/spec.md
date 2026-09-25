@@ -26,10 +26,7 @@ NOT be copied or overridden by a View. Unit IDs MUST be unique across all Views.
 - **THEN** every View membership, boss, position, and selection reference to that Employee is removed atomically
 
 ### Requirement: The system View is the canonical Units structure
-The system View SHALL use the localized Units destination label and SHALL be the sole structure used
-by Units, global Employee Team assignment, Employee-array Team Import, and Analytics. It SHALL NOT be
-renamable or deletable. Editor edits to the system View and Units edits SHALL operate on the same
-document.
+The system View SHALL use the localized Units destination label and SHALL be the sole structure used by Units, global Employee Team assignment, and Employee-array Team Import. It SHALL NOT be renamable or deletable. Editor edits to the system View and Units edits SHALL operate on the same document. Analytics widgets MAY select the system or any custom View independently.
 
 #### Scenario: Edit system Units from Editor
 - **WHEN** the active Editor View is the system View and a Unit changes
@@ -38,6 +35,10 @@ document.
 #### Scenario: Protect the system View
 - **WHEN** the View toolbar displays the system View
 - **THEN** rename and delete actions are disabled while create remains available
+
+#### Scenario: Select a custom analytics source
+- **WHEN** a widget selects a custom View
+- **THEN** its Unit, assignment, position, and boss fields resolve from only that View
 
 ### Requirement: Users can create and manage isolated custom Views
 Users SHALL be able to create a blank custom View or copy any existing View, rename a custom View,
@@ -226,3 +227,10 @@ position MUST NOT be copied or pasted as a standalone Employee-like entity.
 #### Scenario: Copy only a selected position
 - **WHEN** only an open-position row is selected and Copy is invoked
 - **THEN** no standalone position clipboard payload is created
+
+### Requirement: Saved analytics references protect Views
+A custom View SHALL NOT be deleted while any saved analytics widget selects it. The refusal MUST identify the referencing dashboards and widgets and MUST leave the View and dashboard definitions unchanged.
+
+#### Scenario: Delete a referenced View
+- **WHEN** a user confirms deletion of a custom View selected by one or more widgets
+- **THEN** deletion is blocked and each saved reference remains valid
