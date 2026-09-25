@@ -423,20 +423,22 @@ Capabilities: Single selection, Exact row anchors, Collapsed fallback, Pointer-i
 Preview and inspect a full-View local PNG with Fit, zoom, and pan. Unit cards, hierarchy, Text,
 Sticker, embedded Image, curved Arrow, Tags, boss marker, and assigned/source-only row tones follow
 the durable canvas presentation without printing transient editing chrome. The dialog retains
-token-aware Employee format and icon-labelled Copy and Save actions while applying density safety
-limits silently.
+token-aware Employee format and icon-labelled Copy and Save actions while requesting 3× output and
+applying density safety limits silently.
 
-Capabilities: Full-View PNG, Canvas elements, Distribution tones, Hierarchy, Zoom and pan, Density,
+Capabilities: Full-View PNG, Canvas elements, Distribution tones, Hierarchy, Zoom and pan, Fixed 3×,
 Local Copy and Save.
 
 ### Editor text template export
 
 [![Editor text template export](screenshots/feature-editor-template-export.png)](screenshots/feature-editor-template-export.png)
 
-Build a text representation from Employee and Unit tokens, remove whitespace-only lines, and keep
-the live preview and every row count aligned with the processed output.
+Build a text representation from Employee and Unit tokens, remove whitespace-only lines, keep only
+the first exact occurrence of repeated lines, and align live preview and counts with the processed
+output.
 
-Capabilities: Text template, Field tokens, Empty-line removal, Filtered counts, Scope, Live preview.
+Capabilities: Text template, Field tokens, Unique lines, Empty-line removal, Filtered counts, Scope,
+Live preview.
 
 ### Editor structured JSON export
 
@@ -451,12 +453,12 @@ Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, U
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Configure 1x/2x/3x density, background presets, title, the five local fonts, spacing, and
-`@`-assisted conditional Employee card content beside the complete View preview. Employee rows use
-the saved Editor-export line spacing.
+Choose a transparent, gradient, preset, used, or custom solid background with opacity; configure
+spacing and `@`-assisted conditional Employee card content beside the complete View preview.
+Employee rows use the saved Editor-export line spacing and output requests 3× automatically.
 
-Capabilities: Density and silent clamping, Fit/manual preview, Background, Title and font, Spacing
-and alignment, Employee line spacing, Employee card content.
+Capabilities: Fixed 3× and silent clamping, Fit/manual preview, Shared color picker, Gradients and
+transparency, Spacing, Employee line spacing, Employee card content.
 
 ## Analytics
 
@@ -520,11 +522,11 @@ Capabilities: Tag rail, Conditional history, Complete Employee cards, Employee a
 
 [![Template Data Download](screenshots/demo-download.png)](screenshots/demo-download.png)
 
-Configure a separator-based template, row mode, field tokens, whitespace-only line removal, live
-preview, copy, and local download.
+Configure a separator-based template that evaluates every assignment, field tokens, exact unique
+line filtering, whitespace-only line removal, live preview, copy, and local download.
 
-Capabilities: Template format, Row mode, Field tokens, Empty-line removal, Filtered counts, Preview,
-Copy and download.
+Capabilities: Template format, All assignments, Field tokens, Unique lines, Empty-line removal,
+Filtered counts, Preview, Copy and download.
 
 ### Template token suggestions
 
@@ -645,7 +647,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   and searchable exclusions, and previews remain bounded. Both Template formats use one Format field
   whose help icon and placeholder disclose the `@` menu that inserts the existing `{token}` syntax;
   help must also explain `?` conditionals. Full-View Image uses the same input and the same
-  clipboard/download action icons as scoped Image export.
+  clipboard/download action icons as scoped Image export. Both Image dialogs omit density, title,
+  and output-font controls, use the shared color picker for solid backgrounds, and request 3× output.
 - Confirm a plain canvas-element click selects only that element, Ctrl/Cmd creates an explicit
   group, choosing a creation tool clears prior selection, and element right-click exposes only
   global Back/Front, Duplicate, and Delete actions. Verify four visible corner markers, transparent
@@ -681,8 +684,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both Editor PNG previews start at Fit, zoom around the pointer, pan without losing the
   image, expose 100% and Fit, retain a manual focal point after regeneration, and omit dimensions,
   effective density, and clamping copy while Copy/Save remain unchanged.
-- Confirm both Template surfaces remove whitespace-only lines only while their transient checkbox is
-  enabled, and that bounded preview, Copy/Save or Copy/Download, row-mode counts, and preview totals
+- Confirm both Template surfaces always process every retained assignment and retain the direct
+  unassigned fallback. Their transient checkboxes remove whitespace-only lines and keep the first
+  exact unique line in that order; bounded preview, Copy/Save or Copy/Download, and preview totals
   all describe the same processed text while JSON remains unchanged.
 - Confirm Employee Import shows a bounded richest-record preview beside virtualized fixed-source →
   target-Select rows, transfers occupied targets, imports Teams only through mapping, and keeps

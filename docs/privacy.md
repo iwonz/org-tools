@@ -78,8 +78,9 @@ object-URL persistence, or quality-reducing re-encoding. Decode failure produces
 local placeholder in the Editor and PNG. Full-View and scoped preview/copy/save rasterization loads
 only validated embedded data URLs with bounded concurrency and never creates a network request.
 Canvas selection, tool activation, contextual target outlines and anchors, perimeter
-resize/rotation previews, context menus, Format token suggestions, Format help, and the Remove empty
-lines choice remain transient browser UI. PNG preview Fit/manual mode, zoom, pan, pointer capture,
+resize/rotation previews, context menus, Format token suggestions, Format help, and the Keep only
+unique values and Remove empty lines choices remain transient browser UI. PNG preview Fit/manual
+mode, zoom, pan, pointer capture,
 keyboard position, normalized focal point, and local object URL also remain in dialog memory only.
 Rich Text and Sticker drafts, DOM ranges, pending caret typography, and composition state remain
 transient and store plain text plus normalized style ranges only when editing completes. Only a
@@ -110,9 +111,10 @@ process environments or organization state, persist a process registry, log comm
 the network, or remove runtime files. Graceful shutdown precedes any verified forceful termination.
 
 The Pages artifact contains HTML, CSS, JavaScript, and locally bundled UI families. Editor
-annotations and Image export resolve System and Georgia fallbacks or bundled Bebas Neue, Lobster,
-and Montserrat files; historical imported family names resolve to System. Language, theme, and
-Editor font selectors never download catalogs or fonts. It
+annotations resolve System and Georgia fallbacks or bundled Bebas Neue, Lobster, and Montserrat
+files; Image export uses the system UI font for structure text and retains stored annotation
+typography. Historical imported family names resolve to System. Language, theme, and Editor element
+font selectors never download catalogs or fonts. It
 contains no SQLite code, state endpoint, organization fixture, secret, remote asset, or external
 request. `pnpm pages:check` and `pnpm public:check` scan these boundaries.
 

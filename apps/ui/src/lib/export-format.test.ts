@@ -4,7 +4,6 @@ import { describe, expect, test } from "vitest";
 import { buildEmployeeUnitContextIndex } from "@/lib/employee-unit-contexts";
 import {
   buildEmployeeExportRows,
-  countEmployeeExportRows,
   createExportPreview,
   createExportText,
   createStructuredJsonRecords,
@@ -69,12 +68,7 @@ const createRows = (employee = createEmployee()) =>
   buildEmployeeExportRows({
     employee,
     isDirectlySelected: true,
-    mode: "allUnits",
     unitContexts: buildEmployeeUnitContextIndex([employee]).get(employee.id) ?? [],
-    unitOrderById: new Map([
-      [ROOT_UNIT_ID, 0],
-      [CHILD_UNIT_ID, 1],
-    ]),
   });
 
 const createJsonOptions = () => ({
@@ -164,38 +158,16 @@ describe("Employee export rows", () => {
     ]);
   });
 
-  test("supports All Units and First Unit with stable tree precedence", () => {
+  test("emits every Unit assignment in stable structure order", () => {
     const employee = createEmployee();
     const contexts = buildEmployeeUnitContextIndex([employee]).get(employee.id) ?? [];
-    const unitOrderById = new Map([
-      [ROOT_UNIT_ID, 0],
-      [CHILD_UNIT_ID, 1],
-    ]);
-    const allRows = buildEmployeeExportRows({
+    const rows = buildEmployeeExportRows({
       employee,
       isDirectlySelected: true,
-      mode: "allUnits",
       unitContexts: contexts,
-      unitOrderById,
-    });
-    const firstRows = buildEmployeeExportRows({
-      employee,
-      isDirectlySelected: true,
-      mode: "firstUnit",
-      unitContexts: contexts,
-      unitOrderById,
     });
 
-    expect(allRows.map((row) => row.unitContext?.unitId)).toEqual([ROOT_UNIT_ID, CHILD_UNIT_ID]);
-    expect(firstRows[0]?.unitContext?.unitId).toBe(ROOT_UNIT_ID);
-    expect(
-      countEmployeeExportRows({
-        isDirectlySelected: true,
-        mode: "allUnits",
-        unitContexts: contexts,
-        unitOrderById,
-      }),
-    ).toBe(2);
+    expect(rows.map((row) => row.unitContext?.unitId)).toEqual([ROOT_UNIT_ID, CHILD_UNIT_ID]);
   });
 
   test("retains an unassigned directly selected Employee", () => {
@@ -204,9 +176,7 @@ describe("Employee export rows", () => {
       buildEmployeeExportRows({
         employee,
         isDirectlySelected: true,
-        mode: "firstUnit",
         unitContexts: [],
-        unitOrderById: new Map(),
       }),
     ).toEqual([{ context: "employeeFallback", employee, unitContext: null }]);
   });
@@ -366,7 +336,7 @@ describe("Template export", () => {
     ).toBe("29.02.1900");
   });
 
-  test("keeps row mode output and Employee tag tokens", () => {
+  test("keeps all-assignment output and Employee tag tokens", () => {
     const text = createExportText({
       ...createJsonOptions(),
       rows: createRows(),

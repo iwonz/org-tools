@@ -3,6 +3,7 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTagColor,
   EmployeeTagDefinition,
   OrgEditorCanvasElement,
   OrgEditorLayoutMode,
@@ -15,9 +16,6 @@ import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   HiOutlineArrowDownTray,
-  HiOutlineBars3,
-  HiOutlineBars3BottomLeft,
-  HiOutlineBars3BottomRight,
   HiOutlineBuildingOffice2,
   HiOutlineClipboardDocument,
   HiOutlineCodeBracket,
@@ -26,13 +24,13 @@ import {
   HiOutlineRectangleGroup,
 } from "react-icons/hi2";
 import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
-import { ExportRowModeControl } from "@/components/export-row-mode-control";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
 import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
 import {
   StructuredJsonSettings,
   type StructuredJsonSettingsValue,
 } from "@/components/structured-json-settings";
+import { TagColorPicker } from "@/components/tag-color-picker";
 import { TemplateFormatInput } from "@/components/template-format-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,17 +44,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type UiTextKey, useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
-  countTemplateOutputLines,
   createExportPreview,
   createExportTextAsync,
   exportEmployeeFields,
@@ -64,11 +54,9 @@ import {
   validateExportFieldNames,
 } from "@/lib/export-format";
 import type { OrgEditorSourceIndex, OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
-import { getOrgEditorCanvasCssFontFamily } from "@/lib/org-editor-canvas";
 import type {
   OrgEditorExportScope,
   OrgEditorExportTab,
-  OrgEditorExportTitleAlign,
   OrgEditorImageBackground,
   OrgEditorImageExportSettings,
 } from "@/lib/org-editor-export";
@@ -79,7 +67,6 @@ import {
   createOrgEditorImageExportResult,
   createOrgEditorUnitImageBlob,
   getOrgEditorExportUnits,
-  ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
@@ -94,7 +81,6 @@ import {
   defaultExportJsonTopLevelFieldOrder,
   defaultExportJsonUnitFieldOrder,
 } from "@/stores/export-session-store";
-import type { ExportRowMode } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type OrgEditorExportDialogProps = {
@@ -171,8 +157,8 @@ export function OrgEditorExportDialog({
   );
   const previousImageOpenRef = useRef(false);
   const [templateFormat, setTemplateFormat] = useState(DEFAULT_TEMPLATE_FORMAT);
+  const [keepUniqueTemplateLines, setKeepUniqueTemplateLines] = useState(false);
   const [removeEmptyTemplateLines, setRemoveEmptyTemplateLines] = useState(false);
-  const [rowMode, setRowMode] = useState<ExportRowMode>("allUnits");
   const [jsonSettings, setJsonSettings] = useState<StructuredJsonSettingsValue>(() => ({
     excludedJsonTagKeys: [],
     excludedJsonUnitIds: [],
@@ -239,45 +225,15 @@ export function OrgEditorExportDialog({
 
     return buildOrgEditorExportRows({
       rootUnit: unit,
-      rowMode: activeTab === "json" ? "allUnits" : rowMode,
       scope,
       sourceIndex,
       units,
     });
-  }, [activeTab, rowMode, scope, sourceIndex, unit, units]);
+  }, [scope, sourceIndex, unit, units]);
   const scopedUnits = useMemo(
     () => (unit ? getOrgEditorExportUnits({ rootUnit: unit, scope, units }) : []),
     [scope, unit, units],
   );
-  const rowCountByMode = useMemo(() => {
-    const countRows = (mode: ExportRowMode) =>
-      unit
-        ? countTemplateOutputLines(
-            buildOrgEditorExportRows({
-              rootUnit: unit,
-              rowMode: mode,
-              scope,
-              sourceIndex,
-              units,
-            }),
-            templateFormat,
-            store.employeeFieldDefinitions,
-            removeEmptyTemplateLines,
-          )
-        : 0;
-    return {
-      allUnits: countRows("allUnits"),
-      firstUnit: countRows("firstUnit"),
-    };
-  }, [
-    removeEmptyTemplateLines,
-    scope,
-    sourceIndex,
-    store.employeeFieldDefinitions,
-    templateFormat,
-    unit,
-    units,
-  ]);
   const tagOptions = useMemo(() => {
     const tagIds = new Set<string>();
     for (const row of exportRows) {
@@ -307,6 +263,7 @@ export function OrgEditorExportDialog({
       createExportPreview({
         ...jsonSettings,
         customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
+        keepUniqueLines: activeTab === "template" && keepUniqueTemplateLines,
         rows: exportRows,
         removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
         tabMode: activeTab === "json" ? "json" : "template",
@@ -316,6 +273,7 @@ export function OrgEditorExportDialog({
       activeTab,
       exportRows,
       jsonSettings,
+      keepUniqueTemplateLines,
       removeEmptyTemplateLines,
       store.employeeFieldDefinitions,
       templateFormat,
@@ -441,6 +399,7 @@ export function OrgEditorExportDialog({
     createExportTextAsync({
       ...jsonSettings,
       customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
+      keepUniqueLines: activeTab === "template" && keepUniqueTemplateLines,
       rows: exportRows,
       removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
       tabMode: activeTab === "json" ? "json" : "template",
@@ -500,14 +459,16 @@ export function OrgEditorExportDialog({
     }
   };
 
-  const isSolidBackgroundActive = imageSettings.background.type === "solid";
   const solidColor =
     imageSettings.background.type === "solid" ? imageSettings.background.color : "#ffffff";
 
   return (
     <Dialog
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) setRemoveEmptyTemplateLines(false);
+        if (!nextOpen) {
+          setKeepUniqueTemplateLines(false);
+          setRemoveEmptyTemplateLines(false);
+        }
         onOpenChange(nextOpen);
       }}
       open={open}
@@ -605,25 +566,14 @@ export function OrgEditorExportDialog({
                       <span className="size-5 rounded border bg-[linear-gradient(45deg,#e2e8f0_25%,transparent_25%),linear-gradient(-45deg,#e2e8f0_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e2e8f0_75%),linear-gradient(-45deg,transparent_75%,#e2e8f0_75%)] bg-[length:10px_10px] bg-[position:0_0,0_5px,5px_-5px,-5px_0]" />
                       {t("Transparent")}
                     </Button>
-                    <div
-                      className={cn(
-                        getBackgroundButtonClassName(isSolidBackgroundActive),
-                        "inline-flex cursor-pointer items-center gap-2 rounded-md",
-                      )}
-                    >
-                      <Input
-                        className="h-6 w-8 border-0 p-0"
-                        onChange={(event) =>
-                          setImageBackground({
-                            color: event.currentTarget.value,
-                            type: "solid",
-                          })
-                        }
-                        type="color"
-                        value={solidColor}
-                      />
-                      {t("Color")}
-                    </div>
+                    <TagColorPicker
+                      allowNoColor={false}
+                      label={t("Background color")}
+                      onChange={(color: EmployeeTagColor | null) => {
+                        if (color) setImageBackground({ color, type: "solid" });
+                      }}
+                      value={solidColor}
+                    />
                     {ORG_EDITOR_EXPORT_GRADIENTS.map((gradient) => (
                       <Button
                         className={getBackgroundButtonClassName(
@@ -650,7 +600,7 @@ export function OrgEditorExportDialog({
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="org-editor-export-padding">{t("Padding")}</Label>
                     <Input
@@ -667,24 +617,6 @@ export function OrgEditorExportDialog({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="org-editor-export-density">{t("Density")}</Label>
-                    <Select
-                      onValueChange={(value) =>
-                        updateImageSettings({ density: Number(value) as 1 | 2 | 3 })
-                      }
-                      value={String(imageSettings.density)}
-                    >
-                      <SelectTrigger id="org-editor-export-density">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1×</SelectItem>
-                        <SelectItem value="2">2×</SelectItem>
-                        <SelectItem value="3">3×</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
                     <Label htmlFor="org-editor-export-unit-radius">{t("Corner radius")}</Label>
                     <Input
                       id="org-editor-export-unit-radius"
@@ -698,93 +630,6 @@ export function OrgEditorExportDialog({
                       type="number"
                       value={imageSettings.unitBorderRadius}
                     />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="org-editor-export-font">{t("Font")}</Label>
-                    <Select
-                      onValueChange={(value) => updateImageSettings({ fontFamily: value })}
-                      value={imageSettings.fontFamily}
-                    >
-                      <SelectTrigger id="org-editor-export-font">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ORG_EDITOR_EXPORT_FONTS.map((font) => (
-                          <SelectItem key={font.family} value={font.family}>
-                            <span
-                              style={{ fontFamily: getOrgEditorCanvasCssFontFamily(font.family) }}
-                            >
-                              {font.family === "system-ui" ? t("System") : font.family}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_8rem_auto]">
-                  <div className="grid gap-2">
-                    <Label htmlFor="org-editor-export-title">{t("Title")}</Label>
-                    <Input
-                      id="org-editor-export-title"
-                      onChange={(event) =>
-                        updateImageSettings({ title: event.currentTarget.value })
-                      }
-                      placeholder={t("No title")}
-                      value={imageSettings.title}
-                    />
-                  </div>
-                  <div className="grid gap-2 md:w-32">
-                    <Label htmlFor="org-editor-export-title-font-size">{t("Size")}</Label>
-                    <Input
-                      id="org-editor-export-title-font-size"
-                      max={48}
-                      min={12}
-                      onChange={(event) =>
-                        updateImageSettings({
-                          titleFontSize: Number.parseInt(event.currentTarget.value || "20", 10),
-                        })
-                      }
-                      type="number"
-                      value={imageSettings.titleFontSize}
-                    />
-                  </div>
-                  <div className="grid gap-2 md:w-fit">
-                    <Label>{t("Alignment")}</Label>
-                    <Tabs
-                      onValueChange={(value) =>
-                        updateImageSettings({ titleAlign: value as OrgEditorExportTitleAlign })
-                      }
-                      value={imageSettings.titleAlign}
-                    >
-                      <TabsList className="h-10">
-                        <TabsTrigger
-                          aria-label={t("Left")}
-                          className="size-8 px-0"
-                          title={t("Left")}
-                          value="left"
-                        >
-                          <HiOutlineBars3BottomLeft />
-                        </TabsTrigger>
-                        <TabsTrigger
-                          aria-label={t("Center")}
-                          className="size-8 px-0"
-                          title={t("Center")}
-                          value="center"
-                        >
-                          <HiOutlineBars3 />
-                        </TabsTrigger>
-                        <TabsTrigger
-                          aria-label={t("Right")}
-                          className="size-8 px-0"
-                          title={t("Right")}
-                          value="right"
-                        >
-                          <HiOutlineBars3BottomRight />
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
                   </div>
                 </div>
 
@@ -848,8 +693,13 @@ export function OrgEditorExportDialog({
                   })),
                 ]}
                 format={templateFormat}
+                keepUniqueLines={keepUniqueTemplateLines}
                 onFormatChange={(value) => {
                   setTemplateFormat(value);
+                  setStatus(null);
+                }}
+                onKeepUniqueLinesChange={(value) => {
+                  setKeepUniqueTemplateLines(value);
                   setStatus(null);
                 }}
                 onRemoveEmptyLinesChange={(value) => {
@@ -872,16 +722,7 @@ export function OrgEditorExportDialog({
                 removeEmptyLines={removeEmptyTemplateLines}
                 showPreviewLabel={false}
                 unitFields={exportUnitFields}
-              >
-                <ExportRowModeControl
-                  onValueChange={(value) => {
-                    setRowMode(value);
-                    setStatus(null);
-                  }}
-                  rowCountByMode={rowCountByMode}
-                  value={rowMode}
-                />
-              </ExportTemplateSettings>
+              />
             </TabsContent>
           </Tabs>
         </DialogBody>

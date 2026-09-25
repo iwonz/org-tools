@@ -137,7 +137,6 @@ const state = {
       jsonTagFieldOrder: ["label", "date"],
       jsonTopLevelFieldOrder: [...employeeFields, "units", "tags"],
       jsonUnitFieldOrder: unitFields,
-      rowMode: "allUnits",
       selectedEmployeeFieldKeys: ["username"],
       selectedFilters: emptyFilters,
       selectedJsonTagFieldKeys: [],

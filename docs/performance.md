@@ -132,11 +132,11 @@ rather than detached Employee arrays. Analytics uses bounded virtualized groups.
 indicator per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same
 display-line heights and prefix geometry. Mounted list cards measure their information-column width
 with `ResizeObserver` and reuse the same bounded layout cache; font readiness, width, locale,
-direction, content, or selected image font invalidates the applicable measurements and virtual rows
+direction, content, or fixed image font invalidates the applicable measurements and virtual rows
 remeasure only after the resolved height changes. Focused Display setters skip identical values, while the existing latest-
 snapshot writer coalesces valid keystroke updates. Open-position rows continue to use deterministic Tag
 packing. Image export measures each included open-position Tag once
-with the loaded output font, retains complete multi-line chip layouts, and builds one immutable
+with the system UI output font, retains complete multi-line chip layouts, and builds one immutable
 render entry per included Unit before painting cards and connections without measuring mounted or
 virtualized DOM.
 
@@ -149,8 +149,9 @@ canonical complete birthdays in the same pass, keeps per-row overrides sparse, a
 three review columns. Pending custom Value definitions remain bounded metadata and are committed only
 with a successful atomic Apply. Global Export computes only the complete state after the explicit
 action. Data Download derives only the selected View/source, caps preview work at 50 records or rows and
-128 KiB, counts filtered Template lines from rendered row fragments without assembling complete
-output, and builds complete JSON or Template output in yielding batches only for Copy or Download.
+128 KiB, and streams rendered Template fragments through one exact logical-line filter. Its bounded
+Set preserves the first unique line across asynchronous batches; complete JSON or Template output is
+built in yielding batches only for Copy or Download.
 The source and selected panes retain equal width on desktop and equal height on narrow screens; their
 geometry does not depend on the current source tab. Template token filtering uses the bounded
 built-in plus custom-field catalog and never serializes organization data.
@@ -168,7 +169,7 @@ increase only their Employee row and containing Unit height; the existing maximu
 remains authoritative.
 The shared image scene computes rotated rectangle and cubic Bezier bounds once, then paints hierarchy
 connections, `behindUnits`, cards, and `aboveUnits` in stable order. Preview and final output reuse the
-same plan; only effective raster density changes under the 8- and 32-megapixel plus maximum-side
+same fixed-requested-3× plan; only effective raster density changes under the 8- and 32-megapixel plus maximum-side
 limits. Each dialog transforms one preview image inside a ResizeObserver-bounded viewport; wheel,
 pointer, button, and keyboard navigation update only constant-size transient geometry, while preview
 regeneration preserves one normalized focal point without repainting organization data. Embedded

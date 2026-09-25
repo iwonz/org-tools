@@ -5,8 +5,10 @@ import {
   countTemplateOutputLines,
   createExportPreview,
   createExportText,
+  createExportTextAsync,
   type ExportRow,
   filterTemplateEmptyLines,
+  processTemplateTextLines,
 } from "@/lib/export-format";
 import {
   renderTemplateFormat,
@@ -244,6 +246,62 @@ describe("createExportText template mode", () => {
       for (let index = 0; index < 20_000; index += 1) yield rows[index % rows.length] as ExportRow;
     }
     expect(countTemplateOutputLines(largeRows(), "{fullName}\n", [], true)).toBe(20_000);
+  });
+
+  test("keeps the first exact text line across line endings and async batches", async () => {
+    const repeated = processTemplateTextLines("Ada\r\nAda\rADA\n Ada \n\t\nAda\n", {
+      keepUniqueLines: true,
+      removeEmptyLines: true,
+    });
+    expect(repeated).toBe("Ada\nADA\n Ada ");
+
+    const rows = Array.from(
+      { length: 1_001 },
+      (_, index): ExportRow => ({
+        context: "employeeFallback",
+        employee: {
+          avatarBase64Url: null,
+          birthday: null,
+          customFieldValues: {},
+          email: null,
+          firstName: index % 2 === 0 ? "Ada" : "Grace",
+          fullName: index % 2 === 0 ? "Ada" : "Grace",
+          gender: "unspecified",
+          id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+          lastName: "",
+          phone: null,
+          profileUrl: null,
+          tags: [],
+          tagPriority: null,
+          unitIds: [],
+          unitPositions: [],
+          username: null,
+        },
+        unitContext: null,
+      }),
+    );
+    const options = {
+      excludedJsonTagKeys: [],
+      excludedJsonUnitIds: [],
+      jsonFieldNames: createDefaultExportJsonFieldNames(),
+      jsonTopLevelFieldOrder: defaultExportJsonTopLevelFieldOrder,
+      keepUniqueLines: true,
+      rows,
+      selectedEmployeeFieldKeys: [],
+      selectedJsonTagFieldKeys: [],
+      selectedJsonUnitFieldKeys: [],
+      tabMode: "template" as const,
+      templateFormat: "{fullName}\n",
+    };
+
+    expect(createExportText(options)).toBe("Ada\nGrace");
+    await expect(createExportTextAsync(options)).resolves.toBe("Ada\nGrace");
+    expect(createExportPreview(options)).toMatchObject({
+      fullCount: 2,
+      shownCount: 2,
+      text: "Ada\nGrace",
+      truncated: false,
+    });
   });
 });
 

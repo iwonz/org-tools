@@ -714,8 +714,14 @@ describe("OrgToolsState", () => {
     }
   });
 
-  test("rejects obsolete CSV and flat Unit Download state", () => {
+  test("rejects obsolete row-mode, CSV, and flat Unit Download state", () => {
     const state = createBlankOrgToolsState();
+    const rowMode = structuredClone(state) as unknown as {
+      ui: { download: Record<string, unknown> };
+    };
+    rowMode.ui.download.rowMode = "allUnits";
+    expect(() => parseOrgToolsState(rowMode)).toThrow("invalid durable UI state");
+
     const obsolete = structuredClone(state) as unknown as {
       ui: { download: Record<string, unknown> };
     };

@@ -920,7 +920,6 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
       "jsonTagFieldOrder",
       "jsonTopLevelFieldOrder",
       "jsonUnitFieldOrder",
-      "rowMode",
       "selectedCustomEmployeeFieldIds",
       "selectedEmployeeFieldKeys",
       "selectedFilters",
@@ -940,7 +939,6 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     !Array.isArray(value.jsonTagFieldOrder) ||
     !Array.isArray(value.jsonTopLevelFieldOrder) ||
     !Array.isArray(value.jsonUnitFieldOrder) ||
-    (value.rowMode !== "allUnits" && value.rowMode !== "firstUnit") ||
     !Array.isArray(value.selectedEmployeeFieldKeys) ||
     !isUuidArray(value.selectedCustomEmployeeFieldIds) ||
     !Array.isArray(value.selectedJsonTagFieldKeys) ||
@@ -1013,7 +1011,6 @@ const normalizeDownloadState = (value: unknown): OrgToolsDownloadState | null =>
     jsonTagFieldOrder,
     jsonTopLevelFieldOrder,
     jsonUnitFieldOrder,
-    rowMode: value.rowMode,
     selectedCustomEmployeeFieldIds: [...new Set(value.selectedCustomEmployeeFieldIds)],
     selectedEmployeeFieldKeys,
     selectedFilters,
@@ -2031,7 +2028,6 @@ export const createBlankDownloadState = (sourceViewId: ViewId): OrgToolsDownload
   },
   jsonTagFieldOrder: ["label", "date"],
   jsonUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
-  rowMode: "allUnits",
   selectedCustomEmployeeFieldIds: [],
   selectedEmployeeFieldKeys: ["username"],
   selectedFilters: createEmptyEmployeeFiltersState(),

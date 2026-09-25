@@ -10,6 +10,7 @@ import type {
 import { useState } from "react";
 import {
   HiOutlineArrowsPointingOut,
+  HiOutlineArrowUpRight,
   HiOutlineBars3BottomLeft,
   HiOutlineBars3BottomRight,
   HiOutlineBars3CenterLeft,
@@ -59,18 +60,7 @@ const toolDefinitions = [
 ];
 
 function ArrowToolIcon() {
-  return (
-    <svg aria-hidden="true" data-canvas-tool-icon="arrow-bezier" viewBox="0 0 24 24">
-      <path
-        d="M3 17C7 6 14 5 19 11"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
-      <path d="m16.9 8.25 4.35 2.35-3.1 3.86z" fill="currentColor" />
-    </svg>
-  );
+  return <HiOutlineArrowUpRight aria-hidden="true" data-canvas-tool-icon="arrow-up-right" />;
 }
 
 function ImageToolIcon() {

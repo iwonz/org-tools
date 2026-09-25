@@ -520,7 +520,6 @@
       },
       "jsonTagFieldOrder": ["label", "date"],
       "jsonUnitFieldOrder": ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
-      "rowMode": "allUnits",
       "selectedCustomEmployeeFieldIds": [],
       "selectedEmployeeFieldKeys": ["username"],
       "selectedFilters": {

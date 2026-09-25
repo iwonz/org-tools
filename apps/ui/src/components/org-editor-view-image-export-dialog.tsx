@@ -3,6 +3,7 @@
 import type {
   Employee,
   EmployeeId,
+  EmployeeTagColor,
   EmployeeTagDefinition,
   OrgEditorCanvasElement,
   OrgEditorLayoutMode,
@@ -13,16 +14,11 @@ import type {
 } from "@org-tools/types";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  HiOutlineArrowDownTray,
-  HiOutlineBars3,
-  HiOutlineBars3BottomLeft,
-  HiOutlineBars3BottomRight,
-  HiOutlineClipboardDocument,
-} from "react-icons/hi2";
+import { HiOutlineArrowDownTray, HiOutlineClipboardDocument } from "react-icons/hi2";
 
 import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
 import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
+import { TagColorPicker } from "@/components/tag-color-picker";
 import { TemplateFormatInput } from "@/components/template-format-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,27 +32,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { UiTextKey } from "@/i18n/messages";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import type { OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
-import { getOrgEditorCanvasCssFontFamily } from "@/lib/org-editor-canvas";
 import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorImageExportResult,
-  ORG_EDITOR_EXPORT_FONTS,
   ORG_EDITOR_EXPORT_GRADIENTS,
   ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
-  type OrgEditorExportTitleAlign,
 } from "@/lib/org-editor-export";
 import { downloadBlob } from "@/lib/org-file";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -282,25 +267,6 @@ export function OrgEditorViewImageExportDialog({
           <section className="grid content-start gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
-                <Label>{t("Density")}</Label>
-                <Select
-                  onValueChange={(value) => update({ density: Number(value) as 1 | 2 | 3 })}
-                  value={String(settings.density)}
-                >
-                  <SelectTrigger
-                    aria-label={t("Density")}
-                    data-demo-id="org-editor-view-image-density"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1×</SelectItem>
-                    <SelectItem value="2">2×</SelectItem>
-                    <SelectItem value="3">3×</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
                 <Label>{t("Padding")}</Label>
                 <Input
                   max={100}
@@ -310,49 +276,45 @@ export function OrgEditorViewImageExportDialog({
                   value={settings.padding}
                 />
               </div>
+              <div className="grid gap-2">
+                <Label>{t("Corner radius")}</Label>
+                <Input
+                  max={100}
+                  min={0}
+                  onChange={(event) =>
+                    update({ unitBorderRadius: Number(event.currentTarget.value) })
+                  }
+                  type="number"
+                  value={settings.unitBorderRadius}
+                />
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>{t("Background")}</Label>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <Button
-                  className="h-10 px-2"
+                  className="h-10 justify-start px-3"
                   onClick={() => update({ background: { type: "transparent" } })}
                   type="button"
                   variant={settings.background.type === "transparent" ? "secondary" : "outline"}
                 >
                   <span className="size-5 rounded border bg-[linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%),linear-gradient(45deg,#e2e8f0_25%,white_25%,white_75%,#e2e8f0_75%)] bg-[length:8px_8px] bg-[position:0_0,4px_4px]" />
-                  <span className="sr-only">{t("Transparent")}</span>
+                  {t("Transparent")}
                 </Button>
-                <label
-                  className="relative flex h-10 cursor-pointer items-center justify-center rounded-md border border-input bg-background"
-                  htmlFor="org-editor-view-image-background-color"
-                >
-                  <Input
-                    aria-label={t("Background color")}
-                    className="absolute inset-0 size-full cursor-pointer opacity-0"
-                    id="org-editor-view-image-background-color"
-                    onChange={(event) =>
-                      update({ background: { color: event.currentTarget.value, type: "solid" } })
-                    }
-                    type="color"
-                    value={
-                      settings.background.type === "solid" ? settings.background.color : "#ffffff"
-                    }
-                  />
-                  <span
-                    className="size-5 rounded border"
-                    style={{
-                      backgroundColor:
-                        settings.background.type === "solid"
-                          ? settings.background.color
-                          : "#ffffff",
-                    }}
-                  />
-                </label>
+                <TagColorPicker
+                  allowNoColor={false}
+                  label={t("Background color")}
+                  onChange={(color: EmployeeTagColor | null) => {
+                    if (color) update({ background: { color, type: "solid" } });
+                  }}
+                  value={
+                    settings.background.type === "solid" ? settings.background.color : "#ffffff"
+                  }
+                />
                 {ORG_EDITOR_EXPORT_GRADIENTS.map((gradient) => (
                   <Button
                     aria-label={t(gradient.label as UiTextKey)}
-                    className="h-10 px-2"
+                    className="h-10 justify-start px-3"
                     key={gradient.id}
                     onClick={() =>
                       update({ background: { gradientId: gradient.id, type: "gradient" } })
@@ -371,83 +333,9 @@ export function OrgEditorViewImageExportDialog({
                       className="size-5 rounded border"
                       style={{ background: gradient.previewCss }}
                     />
+                    {t(gradient.label as UiTextKey)}
                   </Button>
                 ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label>{t("Corner radius")}</Label>
-                <Input
-                  max={100}
-                  min={0}
-                  onChange={(event) =>
-                    update({ unitBorderRadius: Number(event.currentTarget.value) })
-                  }
-                  type="number"
-                  value={settings.unitBorderRadius}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="org-editor-view-export-font">{t("Font")}</Label>
-                <Select
-                  onValueChange={(fontFamily) => update({ fontFamily })}
-                  value={settings.fontFamily}
-                >
-                  <SelectTrigger id="org-editor-view-export-font">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ORG_EDITOR_EXPORT_FONTS.map((font) => (
-                      <SelectItem key={font.family} value={font.family}>
-                        <span style={{ fontFamily: getOrgEditorCanvasCssFontFamily(font.family) }}>
-                          {font.family === "system-ui" ? t("System") : font.family}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label>{t("Title")}</Label>
-              <Input
-                onChange={(event) => update({ title: event.currentTarget.value })}
-                placeholder={t("No title")}
-                value={settings.title}
-              />
-            </div>
-            <div className="grid grid-cols-[7rem_1fr] gap-3">
-              <div className="grid gap-2">
-                <Label>{t("Size")}</Label>
-                <Input
-                  max={48}
-                  min={12}
-                  onChange={(event) => update({ titleFontSize: Number(event.currentTarget.value) })}
-                  type="number"
-                  value={settings.titleFontSize}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t("Alignment")}</Label>
-                <Tabs
-                  onValueChange={(value) =>
-                    update({ titleAlign: value as OrgEditorExportTitleAlign })
-                  }
-                  value={settings.titleAlign}
-                >
-                  <TabsList>
-                    <TabsTrigger aria-label={t("Left")} value="left">
-                      <HiOutlineBars3BottomLeft />
-                    </TabsTrigger>
-                    <TabsTrigger aria-label={t("Center")} value="center">
-                      <HiOutlineBars3 />
-                    </TabsTrigger>
-                    <TabsTrigger aria-label={t("Right")} value="right">
-                      <HiOutlineBars3BottomRight />
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
               </div>
             </div>
             <TemplateFormatInput

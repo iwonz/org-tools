@@ -648,8 +648,6 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
     viewImageDialog.locator('[data-demo-id="org-editor-view-image-dimensions"]'),
   ).toHaveCount(0);
   await capture(page, "editor-image-export");
-  await viewImageDialog.locator('[data-demo-id="org-editor-view-image-density"]').click();
-  await page.getByRole("option", { name: "3×", exact: true }).click();
   await viewImageDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
@@ -661,7 +659,8 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await page.keyboard.press("Escape");
   const dialog = await openEditorExport(page);
   await dialog.getByRole("tab", { name: "Template", exact: true }).click();
-  await dialog.getByLabel("Format", { exact: true }).fill("{fullName}\n\n");
+  await dialog.getByLabel("Format", { exact: true }).fill("{fullName}\n{fullName}\n\n");
+  await dialog.getByRole("checkbox", { name: "Keep only unique values", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "Remove empty lines", exact: true }).click();
   await capture(page, "editor-template-export");
   await dialog.getByRole("tab", { name: "JSON", exact: true }).click();

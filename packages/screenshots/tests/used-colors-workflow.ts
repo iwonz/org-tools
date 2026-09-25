@@ -20,13 +20,16 @@ export async function exerciseUsedColorsAndToolIcons(page: Page, runtime: "pages
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   const tools = page.locator('[data-demo-id="org-editor-canvas-tool-actions"]');
   const arrowIcon = tools.locator(
-    '[data-canvas-tool="arrow"] [data-canvas-tool-icon="arrow-bezier"]',
+    '[data-canvas-tool="arrow"] [data-canvas-tool-icon="arrow-up-right"]',
   );
   await expect(arrowIcon).toBeVisible();
-  await expect(arrowIcon.locator("path")).toHaveCount(2);
-  await expect(arrowIcon.locator("path").first()).toHaveAttribute("d", /C/u);
-  await expect(arrowIcon.locator("path").first()).toHaveAttribute("fill", "none");
-  await expect(arrowIcon.locator("path").nth(1)).toHaveAttribute("fill", "currentColor");
+  await expect(arrowIcon).toHaveAttribute("fill", "none");
+  await expect(arrowIcon.locator("path")).toHaveCount(1);
+  await expect(arrowIcon.locator("path")).toHaveAttribute(
+    "d",
+    "m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25",
+  );
+  await expect(arrowIcon.locator("path")).toHaveAttribute("stroke-linecap", "round");
   await expect(
     tools.locator('[data-canvas-tool="image"] [data-canvas-tool-icon="image-rounded"]'),
   ).toBeVisible();

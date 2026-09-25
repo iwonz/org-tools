@@ -75,7 +75,6 @@ import type {
   ExportJsonTagFieldKey,
   ExportJsonTopLevelFieldKey,
   ExportJsonUnitFieldKey,
-  ExportRowMode,
   ExportSelection,
   ExportTabMode,
 } from "@/stores/export-session-store";
@@ -104,7 +103,6 @@ export type {
   ExportJsonTagFieldKey,
   ExportJsonTopLevelFieldKey,
   ExportJsonUnitFieldKey,
-  ExportRowMode,
   ExportSelection,
   ExportTabMode,
   ExportUnitFieldKey,
@@ -295,7 +293,6 @@ export class OrgStore {
       this.calendarUi,
       this.downloadUi,
       this.exportSession.tabMode,
-      this.exportSession.rowMode,
       this.exportSession.selectedEmployeeFieldKeys,
       this.exportSession.selectedCustomEmployeeFieldIds,
       this.exportSession.jsonTopLevelFieldOrder,
@@ -377,9 +374,6 @@ export class OrgStore {
 
   get exportTabMode() {
     return this.exportSession.tabMode;
-  }
-  get exportRowMode() {
-    return this.exportSession.rowMode;
   }
   get exportSelectedEmployeeFieldKeys() {
     return this.exportSession.selectedEmployeeFieldKeys;
@@ -774,9 +768,6 @@ export class OrgStore {
   }
   setExportJsonSettings(value: ExportJsonSettingsState): void {
     this.exportSession.setJsonSettings(value);
-  }
-  setExportRowMode(value: ExportRowMode): void {
-    this.exportSession.setRowMode(value);
   }
   setExportTemplateFormat(value: string): void {
     this.exportSession.setTemplateFormat(value);

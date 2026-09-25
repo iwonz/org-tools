@@ -48,7 +48,7 @@ Tags and compound assignments remain semantic groups. A platform-neutral inline 
 each resolved authored line as a measured format block and places text, Markdown runs, Tags, and
 `Position · Unit` assignments in source order on shared child rows. It wraps by word and grapheme
 and emits content-sized fragment rectangles. A bounded Canvas cache
-measures the actual UI or selected image font, weight, style, and code family; it is invalidated
+measures the actual UI or fixed system image font, weight, style, and code family; it is invalidated
 after bundled fonts load. DOM renders those fragments without constraining glyphs to an approximate
 fragment width, while Canvas paints the same rectangles. Every Tag and assignment surface uses
 11 px type, 16 px line height, 8 px horizontal and 2 px vertical padding, 6 px radius, and 6 px row
@@ -306,10 +306,12 @@ request IDs remain independent.
   separator templates.
   JSON creates one record per Employee from one sortable top-level list of scalar Employee fields
   and optional Unit and Tag arrays. Unit and Tag rows use the same geometry as scalar fields, retain
-  independently sortable nested fields, and support naming plus exact exclusions. Template retains
-  All Units and First Unit row modes through one control shared with Editor export. Both Template
-  surfaces expose one transient Remove empty lines option; preview, Copy, Download, and all visible
-  counts consume the same whitespace-only line policy while JSON remains unchanged. Both Template
+  independently sortable nested fields, and support naming plus exact exclusions. Template emits
+  every retained assignment in structural order and preserves the direct-selection fallback for an
+  unassigned Employee. Both Template surfaces expose transient Keep only unique values and Remove
+  empty lines options; one streaming logical-line processor applies empty-line removal before exact,
+  order-preserving deduplication for preview, Copy, Download, and all visible counts while JSON
+  remains unchanged. Both Template
   surfaces and full-View Image Employee format use one multiline Format input whose caret menu
   converts `@query` into existing `{token}` syntax. A small help affordance and the placeholder
   disclose the shortcut; help also documents the existing `{condition ? 'value' : 'fallback'}`
@@ -319,8 +321,8 @@ Org Editor DOM and PNG output share a pure scene layer for persistent canvas-ele
 attachment resolution, text wrapping, rotated bounds, cubic extrema, and two-plane ordering. Full
 View export includes all Units, hierarchy connections, and durable elements regardless of viewport;
 Unit/subtree export includes only the structural closure and transitively related annotations, with
-Arrows requiring two included endpoint owners. One render plan retains logical bounds, requested
-and effective 1x/2x/3x density, final dimensions, and 8/32-megapixel plus canvas-side clamping before
+Arrows requiring two included endpoint owners. One render plan retains logical bounds, fixed
+requested 3× density, effective density, final dimensions, and 8/32-megapixel plus canvas-side clamping before
 rasterization. Both dialogs place their local object URL in one transient Fit-first viewport with
 bounded pointer/keyboard pan and 10%-to-400% zoom. Manual inspection preserves its normalized focal
 point across preview regeneration; viewport state and render-plan diagnostics are not persisted or
@@ -343,9 +345,10 @@ direct-membership Tag footer, Tag tonal colors, boss treatment, and persistent
 active-View distribution row tones while excluding Static/Live membership type, transient
 selection, hover, focus, handles, menus, placement paths, and endpoint markers. Distribution status
 uses the complete active-View direct-membership index even when its other placement is outside the
-selected image scope. Its bounded inline preview has no secondary full-image viewer. Image titles,
-backgrounds, fonts, icon-only alignment, scope, radius, Employee templates, and Editor JSON settings
-remain output-only session settings and do not mutate the active View. The painter deliberately uses
+selected image scope. Its bounded inline preview has no secondary full-image viewer. Image
+backgrounds, scope, spacing, radius, Employee templates, and Editor JSON settings remain output-only
+session settings and do not mutate the active View. Standard structure text uses the system UI font;
+persistent Text and Sticker elements retain their own typography. The painter deliberately uses
 the light export palette; shared semantic status, geometry, and tonal helpers keep stable DOM and PNG
 card presentation aligned. Every later persistent canvas element, anchor behavior, View setting, or
 stable Unit/Employee card presentation change must define and test its applicable DOM and PNG

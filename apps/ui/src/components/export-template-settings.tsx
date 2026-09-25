@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { templateFormatTokenDescriptionKeys } from "@/components/employee-display-format-tokens";
 import { TemplateFormatInput } from "@/components/template-format-input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,11 +12,12 @@ export type ExportTemplateToken = {
 };
 
 type ExportTemplateSettingsProps = {
-  children?: ReactNode;
   dataDemoId?: string;
   employeeFields: ExportTemplateToken[];
   format: string;
+  keepUniqueLines: boolean;
   onFormatChange: (value: string) => void;
+  onKeepUniqueLinesChange: (value: boolean) => void;
   onRemoveEmptyLinesChange: (value: boolean) => void;
   previewDataDemoId?: string;
   previewMeta: string;
@@ -29,11 +28,12 @@ type ExportTemplateSettingsProps = {
 };
 
 export function ExportTemplateSettings({
-  children,
   dataDemoId,
   employeeFields,
   format,
+  keepUniqueLines,
   onFormatChange,
+  onKeepUniqueLinesChange,
   onRemoveEmptyLinesChange,
   previewDataDemoId,
   previewMeta,
@@ -60,7 +60,22 @@ export function ExportTemplateSettings({
         tokens={tokens}
         value={format}
       />
-      {children}
+      <div
+        className="flex w-fit cursor-pointer items-center gap-2 text-sm"
+        data-demo-id={`${dataDemoId ?? "export"}-keep-unique-lines`}
+      >
+        <Checkbox
+          checked={keepUniqueLines}
+          id={`${dataDemoId ?? "export"}-keep-unique-lines-checkbox`}
+          onCheckedChange={(checked) => onKeepUniqueLinesChange(checked === true)}
+        />
+        <Label
+          className="cursor-pointer font-normal"
+          htmlFor={`${dataDemoId ?? "export"}-keep-unique-lines-checkbox`}
+        >
+          {t("Keep only unique values")}
+        </Label>
+      </div>
       <div
         className="flex w-fit cursor-pointer items-center gap-2 text-sm"
         data-demo-id={`${dataDemoId ?? "export"}-remove-empty-lines`}

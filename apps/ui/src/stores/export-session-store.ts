@@ -9,7 +9,6 @@ import type {
 import { makeAutoObservable, observable } from "mobx";
 
 export type ExportTabMode = "json" | "template";
-export type ExportRowMode = "allUnits" | "firstUnit";
 export type ExportEmployeeFieldKey =
   | "id"
   | "firstName"
@@ -194,7 +193,6 @@ const moveFieldInOrder = <FieldKey extends string>({
 
 export class ExportSessionStore {
   tabMode: ExportTabMode = "json";
-  rowMode: ExportRowMode = "allUnits";
   selectedEmployeeFieldKeys: ExportJsonEmployeeFieldKey[] = [...defaultExportEmployeeFieldKeys];
   selectedCustomEmployeeFieldIds: EmployeeFieldId[] = [];
   jsonTopLevelFieldOrder: ExportJsonTopLevelFieldKey[] = [...defaultExportJsonTopLevelFieldOrder];
@@ -232,7 +230,6 @@ export class ExportSessionStore {
 
   reset(): void {
     this.tabMode = "json";
-    this.rowMode = "allUnits";
     this.selectedEmployeeFieldKeys = [...defaultExportEmployeeFieldKeys];
     this.selectedCustomEmployeeFieldIds = [];
     this.jsonTopLevelFieldOrder = [...defaultExportJsonTopLevelFieldOrder];
@@ -263,7 +260,6 @@ export class ExportSessionStore {
       jsonTagFieldKeySet.has(key as ExportJsonTagFieldKey),
     );
     this.tabMode = state.tabMode;
-    this.rowMode = state.rowMode;
     this.jsonTopLevelFieldOrder =
       topLevelOrder.length > 0 ? topLevelOrder : [...defaultExportJsonTopLevelFieldOrder];
     this.jsonUnitFieldOrder =
@@ -312,7 +308,6 @@ export class ExportSessionStore {
     | "jsonTagFieldOrder"
     | "jsonTopLevelFieldOrder"
     | "jsonUnitFieldOrder"
-    | "rowMode"
     | "selectedEmployeeFieldKeys"
     | "selectedCustomEmployeeFieldIds"
     | "selectedJsonTagFieldKeys"
@@ -340,7 +335,6 @@ export class ExportSessionStore {
       jsonTagFieldOrder: [...this.jsonTagFieldOrder],
       jsonTopLevelFieldOrder: [...this.jsonTopLevelFieldOrder],
       jsonUnitFieldOrder: [...this.jsonUnitFieldOrder],
-      rowMode: this.rowMode,
       selectedEmployeeFieldKeys: [...this.selectedEmployeeFieldKeys],
       selectedCustomEmployeeFieldIds: [...this.selectedCustomEmployeeFieldIds],
       selectedJsonTagFieldKeys: [...this.selectedJsonTagFieldKeys],
@@ -366,10 +360,6 @@ export class ExportSessionStore {
     this.selectedCustomEmployeeFieldIds = [...state.selectedCustomEmployeeFieldIds];
     this.selectedJsonTagFieldKeys = [...state.selectedJsonTagFieldKeys];
     this.selectedJsonUnitFieldKeys = [...state.selectedJsonUnitFieldKeys];
-  }
-
-  setRowMode(rowMode: ExportRowMode): void {
-    this.rowMode = rowMode;
   }
 
   setTemplateFormat(templateFormat: string): void {

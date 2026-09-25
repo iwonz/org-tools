@@ -9,7 +9,6 @@ import {
 } from "react-icons/hi2";
 
 import type { ExportExclusionOption } from "@/components/export-exclusion-select";
-import { ExportRowModeControl } from "@/components/export-row-mode-control";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
 import {
   StructuredJsonSettings,
@@ -30,7 +29,7 @@ import {
   exportEmployeeFields,
   exportUnitFields,
 } from "@/lib/export-format";
-import type { ExportRowMode, ExportTabMode } from "@/stores/org-store";
+import type { ExportTabMode } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type ExportSettingsStepProps = {
@@ -38,13 +37,14 @@ type ExportSettingsStepProps = {
   fieldNameErrors: ExportFieldNameError[];
   onCopy: () => void;
   onDownload: () => void;
+  onKeepUniqueLinesChange: (value: boolean) => void;
   onRemoveEmptyLinesChange: (value: boolean) => void;
   previewFullCount: number;
   previewShownCount: number;
   previewText: string;
   previewTruncated: boolean;
+  keepUniqueLines: boolean;
   removeEmptyLines: boolean;
-  rowCountByMode: Record<ExportRowMode, number>;
   selectedEmployeeCount: number;
   status: string | null;
   tagOptions: ExportExclusionOption[];
@@ -56,13 +56,14 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
   fieldNameErrors,
   onCopy,
   onDownload,
+  onKeepUniqueLinesChange,
   onRemoveEmptyLinesChange,
   previewFullCount,
   previewShownCount,
   previewText,
   previewTruncated,
+  keepUniqueLines,
   removeEmptyLines,
-  rowCountByMode,
   selectedEmployeeCount,
   status,
   tagOptions,
@@ -72,7 +73,6 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
   const countText = useCountText();
   const store = useOrgStore();
   const activeTab = store.exportTabMode;
-  const rowMode = store.exportRowMode;
   const templateFormat = store.exportTemplateFormat;
   const jsonSettings: StructuredJsonSettingsValue = {
     excludedJsonTagKeys: store.exportExcludedJsonTagKeys,
@@ -159,7 +159,9 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
                 })),
               ]}
               format={templateFormat}
+              keepUniqueLines={keepUniqueLines}
               onFormatChange={(value) => store.setExportTemplateFormat(value)}
+              onKeepUniqueLinesChange={onKeepUniqueLinesChange}
               onRemoveEmptyLinesChange={onRemoveEmptyLinesChange}
               previewMeta={
                 previewTruncated
@@ -172,13 +174,7 @@ export const ExportSettingsStep = observer(function ExportSettingsStep({
               previewText={canExport ? previewText : emptyPreview}
               removeEmptyLines={removeEmptyLines}
               unitFields={exportUnitFields}
-            >
-              <ExportRowModeControl
-                onValueChange={(value) => store.setExportRowMode(value)}
-                rowCountByMode={rowCountByMode}
-                value={rowMode}
-              />
-            </ExportTemplateSettings>
+            />
           )}
         </div>
       </DialogBody>

@@ -189,7 +189,6 @@ const emptyDownloadState = (sourceViewId: string): OrgToolsState["ui"]["download
     "tags",
   ],
   jsonUnitFieldOrder: ["unitId", "unitName", "unitFullPath", "position", "isBoss"],
-  rowMode: "allUnits" as const,
   selectedCustomEmployeeFieldIds: [],
   selectedEmployeeFieldKeys: ["username"],
   selectedFilters: emptyEmployeeFilters(),

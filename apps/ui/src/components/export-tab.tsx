@@ -48,7 +48,6 @@ import {
 } from "@/lib/employee-unit-contexts";
 import {
   buildEmployeeExportRows,
-  countTemplateOutputLines,
   createExportPreview,
   createExportTextAsync,
   type ExportRow,
@@ -58,15 +57,10 @@ import { copyTextToClipboard, downloadText } from "@/lib/org-file";
 import { normalizeSearchValue } from "@/lib/search-index";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
-import type { ExportRowMode, ExportSelection } from "@/stores/org-store";
+import type { ExportSelection } from "@/stores/org-store";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type ExportSourceSection = "employees" | "units";
-
-const emptyRowCountByMode = {
-  allUnits: 0,
-  firstUnit: 0,
-} satisfies Record<ExportRowMode, number>;
 
 const getSelectionId = (selection: ExportSelection) => selection.id;
 
@@ -121,6 +115,7 @@ export const ExportTab = observer(() => {
   const units: UiOrgStructure | null = store.downloadUnits;
   const [status, setStatus] = useState<UiTextKey | null>(null);
   const [isExportSettingsDialogOpen, setIsExportSettingsDialogOpen] = useState(false);
+  const [keepUniqueTemplateLines, setKeepUniqueTemplateLines] = useState(false);
   const [removeEmptyTemplateLines, setRemoveEmptyTemplateLines] = useState(false);
   const [sourceSection, setSourceSection] = useState<ExportSourceSection>("units");
   const { employeeFilters, employeeQuery, selectedFilters, selectedQuery, unitQuery } =
@@ -129,7 +124,6 @@ export const ExportTab = observer(() => {
     () => new Set(units?.roots.map((root) => root.id) ?? []),
   );
   const activeTab = store.exportTabMode;
-  const rowMode = store.exportRowMode;
   const selectedEmployeeFieldKeys = store.exportSelectedEmployeeFieldKeys;
   const selectedCustomEmployeeFieldIds = store.exportSelectedCustomEmployeeFieldIds;
   const selectedJsonUnitFieldKeys = store.exportSelectedJsonUnitFieldKeys;
@@ -144,7 +138,6 @@ export const ExportTab = observer(() => {
 
   const employeeById = units?.indexes.employeesById;
   const unitsById = units?.indexes.unitsById;
-  const unitOrderById = units?.indexes.unitOrderById;
   const employeePositionOptions = units?.indexes.positionOptions ?? [];
   const employeeTagOptions = units?.indexes.tagOptions ?? [];
   const employeeSearchDocumentByEmployeeId = units?.indexes.employeeSearchDocumentByEmployeeId;
@@ -281,64 +274,21 @@ export const ExportTab = observer(() => {
     () => foundEmployees.filter((employee) => selectedEmployeeIdSet.has(employee.id)),
     [foundEmployees, selectedEmployeeIdSet],
   );
-  const rowCountByMode = useMemo(() => {
-    if (!isExportSettingsDialogOpen || !unitOrderById) return emptyRowCountByMode;
-    const activeUnitOrderById = unitOrderById;
-
-    const countRows = (mode: ExportRowMode) => {
-      function* modeRows() {
-        for (const employee of selectedEmployees) {
-          yield* buildEmployeeExportRows({
-            employee,
-            isDirectlySelected: selectedDirectEmployeeIdSet.has(employee.id),
-            mode,
-            unitContexts: employeeUnitContextsByEmployeeId.get(employee.id) ?? [],
-            unitOrderById: activeUnitOrderById,
-          });
-        }
-      }
-      return countTemplateOutputLines(
-        modeRows(),
-        templateFormat,
-        store.employeeFieldDefinitions,
-        removeEmptyTemplateLines,
-      );
-    };
-
-    return {
-      allUnits: countRows("allUnits"),
-      firstUnit: countRows("firstUnit"),
-    } satisfies Record<ExportRowMode, number>;
-  }, [
-    employeeUnitContextsByEmployeeId,
-    isExportSettingsDialogOpen,
-    selectedDirectEmployeeIdSet,
-    selectedEmployees,
-    templateFormat,
-    removeEmptyTemplateLines,
-    store.employeeFieldDefinitions,
-    unitOrderById,
-  ]);
   const rows = useMemo(() => {
-    if (!isExportSettingsDialogOpen || !unitOrderById) return [];
+    if (!isExportSettingsDialogOpen) return [];
 
     return selectedEmployees.flatMap((employee): ExportRow[] => {
       return buildEmployeeExportRows({
         employee,
         isDirectlySelected: selectedDirectEmployeeIdSet.has(employee.id),
-        mode: activeTab === "json" ? "allUnits" : rowMode,
         unitContexts: employeeUnitContextsByEmployeeId.get(employee.id) ?? [],
-        unitOrderById,
       });
     });
   }, [
     employeeUnitContextsByEmployeeId,
     isExportSettingsDialogOpen,
-    activeTab,
-    rowMode,
     selectedDirectEmployeeIdSet,
     selectedEmployees,
-    unitOrderById,
   ]);
   const exportRecordCount =
     activeTab === "json" ? new Set(rows.map((row) => row.employee.id)).size : rows.length;
@@ -373,6 +323,7 @@ export const ExportTab = observer(() => {
         excludedJsonUnitIds,
         jsonFieldNames,
         jsonTopLevelFieldOrder,
+        keepUniqueLines: activeTab === "template" && keepUniqueTemplateLines,
         removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
         rows,
         selectedEmployeeFieldKeys,
@@ -388,6 +339,7 @@ export const ExportTab = observer(() => {
       excludedJsonUnitIds,
       jsonFieldNames,
       jsonTopLevelFieldOrder,
+      keepUniqueTemplateLines,
       removeEmptyTemplateLines,
       rows,
       selectedCustomEmployeeFieldIds,
@@ -407,6 +359,7 @@ export const ExportTab = observer(() => {
             excludedJsonUnitIds,
             jsonFieldNames,
             jsonTopLevelFieldOrder,
+            keepUniqueLines: activeTab === "template" && keepUniqueTemplateLines,
             removeEmptyLines: activeTab === "template" && removeEmptyTemplateLines,
             rows,
             selectedEmployeeFieldKeys,
@@ -426,6 +379,7 @@ export const ExportTab = observer(() => {
       isExportSettingsDialogOpen,
       jsonFieldNames,
       jsonTopLevelFieldOrder,
+      keepUniqueTemplateLines,
       removeEmptyTemplateLines,
       rows,
       selectedCustomEmployeeFieldIds,
@@ -801,7 +755,10 @@ export const ExportTab = observer(() => {
       <Dialog
         onOpenChange={(open) => {
           setIsExportSettingsDialogOpen(open);
-          if (!open) setRemoveEmptyTemplateLines(false);
+          if (!open) {
+            setKeepUniqueTemplateLines(false);
+            setRemoveEmptyTemplateLines(false);
+          }
           setStatus(null);
         }}
         open={isExportSettingsDialogOpen}
@@ -815,12 +772,16 @@ export const ExportTab = observer(() => {
             fieldNameErrors={exportFieldNameValidation.errors}
             onCopy={copy}
             onDownload={download}
+            keepUniqueLines={keepUniqueTemplateLines}
+            onKeepUniqueLinesChange={(value) => {
+              setKeepUniqueTemplateLines(value);
+              setStatus(null);
+            }}
             previewFullCount={exportPreview.fullCount}
             previewShownCount={exportPreview.shownCount}
             previewText={exportPreview.text}
             previewTruncated={exportPreview.truncated}
             removeEmptyLines={removeEmptyTemplateLines}
-            rowCountByMode={rowCountByMode}
             selectedEmployeeCount={selectedEmployees.length}
             onRemoveEmptyLinesChange={(value) => {
               setRemoveEmptyTemplateLines(value);

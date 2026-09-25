@@ -93,7 +93,6 @@ export type OrgToolsDownloadState = {
   jsonTopLevelFieldOrder: OrgToolsDownloadJsonTopLevelFieldKey[];
   jsonTagFieldOrder: OrgToolsDownloadTagFieldKey[];
   jsonUnitFieldOrder: OrgToolsDownloadUnitFieldKey[];
-  rowMode: "allUnits" | "firstUnit";
   selectedEmployeeFieldKeys: OrgToolsDownloadEmployeeFieldKey[];
   selectedCustomEmployeeFieldIds: EmployeeFieldId[];
   selectedFilters: OrgToolsEmployeeFilters;

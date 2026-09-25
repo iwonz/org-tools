@@ -240,17 +240,18 @@ control.
   disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
   JSON, or Template output. Editor Image exports preserve its stable row tones without selection,
   placement lines, or endpoint markers. The dedicated View Image dialog previews the entire durable
-  scene and offers the same
-  background, padding, title, the same five-font choice, Unit radius, Employee format, Copy, and
-  Save controls. Its Employee rows use the saved Editor-export line spacing.
+  scene and offers the same background picker, padding, Unit radius, Employee format, Copy, and
+  Save controls. Solid backgrounds use the shared preset, used, and custom color picker with
+  opacity. Its Employee rows use the saved Editor-export line spacing and standard structure text
+  uses the system UI font; Text and Sticker elements retain their own typography.
   Full-View and Unit/subtree previews begin fitted and support pointer-centered wheel zoom,
   10%-to-400% controls, 100%, Fit, drag pan, and keyboard pan. Manual zoom and the relative center
   survive preview regeneration; these inspection controls never affect the PNG or View state.
-  Density and canvas safety limits continue to apply silently.
+  Export always requests 3× output, then applies canvas safety limits silently.
   Employee format uses the shared `@` suggestion input and its information help documents
   `{condition ? 'value' : 'fallback'}`; Copy and Save retain the standard clipboard and download
-  icons. Scoped Template export also offers **Remove empty lines**; its preview, Copy, Save, row-mode
-  counts, and preview totals all describe the filtered output.
+  icons. Scoped Template export also offers **Keep only unique values** and **Remove empty lines**;
+  its preview, Copy, Save, and preview totals all describe the same filtered output.
   Unit/subtree Image export includes transitively attached annotations but excludes free or external
   ones. Editor exports always use the active View.
 - **Analytics** derives organization distributions locally without repeating the page title. It
@@ -274,14 +275,17 @@ control.
   JSON or Template output from Employees assigned in that View.
   JSON always produces one record per Employee. Drag handles order scalar fields and the ordinary
   Unit and Tag rows in one list; enabled Unit and Tag arrays expose their own reorderable fields,
-  names, and searchable exclusion menus. Template retains All Units and First Unit row modes through
-  the same control used by Editor export. Every token-aware Format label includes a help icon, and
+  names, and searchable exclusion menus. Template creates one row for every retained assignment in
+  structural order and keeps a fallback row for a directly selected Employee without a Unit. Every
+  token-aware Format label includes a help icon, and
   its placeholder explains that typing `@` opens a localized caret menu and inserts the stable
   `{token}` syntax. The information help also shows the supported
   `{condition ? 'value' : 'fallback'}` form. Unit paths use the fixed ` / ` separator. **Continue**
   stays disabled in the shared header until at least one Employee is selected. **Remove empty
-  lines** deletes whitespace-only Template lines from preview, Copy, and Download and updates every
-  displayed row count from that same processed output; closing the settings resets the option.
+  lines** deletes whitespace-only Template lines from preview, Copy, and Download. **Keep only
+  unique values** keeps the first exact occurrence of each final text line after optional empty-line
+  removal. Preview, counts, Copy, and Download use that same processing order; closing the settings
+  resets both options.
 
 ## Import and Export
 

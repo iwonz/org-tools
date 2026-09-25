@@ -3,7 +3,6 @@
 ## Purpose
 Define the local, generic structured-text and Editor image export boundary for Employees and Units.
 ## Requirements
-
 ### Requirement: Data export remains local and generic
 The application SHALL export selected Employees as structured JSON or separator templates using
 only the generic data model. JSON SHALL contain one object per selected Employee and SHALL expose
@@ -21,16 +20,17 @@ checked state from their nested selections. Activating an unchecked or indetermi
 select every nested field; activating a fully checked parent SHALL clear every nested field.
 Top-level and nested output names MUST be non-empty and unique within their JSON object.
 
-JSON SHALL include every exact Unit assignment independent of Template row mode. Searchable
-virtualized exclusion controls SHALL omit exact Unit IDs and normalized Tag labels without removing
-the Employee or implicitly excluding descendant Units. `unitFullPath` SHALL use the fixed ` / `
-separator. Template output SHALL retain All Units/First Unit row behavior and Employee, Unit, tag,
-and dated-tag tokens. Both export surfaces SHALL use one shared visual control for that Template row
-behavior. CSV output and a configurable Unit-path separator SHALL NOT be available.
+JSON SHALL include every exact Unit assignment and one object per Employee. Template output SHALL
+evaluate every retained Employee Unit assignment in stable structure order and SHALL retain one
+fallback row for a directly selected Employee without a retained Unit. Searchable virtualized
+exclusion controls SHALL omit exact Unit IDs and normalized Tag labels without removing the Employee
+or implicitly excluding descendant Units. `unitFullPath` SHALL use the fixed ` / ` separator.
+Template output SHALL retain Employee, Unit, tag, and dated-tag tokens. CSV output and a configurable
+Unit-path separator SHALL NOT be available.
 
-Preview output SHALL be bounded to 50 records or rows and 128 KiB. Complete output SHALL be built
-only for an explicit Copy or Download action, SHALL remain local, and SHALL NOT enter browser
-storage. Successful downloads SHALL not render a downloaded-file label, while clipboard
+Preview output SHALL be bounded to 50 records or processed text lines and 128 KiB. Complete output
+SHALL be built only for an explicit Copy or Download action, SHALL remain local, and SHALL NOT enter
+browser storage. Successful downloads SHALL not render a downloaded-file label, while clipboard
 confirmation and localized errors SHALL remain available.
 
 Editor PNG output SHALL receive the active locale, render every tag as `label` or
@@ -59,13 +59,13 @@ same packing model as the live Editor.
 - **WHEN** a user excludes a Unit or Tag from JSON
 - **THEN** matching exact assignments or normalized labels are omitted while the Employee, other assignments, and descendant Units remain
 
-#### Scenario: JSON ignores Template row mode
+#### Scenario: JSON retains every assignment
 - **WHEN** an Employee belongs to multiple retained Units and JSON is generated
-- **THEN** one Employee object contains all retained Unit objects regardless of the saved Template row mode
+- **THEN** one Employee object contains all retained Unit objects
 
-#### Scenario: Generate a template
-- **WHEN** the user selects All Units or First Unit through either export surface and generates Template output
-- **THEN** the same shared control and formatter render the corresponding rows with the fixed Unit-path separator
+#### Scenario: Generate a template for every assignment
+- **WHEN** an Employee belongs to multiple retained Units and either Template surface generates output
+- **THEN** the formatter evaluates every Unit context in stable structure order without a row-mode control
 
 #### Scenario: Preview a large output
 - **WHEN** the selected sources contain 20,000 Employees
@@ -218,30 +218,35 @@ JSON Tag arrays, text Tag tokens, Employee image chips, and visible Unit image f
 - **THEN** PNG omits Unit footers and reserves no footer height while Employee Tag chips and report data remain available
 
 ### Requirement: Template output can remove empty lines consistently
-Data Download and Editor Template export SHALL expose one shared **Remove empty lines** checkbox.
-When enabled, preview, Copy, and Download SHALL remove every whitespace-only rendered line while
-preserving the content and order of nonempty lines. Every Template line count, including All Units,
-First Unit, bounded-preview shown, and complete totals, SHALL describe the processed output after
-the same line-removal policy. A terminal line separator SHALL NOT count as an additional visual
-line, and output with no retained content SHALL have a count of zero. The option SHALL remain
-transient to the open export surface and SHALL NOT affect JSON, Image, organization State, browser
-storage, or network behavior.
+Data Download and Editor Template export SHALL expose shared **Keep only unique values** and
+**Remove empty lines** checkboxes in that order. Both options SHALL default off and remain transient
+to the open export surface. When empty-line removal is enabled, processing SHALL first remove every
+whitespace-only rendered line. When uniqueness is enabled, processing SHALL then retain the first
+exact occurrence of each remaining rendered line with case and whitespace significant. Processing
+SHALL recognize LF, CRLF, and CR input boundaries, join retained output with LF, and SHALL NOT add a
+terminal line. Preview, Copy, Download, and every visible Template count SHALL consume the same
+processed line stream. Neither option SHALL affect JSON, Image, organization State, browser storage,
+or network behavior.
 
-#### Scenario: Remove whitespace-only lines
-- **WHEN** Remove empty lines is enabled and Template evaluation produces empty, spaces-only, tabs-only, and nonempty lines
-- **THEN** preview, copied text, and downloaded text contain only the nonempty lines in their original order
+#### Scenario: Keep exact unique lines
+- **WHEN** uniqueness is enabled and rendered lines contain exact duplicates plus values that differ by case or whitespace
+- **THEN** only later exact duplicates are removed while the first occurrence and all distinct values keep their original order and content
 
-#### Scenario: Preserve output while disabled
-- **WHEN** Remove empty lines is disabled
+#### Scenario: Combine line filters
+- **WHEN** both options are enabled and Template evaluation produces whitespace-only and duplicate nonempty lines across Employee batches
+- **THEN** whitespace-only lines are removed first and duplicate nonempty lines remain removed across every batch boundary
+
+#### Scenario: Preserve unprocessed output
+- **WHEN** both options are disabled
 - **THEN** preview, copied text, and downloaded text retain the existing rendered Template output byte for byte
 
-#### Scenario: Count the processed output
-- **WHEN** the option or Template Format changes, or All Units and First Unit produce different empty lines
-- **THEN** every visible Template count updates from the same processed line stream used by the corresponding output
+#### Scenario: Count processed output
+- **WHEN** either option or Template Format changes
+- **THEN** every visible Template count updates from the same processed output used by preview, Copy, and Download
 
-#### Scenario: Bound filtered preview work
-- **WHEN** Template export contains 20,000 Employees and Remove empty lines is enabled
-- **THEN** the application derives complete line counts without constructing the complete output for preview and still bounds displayed text to 50 source rows and 128 KiB
+#### Scenario: Bound processed preview work
+- **WHEN** Template export contains 20,000 Employees with either line option enabled
+- **THEN** complete counts are derived in linear work without constructing complete preview text and displayed output remains bounded to 50 processed lines and 128 KiB
 
 ### Requirement: Advanced custom fields retain their output structure
 Structured JSON SHALL export multi-option values as label arrays and Composite values as ordered arrays of typed objects named by their configured subfields. Template output SHALL render multi-option labels in stored order and Composite records as deterministic JSON text. Missing advanced values SHALL emit null in JSON and empty text in Template output.
@@ -274,3 +279,30 @@ applying explicit image settings independently. Plain `{email}` MUST paint as or
 #### Scenario: Paint email values
 - **WHEN** an exported format contains plain `{email}` and an explicit Markdown `mailto:` link
 - **THEN** both paint locally as text and only the explicit link receives inert link styling
+
+### Requirement: Editor PNG uses fixed high-quality local settings
+Scoped and full-View Editor Image export SHALL request 3x output for Copy and Save while retaining
+the 32-megapixel and 16,384-pixel side safety limits. Preview SHALL request the same density while
+retaining its 8-megapixel bound. Neither dialog SHALL expose density, output font, title, title size,
+or title alignment. Standard Unit and Employee content SHALL use the local system UI font while
+durable Text and Sticker elements retain their own stored typography. Transparent and gradient
+backgrounds SHALL remain available. Solid backgrounds SHALL use the shared local color dropdown
+with presets, organization-used colors, custom values, and alpha, and SHALL NOT expose a no-color
+choice.
+
+#### Scenario: Save at fixed density
+- **WHEN** a user copies or saves an image whose 3x dimensions fit the Canvas limits
+- **THEN** the PNG uses exactly 3x density without a density control
+
+#### Scenario: Clamp a large image
+- **WHEN** a 3x preview, Copy, or Save would exceed its pixel or side limit
+- **THEN** the renderer reduces effective density silently and still creates the bounded image
+
+#### Scenario: Use simplified image settings
+- **WHEN** either image dialog opens
+- **THEN** title and output-font controls are absent while padding, Unit radius, Employee format, background, preview, Copy, and Save remain available
+
+#### Scenario: Choose a solid organization color
+- **WHEN** a user selects a preset, already-used, custom, or alpha color from the shared background dropdown
+- **THEN** preview, Copy, and Save paint its resolved local Canvas color without a remote request
+

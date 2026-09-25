@@ -804,11 +804,10 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
   const dialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel("Font", { exact: true }).click();
-  await expect(page.getByRole("option")).toHaveCount(5);
-  await expect(page.getByRole("option", { name: "System", exact: true })).toBeVisible();
-  await expect(page.getByRole("option", { name: "Georgia", exact: true })).toBeVisible();
-  await page.getByRole("option", { name: "System", exact: true }).click();
+  await expect(dialog.getByLabel("Density", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByLabel("Font", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByLabel("Title", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Background color" })).toBeVisible();
   const preview = dialog.getByAltText("View export preview", { exact: true });
   await expect(preview).toBeVisible();
   await expect(dialog.locator('[data-demo-id="org-editor-view-image-dimensions"]')).toHaveCount(0);
@@ -837,8 +836,6 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const transformBeforeKeyboardPan = await preview.getAttribute("style");
   await previewViewport.press("ArrowRight");
   await expect.poll(() => preview.getAttribute("style")).not.toBe(transformBeforeKeyboardPan);
-  await dialog.locator('[data-demo-id="org-editor-view-image-density"]').click();
-  await page.getByRole("option", { name: "3×", exact: true }).click();
   await expect
     .poll(async () => Number(await previewViewport.getAttribute("data-preview-scale")))
     .toBeCloseTo(manualScale, 4);
@@ -880,11 +877,10 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   const unitDialog = page.locator('[data-demo-id="org-editor-export-dialog"]');
   await expect(unitDialog).toBeVisible();
   await unitDialog.getByRole("tab", { name: "Unit only", exact: true }).click();
-  await unitDialog.getByLabel("Font", { exact: true }).click();
-  await expect(page.getByRole("option")).toHaveCount(5);
-  await expect(page.getByRole("option", { name: "System", exact: true })).toBeVisible();
-  await expect(page.getByRole("option", { name: "Georgia", exact: true })).toBeVisible();
-  await page.getByRole("option", { name: "System", exact: true }).click();
+  await expect(unitDialog.getByLabel("Density", { exact: true })).toHaveCount(0);
+  await expect(unitDialog.getByLabel("Font", { exact: true })).toHaveCount(0);
+  await expect(unitDialog.getByLabel("Title", { exact: true })).toHaveCount(0);
+  await expect(unitDialog.getByRole("button", { name: "Background color" })).toBeVisible();
   const unitPreview = unitDialog.getByAltText("Unit export preview", { exact: true });
   await expect(unitPreview).toBeVisible();
   await expect
@@ -912,35 +908,26 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   });
   expect(scopedImage.hasArrow).toBe(true);
   expect(scopedImage.hasSticker).toBe(true);
-  expect(scopedImage.width / 2).toBeLessThan(fullViewLogicalWidth);
+  expect(scopedImage.width / 3).toBeLessThan(fullViewLogicalWidth);
   await unitDialog.getByRole("tab", { name: "Template", exact: true }).click();
   const unitTemplateFormat = unitDialog.getByLabel("Format", { exact: true });
-  await unitTemplateFormat.fill("{fullName}\n\n");
+  await unitTemplateFormat.fill("{fullName}\n{fullName}\n\n");
   const unitTemplatePreview = unitDialog.locator(
     '[data-demo-id="org-editor-export-template-preview"] pre',
   );
   await expect.poll(() => unitTemplatePreview.textContent()).toContain("\n\n");
-  const rowModeCounts = unitDialog.locator('[data-demo-id="export-row-mode"] .tabular-nums');
-  const countsBeforeFiltering = await rowModeCounts.allTextContents();
+  await unitDialog.getByRole("checkbox", { name: "Keep only unique values", exact: true }).click();
+  await expect.poll(() => unitTemplatePreview.textContent()).not.toMatch(/(.+)\n\1/u);
   await unitDialog.getByRole("checkbox", { name: "Remove empty lines", exact: true }).click();
   await expect.poll(() => unitTemplatePreview.textContent()).not.toContain("\n\n");
-  await expect
-    .poll(async () => {
-      const countsAfterFiltering = (await rowModeCounts.allTextContents()).map((value) =>
-        Number.parseInt(value, 10),
-      );
-      const previousCounts = countsBeforeFiltering.map((value) => Number.parseInt(value, 10));
-      return (
-        countsAfterFiltering.every((count, index) => count <= (previousCounts[index] ?? 0)) &&
-        countsAfterFiltering.some((count, index) => count < (previousCounts[index] ?? 0))
-      );
-    })
-    .toBe(true);
   const templateDownloadPromise = page.waitForEvent("download");
   await unitDialog.getByRole("button", { name: "Save", exact: true }).click();
   const templateDownload = await templateDownloadPromise;
   const templatePath = await templateDownload.path();
-  expect(await readFile(templatePath ?? "", "utf8")).not.toContain("\n\n");
+  const templateText = await readFile(templatePath ?? "", "utf8");
+  expect(templateText).not.toContain("\n\n");
+  const templateLines = templateText.split("\n");
+  expect(new Set(templateLines).size).toBe(templateLines.length);
   await page.keyboard.press("Escape");
 
   await createdText.click();

@@ -1515,8 +1515,7 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   >;
   expect(Object.keys(records[0] ?? {})).toEqual(["username", "tags", "units"]);
   await settings.getByRole("tab", { name: "Template", exact: true }).click();
-  await expect(settings.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
-  await expect(settings.getByText("All Employee Units", { exact: true })).toBeVisible();
+  await expect(settings.locator('[data-demo-id="export-row-mode"]')).toHaveCount(0);
   const formatInput = settings.getByLabel("Format", { exact: true });
   await expect(formatInput).toHaveAttribute("placeholder", "Type @ to add tokens");
   const formatHelp = settings.getByRole("button", {
@@ -1531,7 +1530,14 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   await expect(suggestions).toContainText("{fullName}");
   await formatInput.press("Enter");
   await expect(formatInput).toHaveValue("{fullName}");
-  await formatInput.fill("{fullName}\n\n");
+  await formatInput.fill("{fullName}\n{fullName}\n\n");
+  const keepUniqueLines = settings.getByRole("checkbox", {
+    name: "Keep only unique values",
+    exact: true,
+  });
+  await expect(keepUniqueLines).not.toBeChecked();
+  await keepUniqueLines.click();
+  await expect(keepUniqueLines).toBeChecked();
   const removeEmptyLines = settings.getByRole("checkbox", {
     name: "Remove empty lines",
     exact: true,
@@ -1544,7 +1550,10 @@ test("keeps JSON and Template as Download outputs while Import accepts JSON only
   const templateDownload = await templatePromise;
   expect(templateDownload.suggestedFilename()).toBe("org-tools-export.txt");
   const templatePath = await templateDownload.path();
-  expect(await readFile(templatePath ?? "", "utf8")).not.toContain("\n\n");
+  const templateText = await readFile(templatePath ?? "", "utf8");
+  expect(templateText).not.toContain("\n\n");
+  const templateLines = templateText.split("\n");
+  expect(new Set(templateLines).size).toBe(templateLines.length);
   await expect(settings.locator('[data-demo-id="export-actions"] > div')).toHaveCount(0);
 
   await settings.getByRole("button", { name: "Close", exact: true }).click();
@@ -3484,11 +3493,10 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await expect(
     exportDialog.getByRole("button", { name: "avatarBase64Url", exact: true }),
   ).toHaveCount(0);
-  for (const alignment of ["Left", "Center", "Right"]) {
-    const control = exportDialog.getByRole("tab", { name: alignment, exact: true });
-    await expect(control.locator("svg")).toHaveCount(1);
-    await expect(control).toHaveText("");
-  }
+  await expect(exportDialog.getByLabel("Density", { exact: true })).toHaveCount(0);
+  await expect(exportDialog.getByLabel("Font", { exact: true })).toHaveCount(0);
+  await expect(exportDialog.getByLabel("Title", { exact: true })).toHaveCount(0);
+  await expect(exportDialog.getByRole("button", { name: "Background color" })).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -3515,7 +3523,7 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   expect(records.length).toBeGreaterThan(0);
 
   await exportDialog.getByRole("tab", { name: "Template", exact: true }).click();
-  await expect(exportDialog.locator('[data-demo-id="export-row-mode"]')).toBeVisible();
+  await expect(exportDialog.locator('[data-demo-id="export-row-mode"]')).toHaveCount(0);
   await expect(exportDialog.getByText("Preview", { exact: true })).toHaveCount(0);
   const editorFormatInput = exportDialog.getByLabel("Format", { exact: true });
   await expect(editorFormatInput).toHaveAttribute("placeholder", "Type @ to add tokens");
@@ -3530,9 +3538,17 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   );
   await editorFormatInput.press("Enter");
   await expect(editorFormatInput).toHaveValue("{unitName}");
+  await editorFormatInput.fill("{unitName}\n{unitName}\n");
+  await exportDialog
+    .getByRole("checkbox", { name: "Keep only unique values", exact: true })
+    .click();
   const templatePromise = page.waitForEvent("download");
   await exportDialog.getByRole("button", { name: "Save", exact: true }).click();
-  expect((await templatePromise).suggestedFilename()).toBe("Product.txt");
+  const templateDownload = await templatePromise;
+  expect(templateDownload.suggestedFilename()).toBe("Product.txt");
+  const templatePath = await templateDownload.path();
+  const templateLines = (await readFile(templatePath ?? "", "utf8")).split("\n");
+  expect(new Set(templateLines).size).toBe(templateLines.length);
   await assertLocalRequests();
 });
 

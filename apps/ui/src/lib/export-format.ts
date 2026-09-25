@@ -8,7 +8,7 @@ import type {
 
 import { evaluateCustomEmployeeFields } from "@/lib/custom-employee-fields";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
-import { getEmployeeOrgUnitContexts, getTopOrgUnitContext } from "@/lib/employee-unit-contexts";
+import { getEmployeeOrgUnitContexts } from "@/lib/employee-unit-contexts";
 import { normalizeSearchValue } from "@/lib/search-index";
 import {
   formatTemplateTextValue,
@@ -31,7 +31,6 @@ import type {
   ExportJsonTagFieldKey,
   ExportJsonTopLevelFieldKey,
   ExportJsonUnitFieldKey,
-  ExportRowMode,
   ExportTabMode,
   ExportUnitFieldKey,
 } from "@/stores/org-store";
@@ -90,23 +89,6 @@ export type ExportFieldNameValidation = {
   errors: ExportFieldNameError[];
   isValid: boolean;
 };
-
-export const exportRowModeOptions: Array<{
-  description: string;
-  title: string;
-  value: ExportRowMode;
-}> = [
-  {
-    description: "Creates one record for every Unit assigned to an Employee.",
-    title: "All Employee Units",
-    value: "allUnits",
-  },
-  {
-    description: "Creates one record per Employee using the highest Unit in the tree.",
-    title: "First Unit",
-    value: "firstUnit",
-  },
-];
 
 export const uniqueByEmployeeId = (employees: Employee[]) => {
   const employeesById = new Map<EmployeeId, Employee>();
@@ -217,43 +199,16 @@ const createEmployeeFallbackRow = (employee: Employee): ExportRow => ({
 export const buildEmployeeExportRows = ({
   employee,
   isDirectlySelected,
-  mode,
   unitContexts,
-  unitOrderById,
 }: {
   employee: Employee;
   isDirectlySelected: boolean;
-  mode: ExportRowMode;
   unitContexts: EmployeeUnitContext[];
-  unitOrderById: Map<UnitId, number>;
 }) => {
   const contexts = getEmployeeOrgUnitContexts(unitContexts);
-  if (mode === "allUnits") {
-    const rows = contexts.map((context) => createUnitRow(employee, context));
-    if (rows.length === 0 && isDirectlySelected) rows.push(createEmployeeFallbackRow(employee));
-    return rows;
-  }
-  const topContext = getTopOrgUnitContext(unitContexts, unitOrderById);
-  if (topContext) return [createUnitRow(employee, topContext)];
-  return isDirectlySelected ? [createEmployeeFallbackRow(employee)] : [];
-};
-
-export const countEmployeeExportRows = ({
-  isDirectlySelected,
-  mode,
-  unitContexts,
-  unitOrderById,
-}: {
-  isDirectlySelected: boolean;
-  mode: ExportRowMode;
-  unitContexts: EmployeeUnitContext[];
-  unitOrderById: Map<UnitId, number>;
-}) => {
-  if (mode === "allUnits") {
-    const count = getEmployeeOrgUnitContexts(unitContexts).length;
-    return count === 0 && isDirectlySelected ? 1 : count;
-  }
-  return getTopOrgUnitContext(unitContexts, unitOrderById) || isDirectlySelected ? 1 : 0;
+  const rows = contexts.map((context) => createUnitRow(employee, context));
+  if (rows.length === 0 && isDirectlySelected) rows.push(createEmployeeFallbackRow(employee));
+  return rows;
 };
 
 export const getExportEmployeeFieldValue = (
@@ -445,24 +400,14 @@ const createTemplateRowText = (
   });
 };
 
-export const filterTemplateEmptyLines = (text: string, removeEmptyLines: boolean) => {
-  if (!removeEmptyLines) return text;
-  return text
-    .split(/\r\n?|\n/u)
-    .filter((line) => line.trim().length > 0)
-    .join("\n");
+export type TemplateLineProcessingOptions = {
+  keepUniqueLines?: boolean;
+  removeEmptyLines?: boolean;
 };
 
-const countTemplateLineFragments = (fragments: Iterable<string>, removeEmptyLines: boolean) => {
-  let count = 0;
-  let hasCharacters = false;
-  let hasNonWhitespace = false;
+function* iterateTemplateLines(fragments: Iterable<string>) {
+  let line = "";
   let previousWasCarriageReturn = false;
-  const finishLine = () => {
-    if (!removeEmptyLines || hasNonWhitespace) count += 1;
-    hasCharacters = false;
-    hasNonWhitespace = false;
-  };
 
   for (const fragment of fragments) {
     for (const character of fragment) {
@@ -471,20 +416,58 @@ const countTemplateLineFragments = (fragments: Iterable<string>, removeEmptyLine
         if (character === "\n") continue;
       }
       if (character === "\r") {
-        finishLine();
+        yield line;
+        line = "";
         previousWasCarriageReturn = true;
         continue;
       }
       if (character === "\n") {
-        finishLine();
+        yield line;
+        line = "";
         continue;
       }
-      hasCharacters = true;
-      if (!/\s/u.test(character)) hasNonWhitespace = true;
+      line += character;
     }
   }
-  if (hasCharacters) finishLine();
-  return count;
+  if (line.length > 0) yield line;
+}
+
+const processTemplateLineFragments = (
+  fragments: Iterable<string>,
+  { keepUniqueLines = false, removeEmptyLines = false }: TemplateLineProcessingOptions,
+  maxCollectedLines = Number.POSITIVE_INFINITY,
+) => {
+  const collected: string[] = [];
+  const seen = keepUniqueLines ? new Set<string>() : null;
+  let count = 0;
+
+  for (const line of iterateTemplateLines(fragments)) {
+    if (removeEmptyLines && line.trim().length === 0) continue;
+    if (seen?.has(line)) continue;
+    seen?.add(line);
+    count += 1;
+    if (collected.length < maxCollectedLines) collected.push(line);
+  }
+
+  return { count, text: collected.join("\n") };
+};
+
+export const processTemplateTextLines = (text: string, options: TemplateLineProcessingOptions) => {
+  if (!options.keepUniqueLines && !options.removeEmptyLines) return text;
+  return processTemplateLineFragments([text], options).text;
+};
+
+export const filterTemplateEmptyLines = (text: string, removeEmptyLines: boolean) =>
+  processTemplateTextLines(text, { removeEmptyLines });
+
+const renderTemplateRows = function* (
+  rows: Iterable<ExportRow>,
+  templateFormat: string,
+  customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[],
+) {
+  for (const row of rows) {
+    yield createTemplateRowText(row, templateFormat, customEmployeeFieldDefinitions);
+  }
 };
 
 export const countTemplateOutputLines = (
@@ -492,39 +475,38 @@ export const countTemplateOutputLines = (
   templateFormat: string,
   customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
   removeEmptyLines = false,
+  keepUniqueLines = false,
 ) =>
-  countTemplateLineFragments(
-    (function* renderRows() {
-      for (const row of rows) {
-        yield createTemplateRowText(row, templateFormat, customEmployeeFieldDefinitions);
-      }
-    })(),
-    removeEmptyLines,
-  );
+  processTemplateLineFragments(
+    renderTemplateRows(rows, templateFormat, customEmployeeFieldDefinitions),
+    { keepUniqueLines, removeEmptyLines },
+    0,
+  ).count;
 
 export const createTemplateText = (
   rows: ExportRow[],
   templateFormat: string,
   customEmployeeFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
   removeEmptyLines = false,
-) =>
-  filterTemplateEmptyLines(
-    rows
-      .map((row) => createTemplateRowText(row, templateFormat, customEmployeeFieldDefinitions))
-      .join(""),
-    removeEmptyLines,
-  );
+  keepUniqueLines = false,
+) => {
+  const fragments = renderTemplateRows(rows, templateFormat, customEmployeeFieldDefinitions);
+  if (!removeEmptyLines && !keepUniqueLines) return [...fragments].join("");
+  return processTemplateLineFragments(fragments, { keepUniqueLines, removeEmptyLines }).text;
+};
 
 export const createExportText = ({
   rows,
   tabMode,
   templateFormat,
+  keepUniqueLines = false,
   removeEmptyLines = false,
   ...jsonOptions
 }: StructuredJsonExportOptions & {
   rows: ExportRow[];
   tabMode: ExportTabMode;
   templateFormat: string;
+  keepUniqueLines?: boolean;
   removeEmptyLines?: boolean;
 }) =>
   tabMode === "json"
@@ -534,6 +516,7 @@ export const createExportText = ({
         templateFormat,
         jsonOptions.customEmployeeFieldDefinitions,
         removeEmptyLines,
+        keepUniqueLines,
       );
 
 const yieldForExportWork = () =>
@@ -549,12 +532,14 @@ export const createExportTextAsync = async ({
   rows,
   tabMode,
   templateFormat,
+  keepUniqueLines = false,
   removeEmptyLines = false,
   ...jsonOptions
 }: StructuredJsonExportOptions & {
   rows: ExportRow[];
   tabMode: ExportTabMode;
   templateFormat: string;
+  keepUniqueLines?: boolean;
   removeEmptyLines?: boolean;
 }) => {
   const batchSize = 500;
@@ -582,7 +567,7 @@ export const createExportTextAsync = async ({
     );
     if (index + batchSize < rows.length) await yieldForExportWork();
   }
-  return filterTemplateEmptyLines(parts.join(""), removeEmptyLines);
+  return processTemplateTextLines(parts.join(""), { keepUniqueLines, removeEmptyLines });
 };
 
 const truncateUtf8 = (text: string, maxBytes: number) => {
@@ -601,15 +586,32 @@ export const createExportPreview = ({
   rows,
   tabMode,
   templateFormat,
+  keepUniqueLines = false,
   removeEmptyLines = false,
   ...jsonOptions
 }: StructuredJsonExportOptions & {
   rows: ExportRow[];
   tabMode: ExportTabMode;
   templateFormat: string;
+  keepUniqueLines?: boolean;
   removeEmptyLines?: boolean;
 }) => {
   const groupedRows = tabMode === "json" ? rowsByEmployee(rows) : null;
+  if (!groupedRows && (removeEmptyLines || keepUniqueLines)) {
+    const processed = processTemplateLineFragments(
+      renderTemplateRows(rows, templateFormat, jsonOptions.customEmployeeFieldDefinitions ?? []),
+      { keepUniqueLines, removeEmptyLines },
+      EXPORT_PREVIEW_MAX_RECORDS,
+    );
+    const bounded = truncateUtf8(processed.text, EXPORT_PREVIEW_MAX_BYTES);
+    const shownCount = Math.min(processed.count, EXPORT_PREVIEW_MAX_RECORDS);
+    return {
+      fullCount: processed.count,
+      shownCount,
+      text: bounded.text,
+      truncated: bounded.truncated || processed.count > shownCount,
+    };
+  }
   const limitedRows = groupedRows
     ? groupedRows.slice(0, EXPORT_PREVIEW_MAX_RECORDS).flat()
     : rows.slice(0, EXPORT_PREVIEW_MAX_RECORDS);
@@ -620,6 +622,7 @@ export const createExportPreview = ({
         templateFormat,
         jsonOptions.customEmployeeFieldDefinitions,
         removeEmptyLines,
+        keepUniqueLines,
       );
   const shownCount = groupedRows
     ? rowsByEmployee(limitedRows).length
@@ -628,9 +631,11 @@ export const createExportPreview = ({
         templateFormat,
         jsonOptions.customEmployeeFieldDefinitions,
         removeEmptyLines,
+        keepUniqueLines,
       );
   const text = createExportText({
     ...jsonOptions,
+    keepUniqueLines,
     removeEmptyLines,
     rows: limitedRows,
     tabMode,

@@ -35,8 +35,10 @@ import {
   getOrgEditorExportFontRequests,
   getOrgEditorExportOpenPositionRowBackground,
   getOrgEditorExportOpenPositionRowOutline,
+  getOrgEditorImageSolidBackgroundColor,
+  ORG_EDITOR_EXPORT_DENSITY,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
-  ORG_EDITOR_EXPORT_FONTS,
+  ORG_EDITOR_EXPORT_FONT_FAMILY,
   ORG_EDITOR_EXPORT_GRADIENTS,
   ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE,
 } from "@/lib/org-editor-export";
@@ -128,18 +130,15 @@ describe("Org Editor image export", () => {
   });
 
   test("uses English defaults and filesystem-safe Unit names", () => {
-    expect(createDefaultOrgEditorImageExportSettings()).toMatchObject({
+    expect(createDefaultOrgEditorImageExportSettings()).toEqual({
+      background: { type: "transparent" },
+      employeeFormat: expect.any(String),
       employeeLineGap: 4,
-      fontFamily: "system-ui",
+      padding: 20,
       unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
     });
-    expect(ORG_EDITOR_EXPORT_FONTS).toEqual([
-      { family: "system-ui", label: "System" },
-      { family: "Georgia", label: "Georgia" },
-      { family: "Bebas Neue", label: "Bebas Neue" },
-      { family: "Lobster", label: "Lobster" },
-      { family: "Montserrat", label: "Montserrat" },
-    ]);
+    expect(ORG_EDITOR_EXPORT_DENSITY).toBe(3);
+    expect(ORG_EDITOR_EXPORT_FONT_FAMILY).toBe("system-ui");
     expect(createDefaultOrgEditorImageExportSettings("{email}", 8)).toMatchObject({
       employeeFormat: "{email}",
       employeeLineGap: 8,
@@ -212,6 +211,12 @@ describe("Org Editor image export", () => {
     });
   });
 
+  test("resolves preset, custom, and alpha image backgrounds through the shared palette", () => {
+    expect(getOrgEditorImageSolidBackgroundColor("blue")).toMatch(/^#[0-9a-f]{6}$/u);
+    expect(getOrgEditorImageSolidBackgroundColor("#7c3aed")).toBe("#7c3aed");
+    expect(getOrgEditorImageSolidBackgroundColor("#7c3aed66")).toBe("#7c3aed66");
+  });
+
   test("waits for every base and inline Text and Sticker font used by PNG", () => {
     const text = {
       ...createOrgEditorTextElement({ x: 0, y: 0 }),
@@ -252,16 +257,14 @@ describe("Org Editor image export", () => {
     };
     const requests = getOrgEditorExportFontRequests({
       canvasElements: [text, sticker],
-      fontFamily: "Montserrat",
-      titleFontSize: 28,
     });
     expect(requests).toContain('400 24px "Bebas Neue", Impact, sans-serif');
     expect(requests).toContain("700 31px Lobster, Georgia, serif");
     expect(requests).toContain('400 27px Georgia, "Times New Roman", serif');
-    expect(requests.some((request) => request.includes("Montserrat"))).toBe(true);
+    expect(requests.some((request) => request.includes("system-ui"))).toBe(true);
     expect(
       requests.some(
-        (request) => request.startsWith("italic 600 12px") && request.includes("Montserrat"),
+        (request) => request.startsWith("italic 600 12px") && request.includes("system-ui"),
       ),
     ).toBe(true);
   });
@@ -504,14 +507,12 @@ describe("Org Editor structured export scope", () => {
 
     const unitRows = buildOrgEditorExportRows({
       rootUnit: root,
-      rowMode: "allUnits",
       scope: "unit",
       sourceIndex,
       units: [root, child],
     });
     const subtreeRows = buildOrgEditorExportRows({
       rootUnit: root,
-      rowMode: "allUnits",
       scope: "subtree",
       sourceIndex,
       units: [root, child],
