@@ -25,7 +25,6 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -245,14 +244,11 @@ export function OrgEditorViewImageExportDialog({
       >
         <DialogHeader>
           <DialogTitle>{t("Export View image")}</DialogTitle>
-          <DialogDescription>
-            {t("Export the complete View with Units and canvas elements.")}
-          </DialogDescription>
         </DialogHeader>
-        <DialogBody className="grid min-h-0 flex-1 gap-5 overflow-y-auto lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
+        <DialogBody className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
           <OrgEditorImagePreview
             alt={t("View export preview")}
-            className="min-h-72 lg:min-h-0"
+            className="h-[360px] shrink-0"
             dataDemoId="org-editor-view-image-preview"
             {...(hasContent
               ? {}
@@ -264,7 +260,7 @@ export function OrgEditorViewImageExportDialog({
             src={previewError ? null : previewUrl}
             width={previewSize.width}
           />
-          <section className="grid content-start gap-4">
+          <section className="grid gap-4 py-2" data-demo-id="org-editor-view-image-settings">
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>{t("Padding")}</Label>

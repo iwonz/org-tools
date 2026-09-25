@@ -623,7 +623,6 @@
     "Canvas text can contain at most 64 KiB.": "Le texte du canevas est limité à 64 Kio.",
     "Canvas attachments cannot form a cycle.": "Les ancrages du canevas ne peuvent pas former de cycle.",
     "Density": "Densité",
-    "Export the complete View with Units and canvas elements.": "Exportez la Vue complète avec les Équipes et les éléments du canevas.",
     "View export preview": "Aperçu de l’export de la Vue",
     "Background color": "Couleur d’arrière-plan",
     "Mixed": "Valeurs mixtes",

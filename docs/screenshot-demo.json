@@ -509,7 +509,7 @@
     "featured": false,
     "title": "Editor image detail settings",
     "file": "feature-editor-image-settings.png",
-    "description": "Choose a transparent, gradient, preset, used, or custom solid background with opacity and configure spacing plus @-assisted conditional Employee content beside a navigable fixed-3x preview.",
+    "description": "Navigate the fixed-3x complete View preview, then choose a transparent, gradient, preset, used, or custom solid background with opacity and configure spacing plus @-assisted conditional Employee content in the full-width settings block below it.",
     "capabilities": [
       "Fixed 3x and silent clamping",
       "Shared color picker",

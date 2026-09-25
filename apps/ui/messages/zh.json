@@ -623,7 +623,6 @@
     "Canvas text can contain at most 64 KiB.": "画布文本最多可占 64 KiB。",
     "Canvas attachments cannot form a cycle.": "画布附加关系不能形成循环。",
     "Density": "密度",
-    "Export the complete View with Units and canvas elements.": "导出包含团队和画布元素的完整视图。",
     "View export preview": "视图导出预览",
     "Background color": "背景颜色",
     "Mixed": "混合值",

@@ -623,7 +623,6 @@
     "Canvas text can contain at most 64 KiB.": "يمكن أن يصل نص اللوحة إلى 64 كيبيبايت.",
     "Canvas attachments cannot form a cycle.": "لا يمكن أن تكوّن مرفقات اللوحة دورة.",
     "Density": "الكثافة",
-    "Export the complete View with Units and canvas elements.": "صدّر العرض كاملاً مع الفرق وعناصر اللوحة.",
     "View export preview": "معاينة تصدير العرض",
     "Background color": "لون الخلفية",
     "Mixed": "قيم مختلطة",

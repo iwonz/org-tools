@@ -804,6 +804,9 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
   const dialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
   await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByText("Export the complete View with Units and canvas elements.", { exact: true }),
+  ).toHaveCount(0);
   await expect(dialog.getByLabel("Density", { exact: true })).toHaveCount(0);
   await expect(dialog.getByLabel("Font", { exact: true })).toHaveCount(0);
   await expect(dialog.getByLabel("Title", { exact: true })).toHaveCount(0);
@@ -812,6 +815,15 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(preview).toBeVisible();
   await expect(dialog.locator('[data-demo-id="org-editor-view-image-dimensions"]')).toHaveCount(0);
   const previewViewport = dialog.locator('[data-demo-id="org-editor-view-image-preview"]');
+  const settings = dialog.locator('[data-demo-id="org-editor-view-image-settings"]');
+  const [initialPreviewBox, settingsBox] = await Promise.all([
+    previewViewport.boundingBox(),
+    settings.boundingBox(),
+  ]);
+  if (!initialPreviewBox || !settingsBox) {
+    throw new Error("View image export layout geometry is unavailable.");
+  }
+  expect(settingsBox.y).toBeGreaterThanOrEqual(initialPreviewBox.y + initialPreviewBox.height);
   await expect(previewViewport).toHaveAttribute("data-preview-mode", "fit");
   const fittedScale = Number(await previewViewport.getAttribute("data-preview-scale"));
   await previewViewport.hover();
@@ -834,7 +846,7 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await page.mouse.up();
   await expect.poll(() => preview.getAttribute("style")).not.toBe(transformBeforePan);
   const transformBeforeKeyboardPan = await preview.getAttribute("style");
-  await previewViewport.press("ArrowRight");
+  await previewViewport.press("ArrowDown");
   await expect.poll(() => preview.getAttribute("style")).not.toBe(transformBeforeKeyboardPan);
   await expect
     .poll(async () => Number(await previewViewport.getAttribute("data-preview-scale")))

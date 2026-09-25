@@ -453,8 +453,9 @@ Capabilities: JSON, Drag-and-drop order, Scoped Employees, Scoped assignments, U
 
 [![Editor image detail settings](screenshots/feature-editor-image-settings.png)](screenshots/feature-editor-image-settings.png)
 
-Choose a transparent, gradient, preset, used, or custom solid background with opacity; configure
-spacing and `@`-assisted conditional Employee card content beside the complete View preview.
+Navigate the complete View preview first, then choose a transparent, gradient, preset, used, or
+custom solid background with opacity and configure spacing plus `@`-assisted conditional Employee
+card content in the full-width settings block below it.
 Employee rows use the saved Editor-export line spacing and output requests 3× automatically.
 
 Capabilities: Fixed 3× and silent clamping, Fit/manual preview, Shared color picker, Gradients and

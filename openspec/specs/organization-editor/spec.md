@@ -997,7 +997,8 @@ request required by durable canvas elements. Text and Sticker rich glyph fragmen
 manual fitting, effective scale, block/per-line fills, alignment, rotation, layers, attachments,
 and normalized Arrow curves SHALL match the live canvas. Preview navigation, safety limits,
 supported settings, Employee formatting, action icons, scope, and transient-chrome exclusions SHALL
-remain consistent across both dialogs.
+remain consistent across both dialogs. The full-View dialog SHALL place its complete preview before
+one full-width settings section at every responsive breakpoint and SHALL omit a descriptive subtitle.
 
 #### Scenario: Use the standard structure font
 - **WHEN** full-View or Unit/subtree Image output contains standard Unit and Employee content
@@ -1022,6 +1023,10 @@ remain consistent across both dialogs.
 #### Scenario: Preserve image workflows
 - **WHEN** preview, zoom, pan, Fit, Copy, Save, density clamping, or Unit/subtree scope is used
 - **THEN** the bounded local behavior remains available and transient interaction chrome stays out of the PNG
+
+#### Scenario: Stack full-View image settings
+- **WHEN** the full-View image export dialog opens at any supported viewport width
+- **THEN** the complete preview appears above all image settings in one vertical flow and the header contains no explanatory subtitle
 
 ### Requirement: Scoped Editor PNG includes related annotations
 Unit-only and subtree Image export SHALL include the selected Unit closure plus rectangular elements

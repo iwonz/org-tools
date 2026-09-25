@@ -240,8 +240,8 @@ control.
   disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
   JSON, or Template output. Editor Image exports preserve its stable row tones without selection,
   placement lines, or endpoint markers. The dedicated View Image dialog previews the entire durable
-  scene and offers the same background picker, padding, Unit radius, Employee format, Copy, and
-  Save controls. Solid backgrounds use the shared preset, used, and custom color picker with
+  scene in a preview-first vertical dialog, with the background picker, padding, Unit radius, and
+  Employee format arranged below it before the Copy and Save controls. Solid backgrounds use the shared preset, used, and custom color picker with
   opacity. Its Employee rows use the saved Editor-export line spacing and standard structure text
   uses the system UI font; Text and Sticker elements retain their own typography.
   Full-View and Unit/subtree previews begin fitted and support pointer-centered wheel zoom,

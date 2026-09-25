@@ -623,7 +623,6 @@
     "Canvas text can contain at most 64 KiB.": "Текст на холсте может занимать не более 64 КиБ.",
     "Canvas attachments cannot form a cycle.": "Привязки элементов холста не могут образовывать цикл.",
     "Density": "Плотность",
-    "Export the complete View with Units and canvas elements.": "Экспорт всего Представления с Командами и элементами холста.",
     "View export preview": "Предпросмотр экспорта Представления",
     "Background color": "Цвет фона",
     "Mixed": "Смешанные значения",

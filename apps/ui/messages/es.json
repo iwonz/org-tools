@@ -623,7 +623,6 @@
     "Canvas text can contain at most 64 KiB.": "El texto del lienzo puede ocupar hasta 64 KiB.",
     "Canvas attachments cannot form a cycle.": "Los anclajes del lienzo no pueden formar un ciclo.",
     "Density": "Densidad",
-    "Export the complete View with Units and canvas elements.": "Exporta la Vista completa con Equipos y elementos del lienzo.",
     "View export preview": "Vista previa de exportación",
     "Background color": "Color de fondo",
     "Mixed": "Valores mixtos",

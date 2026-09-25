@@ -623,7 +623,6 @@
     "Canvas text can contain at most 64 KiB.": "Canvas text can contain at most 64 KiB.",
     "Canvas attachments cannot form a cycle.": "Canvas attachments cannot form a cycle.",
     "Density": "Density",
-    "Export the complete View with Units and canvas elements.": "Export the complete View with Units and canvas elements.",
     "View export preview": "View export preview",
     "Background color": "Background color",
     "Mixed": "Mixed",

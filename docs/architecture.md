@@ -315,7 +315,8 @@ request IDs remain independent.
   surfaces and full-View Image Employee format use one multiline Format input whose caret menu
   converts `@query` into existing `{token}` syntax. A small help affordance and the placeholder
   disclose the shortcut; help also documents the existing `{condition ? 'value' : 'fallback'}`
-  expression. Tooltip, query, suggestion, and empty-line option state are transient.
+  expression. The full-View Image dialog keeps its preview above one full-width settings block at
+  every breakpoint. Tooltip, query, suggestion, and empty-line option state are transient.
 
 Org Editor DOM and PNG output share a pure scene layer for persistent canvas-element geometry,
 attachment resolution, text wrapping, rotated bounds, cubic extrema, and two-plane ordering. Full

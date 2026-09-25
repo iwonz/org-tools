@@ -328,6 +328,10 @@ Units, Employees, Editor, Analytics, Calendar, and Download frames.
 - **WHEN** the 59-frame gallery is generated twice from unchanged source and fixed fixtures
 - **THEN** every PNG hash is identical and every owned page has no unexpected console or network diagnostic
 
+#### Scenario: Full-View image settings frame
+- **WHEN** the full-View image export gallery frame is captured
+- **THEN** it shows the preview above the uncompressed settings and no redundant explanatory subtitle
+
 ### Requirement: Localization validation covers every supported catalog
 Automated checks SHALL validate exact keys, placeholders, non-empty translations, allowed technical
 tokens, browser detection, writing direction, and representative visible and accessibility surfaces
