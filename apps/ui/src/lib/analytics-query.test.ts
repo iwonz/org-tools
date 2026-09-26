@@ -5,12 +5,7 @@ import type {
 } from "@org-tools/types";
 import { describe, expect, test } from "vitest";
 
-import {
-  cloneAnalyticsDashboard,
-  createAnalyticsDashboard,
-  createAnalyticsPanel,
-  createAnalyticsWidget,
-} from "@/lib/analytics-dashboard";
+import { createAnalyticsFilter, createAnalyticsWidget } from "@/lib/analytics-dashboard";
 import {
   type AnalyticsRow,
   buildAnalyticsRows,
@@ -288,53 +283,31 @@ describe("Analytics query engine", () => {
     expect(result.rows.every((row) => row.measures[uuid(130)] === 5)).toBe(true);
   });
 
-  test("clones every UUID and rewrites filter targets", () => {
-    const dashboard = createAnalyticsDashboard("Source");
-    const panel = createAnalyticsPanel("Panel", "Tab");
+  test("removes stale filter targets and durable UI references atomically", () => {
     const target = { ...createAnalyticsWidget("kpi", uuid(100), "KPI"), id: uuid(110) };
     const filter = {
-      ...createAnalyticsWidget("filter", uuid(100), "Filter"),
+      ...createAnalyticsFilter(uuid(100), "Filter"),
       id: uuid(111),
-      targetWidgetIds: [target.id],
-    } as AnalyticsWidget;
-    panel.tabs[0]?.widgets.push(target, filter);
-    dashboard.panels.push(panel);
-    const copy = cloneAnalyticsDashboard(dashboard, "Copy");
-    const copiedWidgets = copy.panels[0]?.tabs[0]?.widgets ?? [];
-    expect(copy.id).not.toBe(dashboard.id);
-    expect(copy.panels[0]?.id).not.toBe(panel.id);
-    expect(copiedWidgets[0]?.id).not.toBe(target.id);
-    expect(copiedWidgets[0]?.query.measures[0]?.id).not.toBe(target.query.measures[0]?.id);
-    expect(copiedWidgets[1]?.type === "filter" ? copiedWidgets[1].targetWidgetIds : null).toEqual([
-      copiedWidgets[0]?.id,
-    ]);
-  });
-
-  test("removes stale filter targets and durable UI references atomically", () => {
-    const dashboard = createAnalyticsDashboard("Dashboard");
-    const panel = createAnalyticsPanel("Panel", "Tab");
-    const filter = {
-      ...createAnalyticsWidget("filter", uuid(100), "Filter"),
-      targetWidgetIds: [uuid(999)],
-    } as AnalyticsWidget;
-    panel.tabs[0]?.widgets.push(filter);
-    dashboard.panels.push(panel);
-    const definitions = reconcileAnalyticsDefinitions([dashboard]);
+      targetWidgetIds: [target.id, uuid(999)],
+    };
+    const definitions = reconcileAnalyticsDefinitions({
+      filters: [filter],
+      tabs: [],
+      widgets: [target],
+    });
     const ui = reconcileAnalyticsUi(definitions, {
-      activeDashboardId: uuid(999),
-      activeTabIdsByPanelId: { [uuid(999)]: uuid(998) },
+      activeTabId: uuid(998),
       drilldown: {
         employeeIds: [uuid(1)],
         filters: createEmptyEmployeeFiltersState(),
         query: "Alex",
         sourceWidgetId: uuid(999),
       },
-      filterValuesByWidgetId: { [uuid(999)]: createEmptyAnalyticsFilterValue() },
+      filterValuesByFilterId: { [uuid(999)]: createEmptyAnalyticsFilterValue() },
     });
-    const currentFilter = definitions[0]?.panels[0]?.tabs[0]?.widgets[0];
-    expect(currentFilter?.type === "filter" ? currentFilter.targetWidgetIds : null).toEqual([]);
-    expect(ui.activeDashboardId).toBe(dashboard.id);
-    expect(ui.filterValuesByWidgetId).toEqual({});
+    expect(definitions.filters[0]?.targetWidgetIds).toEqual([target.id]);
+    expect(ui.activeTabId).toBeNull();
+    expect(ui.filterValuesByFilterId).toEqual({});
     expect(ui.drilldown.sourceWidgetId).toBeNull();
     expect(ui.drilldown.employeeIds).toEqual([]);
   });

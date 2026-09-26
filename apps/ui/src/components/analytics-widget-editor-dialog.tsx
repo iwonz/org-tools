@@ -36,12 +36,10 @@ const widgetTypes: AnalyticsWidget["type"][] = [
   "line",
   "pie",
   "gauge",
-  "filter",
 ];
 
 const typeLabels = {
   bar: "Bar chart",
-  filter: "Filter widget",
   gauge: "Gauge",
   kpi: "KPI counter",
   line: "Line or area chart",
@@ -180,6 +178,7 @@ const convertWidgetType = (
     id: widget.id,
     presentation: structuredClone(widget.presentation),
     query: structuredClone(widget.query),
+    tabId: widget.tabId,
     title: widget.title,
     viewId: widget.viewId,
     width: widget.width,
@@ -193,7 +192,6 @@ export function AnalyticsWidgetEditorDialog({
   open,
   views,
   widget,
-  widgets,
 }: {
   definitions: CustomEmployeeFieldDefinition[];
   onOpenChange: (open: boolean) => void;
@@ -201,7 +199,6 @@ export function AnalyticsWidgetEditorDialog({
   open: boolean;
   views: { id: string; kind: "custom" | "system"; name: string | null }[];
   widget: AnalyticsWidget;
-  widgets: AnalyticsWidget[];
 }) {
   const t = useUiText();
   const [draft, setDraft] = useState(() => structuredClone(widget));
@@ -362,392 +359,220 @@ export function AnalyticsWidgetEditorDialog({
             </div>
           </div>
 
-          {draft.type === "filter" ? (
-            <section className="grid gap-4 rounded-lg border p-4">
-              <div className="grid gap-2">
-                <Label>{t("Filter")}</Label>
-                <SelectField
-                  onChange={(field) =>
-                    setDraft((current) =>
-                      current.type === "filter" ? { ...current, field } : current,
-                    )
-                  }
-                  value={draft.field}
-                >
-                  {fields.map((field) => (
-                    <option key={field.id} value={field.id}>
-                      {fieldLabel(field.label)}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-              <div className="grid gap-2">
-                <Label>{t("Type")}</Label>
-                <SelectField
-                  onChange={(control) =>
-                    setDraft((current) =>
-                      current.type === "filter"
-                        ? { ...current, control: control as typeof current.control }
-                        : current,
-                    )
-                  }
-                  value={draft.control}
-                >
-                  <option value="select">{t("Select")}</option>
-                  <option value="multiSelect">{t("Multi-select")}</option>
-                  <option value="search">{t("Search")}</option>
-                  <option value="dateRange">{t("Date range")}</option>
-                </SelectField>
-              </div>
-              <div className="grid gap-2">
-                <Label>{t("Default value")}</Label>
-                {draft.control === "dateRange" ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      onChange={(event) =>
-                        setDraft((current) =>
-                          current.type === "filter"
+          <section className="grid gap-3 rounded-lg border p-4">
+            <Label>{t("Dimension")}</Label>
+            <select
+              className="min-h-32 rounded-md border bg-background p-2 text-sm"
+              multiple
+              onChange={(event) =>
+                updateQuery({
+                  dimensions: [...event.currentTarget.selectedOptions].map((option) => ({
+                    dateGrouping:
+                      draft.query.dimensions.find((dimension) => dimension.field === option.value)
+                        ?.dateGrouping ?? null,
+                    field: option.value,
+                  })),
+                })
+              }
+              value={draft.query.dimensions.map((dimension) => dimension.field)}
+            >
+              {fields.map((field) => (
+                <option key={field.id} value={field.id}>
+                  {fieldLabel(field.label)}
+                </option>
+              ))}
+            </select>
+            {draft.query.dimensions.map((dimension, index) =>
+              fields.find((field) => field.id === dimension.field)?.kind === "date" ? (
+                <div className="grid gap-2 sm:grid-cols-2" key={dimension.field}>
+                  <span className="self-center text-sm">
+                    {fieldLabel(
+                      fields.find((field) => field.id === dimension.field)?.label ??
+                        dimension.field,
+                    )}
+                  </span>
+                  <SelectField
+                    onChange={(dateGrouping) =>
+                      updateQuery({
+                        dimensions: draft.query.dimensions.map((current, currentIndex) =>
+                          currentIndex === index
                             ? {
                                 ...current,
-                                defaultValue: {
-                                  ...current.defaultValue,
-                                  from: event.target.value || null,
-                                },
+                                dateGrouping: dateGrouping
+                                  ? (dateGrouping as typeof current.dateGrouping)
+                                  : null,
                               }
                             : current,
-                        )
-                      }
-                      type="date"
-                      value={
-                        typeof draft.defaultValue.from === "string" ? draft.defaultValue.from : ""
-                      }
-                    />
-                    <Input
-                      onChange={(event) =>
-                        setDraft((current) =>
-                          current.type === "filter"
-                            ? {
-                                ...current,
-                                defaultValue: {
-                                  ...current.defaultValue,
-                                  to: event.target.value || null,
-                                },
-                              }
-                            : current,
-                        )
-                      }
-                      type="date"
-                      value={typeof draft.defaultValue.to === "string" ? draft.defaultValue.to : ""}
-                    />
-                  </div>
-                ) : (
-                  <Input
-                    onChange={(event) =>
-                      setDraft((current) =>
-                        current.type === "filter"
-                          ? {
-                              ...current,
-                              defaultValue:
-                                current.control === "search"
-                                  ? { ...current.defaultValue, search: event.target.value }
-                                  : {
-                                      ...current.defaultValue,
-                                      values: event.target.value
-                                        ? event.target.value.split(",").map((value) => value.trim())
-                                        : [],
-                                    },
-                            }
-                          : current,
-                      )
+                        ),
+                      })
                     }
-                    value={
-                      draft.control === "search"
-                        ? draft.defaultValue.search
-                        : draft.defaultValue.values.join(", ")
-                    }
-                  />
-                )}
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  checked={draft.defaultValue.includeEmpty}
-                  onChange={(event) =>
-                    setDraft((current) =>
-                      current.type === "filter"
-                        ? {
-                            ...current,
-                            defaultValue: {
-                              ...current.defaultValue,
-                              includeEmpty: event.target.checked,
-                            },
-                          }
-                        : current,
-                    )
-                  }
-                  type="checkbox"
-                />
-                {t("Include empty values")}
-              </label>
-              <div className="grid gap-2">
-                <Label>{t("Specific widgets")}</Label>
-                <select
-                  className="min-h-28 rounded-md border bg-background p-2 text-sm"
-                  multiple
-                  onChange={(event) =>
-                    setDraft((current) =>
-                      current.type === "filter"
-                        ? {
-                            ...current,
-                            targetWidgetIds: [...event.currentTarget.selectedOptions].map(
-                              (option) => option.value,
-                            ),
-                          }
-                        : current,
-                    )
-                  }
-                  value={draft.targetWidgetIds ?? []}
-                >
-                  {widgets
-                    .filter((candidate) => candidate.type !== "filter" && candidate.id !== draft.id)
-                    .map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.title}
-                      </option>
-                    ))}
-                </select>
-                <Button
-                  onClick={() =>
-                    setDraft((current) =>
-                      current.type === "filter" ? { ...current, targetWidgetIds: null } : current,
-                    )
-                  }
-                  type="button"
-                  variant="outline"
-                >
-                  {t("All compatible widgets")}
-                </Button>
-              </div>
-            </section>
-          ) : (
-            <>
-              <section className="grid gap-3 rounded-lg border p-4">
-                <Label>{t("Dimension")}</Label>
-                <select
-                  className="min-h-32 rounded-md border bg-background p-2 text-sm"
-                  multiple
-                  onChange={(event) =>
-                    updateQuery({
-                      dimensions: [...event.currentTarget.selectedOptions].map((option) => ({
-                        dateGrouping:
-                          draft.query.dimensions.find(
-                            (dimension) => dimension.field === option.value,
-                          )?.dateGrouping ?? null,
-                        field: option.value,
-                      })),
+                    value={dimension.dateGrouping ?? ""}
+                  >
+                    <option value="">{t("No grouping")}</option>
+                    <option value="day">{t("Day")}</option>
+                    <option value="week">{t("Week")}</option>
+                    <option value="month">{t("Month")}</option>
+                    <option value="quarter">{t("Quarter")}</option>
+                    <option value="year">{t("Year")}</option>
+                  </SelectField>
+                </div>
+              ) : null,
+            )}
+          </section>
+          <section className="grid gap-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <Label>{t("Measure")}</Label>
+              <Button
+                onClick={() =>
+                  updateQuery({
+                    measures: [
+                      ...draft.query.measures,
+                      { field: null, id: createUuid(), operation: "countRows" },
+                    ],
+                  })
+                }
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <HiOutlinePlus />
+                {t("Add")}
+              </Button>
+            </div>
+            {draft.query.measures.map((measure, index) => (
+              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]" key={measure.id}>
+                <SelectField
+                  onChange={(operation) =>
+                    updateMeasure(index, {
+                      field:
+                        operation === "countRows" || operation === "countDistinctEmployees"
+                          ? null
+                          : (measure.field ?? fields[0]?.id ?? null),
+                      operation: operation as AnalyticsMeasure["operation"],
                     })
                   }
-                  value={draft.query.dimensions.map((dimension) => dimension.field)}
+                  value={measure.operation}
+                >
+                  {Object.entries(operationLabels).map(([operation, label]) => (
+                    <option key={operation} value={operation}>
+                      {t(label)}
+                    </option>
+                  ))}
+                </SelectField>
+                <SelectField
+                  onChange={(field) => updateMeasure(index, { field: field || null })}
+                  value={measure.field ?? ""}
+                >
+                  <option value="">—</option>
+                  {(measure.operation === "sum" ||
+                  measure.operation === "average" ||
+                  measure.operation === "min" ||
+                  measure.operation === "max"
+                    ? numericFields
+                    : fields
+                  ).map((field) => (
+                    <option key={field.id} value={field.id}>
+                      {fieldLabel(field.label)}
+                    </option>
+                  ))}
+                </SelectField>
+                <Button
+                  aria-label={t("Delete")}
+                  onClick={() =>
+                    updateQuery({
+                      measures: draft.query.measures.filter(
+                        (_, currentIndex) => currentIndex !== index,
+                      ),
+                    })
+                  }
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <HiOutlineTrash />
+                </Button>
+              </div>
+            ))}
+          </section>
+          <section className="grid gap-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <Label>{t("Filter")}</Label>
+              <Button
+                onClick={() =>
+                  updateQuery({
+                    filters: [
+                      ...draft.query.filters,
+                      {
+                        field: fields[0]?.id ?? "employee.fullName",
+                        operator: "equals",
+                        value: "",
+                        valueTo: null,
+                      },
+                    ],
+                  })
+                }
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <HiOutlinePlus />
+                {t("Add")}
+              </Button>
+            </div>
+            {draft.query.filters.map((filter, index) => (
+              <div
+                className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
+                key={`${filter.field}:${filter.operator}:${String(filter.value)}:${String(filter.valueTo)}`}
+              >
+                <SelectField
+                  onChange={(field) => updateFilter(index, { field })}
+                  value={filter.field}
                 >
                   {fields.map((field) => (
                     <option key={field.id} value={field.id}>
                       {fieldLabel(field.label)}
                     </option>
                   ))}
-                </select>
-                {draft.query.dimensions.map((dimension, index) =>
-                  fields.find((field) => field.id === dimension.field)?.kind === "date" ? (
-                    <div className="grid gap-2 sm:grid-cols-2" key={dimension.field}>
-                      <span className="self-center text-sm">
-                        {fieldLabel(
-                          fields.find((field) => field.id === dimension.field)?.label ??
-                            dimension.field,
-                        )}
-                      </span>
-                      <SelectField
-                        onChange={(dateGrouping) =>
-                          updateQuery({
-                            dimensions: draft.query.dimensions.map((current, currentIndex) =>
-                              currentIndex === index
-                                ? {
-                                    ...current,
-                                    dateGrouping: dateGrouping
-                                      ? (dateGrouping as typeof current.dateGrouping)
-                                      : null,
-                                  }
-                                : current,
-                            ),
-                          })
-                        }
-                        value={dimension.dateGrouping ?? ""}
-                      >
-                        <option value="">{t("No grouping")}</option>
-                        <option value="day">{t("Day")}</option>
-                        <option value="week">{t("Week")}</option>
-                        <option value="month">{t("Month")}</option>
-                        <option value="quarter">{t("Quarter")}</option>
-                        <option value="year">{t("Year")}</option>
-                      </SelectField>
-                    </div>
-                  ) : null,
-                )}
-              </section>
-              <section className="grid gap-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <Label>{t("Measure")}</Label>
-                  <Button
-                    onClick={() =>
-                      updateQuery({
-                        measures: [
-                          ...draft.query.measures,
-                          { field: null, id: createUuid(), operation: "countRows" },
-                        ],
-                      })
-                    }
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <HiOutlinePlus />
-                    {t("Add")}
-                  </Button>
-                </div>
-                {draft.query.measures.map((measure, index) => (
-                  <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]" key={measure.id}>
-                    <SelectField
-                      onChange={(operation) =>
-                        updateMeasure(index, {
-                          field:
-                            operation === "countRows" || operation === "countDistinctEmployees"
-                              ? null
-                              : (measure.field ?? fields[0]?.id ?? null),
-                          operation: operation as AnalyticsMeasure["operation"],
-                        })
-                      }
-                      value={measure.operation}
-                    >
-                      {Object.entries(operationLabels).map(([operation, label]) => (
-                        <option key={operation} value={operation}>
-                          {t(label)}
-                        </option>
-                      ))}
-                    </SelectField>
-                    <SelectField
-                      onChange={(field) => updateMeasure(index, { field: field || null })}
-                      value={measure.field ?? ""}
-                    >
-                      <option value="">—</option>
-                      {(measure.operation === "sum" ||
-                      measure.operation === "average" ||
-                      measure.operation === "min" ||
-                      measure.operation === "max"
-                        ? numericFields
-                        : fields
-                      ).map((field) => (
-                        <option key={field.id} value={field.id}>
-                          {fieldLabel(field.label)}
-                        </option>
-                      ))}
-                    </SelectField>
-                    <Button
-                      aria-label={t("Delete")}
-                      onClick={() =>
-                        updateQuery({
-                          measures: draft.query.measures.filter(
-                            (_, currentIndex) => currentIndex !== index,
-                          ),
-                        })
-                      }
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <HiOutlineTrash />
-                    </Button>
-                  </div>
-                ))}
-              </section>
-              <section className="grid gap-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <Label>{t("Filter")}</Label>
-                  <Button
-                    onClick={() =>
-                      updateQuery({
-                        filters: [
-                          ...draft.query.filters,
-                          {
-                            field: fields[0]?.id ?? "employee.fullName",
-                            operator: "equals",
-                            value: "",
-                            valueTo: null,
-                          },
-                        ],
-                      })
-                    }
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <HiOutlinePlus />
-                    {t("Add")}
-                  </Button>
-                </div>
-                {draft.query.filters.map((filter, index) => (
-                  <div
-                    className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
-                    key={`${filter.field}:${filter.operator}:${String(filter.value)}:${String(filter.valueTo)}`}
-                  >
-                    <SelectField
-                      onChange={(field) => updateFilter(index, { field })}
-                      value={filter.field}
-                    >
-                      {fields.map((field) => (
-                        <option key={field.id} value={field.id}>
-                          {fieldLabel(field.label)}
-                        </option>
-                      ))}
-                    </SelectField>
-                    <SelectField
-                      onChange={(operator) =>
-                        updateFilter(index, {
-                          operator: operator as AnalyticsPredicate["operator"],
-                        })
-                      }
-                      value={filter.operator}
-                    >
-                      {(Object.keys(operatorLabels) as AnalyticsPredicate["operator"][]).map(
-                        (operator) => (
-                          <option key={operator} value={operator}>
-                            {t(operatorLabels[operator])}
-                          </option>
-                        ),
-                      )}
-                    </SelectField>
-                    <PredicateValueInput
-                      fieldKind={fields.find((field) => field.id === filter.field)?.kind ?? "text"}
-                      filter={filter}
-                      onChange={(next) => updateFilter(index, next)}
-                    />
-                    <Button
-                      aria-label={t("Delete")}
-                      onClick={() =>
-                        updateQuery({
-                          filters: draft.query.filters.filter(
-                            (_, currentIndex) => currentIndex !== index,
-                          ),
-                        })
-                      }
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <HiOutlineTrash />
-                    </Button>
-                  </div>
-                ))}
-              </section>
-            </>
-          )}
-
+                </SelectField>
+                <SelectField
+                  onChange={(operator) =>
+                    updateFilter(index, {
+                      operator: operator as AnalyticsPredicate["operator"],
+                    })
+                  }
+                  value={filter.operator}
+                >
+                  {(Object.keys(operatorLabels) as AnalyticsPredicate["operator"][]).map(
+                    (operator) => (
+                      <option key={operator} value={operator}>
+                        {t(operatorLabels[operator])}
+                      </option>
+                    ),
+                  )}
+                </SelectField>
+                <PredicateValueInput
+                  fieldKind={fields.find((field) => field.id === filter.field)?.kind ?? "text"}
+                  filter={filter}
+                  onChange={(next) => updateFilter(index, next)}
+                />
+                <Button
+                  aria-label={t("Delete")}
+                  onClick={() =>
+                    updateQuery({
+                      filters: draft.query.filters.filter(
+                        (_, currentIndex) => currentIndex !== index,
+                      ),
+                    })
+                  }
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <HiOutlineTrash />
+                </Button>
+              </div>
+            ))}
+          </section>
           {draft.type === "bar" ? (
             <section className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
               <div className="grid gap-2">
@@ -1097,7 +922,7 @@ export function AnalyticsWidgetEditorDialog({
               !draft.title.trim() ||
               !draft.viewId ||
               !overridesValid ||
-              (draft.type !== "filter" && draft.query.measures.length === 0)
+              draft.query.measures.length === 0
             }
             onClick={() => {
               onSave({

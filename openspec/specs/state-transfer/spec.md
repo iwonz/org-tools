@@ -329,8 +329,8 @@ name and Tags; Editor export MUST use full name with a conditional manager marke
 - **THEN** its four required display formats exactly match the maintained defaults
 
 ### Requirement: Complete transfer includes analytics configuration
-Complete State Export and Import SHALL include valid dashboard definitions and current bounded analytics UI state. Import MUST reject invalid widget unions, dangling View/custom-field/widget references, incompatible filter targets, or limit violations atomically.
+Complete State Export and Import SHALL include the exact singleton Analytics configuration and current bounded Analytics UI state. Import MUST reject dashboard collections, panels, filter widgets, invalid tab membership, dangling View/custom-field/filter/widget references, incompatible targets, or limit violations atomically.
 
-#### Scenario: Import dashboards atomically
-- **WHEN** a complete current State contains valid dashboards and UI selections
+#### Scenario: Import singleton Analytics atomically
+- **WHEN** a complete current State contains valid filters, optional tabs, widgets, and UI selections
 - **THEN** all definitions and interaction state replace the current State together and results calculate locally on demand

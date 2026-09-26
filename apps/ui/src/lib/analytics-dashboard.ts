@@ -1,8 +1,8 @@
 import type {
-  AnalyticsDashboard,
-  AnalyticsPanel,
-  AnalyticsPanelTab,
+  AnalyticsConfiguration,
+  AnalyticsFilter,
   AnalyticsQuery,
+  AnalyticsTab,
   AnalyticsWidget,
   AnalyticsWidgetPresentation,
   ViewId,
@@ -27,24 +27,30 @@ export const createDefaultAnalyticsQuery = (): AnalyticsQuery => ({
   topN: null,
 });
 
-const baseWidget = (title: string, viewId: ViewId) => ({
-  dataset: { kind: "employees" as const },
-  description: "",
-  height: "M" as const,
-  id: createUuid(),
-  presentation: createDefaultAnalyticsPresentation(),
-  query: createDefaultAnalyticsQuery(),
-  title,
-  viewId,
-  width: 1 as const,
+export const createEmptyAnalyticsConfiguration = (): AnalyticsConfiguration => ({
+  filters: [],
+  tabs: [],
+  widgets: [],
 });
 
 export const createAnalyticsWidget = (
   type: AnalyticsWidget["type"],
   viewId: ViewId,
   title: string,
+  tabId: string | null = null,
 ): AnalyticsWidget => {
-  const base = baseWidget(title, viewId);
+  const base = {
+    dataset: { kind: "employees" as const },
+    description: "",
+    height: "M" as const,
+    id: createUuid(),
+    presentation: createDefaultAnalyticsPresentation(),
+    query: createDefaultAnalyticsQuery(),
+    tabId,
+    title,
+    viewId,
+    width: 1 as const,
+  };
   if (type === "table") return { ...base, showTotals: true, type };
   if (type === "pivot")
     return {
@@ -59,90 +65,77 @@ export const createAnalyticsWidget = (
   if (type === "line") return { ...base, type, variant: "line" };
   if (type === "pie") return { ...base, type, variant: "donut" };
   if (type === "gauge") return { ...base, maximum: 100, minimum: 0, type };
-  if (type === "filter")
-    return {
-      ...base,
-      control: "multiSelect",
-      defaultValue: createEmptyAnalyticsFilterValue(),
-      field: "employee.fullName",
-      targetWidgetIds: null,
-      type,
-    };
   return { ...base, type };
 };
 
-export const createAnalyticsPanelTab = (name: string): AnalyticsPanelTab => ({
+export const createAnalyticsFilter = (viewId: ViewId, name: string): AnalyticsFilter => ({
+  control: "multiSelect",
+  defaultValue: createEmptyAnalyticsFilterValue(),
+  field: "employee.fullName",
   id: createUuid(),
   name,
-  widgets: [],
+  targetWidgetIds: null,
+  viewId,
 });
 
-export const createAnalyticsPanel = (name: string, tabName: string): AnalyticsPanel => ({
-  id: createUuid(),
-  name,
-  tabs: [createAnalyticsPanelTab(tabName)],
-  width: 3,
-});
+export const createAnalyticsTab = (name: string): AnalyticsTab => ({ id: createUuid(), name });
 
-export const createAnalyticsDashboard = (name: string): AnalyticsDashboard => {
-  const now = new Date().toISOString();
-  return { createdAt: now, id: createUuid(), name, panels: [], updatedAt: now };
-};
-
-export const cloneAnalyticsDashboard = (
-  source: AnalyticsDashboard,
+export const addAnalyticsTab = (
+  configuration: AnalyticsConfiguration,
   name: string,
-): AnalyticsDashboard => {
-  const now = new Date().toISOString();
-  const widgetIdMap = new Map<string, string>();
-  for (const widget of source.panels.flatMap((panel) => panel.tabs.flatMap((tab) => tab.widgets))) {
-    widgetIdMap.set(widget.id, createUuid());
-  }
+): { configuration: AnalyticsConfiguration; tabId: string } => {
+  const tab = createAnalyticsTab(name);
+  const first = configuration.tabs.length === 0;
   return {
-    createdAt: now,
-    id: createUuid(),
-    name,
-    panels: source.panels.map((panel) => ({
-      ...structuredClone(panel),
-      id: createUuid(),
-      tabs: panel.tabs.map((tab) => ({
-        ...structuredClone(tab),
-        id: createUuid(),
-        widgets: tab.widgets.map((widget) => {
-          const measureIdMap = new Map(
-            widget.query.measures.map((measure) => [measure.id, createUuid()]),
-          );
-          return {
-            ...structuredClone(widget),
-            id: widgetIdMap.get(widget.id) as string,
-            query: {
-              ...structuredClone(widget.query),
-              measures: widget.query.measures.map((measure) => ({
-                ...structuredClone(measure),
-                id: measureIdMap.get(measure.id) as string,
-              })),
-              sort: widget.query.sort
-                ? {
-                    ...structuredClone(widget.query.sort),
-                    key: measureIdMap.get(widget.query.sort.key) ?? widget.query.sort.key,
-                  }
-                : null,
-            },
-            ...(widget.type === "filter" && widget.targetWidgetIds !== null
-              ? {
-                  targetWidgetIds: widget.targetWidgetIds.flatMap((id) => {
-                    const replacement = widgetIdMap.get(id);
-                    return replacement ? [replacement] : [];
-                  }),
-                }
-              : {}),
-          } as AnalyticsWidget;
-        }),
+    configuration: {
+      ...structuredClone(configuration),
+      tabs: [...configuration.tabs.map((item) => ({ ...item })), tab],
+      widgets: configuration.widgets.map((widget) => ({
+        ...structuredClone(widget),
+        tabId: first ? tab.id : widget.tabId,
       })),
-    })),
-    updatedAt: now,
+    },
+    tabId: tab.id,
   };
 };
+
+export const removeAnalyticsTab = (
+  configuration: AnalyticsConfiguration,
+  tabId: string,
+): { configuration: AnalyticsConfiguration; activeTabId: string | null } => {
+  const index = configuration.tabs.findIndex((tab) => tab.id === tabId);
+  if (index < 0) return { configuration: structuredClone(configuration), activeTabId: null };
+  const tabs = configuration.tabs.filter((tab) => tab.id !== tabId).map((tab) => ({ ...tab }));
+  const destination = tabs[index] ?? tabs[index - 1] ?? null;
+  return {
+    configuration: {
+      filters: configuration.filters.map((filter) => structuredClone(filter)),
+      tabs,
+      widgets: configuration.widgets.map((widget) => ({
+        ...structuredClone(widget),
+        tabId: widget.tabId === tabId ? (destination?.id ?? null) : widget.tabId,
+      })),
+    },
+    activeTabId: destination?.id ?? null,
+  };
+};
+
+export const removeAnalyticsWidget = (
+  configuration: AnalyticsConfiguration,
+  widgetId: string,
+): AnalyticsConfiguration => ({
+  filters: configuration.filters.map((filter) => ({
+    ...structuredClone(filter),
+    targetWidgetIds:
+      filter.targetWidgetIds === null
+        ? null
+        : filter.targetWidgetIds.filter((targetId) => targetId !== widgetId),
+  })),
+  tabs: configuration.tabs.map((tab) => ({ ...tab })),
+  widgets: configuration.widgets
+    .filter((widget) => widget.id !== widgetId)
+    .map((widget) => structuredClone(widget)),
+});
 
 export const moveAnalyticsItem = <T>(items: readonly T[], index: number, offset: -1 | 1): T[] => {
   const nextIndex = index + offset;
@@ -150,5 +143,19 @@ export const moveAnalyticsItem = <T>(items: readonly T[], index: number, offset:
   const next = [...items];
   const [item] = next.splice(index, 1);
   if (item !== undefined) next.splice(nextIndex, 0, item);
+  return next;
+};
+
+export const reorderById = <T extends { id: string }>(
+  items: readonly T[],
+  sourceId: string,
+  targetId: string,
+): T[] => {
+  const sourceIndex = items.findIndex((item) => item.id === sourceId);
+  const targetIndex = items.findIndex((item) => item.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return [...items];
+  const next = [...items];
+  const [source] = next.splice(sourceIndex, 1);
+  if (source) next.splice(targetIndex, 0, source);
   return next;
 };

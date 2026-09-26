@@ -669,7 +669,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
 
 test("captures Analytics dashboard, constructor, and PNG preview", async ({ page }) => {
   await openSyntheticTab(page, "Analytics");
-  await expect(page.locator('[data-demo-id="analytics-dashboard-grid"]')).toBeVisible();
+  await expect(page.locator('[data-demo-id="analytics-widget-grid"]')).toBeVisible();
   await expect(page.locator('[data-demo-id="analytics-widget-kpi"]')).toContainText("4");
   await capture(page, "analytics-dashboard");
   await page.locator('[data-demo-id="analytics-edit"]').click();
@@ -679,7 +679,7 @@ test("captures Analytics dashboard, constructor, and PNG preview", async ({ page
   await page.getByRole("button", { name: "Export PNG", exact: true }).first().click();
   const exportDialog = page.locator('[data-demo-id="analytics-image-export-dialog"]');
   await expect(exportDialog).toBeVisible();
-  await expect(exportDialog.getByAltText("Analytics dashboard", { exact: true })).toBeVisible();
+  await expect(exportDialog.getByAltText("Analytics", { exact: true })).toBeVisible();
   await capture(page, "analytics-image-preview");
 });
 

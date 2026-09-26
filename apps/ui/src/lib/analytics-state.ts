@@ -1,14 +1,14 @@
 import type {
-  AnalyticsDashboard,
+  AnalyticsConfiguration,
   AnalyticsDataset,
   AnalyticsDimension,
+  AnalyticsFilter,
   AnalyticsFilterScalar,
   AnalyticsFilterValue,
   AnalyticsMeasure,
-  AnalyticsPanel,
-  AnalyticsPanelTab,
   AnalyticsPredicate,
   AnalyticsQuery,
+  AnalyticsTab,
   AnalyticsWidget,
   AnalyticsWidgetPresentation,
   CustomEmployeeFieldDefinition,
@@ -21,8 +21,7 @@ import type {
 import { isUuid } from "@/lib/employee-data";
 
 export const ANALYTICS_LIMITS = {
-  dashboards: 32,
-  panels: 64,
+  filters: 32,
   tabs: 16,
   widgets: 32,
   tableRows: 20_000,
@@ -53,15 +52,6 @@ export const ANALYTICS_BUILT_IN_FIELDS = [
 ] as const;
 
 const ANALYTICS_BUILT_IN_FIELD_SET = new Set<string>(ANALYTICS_BUILT_IN_FIELDS);
-const UNIT_CONTEXT_FIELDS = new Set([
-  "assignment.unitId",
-  "assignment.unitName",
-  "assignment.unitFullPath",
-  "assignment.position",
-  "assignment.isBoss",
-]);
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const COLOR_PATTERN = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -71,9 +61,6 @@ const hasExactKeys = (value: Record<string, unknown>, keys: readonly string[]) =
   const actualKeys = Object.keys(value);
   return actualKeys.length === keys.length && keys.every((key) => actualKeys.includes(key));
 };
-
-const isTimestamp = (value: unknown): value is string =>
-  typeof value === "string" && Number.isFinite(Date.parse(value));
 
 const isBoundedText = (value: unknown, maximum: number, allowEmpty = true): value is string =>
   typeof value === "string" && value.length <= maximum && (allowEmpty || value.trim().length > 0);
@@ -303,6 +290,7 @@ const WIDGET_BASE_KEYS = [
   "id",
   "presentation",
   "query",
+  "tabId",
   "title",
   "type",
   "viewId",
@@ -313,7 +301,6 @@ const normalizeWidget = (value: unknown): AnalyticsWidget | null => {
   if (!isRecord(value) || typeof value.type !== "string") return null;
   const extraKeysByType: Record<string, string[]> = {
     bar: ["orientation", "stacked"],
-    filter: ["control", "defaultValue", "field", "targetWidgetIds"],
     gauge: ["maximum", "minimum"],
     kpi: [],
     line: ["variant"],
@@ -327,6 +314,7 @@ const normalizeWidget = (value: unknown): AnalyticsWidget | null => {
     !hasExactKeys(value, [...WIDGET_BASE_KEYS, ...extraKeys]) ||
     !isUuid(value.id) ||
     !isUuid(value.viewId) ||
+    !(value.tabId === null || isUuid(value.tabId)) ||
     !isBoundedText(value.title, 200) ||
     !isBoundedText(value.description, 1_000) ||
     ![1, 2].includes(value.width as number) ||
@@ -344,6 +332,7 @@ const normalizeWidget = (value: unknown): AnalyticsWidget | null => {
     id: value.id,
     presentation,
     query,
+    tabId: value.tabId,
     title: value.title,
     viewId: value.viewId,
     width: value.width as 1 | 2,
@@ -396,94 +385,84 @@ const normalizeWidget = (value: unknown): AnalyticsWidget | null => {
   ) {
     return { ...base, maximum: value.maximum, minimum: value.minimum, type: "gauge" };
   }
-  if (
-    value.type === "filter" &&
-    ["dateRange", "multiSelect", "search", "select"].includes(value.control as string) &&
-    isBoundedText(value.field, 300, false) &&
-    (value.targetWidgetIds === null ||
-      (Array.isArray(value.targetWidgetIds) &&
-        value.targetWidgetIds.length <= 1_000 &&
-        value.targetWidgetIds.every((id) => typeof id === "string" && UUID_PATTERN.test(id))))
-  ) {
-    const defaultValue = normalizeAnalyticsFilterValue(value.defaultValue);
-    if (!defaultValue) return null;
-    return {
-      ...base,
-      control: value.control as "dateRange" | "multiSelect" | "search" | "select",
-      defaultValue,
-      field: value.field,
-      targetWidgetIds: value.targetWidgetIds === null ? null : [...value.targetWidgetIds],
-      type: "filter",
-    };
-  }
   return null;
 };
 
-const normalizeTab = (value: unknown): AnalyticsPanelTab | null => {
+const normalizeTab = (value: unknown): AnalyticsTab | null => {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ["id", "name", "widgets"]) ||
+    !hasExactKeys(value, ["id", "name"]) ||
     !isUuid(value.id) ||
-    !isBoundedText(value.name, 100, false) ||
-    !Array.isArray(value.widgets) ||
-    value.widgets.length > ANALYTICS_LIMITS.widgets
+    !isBoundedText(value.name, 100, false)
   )
     return null;
-  const widgets = value.widgets.map(normalizeWidget);
-  return widgets.some((widget) => !widget)
-    ? null
-    : { id: value.id, name: value.name, widgets: widgets as AnalyticsWidget[] };
+  return { id: value.id, name: value.name };
 };
 
-const normalizePanel = (value: unknown): AnalyticsPanel | null => {
+const normalizeFilter = (value: unknown): AnalyticsFilter | null => {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ["id", "name", "tabs", "width"]) ||
+    !hasExactKeys(value, [
+      "control",
+      "defaultValue",
+      "field",
+      "id",
+      "name",
+      "targetWidgetIds",
+      "viewId",
+    ]) ||
+    !["dateRange", "multiSelect", "search", "select"].includes(value.control as string) ||
+    !isBoundedText(value.field, 300, false) ||
     !isUuid(value.id) ||
     !isBoundedText(value.name, 100, false) ||
-    ![1, 2, 3].includes(value.width as number) ||
-    !Array.isArray(value.tabs) ||
-    value.tabs.length < 1 ||
-    value.tabs.length > ANALYTICS_LIMITS.tabs
-  )
-    return null;
-  const tabs = value.tabs.map(normalizeTab);
-  return tabs.some((tab) => !tab)
-    ? null
-    : {
-        id: value.id,
-        name: value.name,
-        tabs: tabs as AnalyticsPanelTab[],
-        width: value.width as 1 | 2 | 3,
-      };
-};
-
-export const normalizeAnalyticsDashboards = (value: unknown): AnalyticsDashboard[] | null => {
-  if (!Array.isArray(value) || value.length > ANALYTICS_LIMITS.dashboards) return null;
-  const dashboards = value.map((dashboard): AnalyticsDashboard | null => {
-    if (
-      !isRecord(dashboard) ||
-      !hasExactKeys(dashboard, ["createdAt", "id", "name", "panels", "updatedAt"]) ||
-      !isUuid(dashboard.id) ||
-      !isBoundedText(dashboard.name, 100, false) ||
-      !isTimestamp(dashboard.createdAt) ||
-      !isTimestamp(dashboard.updatedAt) ||
-      !Array.isArray(dashboard.panels) ||
-      dashboard.panels.length > ANALYTICS_LIMITS.panels
+    !isUuid(value.viewId) ||
+    !(
+      value.targetWidgetIds === null ||
+      (Array.isArray(value.targetWidgetIds) &&
+        value.targetWidgetIds.length <= ANALYTICS_LIMITS.tabs * ANALYTICS_LIMITS.widgets &&
+        value.targetWidgetIds.every(isUuid))
     )
-      return null;
-    const panels = dashboard.panels.map(normalizePanel);
-    return panels.some((panel) => !panel)
-      ? null
-      : {
-          createdAt: dashboard.createdAt,
-          id: dashboard.id,
-          name: dashboard.name,
-          panels: panels as AnalyticsPanel[],
-          updatedAt: dashboard.updatedAt,
-        };
-  });
-  return dashboards.some((dashboard) => !dashboard) ? null : (dashboards as AnalyticsDashboard[]);
+  )
+    return null;
+  const defaultValue = normalizeAnalyticsFilterValue(value.defaultValue);
+  if (!defaultValue) return null;
+  return {
+    control: value.control as AnalyticsFilter["control"],
+    defaultValue,
+    field: value.field,
+    id: value.id,
+    name: value.name,
+    targetWidgetIds: value.targetWidgetIds === null ? null : [...value.targetWidgetIds],
+    viewId: value.viewId,
+  };
+};
+
+export const normalizeAnalyticsConfiguration = (value: unknown): AnalyticsConfiguration | null => {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["filters", "tabs", "widgets"]) ||
+    !Array.isArray(value.filters) ||
+    value.filters.length > ANALYTICS_LIMITS.filters ||
+    !Array.isArray(value.tabs) ||
+    value.tabs.length > ANALYTICS_LIMITS.tabs ||
+    !Array.isArray(value.widgets) ||
+    value.widgets.length > ANALYTICS_LIMITS.tabs * ANALYTICS_LIMITS.widgets
+  )
+    return null;
+  const filters = value.filters.map(normalizeFilter);
+  const tabs = value.tabs.map(normalizeTab);
+  const widgets = value.widgets.map(normalizeWidget);
+  if (
+    filters.some((filter) => !filter) ||
+    tabs.some((tab) => !tab) ||
+    widgets.some((widget) => !widget)
+  )
+    return null;
+  return {
+    filters: filters as AnalyticsFilter[],
+    tabs: tabs as AnalyticsTab[],
+    widgets: widgets as AnalyticsWidget[],
+  };
 };
 
 export const normalizeAnalyticsUiState = (
@@ -492,22 +471,10 @@ export const normalizeAnalyticsUiState = (
 ): OrgToolsAnalyticsUiState | null => {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, [
-      "activeDashboardId",
-      "activeTabIdsByPanelId",
-      "drilldown",
-      "filterValuesByWidgetId",
-    ]) ||
-    !(value.activeDashboardId === null || isUuid(value.activeDashboardId)) ||
-    !isRecord(value.activeTabIdsByPanelId) ||
-    Object.keys(value.activeTabIdsByPanelId).length >
-      ANALYTICS_LIMITS.dashboards * ANALYTICS_LIMITS.panels ||
-    !Object.entries(value.activeTabIdsByPanelId).every(
-      ([panelId, tabId]) => isUuid(panelId) && isUuid(tabId),
-    ) ||
-    !isRecord(value.filterValuesByWidgetId) ||
-    Object.keys(value.filterValuesByWidgetId).length >
-      ANALYTICS_LIMITS.dashboards * ANALYTICS_LIMITS.panels * ANALYTICS_LIMITS.widgets ||
+    !hasExactKeys(value, ["activeTabId", "drilldown", "filterValuesByFilterId"]) ||
+    !(value.activeTabId === null || isUuid(value.activeTabId)) ||
+    !isRecord(value.filterValuesByFilterId) ||
+    Object.keys(value.filterValuesByFilterId).length > ANALYTICS_LIMITS.filters ||
     !isRecord(value.drilldown) ||
     !hasExactKeys(value.drilldown, ["employeeIds", "filters", "query", "sourceWidgetId"]) ||
     !Array.isArray(value.drilldown.employeeIds) ||
@@ -518,8 +485,8 @@ export const normalizeAnalyticsUiState = (
   )
     return null;
   const filterValues = Object.fromEntries(
-    Object.entries(value.filterValuesByWidgetId).map(([widgetId, filterValue]) => [
-      widgetId,
+    Object.entries(value.filterValuesByFilterId).map(([filterId, filterValue]) => [
+      filterId,
       normalizeAnalyticsFilterValue(filterValue),
     ]),
   );
@@ -531,150 +498,118 @@ export const normalizeAnalyticsUiState = (
   const filters = normalizeFilters(value.drilldown.filters);
   if (!filters) return null;
   return {
-    activeDashboardId: value.activeDashboardId,
-    activeTabIdsByPanelId: { ...value.activeTabIdsByPanelId } as Record<string, string>,
+    activeTabId: value.activeTabId,
     drilldown: {
       employeeIds: [...value.drilldown.employeeIds],
       filters,
       query: value.drilldown.query,
       sourceWidgetId: value.drilldown.sourceWidgetId,
     },
-    filterValuesByWidgetId: filterValues as Record<string, AnalyticsFilterValue>,
+    filterValuesByFilterId: filterValues as Record<string, AnalyticsFilterValue>,
   };
 };
 
 export const createEmptyAnalyticsUiState = (
   createFilters: () => OrgToolsEmployeeFilters,
 ): OrgToolsAnalyticsUiState => ({
-  activeDashboardId: null,
-  activeTabIdsByPanelId: {},
+  activeTabId: null,
   drilldown: { employeeIds: [], filters: createFilters(), query: "", sourceWidgetId: null },
-  filterValuesByWidgetId: {},
+  filterValuesByFilterId: {},
 });
 
 const collectWidgetFields = (widget: AnalyticsWidget) => [
   ...widget.query.dimensions.map((dimension) => dimension.field),
   ...widget.query.filters.map((filter) => filter.field),
   ...widget.query.measures.flatMap((measure) => (measure.field ? [measure.field] : [])),
-  ...(widget.type === "filter" ? [widget.field] : []),
   ...(widget.type === "pivot" ? [...widget.rowFields, ...widget.columnFields] : []),
 ];
 
+const fieldReferencesCustomField = (field: string, fieldId: EmployeeFieldId) =>
+  field === `custom:${fieldId}` || field.startsWith(`composite:${fieldId}:`);
+
+export const isAnalyticsFilterCompatible = (
+  filter: Pick<AnalyticsFilter, "field" | "viewId">,
+  widget: AnalyticsWidget,
+) => {
+  if (filter.field.startsWith("assignment.")) {
+    return filter.viewId === widget.viewId && widget.dataset.kind === "assignments";
+  }
+  if (filter.field.startsWith("tag.")) return widget.dataset.kind === "tags";
+  if (filter.field.startsWith("composite:")) {
+    return (
+      widget.dataset.kind === "composite" && widget.dataset.fieldId === filter.field.split(":")[1]
+    );
+  }
+  return true;
+};
+
 export const analyticsReferencesCustomField = (
-  dashboards: readonly AnalyticsDashboard[],
+  configuration: AnalyticsConfiguration,
   fieldId: EmployeeFieldId,
 ) =>
-  dashboards.some((dashboard) =>
-    dashboard.panels.some((panel) =>
-      panel.tabs.some((tab) =>
-        tab.widgets.some(
-          (widget) =>
-            (widget.dataset.kind === "composite" && widget.dataset.fieldId === fieldId) ||
-            collectWidgetFields(widget).some(
-              (field) => field === `custom:${fieldId}` || field.startsWith(`composite:${fieldId}:`),
-            ),
-        ),
-      ),
-    ),
+  configuration.filters.some((filter) => fieldReferencesCustomField(filter.field, fieldId)) ||
+  configuration.widgets.some(
+    (widget) =>
+      (widget.dataset.kind === "composite" && widget.dataset.fieldId === fieldId) ||
+      collectWidgetFields(widget).some((field) => fieldReferencesCustomField(field, fieldId)),
   );
 
-export const analyticsReferencesView = (
-  dashboards: readonly AnalyticsDashboard[],
-  viewId: ViewId,
-) =>
-  dashboards.some((dashboard) =>
-    dashboard.panels.some((panel) =>
-      panel.tabs.some((tab) => tab.widgets.some((widget) => widget.viewId === viewId)),
-    ),
-  );
+export const analyticsReferencesView = (configuration: AnalyticsConfiguration, viewId: ViewId) =>
+  configuration.filters.some((filter) => filter.viewId === viewId) ||
+  configuration.widgets.some((widget) => widget.viewId === viewId);
 
 export const reconcileAnalyticsDefinitions = (
-  dashboards: readonly AnalyticsDashboard[],
-): AnalyticsDashboard[] =>
-  structuredClone(dashboards).map((dashboard) => {
-    const validTargetIds = new Set(
-      dashboard.panels.flatMap((panel) =>
-        panel.tabs.flatMap((tab) =>
-          tab.widgets.flatMap((widget) => (widget.type === "filter" ? [] : [widget.id])),
-        ),
-      ),
-    );
-    return {
-      ...dashboard,
-      panels: dashboard.panels.map((panel) => ({
-        ...panel,
-        tabs: panel.tabs.map((tab) => ({
-          ...tab,
-          widgets: tab.widgets.map((widget) =>
-            widget.type === "filter" && widget.targetWidgetIds !== null
-              ? {
-                  ...widget,
-                  targetWidgetIds: widget.targetWidgetIds.filter((id) => validTargetIds.has(id)),
-                }
-              : widget,
-          ),
-        })),
-      })),
-    };
-  });
+  configuration: AnalyticsConfiguration,
+): AnalyticsConfiguration => {
+  const next = structuredClone(configuration);
+  const validTargetIds = new Set(next.widgets.map((widget) => widget.id));
+  next.filters = next.filters.map((filter) => ({
+    ...filter,
+    targetWidgetIds:
+      filter.targetWidgetIds === null
+        ? null
+        : filter.targetWidgetIds.filter((id) => validTargetIds.has(id)),
+  }));
+  return next;
+};
 
 export const reconcileAnalyticsUi = (
-  dashboards: readonly AnalyticsDashboard[],
+  configuration: AnalyticsConfiguration,
   current: OrgToolsAnalyticsUiState,
 ): OrgToolsAnalyticsUiState => {
-  const activeDashboardId =
-    current.activeDashboardId &&
-    dashboards.some((dashboard) => dashboard.id === current.activeDashboardId)
-      ? current.activeDashboardId
-      : (dashboards[0]?.id ?? null);
-  const panels = dashboards.flatMap((dashboard) => dashboard.panels);
-  const activeTabIdsByPanelId = Object.fromEntries(
-    panels
-      .map((panel) => {
-        const currentTabId = current.activeTabIdsByPanelId[panel.id];
-        return [
-          panel.id,
-          currentTabId && panel.tabs.some((tab) => tab.id === currentTabId)
-            ? currentTabId
-            : (panel.tabs[0]?.id ?? ""),
-        ];
-      })
-      .filter((entry) => entry[1] !== ""),
-  );
-  const widgets = dashboards.flatMap((dashboard) =>
-    dashboard.panels.flatMap((panel) => panel.tabs.flatMap((tab) => tab.widgets)),
-  );
-  const widgetById = new Map(widgets.map((widget) => [widget.id, widget]));
-  const filterValuesByWidgetId = Object.fromEntries(
-    Object.entries(current.filterValuesByWidgetId).filter(
-      ([widgetId]) => widgetById.get(widgetId)?.type === "filter",
-    ),
+  const tabIds = new Set(configuration.tabs.map((tab) => tab.id));
+  const filterIds = new Set(configuration.filters.map((filter) => filter.id));
+  const widgetIds = new Set(configuration.widgets.map((widget) => widget.id));
+  const activeTabId =
+    current.activeTabId && tabIds.has(current.activeTabId)
+      ? current.activeTabId
+      : (configuration.tabs[0]?.id ?? null);
+  const filterValuesByFilterId = Object.fromEntries(
+    Object.entries(current.filterValuesByFilterId).filter(([filterId]) => filterIds.has(filterId)),
   );
   const sourceWidgetId = current.drilldown.sourceWidgetId;
   return {
-    activeDashboardId,
-    activeTabIdsByPanelId,
+    activeTabId,
     drilldown:
-      sourceWidgetId === null || widgetById.has(sourceWidgetId)
+      sourceWidgetId === null || widgetIds.has(sourceWidgetId)
         ? structuredClone(current.drilldown)
         : { ...structuredClone(current.drilldown), employeeIds: [], sourceWidgetId: null },
-    filterValuesByWidgetId,
+    filterValuesByFilterId,
   };
 };
 
 export const validateAnalyticsGraph = (
-  dashboards: readonly AnalyticsDashboard[],
+  configuration: AnalyticsConfiguration,
   ui: OrgToolsAnalyticsUiState,
   views: readonly { id: ViewId }[],
   fieldDefinitions: readonly CustomEmployeeFieldDefinition[],
 ): void => {
   const ids = new Set<string>();
-  const widgetById = new Map<string, AnalyticsWidget>();
-  const tabById = new Map<string, AnalyticsPanelTab>();
-  const panelById = new Map<string, AnalyticsPanel>();
-  const dashboardIds = new Set<string>();
   const viewIds = new Set(views.map((view) => view.id));
   const fieldById = new Map(fieldDefinitions.map((field) => [field.id, field]));
+  const tabIds = new Set(configuration.tabs.map((tab) => tab.id));
+  const widgetById = new Map(configuration.widgets.map((widget) => [widget.id, widget]));
+  const filterIds = new Set(configuration.filters.map((filter) => filter.id));
   const assertUnique = (id: string) => {
     if (ids.has(id)) throw new Error("Analytics IDs must be unique.");
     ids.add(id);
@@ -700,57 +635,62 @@ export const validateAnalyticsGraph = (
     }
     throw new Error("Analytics field reference is invalid.");
   };
-  for (const dashboard of dashboards) {
-    assertUnique(dashboard.id);
-    dashboardIds.add(dashboard.id);
-    for (const panel of dashboard.panels) {
-      assertUnique(panel.id);
-      panelById.set(panel.id, panel);
-      for (const tab of panel.tabs) {
-        assertUnique(tab.id);
-        tabById.set(tab.id, tab);
-        for (const widget of tab.widgets) {
-          assertUnique(widget.id);
-          for (const measure of widget.query.measures) assertUnique(measure.id);
-          widgetById.set(widget.id, widget);
-          if (!viewIds.has(widget.viewId)) throw new Error("Analytics references a missing View.");
-          if (
-            widget.dataset.kind === "composite" &&
-            fieldById.get(widget.dataset.fieldId)?.kind !== "composite"
-          )
-            throw new Error("Analytics references a missing Composite field.");
-          for (const field of collectWidgetFields(widget)) validateField(field);
-        }
-      }
-    }
-    const localWidgets = new Map(
-      dashboard.panels.flatMap((panel) =>
-        panel.tabs.flatMap((tab) => tab.widgets.map((widget) => [widget.id, widget] as const)),
-      ),
-    );
-    for (const widget of localWidgets.values()) {
-      if (widget.type !== "filter" || widget.targetWidgetIds === null) continue;
-      if (new Set(widget.targetWidgetIds).size !== widget.targetWidgetIds.length)
-        throw new Error("Analytics filter targets must be unique.");
-      for (const targetId of widget.targetWidgetIds) {
-        const target = localWidgets.get(targetId);
-        if (!target || target.type === "filter")
-          throw new Error("Analytics filter target is invalid.");
-        if (UNIT_CONTEXT_FIELDS.has(widget.field) && target.viewId !== widget.viewId)
-          throw new Error("Unit-context analytics filters require the same View.");
-      }
+
+  for (const tab of configuration.tabs) assertUnique(tab.id);
+  for (const filter of configuration.filters) assertUnique(filter.id);
+  for (const widget of configuration.widgets) {
+    assertUnique(widget.id);
+    for (const measure of widget.query.measures) assertUnique(measure.id);
+  }
+
+  if (configuration.tabs.length === 0) {
+    if (configuration.widgets.length > ANALYTICS_LIMITS.widgets)
+      throw new Error("Analytics root widget limit exceeded.");
+    if (configuration.widgets.some((widget) => widget.tabId !== null))
+      throw new Error("Analytics root widgets cannot reference a tab.");
+  } else {
+    if (configuration.widgets.some((widget) => widget.tabId === null || !tabIds.has(widget.tabId)))
+      throw new Error("Analytics widget references a missing tab.");
+    for (const tabId of tabIds) {
+      if (
+        configuration.widgets.filter((widget) => widget.tabId === tabId).length >
+        ANALYTICS_LIMITS.widgets
+      )
+        throw new Error("Analytics tab widget limit exceeded.");
     }
   }
-  if (ui.activeDashboardId !== null && !dashboardIds.has(ui.activeDashboardId))
-    throw new Error("Active analytics dashboard does not exist.");
-  for (const [panelId, tabId] of Object.entries(ui.activeTabIdsByPanelId)) {
-    const panel = panelById.get(panelId);
-    if (!panel?.tabs.some((tab) => tab.id === tabId))
-      throw new Error("Active analytics tab does not exist in its panel.");
+
+  for (const widget of configuration.widgets) {
+    if (!viewIds.has(widget.viewId)) throw new Error("Analytics references a missing View.");
+    if (
+      widget.dataset.kind === "composite" &&
+      fieldById.get(widget.dataset.fieldId)?.kind !== "composite"
+    )
+      throw new Error("Analytics references a missing Composite field.");
+    for (const field of collectWidgetFields(widget)) validateField(field);
   }
-  for (const widgetId of Object.keys(ui.filterValuesByWidgetId)) {
-    if (widgetById.get(widgetId)?.type !== "filter")
-      throw new Error("Analytics filter UI references a missing filter widget.");
+
+  for (const filter of configuration.filters) {
+    if (!viewIds.has(filter.viewId)) throw new Error("Analytics filter references a missing View.");
+    validateField(filter.field);
+    if (filter.targetWidgetIds === null) continue;
+    if (new Set(filter.targetWidgetIds).size !== filter.targetWidgetIds.length)
+      throw new Error("Analytics filter targets must be unique.");
+    for (const targetId of filter.targetWidgetIds) {
+      const target = widgetById.get(targetId);
+      if (!target) throw new Error("Analytics filter target is invalid.");
+      if (!isAnalyticsFilterCompatible(filter, target))
+        throw new Error("Analytics filter target is incompatible.");
+    }
+  }
+
+  if (ui.activeTabId !== null && !tabIds.has(ui.activeTabId))
+    throw new Error("Active analytics tab does not exist.");
+  if (configuration.tabs.length === 0 && ui.activeTabId !== null)
+    throw new Error("Tabless Analytics cannot have an active tab.");
+  for (const filterId of Object.keys(ui.filterValuesByFilterId)) {
+    if (!filterIds.has(filterId))
+      throw new Error("Analytics filter UI references a missing filter.");
   }
   if (ui.drilldown.sourceWidgetId !== null && !widgetById.has(ui.drilldown.sourceWidgetId))
     throw new Error("Analytics drill-down references a missing widget.");

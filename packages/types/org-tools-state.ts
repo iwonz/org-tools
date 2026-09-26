@@ -110,6 +110,7 @@ type AnalyticsWidgetBase = {
   id: string;
   presentation: AnalyticsWidgetPresentation;
   query: AnalyticsQuery;
+  tabId: string | null;
   title: string;
   viewId: ViewId;
   width: 1 | 2;
@@ -132,14 +133,7 @@ export type AnalyticsWidget =
     })
   | (AnalyticsWidgetBase & { type: "line"; variant: "area" | "line" })
   | (AnalyticsWidgetBase & { type: "pie"; variant: "donut" | "pie" })
-  | (AnalyticsWidgetBase & { maximum: number; minimum: number; type: "gauge" })
-  | (AnalyticsWidgetBase & {
-      control: "dateRange" | "multiSelect" | "search" | "select";
-      defaultValue: AnalyticsFilterValue;
-      field: string;
-      targetWidgetIds: string[] | null;
-      type: "filter";
-    });
+  | (AnalyticsWidgetBase & { maximum: number; minimum: number; type: "gauge" });
 
 export type AnalyticsFilterValue = {
   from: AnalyticsFilterScalar | null;
@@ -149,37 +143,36 @@ export type AnalyticsFilterValue = {
   values: AnalyticsFilterScalar[];
 };
 
-export type AnalyticsPanelTab = {
+export type AnalyticsFilter = {
+  control: "dateRange" | "multiSelect" | "search" | "select";
+  defaultValue: AnalyticsFilterValue;
+  field: string;
   id: string;
   name: string;
+  targetWidgetIds: string[] | null;
+  viewId: ViewId;
+};
+
+export type AnalyticsTab = {
+  id: string;
+  name: string;
+};
+
+export type AnalyticsConfiguration = {
+  filters: AnalyticsFilter[];
+  tabs: AnalyticsTab[];
   widgets: AnalyticsWidget[];
 };
 
-export type AnalyticsPanel = {
-  id: string;
-  name: string;
-  tabs: AnalyticsPanelTab[];
-  width: 1 | 2 | 3;
-};
-
-export type AnalyticsDashboard = {
-  createdAt: string;
-  id: string;
-  name: string;
-  panels: AnalyticsPanel[];
-  updatedAt: string;
-};
-
 export type OrgToolsAnalyticsUiState = {
-  activeDashboardId: string | null;
-  activeTabIdsByPanelId: Record<string, string>;
+  activeTabId: string | null;
   drilldown: {
     employeeIds: EmployeeId[];
     filters: OrgToolsEmployeeFilters;
     query: string;
     sourceWidgetId: string | null;
   };
-  filterValuesByWidgetId: Record<string, AnalyticsFilterValue>;
+  filterValuesByFilterId: Record<string, AnalyticsFilterValue>;
 };
 
 export type OrgToolsEmployeeFilters = {
@@ -310,7 +303,7 @@ export type OrgToolsUiState = {
 
 export type OrgToolsState = {
   organization: {
-    analyticsDashboards: AnalyticsDashboard[];
+    analytics: AnalyticsConfiguration;
     employeeDisplayFormats: EmployeeDisplayFormats;
     employeeDisplayLineGaps: EmployeeDisplayLineGaps;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];

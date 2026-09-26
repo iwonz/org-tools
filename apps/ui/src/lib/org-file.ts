@@ -43,7 +43,7 @@ import type {
 } from "@org-tools/types";
 import {
   createEmptyAnalyticsUiState,
-  normalizeAnalyticsDashboards,
+  normalizeAnalyticsConfiguration,
   normalizeAnalyticsUiState,
   validateAnalyticsGraph,
 } from "@/lib/analytics-state";
@@ -1766,7 +1766,7 @@ const validateStateGraph = (state: OrgToolsState): void => {
   }
   assertUniqueIds(state.ui.expandedUnitIds, "Expanded Unit IDs must be unique.");
   validateAnalyticsGraph(
-    state.organization.analyticsDashboards,
+    state.organization.analytics,
     state.ui.analytics,
     state.organization.views,
     state.organization.employeeFieldDefinitions,
@@ -1902,7 +1902,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
     !hasExactKeys(input, ["organization", "ui"]) ||
     !isRecord(input.organization) ||
     !hasExactKeys(input.organization, [
-      "analyticsDashboards",
+      "analytics",
       "employeeDisplayFormats",
       "employeeDisplayLineGaps",
       "employeeFieldDefinitions",
@@ -1910,7 +1910,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
       "tags",
       "views",
     ]) ||
-    !Array.isArray(input.organization.analyticsDashboards) ||
+    !isRecord(input.organization.analytics) ||
     !isRecord(input.organization.employeeDisplayFormats) ||
     !hasExactKeys(input.organization.employeeDisplayFormats, [
       "editor",
@@ -1946,8 +1946,8 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   const tags = normalizeTagDefinitions(input.organization.tags);
   if (!employeeFieldDefinitions) throw new Error("State contains invalid custom Employee fields.");
   if (!tags) throw new Error("State contains invalid Tags.");
-  const analyticsDashboards = normalizeAnalyticsDashboards(input.organization.analyticsDashboards);
-  if (!analyticsDashboards) throw new Error("State contains invalid Analytics dashboards.");
+  const analytics = normalizeAnalyticsConfiguration(input.organization.analytics);
+  if (!analytics) throw new Error("State contains an invalid Analytics configuration.");
   const employees = input.organization.employees.map(normalizeOrganizationEmployee);
   if (employees.some((employee) => !employee))
     throw new Error("State contains an invalid Employee.");
@@ -1955,7 +1955,7 @@ export const parseOrgToolsState = (input: unknown): OrgToolsState => {
   if (views.some((view) => !view)) throw new Error("State contains an invalid View structure.");
   const state: OrgToolsState = {
     organization: {
-      analyticsDashboards,
+      analytics,
       employeeDisplayFormats: {
         editor: input.organization.employeeDisplayFormats.editor,
         editorExport: input.organization.employeeDisplayFormats.editorExport,
@@ -2065,7 +2065,7 @@ export const createBlankOrgToolsState = (
   const now = currentDate.toISOString();
   return {
     organization: {
-      analyticsDashboards: [],
+      analytics: { filters: [], tabs: [], widgets: [] },
       employeeDisplayFormats: createDefaultEmployeeDisplayFormats(locale),
       employeeDisplayLineGaps: { ...DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS },
       employeeFieldDefinitions: [],

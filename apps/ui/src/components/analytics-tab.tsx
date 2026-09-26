@@ -1,10 +1,9 @@
 "use client";
 
 import type {
-  AnalyticsDashboard,
+  AnalyticsConfiguration,
+  AnalyticsFilter,
   AnalyticsFilterValue,
-  AnalyticsPanel,
-  AnalyticsPanelTab,
   AnalyticsWidget,
   EmployeeId,
   OrgToolsAnalyticsUiState,
@@ -16,14 +15,14 @@ import {
   HiOutlineChartBar,
   HiOutlineChevronDown,
   HiOutlineChevronUp,
-  HiOutlineDocumentDuplicate,
   HiOutlinePencilSquare,
   HiOutlinePlus,
   HiOutlineTrash,
 } from "react-icons/hi2";
 
+import { AnalyticsFilterEditorDialog } from "@/components/analytics-filter-editor-dialog";
 import { AnalyticsImageExportDialog } from "@/components/analytics-image-export-dialog";
-import { AnalyticsWidgetCard } from "@/components/analytics-widget-card";
+import { AnalyticsFilterControl, AnalyticsWidgetCard } from "@/components/analytics-widget-card";
 import { AnalyticsWidgetEditorDialog } from "@/components/analytics-widget-editor-dialog";
 import { EmployeeCardList } from "@/components/employee-card-list";
 import { TopLevelEmptyState } from "@/components/source-empty-state";
@@ -36,39 +35,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ProductSurface } from "@/components/ui/product-surface";
 import { useUiText } from "@/i18n/use-ui-text";
 import {
-  cloneAnalyticsDashboard,
-  createAnalyticsDashboard,
-  createAnalyticsPanel,
-  createAnalyticsPanelTab,
+  addAnalyticsTab,
+  createAnalyticsFilter,
   createAnalyticsWidget,
   moveAnalyticsItem,
+  removeAnalyticsTab,
+  removeAnalyticsWidget,
+  reorderById,
 } from "@/lib/analytics-dashboard";
 import type { AnalyticsAppliedFilter } from "@/lib/analytics-query";
-import { ANALYTICS_LIMITS } from "@/lib/analytics-state";
+import { ANALYTICS_LIMITS, isAnalyticsFilterCompatible } from "@/lib/analytics-state";
 import { AnalyticsWorkerClient } from "@/lib/analytics-worker-client";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
 type ExportTarget = { fileName: string; node: HTMLElement } | null;
-type DragItem = { id: string; kind: "dashboard" | "panel" | "tab" | "widget" };
-
-const reorderById = <T extends { id: string }>(
-  items: readonly T[],
-  sourceId: string,
-  targetId: string,
-) => {
-  const sourceIndex = items.findIndex((item) => item.id === sourceId);
-  const targetIndex = items.findIndex((item) => item.id === targetId);
-  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return [...items];
-  const next = [...items];
-  const [item] = next.splice(sourceIndex, 1);
-  if (item) next.splice(targetIndex, 0, item);
-  return next;
-};
+type DragItem = { id: string; kind: "filter" | "tab" | "widget" };
 
 const sanitizeName = (value: string) =>
   value.trim().replace(/[^\p{L}\p{N}._ -]+/gu, "-") || "analytics";
@@ -164,52 +149,19 @@ function AnalyticsDrilldown({
   );
 }
 
-function DashboardSelector({
-  activeId,
-  dashboards,
-  editing,
-  onChange,
-  onReorder,
-}: {
-  activeId: string | null;
-  dashboards: AnalyticsDashboard[];
-  editing: boolean;
-  onChange: (id: string) => void;
-  onReorder: (sourceId: string, targetId: string) => void;
-}) {
-  const dragRef = useRef<DragItem | null>(null);
-  return (
-    <div className="flex min-w-0 gap-1 overflow-x-auto" role="tablist">
-      {dashboards.map((dashboard) => (
-        <button
-          aria-selected={dashboard.id === activeId}
-          className={cn(
-            "shrink-0 rounded-md px-3 py-2 text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
-            dashboard.id === activeId && "bg-accent font-medium text-accent-foreground",
-          )}
-          draggable={editing}
-          key={dashboard.id}
-          onClick={() => onChange(dashboard.id)}
-          onDragOver={(event) => {
-            if (editing) event.preventDefault();
-          }}
-          onDragStart={() => {
-            dragRef.current = { id: dashboard.id, kind: "dashboard" };
-          }}
-          onDrop={() => {
-            const source = dragRef.current;
-            if (source?.kind === "dashboard") onReorder(source.id, dashboard.id);
-            dragRef.current = null;
-          }}
-          role="tab"
-          type="button"
-        >
-          {dashboard.name}
-        </button>
-      ))}
-    </div>
-  );
-}
+const replaceScopedWidgets = (
+  configuration: AnalyticsConfiguration,
+  tabId: string | null,
+  nextWidgets: AnalyticsWidget[],
+): AnalyticsConfiguration => {
+  let index = 0;
+  return {
+    ...configuration,
+    widgets: configuration.widgets.map((widget) =>
+      widget.tabId === tabId ? (nextWidgets[index++] ?? widget) : widget,
+    ),
+  };
+};
 
 export const AnalyticsTab = observer(() => {
   const store = useOrgStore();
@@ -218,286 +170,97 @@ export const AnalyticsTab = observer(() => {
   if (!clientRef.current) clientRef.current = new AnalyticsWorkerClient();
   const client = clientRef.current;
   const [editing, setEditing] = useState(false);
-  const [drafts, setDrafts] = useState<AnalyticsDashboard[]>([]);
-  const [draftDashboardId, setDraftDashboardId] = useState<string | null>(null);
-  const [draftTabs, setDraftTabs] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<AnalyticsConfiguration>(() =>
+    structuredClone(store.analytics),
+  );
+  const [draftActiveTabId, setDraftActiveTabId] = useState<string | null>(null);
   const [draftFilterValues, setDraftFilterValues] = useState<Record<string, AnalyticsFilterValue>>(
     {},
   );
-  const [widgetEditor, setWidgetEditor] = useState<{
-    panelId: string;
-    tabId: string;
-    widget: AnalyticsWidget;
-  } | null>(null);
+  const [widgetEditor, setWidgetEditor] = useState<AnalyticsWidget | null>(null);
+  const [filterEditor, setFilterEditor] = useState<AnalyticsFilter | null>(null);
   const [exportTarget, setExportTarget] = useState<ExportTarget>(null);
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
   const [reorderAnnouncement, setReorderAnnouncement] = useState("");
-  const elementByKey = useRef(new Map<string, HTMLElement>());
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const widgetElements = useRef(new Map<string, HTMLElement>());
 
   useEffect(() => () => client.dispose(), [client]);
 
-  const dashboards = editing ? drafts : store.analyticsDashboards;
-  const activeDashboardId = editing ? draftDashboardId : store.analyticsUi.activeDashboardId;
-  const activeDashboard =
-    dashboards.find((dashboard) => dashboard.id === activeDashboardId) ?? dashboards[0] ?? null;
-  const allWidgets =
-    activeDashboard?.panels.flatMap((panel) => panel.tabs.flatMap((tab) => tab.widgets)) ?? [];
-  const activeTabId = (panel: AnalyticsPanel) =>
-    (editing ? draftTabs[panel.id] : store.analyticsUi.activeTabIdsByPanelId[panel.id]) ??
-    panel.tabs[0]?.id ??
-    null;
-  const activeFilterWidgets =
-    activeDashboard?.panels.flatMap((panel) => {
-      const tab = panel.tabs.find((candidate) => candidate.id === activeTabId(panel));
-      return (
-        tab?.widgets.filter(
-          (widget): widget is Extract<AnalyticsWidget, { type: "filter" }> =>
-            widget.type === "filter",
-        ) ?? []
-      );
-    }) ?? [];
-  const filtersFor = (widget: AnalyticsWidget): AnalyticsAppliedFilter[] =>
-    activeFilterWidgets.flatMap((filterWidget) => {
-      if (filterWidget.id === widget.id) return [];
-      if (
-        filterWidget.targetWidgetIds !== null &&
-        !filterWidget.targetWidgetIds.includes(widget.id)
-      )
-        return [];
-      if (
-        filterWidget.field.startsWith("assignment.") &&
-        (filterWidget.viewId !== widget.viewId || widget.dataset.kind !== "assignments")
-      )
-        return [];
-      const filterValues = editing ? draftFilterValues : store.analyticsUi.filterValuesByWidgetId;
-      return [
-        {
-          field: filterWidget.field,
-          value: filterValues[filterWidget.id] ?? filterWidget.defaultValue,
-        },
-      ];
-    });
+  const configuration = editing ? draft : store.analytics;
+  const activeTabId = editing ? draftActiveTabId : store.analyticsUi.activeTabId;
+  const visibleWidgets = configuration.widgets.filter((widget) => widget.tabId === activeTabId);
+  const filterValues = editing ? draftFilterValues : store.analyticsUi.filterValuesByFilterId;
+  const hasContent =
+    configuration.filters.length > 0 ||
+    configuration.tabs.length > 0 ||
+    configuration.widgets.length > 0;
 
-  const beginEdit = (createWhenEmpty = false) => {
-    const next = structuredClone([...store.analyticsDashboards]);
-    if (createWhenEmpty && next.length === 0)
-      next.push(createAnalyticsDashboard(t("Analytics dashboard")));
-    setDrafts(next);
-    setDraftDashboardId(
-      next.find((dashboard) => dashboard.id === store.analyticsUi.activeDashboardId)?.id ??
-        next[0]?.id ??
-        null,
-    );
-    setDraftTabs(structuredClone(store.analyticsUi.activeTabIdsByPanelId));
-    setDraftFilterValues(structuredClone(store.analyticsUi.filterValuesByWidgetId));
+  const beginEdit = () => {
+    setDraft(structuredClone(store.analytics));
+    setDraftActiveTabId(store.analyticsUi.activeTabId);
+    setDraftFilterValues(structuredClone(store.analyticsUi.filterValuesByFilterId));
     setEditing(true);
   };
   const cancelEdit = () => {
     setEditing(false);
-    setDrafts([]);
-    setDraftFilterValues({});
     setWidgetEditor(null);
+    setFilterEditor(null);
   };
-  const canSave = drafts.every(
-    (dashboard) =>
-      dashboard.name.trim().length > 0 &&
-      dashboard.panels.length <= ANALYTICS_LIMITS.panels &&
-      dashboard.panels.every(
-        (panel) =>
-          panel.name.trim().length > 0 &&
-          panel.tabs.length > 0 &&
-          panel.tabs.length <= ANALYTICS_LIMITS.tabs &&
-          panel.tabs.every(
-            (tab) => tab.name.trim().length > 0 && tab.widgets.length <= ANALYTICS_LIMITS.widgets,
-          ),
-      ),
-  );
+  const canSave =
+    draft.tabs.every((tab) => tab.name.trim()) &&
+    draft.filters.every((filter) => filter.name.trim()) &&
+    draft.widgets.every((widget) => widget.title.trim());
   const saveEdit = () => {
     if (!canSave) return;
     const nextUi: OrgToolsAnalyticsUiState = {
       ...structuredClone(store.analyticsUi),
-      activeDashboardId: draftDashboardId,
-      activeTabIdsByPanelId: structuredClone(draftTabs),
-      filterValuesByWidgetId: structuredClone(draftFilterValues),
+      activeTabId: draftActiveTabId,
+      filterValuesByFilterId: structuredClone(draftFilterValues),
     };
-    store.replaceAnalyticsDashboards(
-      drafts.map((dashboard) => ({ ...dashboard, updatedAt: new Date().toISOString() })),
-      nextUi,
-    );
+    store.replaceAnalyticsConfiguration(draft, nextUi);
     setEditing(false);
   };
-  const updateDashboard = (
-    id: string,
-    updater: (dashboard: AnalyticsDashboard) => AnalyticsDashboard,
-  ) =>
-    setDrafts((current) =>
-      current.map((dashboard) => (dashboard.id === id ? updater(dashboard) : dashboard)),
-    );
-  const updatePanel = (panelId: string, updater: (panel: AnalyticsPanel) => AnalyticsPanel) => {
-    if (!activeDashboard) return;
-    updateDashboard(activeDashboard.id, (dashboard) => ({
-      ...dashboard,
-      panels: dashboard.panels.map((panel) => (panel.id === panelId ? updater(panel) : panel)),
-    }));
+  const setActiveTab = (tabId: string | null) => {
+    if (editing) setDraftActiveTabId(tabId);
+    else store.setAnalyticsActiveTab(tabId);
   };
-  const updateTab = (
-    panelId: string,
-    tabId: string,
-    updater: (tab: AnalyticsPanelTab) => AnalyticsPanelTab,
-  ) =>
-    updatePanel(panelId, (panel) => ({
-      ...panel,
-      tabs: panel.tabs.map((tab) => (tab.id === tabId ? updater(tab) : tab)),
-    }));
+  const moveScopedWidget = (index: number, offset: -1 | 1) => {
+    const widgets = moveAnalyticsItem(visibleWidgets, index, offset);
+    setDraft((current) => replaceScopedWidgets(current, activeTabId, widgets));
+    const widget = visibleWidgets[index];
+    if (widget)
+      setReorderAnnouncement(
+        t("{name} moved to position {position}", {
+          name: widget.title,
+          position: index + offset + 1,
+        }),
+      );
+  };
+  const activeFiltersFor = (widget: AnalyticsWidget): AnalyticsAppliedFilter[] =>
+    configuration.filters.flatMap((filter) => {
+      if (filter.targetWidgetIds !== null && !filter.targetWidgetIds.includes(widget.id)) return [];
+      if (!isAnalyticsFilterCompatible(filter, widget)) return [];
+      return [{ field: filter.field, value: filterValues[filter.id] ?? filter.defaultValue }];
+    });
   const openDrilldown = (employeeIds: EmployeeId[], widgetId: string) => {
     store.setAnalyticsDrilldown({ employeeIds, sourceWidgetId: widgetId });
     setDrilldownOpen(true);
   };
-  const registerElement = (key: string) => (node: HTMLDivElement | null) => {
-    if (node) elementByKey.current.set(key, node);
-    else elementByKey.current.delete(key);
+  const updateFilterValue = (filterId: string, value: AnalyticsFilterValue) => {
+    if (editing)
+      setDraftFilterValues((current) => ({ ...current, [filterId]: structuredClone(value) }));
+    else store.setAnalyticsFilterValue(filterId, value);
   };
-  const openExport = (key: string, fileName: string) => {
-    const node = elementByKey.current.get(key);
+  const openExport = (node: HTMLElement | null, fileName: string) => {
     if (node) setExportTarget({ fileName: sanitizeName(fileName), node });
   };
-
-  const renderWidget = (
-    panel: AnalyticsPanel,
-    tab: AnalyticsPanelTab,
-    widget: AnalyticsWidget,
-    index: number,
-  ) => {
-    const structure = store.getViewModel(widget.viewId);
-    const editChrome = editing ? (
-      <>
-        <ReorderButtons
-          index={index}
-          length={tab.widgets.length}
-          onMove={(offset) => {
-            updateTab(panel.id, tab.id, (current) => ({
-              ...current,
-              widgets: moveAnalyticsItem(current.widgets, index, offset),
-            }));
-            setReorderAnnouncement(
-              t("{name} moved to position {position}", {
-                name: widget.title,
-                position: index + offset + 1,
-              }),
-            );
-          }}
-        />
-        <Button
-          aria-label={t("Edit")}
-          onClick={() => setWidgetEditor({ panelId: panel.id, tabId: tab.id, widget })}
-          size="icon"
-          title={t("Edit")}
-          type="button"
-          variant="ghost"
-        >
-          <HiOutlinePencilSquare />
-        </Button>
-        <Button
-          aria-label={t("Delete")}
-          onClick={() =>
-            updateTab(panel.id, tab.id, (current) => ({
-              ...current,
-              widgets: current.widgets.filter((candidate) => candidate.id !== widget.id),
-            }))
-          }
-          size="icon"
-          title={t("Delete")}
-          type="button"
-          variant="ghost"
-        >
-          <HiOutlineTrash />
-        </Button>
-      </>
-    ) : undefined;
-    return (
-      // biome-ignore lint/a11y/noStaticElementInteractions: The native drag surface contains accessible adjacent keyboard reorder controls.
-      <div
-        className={cn("min-w-0", widget.width === 2 ? "md:col-span-2" : "md:col-span-1")}
-        draggable={editing}
-        key={widget.id}
-        onDragOver={(event) => {
-          if (editing) event.preventDefault();
-        }}
-        onDragStart={() => setDragItem({ id: widget.id, kind: "widget" })}
-        onDrop={() => {
-          if (dragItem?.kind === "widget")
-            updateTab(panel.id, tab.id, (current) => ({
-              ...current,
-              widgets: reorderById(current.widgets, dragItem.id, widget.id),
-            }));
-          setDragItem(null);
-        }}
-        ref={registerElement(`widget:${widget.id}`)}
-      >
-        <AnalyticsWidgetCard
-          activeFilters={filtersFor(widget)}
-          client={client}
-          {...(editChrome ? { editChrome } : {})}
-          {...(widget.type === "filter"
-            ? {
-                filterValue:
-                  (editing ? draftFilterValues : store.analyticsUi.filterValuesByWidgetId)[
-                    widget.id
-                  ] ?? widget.defaultValue,
-              }
-            : {})}
-          onDrilldown={openDrilldown}
-          onExport={() => openExport(`widget:${widget.id}`, widget.title)}
-          onFilterChange={(value: AnalyticsFilterValue) =>
-            editing
-              ? setDraftFilterValues((current) => ({ ...current, [widget.id]: value }))
-              : store.setAnalyticsFilterValue(widget.id, value)
-          }
-          revisionKey={`${store.organizationChangeSequence}:${widget.viewId}`}
-          structure={structure}
-          widget={widget}
-        />
-      </div>
-    );
-  };
-
-  if (!editing && store.analyticsDashboards.length === 0) {
-    return (
-      <ProductSurface className="flex min-h-0 flex-1 flex-col" data-demo-id="analytics-surface">
-        <TopLevelEmptyState
-          action={
-            <Button
-              data-demo-id="analytics-create-dashboard"
-              onClick={() => beginEdit(true)}
-              type="button"
-            >
-              <HiOutlinePlus />
-              {t("Create dashboard")}
-            </Button>
-          }
-          description={t("Create dashboard")}
-          icon={<HiOutlineChartBar className="size-7" />}
-          title={t("No dashboards yet")}
-        />
-      </ProductSurface>
-    );
-  }
 
   return (
     <ProductSurface className="flex min-h-0 flex-1 flex-col" data-demo-id="analytics-surface">
       <header className="flex flex-wrap items-center gap-2 border-b px-4 py-3" data-export-exclude>
-        <DashboardSelector
-          activeId={activeDashboard?.id ?? null}
-          dashboards={dashboards}
-          editing={editing}
-          onChange={(id) =>
-            editing ? setDraftDashboardId(id) : store.setAnalyticsActiveDashboard(id)
-          }
-          onReorder={(sourceId, targetId) =>
-            setDrafts((current) => reorderById(current, sourceId, targetId))
-          }
-        />
+        <h2 className="font-medium">{t("Analytics")}</h2>
         <div className="ms-auto flex items-center gap-2">
           {editing ? (
             <>
@@ -514,329 +277,147 @@ export const AnalyticsTab = observer(() => {
               </Button>
             </>
           ) : (
-            <Button
-              data-demo-id="analytics-edit"
-              onClick={() => beginEdit()}
-              type="button"
-              variant="outline"
-            >
-              <HiOutlinePencilSquare />
-              {t("Edit dashboard")}
-            </Button>
+            <>
+              <Button
+                aria-label={t("Export PNG")}
+                disabled={visibleWidgets.length === 0}
+                onClick={() => openExport(boardRef.current, "analytics")}
+                size="icon"
+                title={t("Export PNG")}
+                type="button"
+                variant="ghost"
+              >
+                <HiOutlineArrowDownTray />
+              </Button>
+              <Button
+                data-demo-id="analytics-edit"
+                onClick={beginEdit}
+                type="button"
+                variant="outline"
+              >
+                <HiOutlinePencilSquare />
+                {t("Edit")}
+              </Button>
+            </>
           )}
         </div>
       </header>
 
-      {editing && activeDashboard ? (
-        <section
-          className="grid gap-3 border-b bg-muted/20 px-4 py-3"
+      {editing ? (
+        <div
+          className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-3"
           data-demo-id="analytics-builder-toolbar"
         >
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="grid min-w-64 flex-1 gap-1">
-              <Label>{t("Dashboard name")}</Label>
-              <Input
-                maxLength={100}
-                onChange={(event) =>
-                  updateDashboard(activeDashboard.id, (dashboard) => ({
-                    ...dashboard,
-                    name: event.target.value,
-                  }))
-                }
-                value={activeDashboard.name}
-              />
-            </div>
-            <ReorderButtons
-              index={drafts.findIndex((dashboard) => dashboard.id === activeDashboard.id)}
-              length={drafts.length}
-              onMove={(offset) => {
-                setDrafts((current) =>
-                  moveAnalyticsItem(
-                    current,
-                    current.findIndex((dashboard) => dashboard.id === activeDashboard.id),
-                    offset,
-                  ),
-                );
-                setReorderAnnouncement(
-                  t("{name} moved to position {position}", {
-                    name: activeDashboard.name,
-                    position:
-                      drafts.findIndex((dashboard) => dashboard.id === activeDashboard.id) +
-                      offset +
-                      1,
-                  }),
-                );
-              }}
-            />
-            <Button
-              disabled={drafts.length >= ANALYTICS_LIMITS.dashboards}
-              onClick={() => {
-                const dashboard = createAnalyticsDashboard(t("Analytics dashboard"));
-                setDrafts((current) => [...current, dashboard]);
-                setDraftDashboardId(dashboard.id);
-              }}
-              type="button"
-              variant="outline"
-            >
-              <HiOutlinePlus />
-              {t("Add dashboard")}
-            </Button>
-            <Button
-              disabled={drafts.length >= 32}
-              onClick={() => {
-                const dashboard = cloneAnalyticsDashboard(
-                  activeDashboard,
-                  `${activeDashboard.name} · ${t("Copy")}`,
-                );
-                setDrafts((current) => [...current, dashboard]);
-                setDraftDashboardId(dashboard.id);
-              }}
-              type="button"
-              variant="outline"
-            >
-              <HiOutlineDocumentDuplicate />
-              {t("Copy dashboard")}
-            </Button>
-            <Button
-              onClick={() => {
-                const index = drafts.findIndex((dashboard) => dashboard.id === activeDashboard.id);
-                const next = drafts.filter((dashboard) => dashboard.id !== activeDashboard.id);
-                setDrafts(next);
-                setDraftDashboardId(next[Math.min(index, next.length - 1)]?.id ?? null);
-              }}
-              type="button"
-              variant="outline"
-            >
-              <HiOutlineTrash />
-              {t("Delete dashboard")}
-            </Button>
-          </div>
-        </section>
+          <Button
+            disabled={draft.filters.length >= ANALYTICS_LIMITS.filters}
+            onClick={() =>
+              setFilterEditor(createAnalyticsFilter(store.systemOrgViewId, t("Filter")))
+            }
+            type="button"
+            variant="outline"
+          >
+            <HiOutlinePlus />
+            {t("Filter")}
+          </Button>
+          <Button
+            disabled={draft.tabs.length >= ANALYTICS_LIMITS.tabs}
+            onClick={() => {
+              const next = addAnalyticsTab(draft, t("Tab"));
+              setDraft(next.configuration);
+              setDraftActiveTabId(next.tabId);
+            }}
+            type="button"
+            variant="outline"
+          >
+            <HiOutlinePlus />
+            {t("Add tab")}
+          </Button>
+        </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto p-4" data-demo-id="analytics-scroll-area">
-        {!activeDashboard ? (
+      <div className="min-h-0 flex-1 overflow-auto">
+        {!editing && !hasContent ? (
           <TopLevelEmptyState
             action={
-              <Button onClick={() => beginEdit(true)} type="button">
-                <HiOutlinePlus />
-                {t("Create dashboard")}
+              <Button onClick={beginEdit} type="button">
+                <HiOutlinePencilSquare />
+                {t("Edit")}
               </Button>
             }
+            description={t("No widgets yet")}
             icon={<HiOutlineChartBar className="size-7" />}
-            title={t("No dashboards yet")}
-          />
-        ) : activeDashboard.panels.length === 0 ? (
-          <TopLevelEmptyState
-            action={
-              editing ? (
-                <Button
-                  onClick={() => {
-                    const panel = createAnalyticsPanel(t("Panel"), t("Tab"));
-                    updateDashboard(activeDashboard.id, (dashboard) => ({
-                      ...dashboard,
-                      panels: [...dashboard.panels, panel],
-                    }));
-                    setDraftTabs((current) => ({
-                      ...current,
-                      [panel.id]: panel.tabs[0]?.id ?? "",
-                    }));
-                  }}
-                  type="button"
-                >
-                  <HiOutlinePlus />
-                  {t("Add panel")}
-                </Button>
-              ) : undefined
-            }
-            icon={<HiOutlineChartBar className="size-7" />}
-            title={t("No panels yet")}
+            title={t("Analytics")}
           />
         ) : (
-          <div
-            className="grid grid-cols-1 gap-4 lg:grid-cols-3"
-            data-demo-id="analytics-dashboard-grid"
-          >
-            {activeDashboard.panels.map((panel, panelIndex) => {
-              const tabId = activeTabId(panel);
-              const tab = panel.tabs.find((candidate) => candidate.id === tabId) ?? panel.tabs[0];
-              if (!tab) return null;
-              return (
-                // biome-ignore lint/a11y/noStaticElementInteractions: The native drag surface contains accessible adjacent keyboard reorder controls.
-                <section
-                  className={cn(
-                    "min-w-0 rounded-xl border bg-background",
-                    panel.width === 1
-                      ? "lg:col-span-1"
-                      : panel.width === 2
-                        ? "lg:col-span-2"
-                        : "lg:col-span-3",
-                  )}
-                  draggable={editing}
-                  key={panel.id}
-                  onDragOver={(event) => {
-                    if (editing) event.preventDefault();
-                  }}
-                  onDragStart={() => setDragItem({ id: panel.id, kind: "panel" })}
-                  onDrop={() => {
-                    if (dragItem?.kind === "panel")
-                      updateDashboard(activeDashboard.id, (dashboard) => ({
-                        ...dashboard,
-                        panels: reorderById(dashboard.panels, dragItem.id, panel.id),
-                      }));
-                    setDragItem(null);
-                  }}
-                  ref={registerElement(`panel:${panel.id}`)}
-                >
-                  <header className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-                    {editing ? (
-                      <Input
-                        className="h-9 min-w-40 flex-1"
-                        maxLength={100}
-                        onChange={(event) =>
-                          updatePanel(panel.id, (current) => ({
+          <div className="grid gap-4 p-4">
+            {configuration.filters.length > 0 ? (
+              <div
+                className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-3"
+                data-demo-id="analytics-filter-strip"
+                data-export-exclude
+              >
+                {configuration.filters.map((filter, index) => {
+                  const structure = store.getViewModel(filter.viewId);
+                  return (
+                    // biome-ignore lint/a11y/noStaticElementInteractions: Adjacent buttons provide keyboard reordering.
+                    <div
+                      className="grid min-w-48 flex-1 gap-1"
+                      draggable={editing}
+                      key={filter.id}
+                      onDragOver={(event) => {
+                        if (editing) event.preventDefault();
+                      }}
+                      onDragStart={() => setDragItem({ id: filter.id, kind: "filter" })}
+                      onDrop={() => {
+                        if (dragItem?.kind === "filter")
+                          setDraft((current) => ({
                             ...current,
-                            name: event.target.value,
-                          }))
-                        }
-                        value={panel.name}
-                      />
-                    ) : (
-                      <h2 className="min-w-0 flex-1 truncate font-semibold">{panel.name}</h2>
-                    )}
-                    <div className="flex items-center gap-1" data-export-exclude>
-                      {editing && (
-                        <>
-                          <select
-                            className="h-9 rounded-md border bg-background px-2 text-sm"
-                            onChange={(event) =>
-                              updatePanel(panel.id, (current) => ({
-                                ...current,
-                                width: Number(event.target.value) as 1 | 2 | 3,
-                              }))
-                            }
-                            value={panel.width}
-                          >
-                            <option value="1">{t("One third")}</option>
-                            <option value="2">{t("Two thirds")}</option>
-                            <option value="3">{t("Three thirds")}</option>
-                          </select>
-                          <ReorderButtons
-                            index={panelIndex}
-                            length={activeDashboard.panels.length}
-                            onMove={(offset) => {
-                              updateDashboard(activeDashboard.id, (dashboard) => ({
-                                ...dashboard,
-                                panels: moveAnalyticsItem(dashboard.panels, panelIndex, offset),
-                              }));
-                              setReorderAnnouncement(
-                                t("{name} moved to position {position}", {
-                                  name: panel.name,
-                                  position: panelIndex + offset + 1,
-                                }),
-                              );
-                            }}
-                          />
-                          <Button
-                            aria-label={t("Delete")}
-                            onClick={() =>
-                              updateDashboard(activeDashboard.id, (dashboard) => ({
-                                ...dashboard,
-                                panels: dashboard.panels.filter(
-                                  (candidate) => candidate.id !== panel.id,
-                                ),
-                              }))
-                            }
-                            size="icon"
-                            title={t("Delete")}
-                            type="button"
-                            variant="ghost"
-                          >
-                            <HiOutlineTrash />
-                          </Button>
-                        </>
-                      )}
-                      {!editing && (
-                        <Button
-                          aria-label={t("Export PNG")}
-                          onClick={() => openExport(`panel:${panel.id}`, panel.name)}
-                          size="icon"
-                          title={t("Export PNG")}
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HiOutlineArrowDownTray />
-                        </Button>
-                      )}
-                    </div>
-                  </header>
-                  <div
-                    className="flex items-center gap-1 overflow-x-auto border-b px-3 py-2"
-                    data-export-exclude
-                  >
-                    {panel.tabs.map((candidate, tabIndex) => (
-                      // biome-ignore lint/a11y/noStaticElementInteractions: The native drag surface contains accessible adjacent keyboard reorder controls.
-                      <div
-                        className="flex shrink-0 items-center"
-                        draggable={editing}
-                        key={candidate.id}
-                        onDragOver={(event) => {
-                          if (editing) event.preventDefault();
-                        }}
-                        onDragStart={() => setDragItem({ id: candidate.id, kind: "tab" })}
-                        onDrop={() => {
-                          if (dragItem?.kind === "tab")
-                            updatePanel(panel.id, (current) => ({
-                              ...current,
-                              tabs: reorderById(current.tabs, dragItem.id, candidate.id),
-                            }));
-                          setDragItem(null);
-                        }}
-                      >
-                        <button
-                          className={cn(
-                            "rounded-md px-3 py-1.5 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
-                            candidate.id === tab.id && "bg-accent font-medium",
-                          )}
-                          onClick={() =>
-                            editing
-                              ? setDraftTabs((current) => ({
-                                  ...current,
-                                  [panel.id]: candidate.id,
-                                }))
-                              : store.setAnalyticsActiveTab(panel.id, candidate.id)
-                          }
-                          type="button"
-                        >
-                          {candidate.name}
-                        </button>
-                        {editing && candidate.id === tab.id ? (
+                            filters: reorderById(current.filters, dragItem.id, filter.id),
+                          }));
+                        setDragItem(null);
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                          {filter.name}
+                        </span>
+                        {editing ? (
                           <>
                             <ReorderButtons
-                              index={tabIndex}
-                              length={panel.tabs.length}
-                              onMove={(offset) => {
-                                updatePanel(panel.id, (current) => ({
+                              index={index}
+                              length={configuration.filters.length}
+                              onMove={(offset) =>
+                                setDraft((current) => ({
                                   ...current,
-                                  tabs: moveAnalyticsItem(current.tabs, tabIndex, offset),
-                                }));
-                                setReorderAnnouncement(
-                                  t("{name} moved to position {position}", {
-                                    name: candidate.name,
-                                    position: tabIndex + offset + 1,
-                                  }),
-                                );
-                              }}
-                            />
-                            <Button
-                              aria-label={t("Delete")}
-                              disabled={panel.tabs.length === 1}
-                              onClick={() =>
-                                updatePanel(panel.id, (current) => ({
-                                  ...current,
-                                  tabs: current.tabs.filter((item) => item.id !== candidate.id),
+                                  filters: moveAnalyticsItem(current.filters, index, offset),
                                 }))
                               }
+                            />
+                            <Button
+                              aria-label={t("Edit")}
+                              onClick={() => setFilterEditor(filter)}
+                              size="icon"
+                              title={t("Edit")}
+                              type="button"
+                              variant="ghost"
+                            >
+                              <HiOutlinePencilSquare />
+                            </Button>
+                            <Button
+                              aria-label={t("Delete")}
+                              onClick={() => {
+                                setDraft((current) => ({
+                                  ...current,
+                                  filters: current.filters.filter(
+                                    (candidate) => candidate.id !== filter.id,
+                                  ),
+                                }));
+                                setDraftFilterValues((current) => {
+                                  const next = { ...current };
+                                  delete next[filter.id];
+                                  return next;
+                                });
+                              }}
                               size="icon"
                               title={t("Delete")}
                               type="button"
@@ -847,93 +428,218 @@ export const AnalyticsTab = observer(() => {
                           </>
                         ) : null}
                       </div>
-                    ))}
-                    {editing && (
-                      <Button
-                        disabled={panel.tabs.length >= ANALYTICS_LIMITS.tabs}
-                        onClick={() => {
-                          const nextTab = createAnalyticsPanelTab(t("Tab"));
-                          updatePanel(panel.id, (current) => ({
-                            ...current,
-                            tabs: [...current.tabs, nextTab],
-                          }));
-                          setDraftTabs((current) => ({ ...current, [panel.id]: nextTab.id }));
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <HiOutlinePlus />
-                        {t("Add tab")}
-                      </Button>
+                      {structure ? (
+                        <AnalyticsFilterControl
+                          client={client}
+                          filter={filter}
+                          onChange={(value) => updateFilterValue(filter.id, value)}
+                          revisionKey={`${store.organizationChangeSequence}:${filter.viewId}`}
+                          structure={structure}
+                          value={filterValues[filter.id] ?? filter.defaultValue}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {configuration.tabs.length > 0 ? (
+              <div
+                className="flex min-w-0 gap-1 overflow-x-auto border-b"
+                data-demo-id="analytics-tabs"
+                data-export-exclude
+                role="tablist"
+              >
+                {configuration.tabs.map((tab, index) => (
+                  // biome-ignore lint/a11y/noStaticElementInteractions: Adjacent buttons provide keyboard reordering.
+                  <div
+                    className={cn(
+                      "flex shrink-0 items-center rounded-t-md",
+                      tab.id === activeTabId && "bg-accent",
                     )}
-                  </div>
-                  {editing ? (
-                    <div className="border-b px-4 py-3">
+                    draggable={editing}
+                    key={tab.id}
+                    onDragOver={(event) => {
+                      if (editing) event.preventDefault();
+                    }}
+                    onDragStart={() => setDragItem({ id: tab.id, kind: "tab" })}
+                    onDrop={() => {
+                      if (dragItem?.kind === "tab")
+                        setDraft((current) => ({
+                          ...current,
+                          tabs: reorderById(current.tabs, dragItem.id, tab.id),
+                        }));
+                      setDragItem(null);
+                    }}
+                  >
+                    {editing ? (
                       <Input
+                        aria-label={t("Tab name")}
+                        className="h-9 w-36 border-0 bg-transparent"
                         maxLength={100}
                         onChange={(event) =>
-                          updateTab(panel.id, tab.id, (current) => ({
+                          setDraft((current) => ({
                             ...current,
-                            name: event.target.value,
+                            tabs: current.tabs.map((candidate) =>
+                              candidate.id === tab.id
+                                ? { ...candidate, name: event.target.value }
+                                : candidate,
+                            ),
                           }))
                         }
+                        onFocus={() => setActiveTab(tab.id)}
                         value={tab.name}
                       />
-                    </div>
-                  ) : null}
-                  <div
-                    className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2"
-                    data-demo-id="analytics-widget-grid"
-                  >
-                    {tab.widgets.map((widget, index) => renderWidget(panel, tab, widget, index))}
-                    {editing && tab.widgets.length < ANALYTICS_LIMITS.widgets && (
+                    ) : (
                       <button
-                        className="grid min-h-40 place-items-center rounded-xl border border-dashed p-6 text-sm text-muted-foreground outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring md:col-span-2"
-                        onClick={() => {
-                          const widget = createAnalyticsWidget(
-                            "kpi",
-                            store.systemOrgViewId,
-                            t("KPI counter"),
-                          );
-                          setWidgetEditor({ panelId: panel.id, tabId: tab.id, widget });
-                        }}
+                        aria-selected={tab.id === activeTabId}
+                        className="px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => setActiveTab(tab.id)}
+                        role="tab"
                         type="button"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <HiOutlinePlus />
-                          {t("Add widget")}
-                        </span>
+                        {tab.name}
                       </button>
                     )}
-                    {!editing && tab.widgets.length === 0 ? (
-                      <div className="grid min-h-40 place-items-center text-sm text-muted-foreground md:col-span-2">
-                        {t("No widgets yet")}
-                      </div>
+                    {editing ? (
+                      <>
+                        <ReorderButtons
+                          index={index}
+                          length={configuration.tabs.length}
+                          onMove={(offset) =>
+                            setDraft((current) => ({
+                              ...current,
+                              tabs: moveAnalyticsItem(current.tabs, index, offset),
+                            }))
+                          }
+                        />
+                        <Button
+                          aria-label={t("Delete")}
+                          onClick={() => {
+                            const removed = removeAnalyticsTab(draft, tab.id);
+                            setDraft(removed.configuration);
+                            if (activeTabId === tab.id) setDraftActiveTabId(removed.activeTabId);
+                          }}
+                          size="icon"
+                          title={t("Delete")}
+                          type="button"
+                          variant="ghost"
+                        >
+                          <HiOutlineTrash />
+                        </Button>
+                      </>
                     ) : null}
                   </div>
-                </section>
-              );
-            })}
-            {editing && activeDashboard.panels.length < ANALYTICS_LIMITS.panels && (
-              <button
-                className="grid min-h-44 place-items-center rounded-xl border border-dashed text-sm text-muted-foreground outline-none hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring lg:col-span-3"
-                onClick={() => {
-                  const panel = createAnalyticsPanel(t("Panel"), t("Tab"));
-                  updateDashboard(activeDashboard.id, (dashboard) => ({
-                    ...dashboard,
-                    panels: [...dashboard.panels, panel],
-                  }));
-                  setDraftTabs((current) => ({ ...current, [panel.id]: panel.tabs[0]?.id ?? "" }));
-                }}
-                type="button"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <HiOutlinePlus />
-                  {t("Add panel")}
-                </span>
-              </button>
-            )}
+                ))}
+              </div>
+            ) : null}
+
+            <div
+              className="grid grid-cols-1 gap-3 md:grid-cols-2"
+              data-demo-id="analytics-widget-grid"
+              ref={boardRef}
+            >
+              {visibleWidgets.map((widget, index) => {
+                const structure = store.getViewModel(widget.viewId);
+                const editChrome = editing ? (
+                  <>
+                    <ReorderButtons
+                      index={index}
+                      length={visibleWidgets.length}
+                      onMove={(offset) => moveScopedWidget(index, offset)}
+                    />
+                    <Button
+                      aria-label={t("Edit")}
+                      onClick={() => setWidgetEditor(widget)}
+                      size="icon"
+                      title={t("Edit")}
+                      type="button"
+                      variant="ghost"
+                    >
+                      <HiOutlinePencilSquare />
+                    </Button>
+                    <Button
+                      aria-label={t("Delete")}
+                      onClick={() =>
+                        setDraft((current) => removeAnalyticsWidget(current, widget.id))
+                      }
+                      size="icon"
+                      title={t("Delete")}
+                      type="button"
+                      variant="ghost"
+                    >
+                      <HiOutlineTrash />
+                    </Button>
+                  </>
+                ) : undefined;
+                return (
+                  // biome-ignore lint/a11y/noStaticElementInteractions: Adjacent buttons provide keyboard reordering.
+                  <div
+                    className={cn(
+                      "min-w-0",
+                      widget.width === 2 ? "md:col-span-2" : "md:col-span-1",
+                    )}
+                    draggable={editing}
+                    key={widget.id}
+                    onDragOver={(event) => {
+                      if (editing) event.preventDefault();
+                    }}
+                    onDragStart={() => setDragItem({ id: widget.id, kind: "widget" })}
+                    onDrop={() => {
+                      if (dragItem?.kind === "widget") {
+                        const widgets = reorderById(visibleWidgets, dragItem.id, widget.id);
+                        setDraft((current) => replaceScopedWidgets(current, activeTabId, widgets));
+                      }
+                      setDragItem(null);
+                    }}
+                    ref={(node) => {
+                      if (node) widgetElements.current.set(widget.id, node);
+                      else widgetElements.current.delete(widget.id);
+                    }}
+                  >
+                    <AnalyticsWidgetCard
+                      activeFilters={activeFiltersFor(widget)}
+                      client={client}
+                      {...(editChrome ? { editChrome } : {})}
+                      onDrilldown={openDrilldown}
+                      onExport={() =>
+                        openExport(widgetElements.current.get(widget.id) ?? null, widget.title)
+                      }
+                      revisionKey={`${store.organizationChangeSequence}:${widget.viewId}`}
+                      structure={structure}
+                      widget={widget}
+                    />
+                  </div>
+                );
+              })}
+              {editing && visibleWidgets.length < ANALYTICS_LIMITS.widgets ? (
+                <button
+                  className="grid min-h-40 place-items-center rounded-xl border border-dashed p-6 text-sm text-muted-foreground outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring md:col-span-2"
+                  onClick={() =>
+                    setWidgetEditor(
+                      createAnalyticsWidget(
+                        "kpi",
+                        store.systemOrgViewId,
+                        t("KPI counter"),
+                        activeTabId,
+                      ),
+                    )
+                  }
+                  type="button"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <HiOutlinePlus />
+                    {t("Add widget")}
+                  </span>
+                </button>
+              ) : null}
+              {!editing && visibleWidgets.length === 0 ? (
+                <div className="grid min-h-40 place-items-center text-sm text-muted-foreground md:col-span-2">
+                  {t("No widgets yet")}
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
       </div>
@@ -944,18 +650,41 @@ export const AnalyticsTab = observer(() => {
           onOpenChange={(open) => {
             if (!open) setWidgetEditor(null);
           }}
-          onSave={(widget) =>
-            updateTab(widgetEditor.panelId, widgetEditor.tabId, (tab) => ({
-              ...tab,
-              widgets: tab.widgets.some((candidate) => candidate.id === widget.id)
-                ? tab.widgets.map((candidate) => (candidate.id === widget.id ? widget : candidate))
-                : [...tab.widgets, widget],
+          onSave={(widget) => {
+            setDraft((current) => ({
+              ...current,
+              widgets: current.widgets.some((candidate) => candidate.id === widget.id)
+                ? current.widgets.map((candidate) =>
+                    candidate.id === widget.id ? widget : candidate,
+                  )
+                : [...current.widgets, widget],
+            }));
+          }}
+          open
+          views={store.orgViewList}
+          widget={widgetEditor}
+        />
+      ) : null}
+      {filterEditor ? (
+        <AnalyticsFilterEditorDialog
+          definitions={store.employeeFieldDefinitions}
+          filter={filterEditor}
+          onOpenChange={(open) => {
+            if (!open) setFilterEditor(null);
+          }}
+          onSave={(filter) =>
+            setDraft((current) => ({
+              ...current,
+              filters: current.filters.some((candidate) => candidate.id === filter.id)
+                ? current.filters.map((candidate) =>
+                    candidate.id === filter.id ? filter : candidate,
+                  )
+                : [...current.filters, filter],
             }))
           }
           open
           views={store.orgViewList}
-          widget={widgetEditor.widget}
-          widgets={allWidgets}
+          widgets={draft.widgets}
         />
       ) : null}
       <AnalyticsDrilldown

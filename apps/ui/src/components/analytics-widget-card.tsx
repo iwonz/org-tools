@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  AnalyticsFilter,
   AnalyticsFilterScalar,
   AnalyticsFilterValue,
   AnalyticsWidget,
@@ -449,32 +450,39 @@ function AnalyticsChart({
   return null;
 }
 
-function AnalyticsFilterWidget({
+export function AnalyticsFilterControl({
   client,
   onChange,
   revisionKey,
   structure,
   value,
-  widget,
+  filter,
 }: {
   client: AnalyticsWorkerClient;
   onChange: (value: AnalyticsFilterValue) => void;
   revisionKey: string;
   structure: UiOrgStructure;
   value: AnalyticsFilterValue;
-  widget: Extract<AnalyticsWidget, { type: "filter" }>;
+  filter: AnalyticsFilter;
 }) {
   const t = useUiText();
   const [options, setOptions] = useState<AnalyticsFilterScalar[] | null>(null);
   const loadOptions = () => {
-    if (options || widget.control === "search") return;
-    const rows = buildAnalyticsRows(structure, widget);
+    if (options || filter.control === "search") return;
+    const dataset = filter.field.startsWith("assignment.")
+      ? ({ kind: "assignments" } as const)
+      : filter.field.startsWith("tag.")
+        ? ({ kind: "tags" } as const)
+        : filter.field.startsWith("composite:")
+          ? ({ fieldId: filter.field.split(":")[1] ?? "", kind: "composite" } as const)
+          : ({ kind: "employees" } as const);
+    const rows = buildAnalyticsRows(structure, { dataset });
     void client
-      .options(`${revisionKey}:options:${widget.id}:${widget.field}`, widget.field, rows)
+      .options(`${revisionKey}:options:${filter.id}:${filter.field}`, filter.field, rows)
       .then(setOptions)
       .catch(() => setOptions(null));
   };
-  if (widget.control === "search") {
+  if (filter.control === "search") {
     return (
       <input
         className="h-10 w-full rounded-md border bg-background px-3 text-sm"
@@ -484,7 +492,7 @@ function AnalyticsFilterWidget({
       />
     );
   }
-  if (widget.control === "dateRange") {
+  if (filter.control === "dateRange") {
     return (
       <div className="grid grid-cols-2 gap-2">
         <input
@@ -505,7 +513,7 @@ function AnalyticsFilterWidget({
   return (
     <select
       className="min-h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
-      multiple={widget.control === "multiSelect"}
+      multiple={filter.control === "multiSelect"}
       onFocus={loadOptions}
       onMouseDown={loadOptions}
       onChange={(event) =>
@@ -535,10 +543,8 @@ export function AnalyticsWidgetCard({
   activeFilters,
   client,
   editChrome,
-  filterValue,
   onDrilldown,
   onExport,
-  onFilterChange,
   revisionKey,
   structure,
   widget,
@@ -546,10 +552,8 @@ export function AnalyticsWidgetCard({
   activeFilters: AnalyticsAppliedFilter[];
   client: AnalyticsWorkerClient;
   editChrome?: ReactNode;
-  filterValue?: AnalyticsFilterValue;
   onDrilldown: (employeeIds: EmployeeId[], widgetId: string) => void;
   onExport: () => void;
-  onFilterChange: (value: AnalyticsFilterValue) => void;
   revisionKey: string;
   structure: UiOrgStructure | null;
   widget: AnalyticsWidget;
@@ -564,7 +568,7 @@ export function AnalyticsWidgetCard({
     [activeFilters, revisionKey, widget],
   );
   useEffect(() => {
-    if (!visible || !structure || widget.type === "filter") return;
+    if (!visible || !structure) return;
     let current = true;
     setResult(null);
     setError(null);
@@ -604,31 +608,20 @@ export function AnalyticsWidgetCard({
         </div>
         <div className="flex shrink-0 items-center gap-1" data-export-exclude>
           {editChrome}
-          {widget.type !== "filter" && (
-            <Button
-              aria-label={t("Export PNG")}
-              onClick={onExport}
-              size="icon"
-              title={t("Export PNG")}
-              type="button"
-              variant="ghost"
-            >
-              <HiOutlineArrowDownTray />
-            </Button>
-          )}
+          <Button
+            aria-label={t("Export PNG")}
+            onClick={onExport}
+            size="icon"
+            title={t("Export PNG")}
+            type="button"
+            variant="ghost"
+          >
+            <HiOutlineArrowDownTray />
+          </Button>
         </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col p-4" data-analytics-widget-body>
-        {widget.type === "filter" && structure ? (
-          <AnalyticsFilterWidget
-            client={client}
-            onChange={onFilterChange}
-            revisionKey={revisionKey}
-            structure={structure}
-            value={filterValue ?? widget.defaultValue}
-            widget={widget}
-          />
-        ) : !visible || !result ? (
+        {!visible || !result ? (
           <div className="grid min-h-32 flex-1 place-items-center text-sm text-muted-foreground">
             {error ?? t("Loading data")}
           </div>

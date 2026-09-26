@@ -178,7 +178,7 @@ export function AnalyticsImageExportDialog({
         </DialogHeader>
         <DialogBody className="grid min-h-0 flex-1 gap-4 overflow-auto">
           <OrgEditorImagePreview
-            alt={t("Analytics dashboard")}
+            alt={t("Analytics")}
             className="h-[420px]"
             dataDemoId="analytics-image-preview"
             errorLabel={error}

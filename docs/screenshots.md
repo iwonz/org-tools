@@ -463,30 +463,29 @@ transparency, Spacing, Employee line spacing, Employee card content.
 
 ## Analytics
 
-### Analytics dashboard
+### Analytics board
 
 [![Organization Analytics](screenshots/demo-analytics.png)](screenshots/demo-analytics.png)
 
-Review a local dashboard composed from KPI, filter, chart, table, and tabbed panels.
+Review the single local board composed from global filters, optional tabs, KPI, charts, and tables.
 
-Capabilities: Local queries, Panel grid, Tabs, Filters, Charts, Virtualized tables.
+Capabilities: Local queries, Root grid, Optional tabs, Global filters, Charts, Virtualized tables.
 
-### Analytics dashboard constructor
+### Analytics board constructor
 
 [![Complete Analytics groups](screenshots/feature-analytics-complete-groups.png)](screenshots/feature-analytics-complete-groups.png)
 
-Edit dashboard names, panel widths, tabs, widget grids, queries, and presentation in an isolated
-draft.
+Edit filters, tabs, widget sizes, queries, and presentation in one isolated draft.
 
-Capabilities: Atomic draft, Panel widths, Widget sizes, Drag and keyboard reorder, Query builder.
+Capabilities: Atomic draft, Widget sizes, Drag and keyboard reorder, Query builder.
 
 ### Analytics PNG preview
 
 [![Analytics drill-down](screenshots/feature-analytics-drilldown.png)](screenshots/feature-analytics-drilldown.png)
 
-Preview a local 3× PNG capture of one widget or the active tab of a complete panel.
+Preview a local 3× PNG capture of one widget or the current board widget grid.
 
-Capabilities: Widget export, Panel export, Fixed 3×, Local DOM capture, Copy and save.
+Capabilities: Widget export, Board export, Fixed 3×, Local DOM capture, Copy and save.
 
 ## Calendar
 

@@ -540,7 +540,7 @@ for (const [locale, messages] of [
         path: testInfo.outputPath("russian-employee-counts.png"),
       });
       await page.getByRole("tab", { name: messages.Ui.Analytics, exact: true }).click();
-      await expect(page.locator('[data-demo-id="analytics-dashboard-grid"]')).toBeVisible();
+      await expect(page.locator('[data-demo-id="analytics-widget-grid"]')).toBeVisible();
       await page.screenshot({
         animations: "disabled",
         fullPage: true,

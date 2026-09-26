@@ -1,5 +1,5 @@
 import type {
-  AnalyticsDashboard,
+  AnalyticsConfiguration,
   AnalyticsFilterValue,
   AppLocale,
   CustomEmployeeFieldDefinition,
@@ -140,7 +140,7 @@ const cloneEmployeeFieldDefinition = (
         };
 
 export class OrgStore {
-  analyticsDashboards: AnalyticsDashboard[] = [];
+  analytics: AnalyticsConfiguration = { filters: [], tabs: [], widgets: [] };
   employeeDisplayFormats: EmployeeDisplayFormats = { ...DEFAULT_EMPLOYEE_DISPLAY_FORMATS };
   employeeDisplayLineGaps: EmployeeDisplayLineGaps = { ...DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS };
   employeeFieldDefinitions: CustomEmployeeFieldDefinition[] = [];
@@ -193,7 +193,7 @@ export class OrgStore {
     makeAutoObservable(
       this,
       {
-        analyticsDashboards: observable.shallow,
+        analytics: observable.ref,
         employeeUnitContextsByEmployeeId: observable.ref,
         employeeUnitMembershipsByEmployeeId: observable.ref,
         expandedUnitIds: observable.shallow,
@@ -237,7 +237,7 @@ export class OrgStore {
   private get organizationObservation() {
     return [
       this.organizationEmployees,
-      this.analyticsDashboards,
+      this.analytics,
       this.employeeDisplayFormats,
       this.employeeDisplayLineGaps,
       this.employeeFieldDefinitions,
@@ -463,7 +463,7 @@ export class OrgStore {
             : buildView(state.ui.download.sourceViewId);
 
       this.organizationEmployees = nextEmployees;
-      this.analyticsDashboards = structuredClone(state.organization.analyticsDashboards);
+      this.analytics = structuredClone(state.organization.analytics);
       this.employeeDisplayFormats = { ...state.organization.employeeDisplayFormats };
       this.employeeDisplayLineGaps = { ...state.organization.employeeDisplayLineGaps };
       this.employeeFieldDefinitions = structuredClone(state.organization.employeeFieldDefinitions);
@@ -533,57 +533,33 @@ export class OrgStore {
     this.editorUi = { ...this.editorUi, ...next };
   }
 
-  replaceAnalyticsDashboards(
-    dashboards: readonly AnalyticsDashboard[],
+  replaceAnalyticsConfiguration(
+    configuration: AnalyticsConfiguration,
     nextUi: OrgToolsAnalyticsUiState = this.analyticsUi,
   ): void {
-    const definitions = reconcileAnalyticsDefinitions(dashboards);
+    const definitions = reconcileAnalyticsDefinitions(configuration);
     const analytics = reconcileAnalyticsUi(definitions, nextUi);
     const parsed = parseOrgToolsState({
-      organization: { ...this.createOrganizationState(), analyticsDashboards: definitions },
+      organization: { ...this.createOrganizationState(), analytics: definitions },
       ui: { ...this.createDurableUiState(), analytics },
     });
-    this.analyticsDashboards = parsed.organization.analyticsDashboards;
+    this.analytics = parsed.organization.analytics;
     this.analyticsUi = parsed.ui.analytics;
   }
 
-  setAnalyticsActiveDashboard(activeDashboardId: string | null): void {
-    if (
-      activeDashboardId !== null &&
-      !this.analyticsDashboards.some((dashboard) => dashboard.id === activeDashboardId)
-    )
-      return;
-    if (this.analyticsUi.activeDashboardId === activeDashboardId) return;
-    this.analyticsUi = { ...this.analyticsUi, activeDashboardId };
+  setAnalyticsActiveTab(tabId: string | null): void {
+    if (tabId !== null && !this.analytics.tabs.some((tab) => tab.id === tabId)) return;
+    if (this.analyticsUi.activeTabId === tabId) return;
+    this.analyticsUi = { ...this.analyticsUi, activeTabId: tabId };
   }
 
-  setAnalyticsActiveTab(panelId: string, tabId: string): void {
-    const panel = this.analyticsDashboards
-      .flatMap((dashboard) => dashboard.panels)
-      .find((candidate) => candidate.id === panelId);
-    if (
-      !panel?.tabs.some((tab) => tab.id === tabId) ||
-      this.analyticsUi.activeTabIdsByPanelId[panelId] === tabId
-    )
-      return;
+  setAnalyticsFilterValue(filterId: string, value: AnalyticsFilterValue): void {
+    if (!this.analytics.filters.some((filter) => filter.id === filterId)) return;
     this.analyticsUi = {
       ...this.analyticsUi,
-      activeTabIdsByPanelId: { ...this.analyticsUi.activeTabIdsByPanelId, [panelId]: tabId },
-    };
-  }
-
-  setAnalyticsFilterValue(widgetId: string, value: AnalyticsFilterValue): void {
-    const widget = this.analyticsDashboards
-      .flatMap((dashboard) =>
-        dashboard.panels.flatMap((panel) => panel.tabs.flatMap((tab) => tab.widgets)),
-      )
-      .find((candidate) => candidate.id === widgetId);
-    if (widget?.type !== "filter") return;
-    this.analyticsUi = {
-      ...this.analyticsUi,
-      filterValuesByWidgetId: {
-        ...this.analyticsUi.filterValuesByWidgetId,
-        [widgetId]: structuredClone(value),
+      filterValuesByFilterId: {
+        ...this.analyticsUi.filterValuesByFilterId,
+        [filterId]: structuredClone(value),
       },
     };
   }
@@ -806,7 +782,7 @@ export class OrgStore {
   }
 
   deleteOrgView(viewId: ViewId): void {
-    if (analyticsReferencesView(this.analyticsDashboards, viewId)) {
+    if (analyticsReferencesView(this.analytics, viewId)) {
       throw new LocalizedError(uiMessage("View is still in use by Analytics."));
     }
     if (!this.orgViews.deleteView(viewId)) return;
@@ -1464,7 +1440,7 @@ export class OrgStore {
     if (
       referenced ||
       referencedByDisplayFormat ||
-      analyticsReferencesCustomField(this.analyticsDashboards, fieldId) ||
+      analyticsReferencesCustomField(this.analytics, fieldId) ||
       this.exportSession.selectedCustomEmployeeFieldIds.includes(fieldId) ||
       extractTemplateFieldKeys(this.exportSession.templateFormat).some(
         (key) =>
@@ -1644,7 +1620,7 @@ export class OrgStore {
 
   createOrganizationState(): OrgToolsState["organization"] {
     return {
-      analyticsDashboards: structuredClone(toJS(this.analyticsDashboards)),
+      analytics: structuredClone(toJS(this.analytics)),
       employeeDisplayFormats: { ...this.employeeDisplayFormats },
       employeeDisplayLineGaps: { ...this.employeeDisplayLineGaps },
       employeeFieldDefinitions: this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition),

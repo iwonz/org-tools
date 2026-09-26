@@ -216,21 +216,20 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
   systemView.structure.canvasElements = [];
   systemView.structure.units = [];
   state.organization.employees = [];
-  state.organization.analyticsDashboards = [];
+  state.organization.analytics = { filters: [], tabs: [], widgets: [] };
   state.organization.employeeFieldDefinitions = [];
   state.organization.tags = [];
   state.organization.views = [systemView];
   state.ui.activeTab = "orgEditor";
   state.ui.analytics = {
-    activeDashboardId: null,
-    activeTabIdsByPanelId: {},
+    activeTabId: null,
     drilldown: {
       employeeIds: [],
       filters: emptyEmployeeFilters(),
       query: "",
       sourceWidgetId: null,
     },
-    filterValuesByWidgetId: {},
+    filterValuesByFilterId: {},
   };
   state.ui.calendar = { monthIndex: 6, year: 2026 };
   state.ui.editor = {

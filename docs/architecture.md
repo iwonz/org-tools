@@ -17,7 +17,7 @@ The public JSON value has exactly two top-level properties:
 ```ts
 type OrgToolsState = {
   organization: {
-    analyticsDashboards: AnalyticsDashboard[];
+    analytics: AnalyticsConfiguration;
     employeeDisplayFormats: EmployeeDisplayFormats;
     employeeDisplayLineGaps: EmployeeDisplayLineGaps;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];
@@ -388,26 +388,28 @@ cells, dedicated light/dark rose weekend tones, a horizontal dated-Tag rail, and
 Only occupied dates expose the day-dialog button; empty dates retain cell geometry without hover or
 activation. Calendar day titles are assembled from locale parts; Russian omits its abbreviated year suffix.
 
-Analytics stores ordered dashboard, panel, tab, widget, query, and presentation definitions under
-`organization.analyticsDashboards`. Current dashboard, active panel tabs, filter values, and
-drill-down state live under `ui.analytics`. The exact parser bounds dashboards to 32, panels to 64
-per dashboard, tabs to 16 per panel, and widgets to 32 per tab, validates every View/custom-field
-reference, and rejects filter targets outside their dashboard or targeting another filter.
+Analytics stores one anonymous configuration under `organization.analytics`: ordered global
+filters, optional tabs, and data widgets. Current active tab, filter values keyed by filter ID, and
+drill-down state live under `ui.analytics`. The exact parser bounds the board to 32 filters, 16 tabs,
+and 32 widgets in root or each tab, validates every View/custom-field reference and compatible filter
+target, and rejects dashboard, panel, and filter-widget shapes.
 
-An Analytics edit session deep-clones every definition into one transient draft. Create, copy,
-rename, reorder, delete, and query edits stay in that draft until one Save replaces definitions and
-reconciles the UI projection atomically. Copies allocate fresh UUIDs for every descendant and remap
-their filter targets. Only the active dashboard and active tab of each panel mount. Visible data
-widgets submit current Employee, assignment, Tag-assignment, or Composite-record rows to a bundled
-Worker. The Worker executes typed predicates, multi-value grouping, date buckets, aggregations,
-sorting, Top N, tables, and pivots in bounded LRU result caches. Filter options are requested only
-when their control opens. Result Employee IDs resolve the current virtualized drill-down rather than
-retaining detached Employee objects.
+An Analytics edit session deep-clones the complete configuration into one transient draft. Tab,
+filter, widget, reorder, and query edits stay in that draft until one Save replaces the configuration
+and reconciles the UI projection atomically. With no tabs, widgets belong to root. Creating the first
+tab adopts all root widgets; deleting a tab moves its widgets to the next or previous tab, and
+deleting the final tab returns them to root. Only root or the active tab mounts. Global filters stay
+visible across tab changes and target every compatible widget by default or explicit widget IDs.
+Visible data widgets submit current Employee, assignment, Tag-assignment, or Composite-record rows
+to a bundled Worker. The Worker executes typed predicates, multi-value grouping, date buckets,
+aggregations, sorting, Top N, tables, and pivots in bounded LRU result caches. Filter options are
+requested only when their control opens. Result Employee IDs resolve the current virtualized
+drill-down rather than retaining detached Employee objects.
 
-Recharts 3 renders locally bundled responsive SVG with its accessibility layer. Widget and active
-panel-tab PNG export clones the settled local DOM through bundled `html-to-image`, excludes edit
-chrome, retains a table's visible viewport, and applies the shared 8/32-megapixel and 16,384-pixel
-limits to its fixed 3× request.
+Recharts 3 renders locally bundled responsive SVG with its accessibility layer. Widget and current
+board-grid PNG export clones the settled local DOM through bundled `html-to-image`, excludes filters,
+tabs, edit chrome, and action menus, retains a table's visible viewport, and applies the shared
+8/32-megapixel and 16,384-pixel limits to its fixed 3× request.
 
 The Editor omits the shared content header. A styled View selector plus Create, Rename, and Delete
 actions occupy a top logical-start surface; the system View cannot be renamed or deleted. Search,
