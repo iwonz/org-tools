@@ -323,7 +323,7 @@ Every ordinary token, including `{position}`, `{unitName}`, `{fullName}`, `{prof
 and custom fields, MUST render as text without implicit navigation. `{positions}` MUST retain its
 native assignment surface, with only its Unit-name segment eligible for implicit navigation. That
 Unit segment MUST navigate only in cards belonging to the Employees and Units sections. It MUST be
-inert in Editor, PNG, Analytics, Calendar, catalogs, pickers, drag previews, and every other fallback
+inert in Editor, PNG, Calendar, catalogs, pickers, drag previews, and every other fallback
 card. Explicit safe Markdown links MUST remain interactive in interactive list cards and visually
 styled but inert in Editor and PNG.
 
@@ -372,7 +372,7 @@ styled but inert in Editor and PNG.
 - **THEN** the application opens that corresponding Unit while its position and middle dot remain noninteractive
 
 #### Scenario: Keep native position Units inert elsewhere
-- **WHEN** `{positions}` renders in Editor, PNG, Analytics, Calendar, a catalog, picker, drag preview, or fallback card
+- **WHEN** `{positions}` renders in Editor, PNG, Calendar, a catalog, picker, drag preview, or fallback card
 - **THEN** its complete native surface has no navigation target
 
 #### Scenario: Keep values inert

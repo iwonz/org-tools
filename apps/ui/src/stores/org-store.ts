@@ -1,6 +1,4 @@
 import type {
-  AnalyticsConfiguration,
-  AnalyticsFilterValue,
   AppLocale,
   CustomEmployeeFieldDefinition,
   CustomEmployeeFieldValue,
@@ -14,7 +12,6 @@ import type {
   EmployeeTagAssignment,
   EmployeeTagDefinition,
   OrganizationEmployee,
-  OrgToolsAnalyticsUiState,
   OrgToolsState,
   TagId,
   UiActiveTab,
@@ -24,15 +21,8 @@ import type {
   UnitId,
   ViewId,
 } from "@org-tools/types";
-import { makeAutoObservable, observable, reaction, toJS } from "mobx";
+import { makeAutoObservable, observable, reaction } from "mobx";
 import { LocalizedError, uiMessage } from "@/i18n/messages";
-import {
-  analyticsReferencesCustomField,
-  analyticsReferencesView,
-  createEmptyAnalyticsUiState,
-  reconcileAnalyticsDefinitions,
-  reconcileAnalyticsUi,
-} from "@/lib/analytics-state";
 import { buildOrganizationStructureWithResolution } from "@/lib/build-organization-structure";
 import {
   extractTemplateFieldKeys,
@@ -140,7 +130,6 @@ const cloneEmployeeFieldDefinition = (
         };
 
 export class OrgStore {
-  analytics: AnalyticsConfiguration = { filters: [], tabs: [], widgets: [] };
   employeeDisplayFormats: EmployeeDisplayFormats = { ...DEFAULT_EMPLOYEE_DISPLAY_FORMATS };
   employeeDisplayLineGaps: EmployeeDisplayLineGaps = { ...DEFAULT_EMPLOYEE_DISPLAY_LINE_GAPS };
   employeeFieldDefinitions: CustomEmployeeFieldDefinition[] = [];
@@ -160,9 +149,6 @@ export class OrgStore {
   };
   employeesUi = { filters: createEmptyEmployeeFiltersState(), query: "" };
   editorUi = { searchOpen: false, searchQuery: "" };
-  analyticsUi: OrgToolsAnalyticsUiState = createEmptyAnalyticsUiState(
-    createEmptyEmployeeFiltersState,
-  );
   calendarUi = {
     monthIndex: new Date().getMonth(),
     year: new Date().getFullYear(),
@@ -193,14 +179,12 @@ export class OrgStore {
     makeAutoObservable(
       this,
       {
-        analytics: observable.ref,
         employeeUnitContextsByEmployeeId: observable.ref,
         employeeUnitMembershipsByEmployeeId: observable.ref,
         expandedUnitIds: observable.shallow,
         unitsUi: observable.ref,
         employeesUi: observable.ref,
         editorUi: observable.ref,
-        analyticsUi: observable.ref,
         calendarUi: observable.ref,
         downloadUi: observable.ref,
         exportSession: observable.ref,
@@ -237,7 +221,6 @@ export class OrgStore {
   private get organizationObservation() {
     return [
       this.organizationEmployees,
-      this.analytics,
       this.employeeDisplayFormats,
       this.employeeDisplayLineGaps,
       this.employeeFieldDefinitions,
@@ -261,7 +244,6 @@ export class OrgStore {
       this.unitsUi,
       this.employeesUi,
       this.editorUi,
-      this.analyticsUi,
       this.calendarUi,
       this.downloadUi,
       this.exportSession.tabMode,
@@ -463,7 +445,6 @@ export class OrgStore {
             : buildView(state.ui.download.sourceViewId);
 
       this.organizationEmployees = nextEmployees;
-      this.analytics = structuredClone(state.organization.analytics);
       this.employeeDisplayFormats = { ...state.organization.employeeDisplayFormats };
       this.employeeDisplayLineGaps = { ...state.organization.employeeDisplayLineGaps };
       this.employeeFieldDefinitions = structuredClone(state.organization.employeeFieldDefinitions);
@@ -487,7 +468,6 @@ export class OrgStore {
         searchOpen: state.ui.editor.searchOpen,
         searchQuery: state.ui.editor.searchQuery,
       };
-      this.analyticsUi = structuredClone(state.ui.analytics);
       this.calendarUi = { ...state.ui.calendar };
       this.downloadUi = {
         employeeFilters: structuredClone(state.ui.download.employeeFilters),
@@ -531,44 +511,6 @@ export class OrgStore {
 
   setEditorUi(next: Partial<typeof this.editorUi>): void {
     this.editorUi = { ...this.editorUi, ...next };
-  }
-
-  replaceAnalyticsConfiguration(
-    configuration: AnalyticsConfiguration,
-    nextUi: OrgToolsAnalyticsUiState = this.analyticsUi,
-  ): void {
-    const definitions = reconcileAnalyticsDefinitions(configuration);
-    const analytics = reconcileAnalyticsUi(definitions, nextUi);
-    const parsed = parseOrgToolsState({
-      organization: { ...this.createOrganizationState(), analytics: definitions },
-      ui: { ...this.createDurableUiState(), analytics },
-    });
-    this.analytics = parsed.organization.analytics;
-    this.analyticsUi = parsed.ui.analytics;
-  }
-
-  setAnalyticsActiveTab(tabId: string | null): void {
-    if (tabId !== null && !this.analytics.tabs.some((tab) => tab.id === tabId)) return;
-    if (this.analyticsUi.activeTabId === tabId) return;
-    this.analyticsUi = { ...this.analyticsUi, activeTabId: tabId };
-  }
-
-  setAnalyticsFilterValue(filterId: string, value: AnalyticsFilterValue): void {
-    if (!this.analytics.filters.some((filter) => filter.id === filterId)) return;
-    this.analyticsUi = {
-      ...this.analyticsUi,
-      filterValuesByFilterId: {
-        ...this.analyticsUi.filterValuesByFilterId,
-        [filterId]: structuredClone(value),
-      },
-    };
-  }
-
-  setAnalyticsDrilldown(next: Partial<OrgToolsAnalyticsUiState["drilldown"]>): void {
-    this.analyticsUi = {
-      ...this.analyticsUi,
-      drilldown: { ...this.analyticsUi.drilldown, ...structuredClone(next) },
-    };
   }
 
   setCalendarUi(next: Partial<typeof this.calendarUi>): void {
@@ -782,9 +724,6 @@ export class OrgStore {
   }
 
   deleteOrgView(viewId: ViewId): void {
-    if (analyticsReferencesView(this.analytics, viewId)) {
-      throw new LocalizedError(uiMessage("View is still in use by Analytics."));
-    }
     if (!this.orgViews.deleteView(viewId)) return;
     this.viewModelCache.delete(viewId);
     if (this.downloadSourceViewId === viewId) {
@@ -941,13 +880,6 @@ export class OrgStore {
       this.employeesUi = {
         ...this.employeesUi,
         filters: removeDeletedUnitsFromFilters(this.employeesUi.filters),
-      };
-      this.analyticsUi = {
-        ...this.analyticsUi,
-        drilldown: {
-          ...this.analyticsUi.drilldown,
-          filters: removeDeletedUnitsFromFilters(this.analyticsUi.drilldown.filters),
-        },
       };
     }
 
@@ -1440,7 +1372,6 @@ export class OrgStore {
     if (
       referenced ||
       referencedByDisplayFormat ||
-      analyticsReferencesCustomField(this.analytics, fieldId) ||
       this.exportSession.selectedCustomEmployeeFieldIds.includes(fieldId) ||
       extractTemplateFieldKeys(this.exportSession.templateFormat).some(
         (key) =>
@@ -1472,13 +1403,6 @@ export class OrgStore {
     });
     this.unitsUi = { ...this.unitsUi, employeeFilters: clear(this.unitsUi.employeeFilters) };
     this.employeesUi = { ...this.employeesUi, filters: clear(this.employeesUi.filters) };
-    this.analyticsUi = {
-      ...this.analyticsUi,
-      drilldown: {
-        ...this.analyticsUi.drilldown,
-        filters: clear(this.analyticsUi.drilldown.filters),
-      },
-    };
     this.downloadUi = {
       ...this.downloadUi,
       employeeFilters: clear(this.downloadUi.employeeFilters),
@@ -1558,13 +1482,6 @@ export class OrgStore {
     });
     this.unitsUi = { ...this.unitsUi, employeeFilters: clear(this.unitsUi.employeeFilters) };
     this.employeesUi = { ...this.employeesUi, filters: clear(this.employeesUi.filters) };
-    this.analyticsUi = {
-      ...this.analyticsUi,
-      drilldown: {
-        ...this.analyticsUi.drilldown,
-        filters: clear(this.analyticsUi.drilldown.filters),
-      },
-    };
     this.downloadUi = {
       ...this.downloadUi,
       employeeFilters: clear(this.downloadUi.employeeFilters),
@@ -1620,7 +1537,6 @@ export class OrgStore {
 
   createOrganizationState(): OrgToolsState["organization"] {
     return {
-      analytics: structuredClone(toJS(this.analytics)),
       employeeDisplayFormats: { ...this.employeeDisplayFormats },
       employeeDisplayLineGaps: { ...this.employeeDisplayLineGaps },
       employeeFieldDefinitions: this.employeeFieldDefinitions.map(cloneEmployeeFieldDefinition),
@@ -1677,7 +1593,6 @@ export class OrgStore {
     const exportState = this.exportSession.createState();
     return {
       activeTab: this.activeTab,
-      analytics: structuredClone(this.analyticsUi),
       calendar: { ...this.calendarUi },
       download: {
         ...exportState,
@@ -1716,7 +1631,6 @@ export class OrgStore {
       this.unitsUi = structuredClone(ui.units);
       this.employeesUi = structuredClone(ui.employees);
       this.editorUi = { searchOpen: ui.editor.searchOpen, searchQuery: ui.editor.searchQuery };
-      this.analyticsUi = structuredClone(ui.analytics);
       this.calendarUi = { ...ui.calendar };
       this.downloadUi = {
         employeeFilters: structuredClone(ui.download.employeeFilters),

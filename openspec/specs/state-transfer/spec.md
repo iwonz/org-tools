@@ -280,8 +280,8 @@ compatibility reader.
 ### Requirement: Employee-oriented exports exclude open positions
 
 Open positions SHALL remain present only in complete State Export and Editor PNG. Employee transfer,
-JSON, Template, Units, Analytics, and Calendar projections MUST continue to operate only on global
-Employees and MUST NOT serialize, count, search, or emit open positions.
+JSON, Template, Units, and Calendar projections MUST continue to operate only on global Employees and
+MUST NOT serialize, count, search, or emit open positions.
 
 #### Scenario: Export data from a View with positions
 - **WHEN** a source View contains open positions and a user exports Employees, JSON, or Template data
@@ -327,10 +327,3 @@ name and Tags; Editor export MUST use full name with a conditional manager marke
 #### Scenario: Create blank State
 - **WHEN** the application creates a new blank organization
 - **THEN** its four required display formats exactly match the maintained defaults
-
-### Requirement: Complete transfer includes analytics configuration
-Complete State Export and Import SHALL include the exact singleton Analytics configuration and current bounded Analytics UI state. Import MUST reject dashboard collections, panels, filter widgets, invalid tab membership, dangling View/custom-field/filter/widget references, incompatible targets, or limit violations atomically.
-
-#### Scenario: Import singleton Analytics atomically
-- **WHEN** a complete current State contains valid filters, optional tabs, widgets, and UI selections
-- **THEN** all definitions and interaction state replace the current State together and results calculate locally on demand

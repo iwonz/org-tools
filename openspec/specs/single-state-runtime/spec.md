@@ -381,13 +381,9 @@ Conversion code MUST NOT remain in runtime or complete-State Import.
 - **WHEN** candidate parsing, preservation comparison, SQLite commit, or reopen fails
 - **THEN** the original transaction remains intact and the complete timestamped backup family remains available
 
-### Requirement: Exact State persists analytics definitions and UI
-Organization state SHALL contain required singleton `analytics` definitions with exact filter, tab, and data-widget arrays. Durable UI SHALL contain required active tab, filter values keyed by filter ID, and drill-down state. The parser MUST enforce widget/filter discriminators, UUID/reference integrity, collection limits, compatible targets, and root-versus-tab membership. Drafts, results, caches, visibility, SVG, and PNG data MUST remain transient.
+### Requirement: Exact State excludes removed Analytics data
+Organization and durable UI State MUST omit Analytics definitions and interaction data. The exact parser MUST reject `organization.analytics`, `ui.analytics`, and `analytics` as an active product tab without runtime conversion.
 
-#### Scenario: Reject the dashboard collection shape
-- **WHEN** State contains `organization.analyticsDashboards`, dashboard or panel definitions, filter widgets, or former active-dashboard/panel-tab UI keys
-- **THEN** strict validation fails without runtime compatibility conversion
-
-#### Scenario: Round trip analytics State
-- **WHEN** a valid singleton Analytics State is saved, synchronized, exported, imported, or reopened
-- **THEN** definitions and bounded UI state restore exactly while calculated results are rebuilt locally
+#### Scenario: Reject an Analytics-bearing State
+- **WHEN** imported, synchronized, or API-written State contains an Analytics organization key, Analytics UI key, or Analytics active tab
+- **THEN** strict validation rejects the complete candidate without changing current State

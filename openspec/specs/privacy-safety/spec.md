@@ -7,13 +7,13 @@ Define the browser data boundary, publication safeguards, and explicit external 
 The application SHALL transmit state only between the local-server page and its loopback same-origin
 singleton state API. Pages SHALL process state only in current page memory, live same-origin tab
 messages, explicit Import, and explicit Export. Neither runtime SHALL transmit organization data,
-durable UI, candidates, tag dates, events, avatars, searches, analytics, or exports to a third party
+durable UI, candidates, tag dates, events, avatars, searches or exports to a third party
 or non-loopback service. State snapshots SHALL remain out of cookies, IndexedDB, local storage,
 session storage, and Cache Storage. The browser MAY persist only bounded locale and theme bootstrap
 metadata, and the local database MAY persist the validated singleton state.
 
 #### Scenario: Core workflow network audit
-- **WHEN** either runtime loads, imports, edits, searches, analyzes, renders, synchronizes tabs, or
+- **WHEN** either runtime loads, imports, edits, searches, renders, synchronizes tabs, or
   exports
 - **THEN** requests contain no third-party organization data and are limited to assets plus the
   loopback singleton API in server mode
@@ -161,12 +161,5 @@ navigation.
 - **THEN** only local Unit navigation occurs and no external request is made
 
 #### Scenario: Render a native Unit segment elsewhere
-- **WHEN** `{positions}` appears in any Editor, PNG, fallback, picker, catalog, Calendar, Analytics, or drag-preview card
+- **WHEN** `{positions}` appears in any Editor, PNG, fallback, picker, catalog, Calendar, or drag-preview card
 - **THEN** its Unit-name segment has no navigation target
-
-### Requirement: Analytics calculation and image capture stay local
-Dashboard snapshots, queries, filter values, results, SVG, drill-down identity, and PNG capture SHALL remain inside the browser and loopback same-origin runtime. Recharts, Worker code, fonts, and html-to-image MUST be locally bundled. Capture MUST accept only local bundled resources and data URLs and MUST NOT fetch remote resources.
-
-#### Scenario: Render and export a dashboard
-- **WHEN** a widget calculates, charts, drills down, or exports PNG
-- **THEN** no organization data or resource request is sent to a third-party origin

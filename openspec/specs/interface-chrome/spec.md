@@ -125,24 +125,17 @@ Workflows SHALL NOT repeat that action inside their content or empty state.
 - **THEN** its visible label is hidden, its icon remains centered, and its accessible name and tooltip remain available
 
 ### Requirement: Product workflows use purposeful grouping
-Teams, Employees, Analytics, Calendar, and Download SHALL render their primary task content
-full-bleed without an outer panel border, radius, shadow, or shell-colored gap. Teams and Download
-SHALL distinguish source and detail panes through tone, typography, and compact layout without a
-decorative separator. Analytics SHALL group each metric table in one uniform soft tonal section
-whose heading, column header, and row viewport do not stack competing neutral backgrounds or
-outlines. Calendar SHALL group its header, Tag rail, and month grid through spacing and tone while
-individual day cells keep semantic boundaries. The Editor SHALL retain an edge-to-edge neutral
-canvas with floating toolbar surfaces and bounded data nodes.
+Teams, Employees, Calendar, and Download SHALL render their primary task content full-bleed without
+an outer panel border, radius, shadow, or shell-colored gap. Teams and Download SHALL distinguish
+source and detail panes through tone, typography, and compact layout without a decorative separator.
+Calendar SHALL group its header, Tag rail, and month grid through spacing and tone while individual
+day cells keep semantic boundaries. The Editor SHALL retain an edge-to-edge neutral canvas with
+floating toolbar surfaces and bounded data nodes.
 
 #### Scenario: Split workflow
 - **WHEN** populated Teams or Download renders adjacent source and detail panes
 - **THEN** the panes share one full-bleed workflow and remain distinguishable without an outer frame,
   empty gutter, decorative separator, or a card around each row
-
-#### Scenario: Analytics overview
-- **WHEN** populated Analytics renders its six groups
-- **THEN** each group has a consistent tonal surface, heading hierarchy, compact table density, and
-  hover or focus feedback without an outline or nested row cards
 
 #### Scenario: Calendar workflow
 - **WHEN** Calendar contains birthdays or dated tag events
@@ -215,19 +208,14 @@ responsive behavior, or interaction states.
 
 ### Requirement: Repeated content remains scan-friendly and performant
 Repeated content SHALL use alignment, compact spacing, subtle row separation where useful, and
-interaction feedback instead of floating row tiles across Employee lists, Analytics tables,
-filters, tag pickers, and event lists. Existing virtualization, stable keys, content-driven
-measurement, wrapped tag visibility, and bounded scrolling SHALL remain unchanged.
+interaction feedback instead of floating row tiles across Employee lists, filters, tag pickers, and
+event lists. Existing virtualization, stable keys, content-driven measurement, wrapped tag
+visibility, and bounded scrolling SHALL remain unchanged.
 
 #### Scenario: Contiguous Employee list
 - **WHEN** multiple Employees render in a virtualized list
 - **THEN** rows remain contiguous and content-driven while a subtle separator and hover or focus
   state make row boundaries scannable
-
-#### Scenario: Dense analytical rows
-- **WHEN** an Analytics group contains more rows than its visible cap
-- **THEN** the section retains its bounded scroll area, eight-row cap, sortable columns, and compact
-  row treatment without rendering per-row cards
 
 #### Scenario: Many Employee tags
 - **WHEN** an Employee row contains tags that wrap across multiple lines
@@ -336,7 +324,7 @@ tooltips without changing header height.
 
 ### Requirement: Navigation prioritizes Employees
 The sidebar SHALL order Employees before Units while preserving the existing order of Editor,
-Analytics, Calendar, Data Download, and utility actions.
+Calendar, Data Download, and utility actions.
 
 #### Scenario: Read the primary navigation
 - **WHEN** the sidebar is expanded or compact
@@ -358,10 +346,3 @@ or change fragment geometry.
 #### Scenario: Inspect a suffix inset
 - **WHEN** a Tag surface ends with a date or count
 - **THEN** measured content ends exactly 8 pixels before the surface's logical end edge in either writing direction
-
-### Requirement: Dashboard builder chrome is responsive and accessible
-Analytics SHALL provide localized empty, viewing, editing, validation, loading, error, and truncation states for one anonymous board. Filter, tab, and widget controls MUST retain visible focus, keyboard access, accessible names, drag alternatives, and logical RTL order. Dashboard selectors, dashboard lifecycle controls, and panel chrome MUST NOT render.
-
-#### Scenario: Use a narrow RTL viewport
-- **WHEN** Analytics renders in Arabic below the maintained grid breakpoint
-- **THEN** the active widget grid forms one logical column and filter, tab, and constructor controls follow RTL reading order

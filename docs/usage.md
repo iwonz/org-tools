@@ -20,7 +20,7 @@ While either runtime resolves its initial state, the shell shows only one center
 without technical status copy. The indicator uses local styles, respects reduced motion, and keeps
 a localized accessible status name.
 
-The compact sidebar contains Employees, Units, Editor, Analytics, Calendar, Data Download, Import,
+The compact sidebar contains Employees, Units, Editor, Calendar, Data Download, Import,
 state Export, language, and theme. Its desktop control expands the 64 px icon rail to a 240 px label
 panel without moving icon centers. The header shows the current section icon and title plus its contextual actions:
 **Add Unit**; **Employee model**, **Tags**, and **Add Employee**; or enabled **Continue**. On narrow screens
@@ -155,7 +155,7 @@ control.
   or **No background**. The alpha-preserving background covers the complete row beneath its dashed vacancy outline and appears in
   Editor PNG. It is hidden by collapse and participates in Group by tag and canvas side attachments,
   but does not
-  appear in Employees, Analytics, Calendar, distribution, Employee totals, Tag-cloud counts, or
+  appear in Employees, Calendar, distribution, Employee totals, Tag-cloud counts, or
   data exports. Its context menu supports Edit, **Replace with Employee**, and Delete. Picker
   replacement adds the chosen Employee occurrence without removing other assignments; dropping one
   Employee from another manual Unit moves that occurrence and consumes the position. Both preserve
@@ -254,21 +254,6 @@ control.
   its preview, Copy, Save, and preview totals all describe the same filtered output.
   Unit/subtree Image export includes transitively attached annotations but excludes free or external
   ones. Editor exports always use the active View.
-- **Analytics** is one anonymous board and starts empty. **Edit** opens one isolated draft for global
-  filters, optional named tabs, and the current two-column widget grid. Widgets can occupy half or
-  full width with S, M, or L height. Save applies the whole draft, while Cancel discards it. Pointer
-  drag and adjacent keyboard controls reorder filters, tabs, and widgets. Narrow screens stack the
-  widget grid into one column. Without tabs, widgets live in the root grid. The first tab adopts
-  existing root widgets; deleting tabs moves their widgets safely to a neighbor or back to root.
-  KPI, table, pivot, bar, line/area, pie/donut, and gauge widgets choose a View and current Employee,
-  assignment, Tag-assignment, or Composite-record dataset. Their query editor offers
-  dimensions, typed local filters, date grouping, row/distinct/numeric measures, sorting, Top N,
-  presentation, palette, and chart-specific settings. Separate global filters remain above tabs,
-  combine with AND, combine selected values inside one filter with OR, and target all compatible
-  widgets or an explicit set across tabs. Clicking a result opens current matching Employees in a
-  virtualized drill-down without changing filters. A widget or the current board widget grid exports
-  to a local PNG preview with background, padding, radius, Copy, and Save; board export excludes
-  filter and tab controls.
 - **Calendar** combines recurring birthdays and dated tags with localized weekday order, leading
   month offsets, soft rose weekend tones, a horizontal Tag rail, conditional Today navigation, event-bearing interactive dates, and Employee
   actions. Empty dates remain non-interactive and open no dialog. A day dialog is one vertical scroll: nonempty Birthdays come first, followed by each

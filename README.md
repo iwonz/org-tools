@@ -1,7 +1,7 @@
 # org-tools
 
-`org-tools` is a private organization editor for Units, Employees, visual structure, Analytics,
-Calendar, and local data downloads.
+`org-tools` is a private organization editor for Units, Employees, visual structure, Calendar, and
+local data downloads.
 
 [Open Org Tools on GitHub Pages](https://iwonz.github.io/org-tools/) — the complete browser-only
 application. Its organization state exists only in memory, can synchronize between currently open
@@ -11,19 +11,15 @@ requests.
 
 ## Screenshots
 
-| Import | State Export |
-| :---: | :---: |
-| [![State import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct state export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) |
-| Theme | Language |
-| [![Dark theme dialog](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) | [![Six-language selector](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) |
-| Teams | Employees |
-| [![Populated Teams](docs/screenshots/demo-teams.png)](docs/screenshots/demo-teams.png) | [![Searchable Employee catalog](docs/screenshots/demo-employees.png)](docs/screenshots/demo-employees.png) |
-| Editor | Analytics |
-| [![Visual organization Editor](docs/screenshots/demo-editor.png)](docs/screenshots/demo-editor.png) | [![Organization Analytics](docs/screenshots/demo-analytics.png)](docs/screenshots/demo-analytics.png) |
-| Calendar | Data Download |
-| [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
+| Import | State Export | Theme |
+| :---: | :---: | :---: |
+| [![State import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct state export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) | [![Dark theme dialog](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) |
+| Language | Teams | Employees |
+| [![Six-language selector](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) | [![Populated Teams](docs/screenshots/demo-teams.png)](docs/screenshots/demo-teams.png) | [![Searchable Employee catalog](docs/screenshots/demo-employees.png)](docs/screenshots/demo-employees.png) |
+| Editor | Calendar | Data Download |
+| [![Visual organization Editor](docs/screenshots/demo-editor.png)](docs/screenshots/demo-editor.png) | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
 
-The [complete visual capability catalog](docs/screenshots.md) documents all 59 maintained scenarios.
+The [complete visual capability catalog](docs/screenshots.md) documents all 56 maintained scenarios.
 
 Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
 recurring day and month are known.
@@ -54,8 +50,6 @@ outputs. A View-local distribution mode can update one or many selected Units, h
 members already placed elsewhere, and traces one selected Employee to every other placement without
 changing or exporting the structure. Multi-Unit Employees expose a separate read-only relationship
 map with pan, zoom, and exact navigation back to their occurrence on the Editor canvas.
-Analytics includes known birth-year distributions plus average, youngest, and oldest age summaries
-for the whole catalog, men, and women; unknown `1900` years are excluded.
 Template formats in Data Download, Editor export, and the Employee model place a help affordance
 beside Format and accept `@` to insert documented `{token}` values at the caret. If a local SQLite database cannot open, explicit recovery preserves its file family as
 a timestamped backup before creating a blank current-schema database.

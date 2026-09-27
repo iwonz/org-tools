@@ -11,7 +11,7 @@ context: |
     complete state or a mapped Employee array; global Export directly downloads only the complete
     state. Public schemas are current-only: changes replace obsolete contracts and remove their
     readers, migrations, fixtures, docs, and tests.
-  Privacy: organization data, imports, search terms, analytics, and exports never leave the browser
+  Privacy: organization data, imports, search terms, and exports never leave the browser
     and loopback same-origin runtime. There is no telemetry, remote logging, remote synchronization,
     remote avatar fetching, or third-party database.
   Scale: preserve the interaction target of 20,000 Employees and 4,000 Units through normalized

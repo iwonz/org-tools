@@ -83,6 +83,28 @@ describe("OrgToolsState", () => {
       name: null,
       structure: { canvasElements: [], layoutMode: "topDown", units: [] },
     });
+    expect(Object.hasOwn(organization, "analytics")).toBe(false);
+    expect(Object.hasOwn(store.createOrgToolsState().ui, "analytics")).toBe(false);
+  });
+
+  test("rejects removed Analytics state and active-tab values", () => {
+    const organizationCandidate = structuredClone(createBlankOrgToolsState()) as unknown as {
+      organization: Record<string, unknown>;
+    };
+    organizationCandidate.organization.analytics = { filters: [], tabs: [], widgets: [] };
+    expect(() => parseOrgToolsState(organizationCandidate)).toThrow("invalid top-level structure");
+
+    const uiCandidate = structuredClone(createBlankOrgToolsState()) as unknown as {
+      ui: Record<string, unknown>;
+    };
+    uiCandidate.ui.analytics = {};
+    expect(() => parseOrgToolsState(uiCandidate)).toThrow("invalid durable UI state");
+
+    const activeTabCandidate = structuredClone(createBlankOrgToolsState()) as unknown as {
+      ui: { activeTab: string };
+    };
+    activeTabCandidate.ui.activeTab = "analytics";
+    expect(() => parseOrgToolsState(activeTabCandidate)).toThrow("invalid durable UI state");
   });
 
   test("requires and round-trips exact Employee display formats", () => {
@@ -795,6 +817,26 @@ describe("OrgToolsState", () => {
       [{ isBoss: true, position: "Lead", unitId }],
     );
     expect(store.organizationEmployees[0]?.customFieldValues[definition.id]).toBe("Engineering");
+  });
+
+  test("deletes unreferenced custom fields without removed Analytics guards", () => {
+    const store = new OrgStore();
+    const definition: CustomEmployeeFieldDefinition = {
+      allowCustomOptions: false,
+      id: uuid(399),
+      key: "temporary",
+      kind: "value",
+      multiple: false,
+      name: "Temporary",
+      options: [],
+      required: false,
+      valueType: "text",
+    };
+    store.saveEmployeeFieldDefinition(definition);
+
+    store.deleteEmployeeFieldDefinition(definition.id);
+
+    expect(store.employeeFieldDefinitions).toEqual([]);
   });
 
   test("clears incompatible values and filters when a Value field type changes", () => {

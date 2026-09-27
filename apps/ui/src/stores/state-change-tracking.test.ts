@@ -22,7 +22,7 @@ describe("state change tracking", () => {
   it("does not treat tab and theme changes as organization changes", () => {
     const store = new OrgStore();
     store.resetChangeTracking();
-    store.setActiveTab("analytics");
+    store.setActiveTab("calendar");
     store.setTheme("dark");
 
     expect(store.organizationChangeSequence).toBe(0);

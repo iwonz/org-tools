@@ -242,6 +242,7 @@ for (const [locale, messages] of [
     const assertLocalRequests = await expectLocalRequestsOnly(page);
     await seedLocale(page, locale);
     await page.goto(await resetServerState(page, locale), { waitUntil: "domcontentloaded" });
+    await expect(page.locator('[data-demo-id="tab-analytics"]')).toHaveCount(0);
 
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: messages.Ui.Export, exact: true }).click();
@@ -538,13 +539,6 @@ for (const [locale, messages] of [
         animations: "disabled",
         fullPage: true,
         path: testInfo.outputPath("russian-employee-counts.png"),
-      });
-      await page.getByRole("tab", { name: messages.Ui.Analytics, exact: true }).click();
-      await expect(page.locator('[data-demo-id="analytics-widget-grid"]')).toBeVisible();
-      await page.screenshot({
-        animations: "disabled",
-        fullPage: true,
-        path: testInfo.outputPath("russian-analytics-clean.png"),
       });
     }
     await page.getByRole("tab", { name: messages.Ui.Calendar, exact: true }).click();

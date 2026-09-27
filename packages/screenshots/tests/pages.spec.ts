@@ -400,7 +400,7 @@ test("runs the complete state editor at the repository base path without APIs or
       .find((unit) => unit.name === "Product")?.noteMarkdown,
   ).toBe("# Portable note");
 
-  for (const tab of ["Employees", "Analytics", "Calendar"] as const) {
+  for (const tab of ["Employees", "Calendar"] as const) {
     await page.getByRole("tab", { name: tab, exact: true }).click();
     await expect(page.getByRole("tabpanel", { name: tab, exact: true })).toBeVisible();
   }

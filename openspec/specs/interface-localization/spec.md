@@ -292,10 +292,3 @@ placeholders and no obsolete keys.
 #### Scenario: Open Display in every locale
 - **WHEN** the user opens Employee model, selects Display, edits Markdown, changes a gap, or resets a format in any supported locale
 - **THEN** every visible label, validation message, tooltip, and accessible name uses that locale catalog
-
-### Requirement: Dashboard builder copy is complete in six locales
-All singleton Analytics, filter, tab, widget, query, drill-down, export, validation, accessibility, empty, loading, error, and truncation messages SHALL exist in all six catalogs. Obsolete dashboard collection and panel lifecycle messages MUST be removed.
-
-#### Scenario: Validate all catalogs
-- **WHEN** localization completeness checks run
-- **THEN** every maintained locale has the same Analytics key set without obsolete dashboard or panel actions

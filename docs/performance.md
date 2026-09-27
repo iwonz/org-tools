@@ -29,8 +29,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   palette and hue movement update only the open Tag draft in constant time; one final valid commit
   updates the catalog after the gesture. Exact input commits only on Enter or blur. These previews never traverse
   Employees or Units.
-- Parse each canonical `DD.MM.YYYY` birthday once while building the shared search index; Calendar,
-  Analytics, and filters reuse its derived recurring month-day key without duplicating Employee data.
+- Parse each canonical `DD.MM.YYYY` birthday once while building the shared search index; Calendar
+  and filters reuse its derived recurring month-day key without duplicating Employee data.
 - Resolve custom Template dependencies once per definition graph and memoize derived Employee
   values by organization revision. Filter option discovery and output reuse the same cache.
   Multi-option filters reuse resolved label arrays, Composite filters reuse only indexed primary
@@ -60,7 +60,7 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   same complete memoized index and enabled-Unit set, so Unit-only and subtree status remains correct
   without rebuilding or rescanning the active View for each preview.
 - Virtualize discriminated Employee/open-position Unit rows, Unit-aware pickers, filter options,
-  Analytics rows, and event dialogs. Stable row keys share cached rich-line heights and prefix
+  and event dialogs. Stable row keys share cached rich-line heights and prefix
   offsets. The prefix sum includes one four-pixel gap before every row after the first, so DOM,
   virtual windows, hit testing, anchors, Unit bounds, hierarchy placement, and PNG reuse one O(n)
   geometry pass without per-row margins or measurements. Open-position anchor and drop hit testing
@@ -126,15 +126,7 @@ and indivisible date or count suffix. Disabling the View Tag
   PNG painting, and Employee output never parse them. Editing mutates only a transient draft; Save
   validates at most 64 KiB of UTF-8 and commits one Unit document change.
 
-Analytics mounts only root widgets or the active tab's widgets. IntersectionObserver starts a data
-query only when its widget approaches the viewport, and global filter options are deferred until
-their control opens. A local Worker deduplicates equivalent revision/query/filter keys,
-ignores obsolete generations, and retains at most 96 result entries. Rows are built only for the
-requested View and explicit Employee, assignment, Tag, or Composite grain. Multi-value categories
-preserve Employee IDs for distinct counting. Tables virtualize at a 20,000-row result bound; pivots
-materialize at most 10,000 cells and report truncation. Drill-down stores bounded Employee IDs and
-re-resolves current cards. This keeps the maintained 20,000 Employee / 4,000 Unit target independent
-of inactive tabs. Calendar uses seven fluid columns, a constant-size Tag indicator
+Calendar uses seven fluid columns, a constant-size Tag indicator
 per date, and virtualized event dialogs. Editor Employee rows and PNG output use the same
 display-line heights and prefix geometry. Mounted list cards measure their information-column width
 with `ResizeObserver` and reuse the same bounded layout cache; font readiness, width, locale,

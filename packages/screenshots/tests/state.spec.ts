@@ -39,10 +39,10 @@ test("opens at the root and writes organization plus durable UI automatically", 
     page.locator('[data-demo-id="employees-list"] [data-employee-display-content]').first(),
   ).toHaveAttribute("data-employee-display-line-gap", "9");
 
-  await page.getByRole("tab", { name: "Analytics", exact: true }).click();
+  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("tab", { name: "Analytics", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "Calendar", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
   );

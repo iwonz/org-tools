@@ -594,7 +594,7 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
     flexDirection: "column",
     width: expectedWidth - 16,
   });
-  expect(tabStyles).toHaveLength(6);
+  expect(tabStyles).toHaveLength(productTabs.length);
   expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
   expect(new Set(tabStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(tabStyles.map(({ height }) => height))).toEqual(new Set([40]));
@@ -640,7 +640,7 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
           return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
         }),
       ),
-    ).toEqual(Array.from({ length: 6 }, () => 0));
+    ).toEqual(Array.from({ length: productTabs.length }, () => 0));
   } else {
     await expect(label).toBeVisible();
     await expect(tooltip).toBeHidden();
@@ -876,14 +876,7 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
     await page
       .locator('[data-demo-id^="tab-"]')
       .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-demo-id"))),
-  ).toEqual([
-    "tab-employees",
-    "tab-units",
-    "tab-org-editor",
-    "tab-analytics",
-    "tab-calendar",
-    "tab-export",
-  ]);
+  ).toEqual(["tab-employees", "tab-units", "tab-org-editor", "tab-calendar", "tab-export"]);
   for (const tabName of productTabs) {
     const tab = page.getByRole("tab", { name: tabName, exact: true });
     await expect(tab).toBeVisible();
@@ -891,8 +884,6 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
     await expect(tab).toHaveAttribute("aria-selected", "true");
     if (tabName === "Calendar") {
       await expect(page.locator('[data-demo-id="calendar-month-grid"]')).toBeVisible();
-    } else if (tabName === "Analytics") {
-      await expect(page.getByText("No widgets yet", { exact: true })).toBeVisible();
     } else {
       await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
     }
@@ -1149,11 +1140,6 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   const surfaces = [
     ["tab-units", '[data-demo-id="units-surface"]', ['[data-demo-id="units-employee-header"]']],
     ["tab-employees", '[data-demo-id="employees-surface"]', ['[data-demo-id="employees-search"]']],
-    [
-      "tab-analytics",
-      '[data-demo-id="analytics-surface"]',
-      ['[data-demo-id="analytics-filter-strip"]'],
-    ],
     ["tab-calendar", '[data-demo-id="calendar-tab"]', ['[data-demo-id="calendar-header"]']],
     [
       "tab-export",
@@ -2583,117 +2569,6 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("builds one local Analytics board with separate tabs, filters, widgets, and PNG", async ({
-  page,
-}) => {
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankState(page);
-  await page.getByRole("tab", { name: "Analytics", exact: true }).click();
-  const analyticsSurface = page.locator('[data-demo-id="analytics-surface"]');
-  const grid = analyticsSurface.locator('[data-demo-id="analytics-widget-grid"]');
-  await expectFullBleedProductSurface(analyticsSurface);
-  await expect(page.getByText("No widgets yet", { exact: true })).toBeVisible();
-  await page.locator('[data-demo-id="analytics-edit"]').click();
-  await expect(page.locator('[data-demo-id="analytics-builder-toolbar"]')).toBeVisible();
-  await expect(grid).toBeVisible();
-  await expect(page.getByText("Dashboard name", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("Panel name", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "Add widget", exact: true }).click();
-  const widgetEditor = page.locator('[data-demo-id="analytics-widget-editor"]');
-  await expect(widgetEditor).toBeVisible();
-  await expect(
-    widgetEditor.getByRole("option", { name: "KPI counter", exact: true }),
-  ).toBeAttached();
-  await expect(
-    widgetEditor.getByRole("option", { name: "Pivot table", exact: true }),
-  ).toBeAttached();
-  await expect(
-    widgetEditor.getByRole("option", { name: "Filter widget", exact: true }),
-  ).toHaveCount(0);
-  await widgetEditor.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(page.getByText("No widgets yet", { exact: true })).toBeVisible();
-
-  await replaceWithSyntheticState(page);
-  await page.getByRole("tab", { name: "Analytics", exact: true }).click();
-  await expect(grid).toBeVisible();
-  const filterStrip = page.locator('[data-demo-id="analytics-filter-strip"]');
-  await expect(filterStrip).toBeVisible();
-  await expect(filterStrip).toContainText("Unit filter");
-  await expect(grid.locator('[data-demo-id="analytics-widget-filter"]')).toHaveCount(0);
-  await expect(grid.locator('[data-demo-id="analytics-widget-kpi"]')).toContainText("4");
-  await expect(grid.locator('[data-demo-id="analytics-widget-gauge"]')).toBeVisible();
-  await expect(grid.locator('[data-demo-id="analytics-widget-bar"]')).toHaveCount(0);
-  const unitFilter = filterStrip.locator("select");
-  await expect(unitFilter.getByRole("option", { name: "Platform", exact: true })).toHaveCount(0);
-  await unitFilter.focus();
-  await expect(unitFilter.getByRole("option", { name: "Platform", exact: true })).toBeVisible();
-
-  await page.getByRole("tab", { name: "Distribution", exact: true }).click();
-  await expect(grid.locator('[data-demo-id="analytics-widget-bar"]')).toBeVisible();
-  await expect(grid.locator('[data-demo-id="analytics-widget-pie"]')).toBeVisible();
-  await page.getByRole("tab", { name: "Trends and pivot", exact: true }).click();
-  await expect(grid.locator('[data-demo-id="analytics-widget-line"]')).toBeVisible();
-  await expect(grid.locator('[data-demo-id="analytics-widget-pivot"]')).toBeVisible();
-  await page.getByRole("tab", { name: "Summary", exact: true }).click();
-
-  await page.locator('[data-demo-id="analytics-edit"]').click();
-  const summaryInput = page.getByLabel("Tab name", { exact: true }).first();
-  await summaryInput.fill("Unsaved summary");
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(page.getByRole("tab", { name: "Summary", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Unsaved summary", exact: true })).toHaveCount(0);
-
-  await page.locator('[data-demo-id="analytics-edit"]').click();
-  await page.getByLabel("Tab name", { exact: true }).first().fill("Saved summary");
-  await expect(page.getByRole("button", { name: "Move down", exact: true }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Filter", exact: true }).click();
-  const filterEditor = page.locator('[data-demo-id="analytics-filter-editor"]');
-  await expect(filterEditor).toBeVisible();
-  await filterEditor.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.locator('[data-demo-id="analytics-save"]').click();
-  await expect(page.getByRole("tab", { name: "Saved summary", exact: true })).toBeVisible();
-
-  const savedKpi = grid.locator('[data-demo-id="analytics-widget-kpi"]');
-  await expect(savedKpi).toContainText("4");
-  await savedKpi.locator("[data-analytics-widget-body] > button").click();
-  const drillDown = page.locator('[data-demo-id="analytics-drilldown-dialog"]');
-  await expect(drillDown).toBeVisible();
-  await expect(drillDown.locator('[data-demo-id="analytics-drilldown-list"] article')).toHaveCount(
-    4,
-  );
-  await drillDown.getByRole("button", { name: "Close", exact: true }).click();
-
-  await grid.getByRole("button", { name: "Export PNG", exact: true }).first().click();
-  const imageDialog = page.locator('[data-demo-id="analytics-image-export-dialog"]');
-  await expect(imageDialog).toBeVisible();
-  await expect(imageDialog.getByAltText("Analytics", { exact: true })).toBeVisible();
-  await expect(
-    imageDialog.getByRole("button", { name: "Fit", exact: true }).locator("svg"),
-  ).toHaveCount(1);
-  await imageDialog.getByRole("button", { name: "Close", exact: true }).click();
-
-  await analyticsSurface
-    .locator(":scope > header")
-    .getByRole("button", { name: "Export PNG", exact: true })
-    .click();
-  await expect(imageDialog).toBeVisible();
-  await expect(imageDialog.getByAltText("Analytics", { exact: true })).toBeVisible();
-  await imageDialog.getByRole("button", { name: "Close", exact: true }).click();
-
-  await page.setViewportSize({ width: 720, height: 900 });
-  expect(
-    await grid.evaluate(
-      (element) => window.getComputedStyle(element).gridTemplateColumns.split(" ").length,
-    ),
-  ).toBe(1);
-  await selectDialogRadio(page, "language-toggle", "language-dialog", "ar");
-  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(filterStrip).toBeVisible();
-  await expect(grid).toBeVisible();
-  await assertLocalRequests();
-});
-
 test("renders split Org Editor controls and reveals search to the left", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
@@ -4062,54 +3937,6 @@ test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page })
   await expect(page.locator("[data-org-editor-selection-rect]")).toBeVisible();
   await page.mouse.up();
   await page.keyboard.up("Control");
-  await assertLocalRequests();
-});
-
-test("virtualizes long Analytics table results", async ({ page }) => {
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankState(page);
-  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const template = state.organization.employees[0];
-  if (!template) throw new Error("Synthetic Employee template is unavailable.");
-  for (let index = 1; index <= 12; index += 1) {
-    const email = `sample-${index}@example.test`;
-    const firstName = `Sample${String(index).padStart(2, "0")}`;
-    const lastName = "Employee";
-    state.organization.employees.push({
-      ...template,
-      avatarBase64Url: null,
-      birthday: null,
-      email,
-      firstName,
-      id: createTestEmployeeId({ email, firstName, lastName }),
-      lastName,
-      profileUrl: null,
-      tags: [],
-      username: `sample-${index}`,
-    });
-  }
-  const dialog = await openImportDialog(page, {
-    buffer: Buffer.from(JSON.stringify(state)),
-    mimeType: "application/json",
-    name: "large-analytics-state.json",
-  });
-  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(page.locator('[data-demo-id="app-notice"]')).toHaveCount(0);
-  await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
-  await page.getByRole("tab", { name: "Analytics", exact: true }).click();
-  await page
-    .locator('[data-demo-id="analytics-tabs"]')
-    .getByRole("tab", { name: "Employees", exact: true })
-    .click();
-
-  const table = page.locator('[data-demo-id="analytics-widget-table"]');
-  await expect(table).toBeVisible();
-  const scrollArea = table.locator("[data-analytics-table-scroll]");
-  await expect(scrollArea.locator("tbody tr").first()).toBeVisible();
-  expect(await scrollArea.evaluate((element) => element.scrollHeight)).toBeGreaterThan(
-    await scrollArea.evaluate((element) => element.clientHeight),
-  );
-  expect(await scrollArea.locator("tbody tr").count()).toBeLessThan(16);
   await assertLocalRequests();
 });
 

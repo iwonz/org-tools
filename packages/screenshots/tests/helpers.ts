@@ -13,14 +13,7 @@ export type ImportFilePayload = {
 export const syntheticStatePath = fileURLToPath(
   new URL("../fixtures/synthetic-state.json", import.meta.url),
 );
-export const productTabs = [
-  "Units",
-  "Employees",
-  "Editor",
-  "Analytics",
-  "Calendar",
-  "Download",
-] as const;
+export const productTabs = ["Employees", "Units", "Editor", "Calendar", "Download"] as const;
 
 export const localeStorageKey = "org-tools-locale";
 
@@ -216,21 +209,10 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
   systemView.structure.canvasElements = [];
   systemView.structure.units = [];
   state.organization.employees = [];
-  state.organization.analytics = { filters: [], tabs: [], widgets: [] };
   state.organization.employeeFieldDefinitions = [];
   state.organization.tags = [];
   state.organization.views = [systemView];
   state.ui.activeTab = "orgEditor";
-  state.ui.analytics = {
-    activeTabId: null,
-    drilldown: {
-      employeeIds: [],
-      filters: emptyEmployeeFilters(),
-      query: "",
-      sourceWidgetId: null,
-    },
-    filterValuesByFilterId: {},
-  };
   state.ui.calendar = { monthIndex: 6, year: 2026 };
   state.ui.editor = {
     activeViewId: systemView.id,

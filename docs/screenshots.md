@@ -1,7 +1,7 @@
 # Screenshots
 
 The screenshot catalog is generated from the production applications and declared in
-`docs/screenshot-demo.json`. The README shows the ten featured module frames; this page covers all 59
+`docs/screenshot-demo.json`. The README shows the nine featured module frames; this page covers all 56
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
@@ -461,32 +461,6 @@ Employee rows use the saved Editor-export line spacing and output requests 3× a
 Capabilities: Fixed 3× and silent clamping, Fit/manual preview, Shared color picker, Gradients and
 transparency, Spacing, Employee line spacing, Employee card content.
 
-## Analytics
-
-### Analytics board
-
-[![Organization Analytics](screenshots/demo-analytics.png)](screenshots/demo-analytics.png)
-
-Review the single local board composed from global filters, optional tabs, KPI, charts, and tables.
-
-Capabilities: Local queries, Root grid, Optional tabs, Global filters, Charts, Virtualized tables.
-
-### Analytics board constructor
-
-[![Complete Analytics groups](screenshots/feature-analytics-complete-groups.png)](screenshots/feature-analytics-complete-groups.png)
-
-Edit filters, tabs, widget sizes, queries, and presentation in one isolated draft.
-
-Capabilities: Atomic draft, Widget sizes, Drag and keyboard reorder, Query builder.
-
-### Analytics PNG preview
-
-[![Analytics drill-down](screenshots/feature-analytics-drilldown.png)](screenshots/feature-analytics-drilldown.png)
-
-Preview a local 3× PNG capture of one widget or the current board widget grid.
-
-Capabilities: Widget export, Board export, Fixed 3×, Local DOM capture, Copy and save.
-
 ## Calendar
 
 ### Employee Calendar
@@ -579,7 +553,7 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Review light and dark themes, all six locale dialogs, Arabic RTL, compact and expanded sidebar
   geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
-- Confirm dialogs, popovers, filters, error states, Editor exports, Analytics drill-down, Calendar events, and Download previews are fully visible.
+- Confirm dialogs, popovers, filters, error states, Editor exports, Calendar events, and Download previews are fully visible.
 - Confirm Tag rows are padding-free and have no row-level hover effect while exposing Eye, Color,
   Edit, and Delete in order. Rename uses a dedicated modal; quick Color shows its palette, exact
   typed format Select above the Popover, synchronized opacity controls, all organization-wide Used
@@ -698,5 +672,5 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
 - Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
-- Regenerate immediately; all 59 PNGs must retain identical hashes. Material differences require
+- Regenerate immediately; all 56 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

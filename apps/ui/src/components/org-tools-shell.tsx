@@ -8,7 +8,6 @@ import { useCallback, useState } from "react";
 import {
   HiOutlineBuildingOffice2,
   HiOutlineCalendarDays,
-  HiOutlineChartBar,
   HiOutlineChevronLeft,
   HiOutlineDocumentArrowDown,
   HiOutlineDocumentArrowUp,
@@ -17,7 +16,6 @@ import {
   HiOutlineUsers,
 } from "react-icons/hi2";
 
-import { AnalyticsTab } from "@/components/analytics-tab";
 import { CalendarTab } from "@/components/calendar-tab";
 import {
   type ContextHeaderAction,
@@ -40,7 +38,7 @@ import { downloadState } from "@/lib/state-transfer";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
-type ProductTabValue = "analytics" | "calendar" | "employees" | "export" | "orgEditor" | "units";
+type ProductTabValue = "calendar" | "employees" | "export" | "orgEditor" | "units";
 
 const PRODUCT_NAVIGATION_ITEMS: Array<{
   icon: ComponentType<{ className?: string }>;
@@ -50,7 +48,6 @@ const PRODUCT_NAVIGATION_ITEMS: Array<{
   { icon: HiOutlineUsers, label: "Employees", value: "employees" },
   { icon: HiOutlineFolder, label: "Units", value: "units" },
   { icon: HiOutlineBuildingOffice2, label: "Editor", value: "orgEditor" },
-  { icon: HiOutlineChartBar, label: "Analytics", value: "analytics" },
   { icon: HiOutlineCalendarDays, label: "Calendar", value: "calendar" },
   { icon: HiOutlineShare, label: "Data Download", value: "export" },
 ];
@@ -125,7 +122,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
               value === "employees" ||
               value === "orgEditor" ||
               value === "export" ||
-              value === "analytics" ||
               value === "calendar"
             ) {
               store.setActiveTab(value);
@@ -336,13 +332,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
               value="orgEditor"
             >
               <OrgStructureEditorTab />
-            </TabsContent>
-            <TabsContent
-              className="flex min-h-0 flex-1"
-              data-demo-id="analytics-tab-content"
-              value="analytics"
-            >
-              <AnalyticsTab />
             </TabsContent>
             <TabsContent
               className="flex min-h-0 flex-1"

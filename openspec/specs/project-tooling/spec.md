@@ -93,7 +93,7 @@ tracked database artifacts, local paths, organization data, obsolete project rou
 The repository SHALL document stable UUID Employee identity, normalized duplicate detection,
 State/Employees transfer, the system and isolated custom Editor Views, local runtimes, privacy, and
 scale behavior. It SHALL include an
-English README with exactly ten deterministic featured screenshot previews, a comprehensive grouped
+English README with exactly nine deterministic featured screenshot previews, a comprehensive grouped
 screenshot catalog, contributor and security guidance, license, tests, specifications, detailed
 documentation, CI, and generated PNGs. Non-English product copy SHALL live only in its corresponding
 locale catalog; source, comments, fixtures, tests, specifications, and documentation SHALL remain
@@ -103,12 +103,11 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: README visual showcase
 - **WHEN** a visitor opens README
-- **THEN** exactly one full-size Import, Export, theme, language, Teams, Employees, Editor, Analytics,
-  Calendar, and Download preview is linked locally
+- **THEN** exactly one full-size Import, Export, theme, language, Teams, Employees, Editor, Calendar, and Download preview is linked locally
 
 #### Scenario: Complete visual capability catalog
 - **WHEN** a visitor opens the detailed screenshot guide
-- **THEN** the 59-frame gallery contains ten featured workflows and only currently visible supporting
+- **THEN** the 56-frame gallery contains nine featured workflows and only currently visible supporting
   behavior, without project, file, Save, autosave, or obsolete conflict frames
 
 #### Scenario: Continuous validation
@@ -128,7 +127,7 @@ or compatibility readers. Employee mapping is supported only by the explicit Emp
 
 #### Scenario: Screenshot generation
 - **WHEN** screenshot generation runs against both production runtimes
-- **THEN** it deterministically replaces exactly 59 declared PNGs, including ten featured frames
+- **THEN** it deterministically replaces exactly 56 declared PNGs, including nine featured frames
 
 #### Scenario: Screenshot manifest consistency
 - **WHEN** generation or publication checks inspect the gallery
@@ -254,7 +253,7 @@ be narrow, documented beside its matcher, and include no organization data.
 
 #### Scenario: Complete production workflow audit
 - **WHEN** the maintained server and Pages browser catalogs exercise Import, Export, theme,
-  language, Teams, Employees, Editor, Analytics, Calendar, Data Download, menus, dialogs, and
+  language, Teams, Employees, Editor, Calendar, Data Download, menus, dialogs, and
   representative mutations
 - **THEN** every page finishes without an unexpected console error or warning, page error, failed
   application request, or failing same-origin resource response
@@ -281,16 +280,16 @@ runners without deprecation annotations.
 
 ### Requirement: Documentation and gallery cover current product surfaces
 The repository SHALL document both local-only runtimes, six bundled locales, Arabic RTL, isolated
-Editor Views over global Employees, Analytics bound to the system View, View-selectable Data
+Editor Views over global Employees, View-selectable Data
 Download, wrapped direct Tag footers, modal Language and Theme settings, selected-only Editor
 arrangement, direct State Export, source-driven Employee Import, colored Editor PNG Tags, privacy,
 performance, and screenshots without obsolete guidance. The deterministic gallery SHALL contain
-exactly 59 PNGs and the README SHALL retain exactly ten featured Import, Export, Theme, Language,
-Units, Employees, Editor, Analytics, Calendar, and Download frames.
+exactly 56 PNGs and the README SHALL retain exactly nine featured Import, Export, Theme, Language,
+Units, Employees, Editor, Calendar, and Download frames.
 
 #### Scenario: Complete gallery
 - **WHEN** screenshot generation runs against the production runtimes
-- **THEN** it deterministically replaces exactly 59 declared PNGs covering only current product workflows
+- **THEN** it deterministically replaces exactly 56 declared PNGs covering only current product workflows
 
 #### Scenario: Locale gallery
 - **WHEN** Language frames are generated
@@ -322,10 +321,10 @@ Units, Employees, Editor, Analytics, Calendar, and Download frames.
 
 #### Scenario: Featured README
 - **WHEN** a visitor opens README
-- **THEN** the same ten current product previews remain featured and every linked PNG exists
+- **THEN** the same nine current product previews remain featured and every linked PNG exists
 
 #### Scenario: Deterministic generation
-- **WHEN** the 59-frame gallery is generated twice from unchanged source and fixed fixtures
+- **WHEN** the 56-frame gallery is generated twice from unchanged source and fixed fixtures
 - **THEN** every PNG hash is identical and every owned page has no unexpected console or network diagnostic
 
 #### Scenario: Full-View image settings frame
@@ -342,7 +341,7 @@ for `en`, `zh`, `ru`, `es`, `fr`, and `ar` in both production runtimes.
 - **THEN** every supported locale passes static parity and runtime surface checks without fallback copy
 
 #### Scenario: Validate large localized data
-- **WHEN** Analytics and Editor exercise 20,000 Employees and 4,000 Units
+- **WHEN** Editor exercises 20,000 Employees and 4,000 Units
 - **THEN** locale-only UI changes do not serialize organization state or trigger per-frame full scans
 
 ### Requirement: Gallery documents Employee schema, Tags, and Calendar
@@ -681,10 +680,3 @@ generation SHALL remain deterministic and SHALL add or remove no frames.
 #### Scenario: Preserve the gallery contract
 - **WHEN** screenshots are generated twice from the same commit
 - **THEN** exactly 59 PNG files are produced with matching hashes and every updated image is visually reviewed
-
-### Requirement: Dashboard dependencies and screenshots are deterministic
-The repository SHALL pin locally bundled compatible Recharts, react-is, and html-to-image packages, validate server and Pages bundles for remote resources, and keep exactly 59 deterministic PNG gallery files. Three maintained Analytics scenarios SHALL show singleton board viewing, flattened constructor mode, and widget-grid PNG preview without dashboard selectors or panel chrome.
-
-#### Scenario: Generate the gallery twice
-- **WHEN** the supported screenshot command runs twice from the same source and fixture
-- **THEN** both 59-file PNG sets have identical hashes and contain the three singleton-board scenarios

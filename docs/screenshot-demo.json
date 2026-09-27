@@ -520,46 +520,6 @@
     ]
   },
   {
-    "id": "analytics-dashboard",
-    "module": "analytics",
-    "featured": true,
-    "title": "Analytics board",
-    "file": "demo-analytics.png",
-    "description": "Review the single local board composed from global filters, optional tabs, KPI, charts, and tables.",
-    "capabilities": [
-      "Local queries",
-      "Root grid",
-      "Optional tabs",
-      "Global filters",
-      "Charts",
-      "Virtualized tables"
-    ]
-  },
-  {
-    "id": "analytics-builder",
-    "module": "analytics",
-    "featured": false,
-    "title": "Analytics board constructor",
-    "file": "feature-analytics-complete-groups.png",
-    "description": "Edit filters, tabs, widget sizes, queries, and presentation in one isolated draft.",
-    "capabilities": ["Atomic draft", "Widget sizes", "Drag and keyboard reorder", "Query builder"]
-  },
-  {
-    "id": "analytics-image-preview",
-    "module": "analytics",
-    "featured": false,
-    "title": "Analytics PNG preview",
-    "file": "feature-analytics-drilldown.png",
-    "description": "Preview a local 3x PNG capture of one widget or the current board widget grid.",
-    "capabilities": [
-      "Widget export",
-      "Board export",
-      "Fixed 3x",
-      "Local DOM capture",
-      "Copy and save"
-    ]
-  },
-  {
     "id": "calendar",
     "module": "calendar",
     "featured": true,

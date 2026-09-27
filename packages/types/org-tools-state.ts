@@ -16,7 +16,7 @@ import type { EmployeeCustomFieldFilter, OrganizationEmployee } from "./organiza
 
 export type AppLocale = "ar" | "en" | "es" | "fr" | "ru" | "zh";
 export type UiTheme = "light" | "dark" | "system";
-export type UiActiveTab = "units" | "employees" | "orgEditor" | "export" | "analytics" | "calendar";
+export type UiActiveTab = "units" | "employees" | "orgEditor" | "export" | "calendar";
 
 export type EmployeeDisplayFormats = {
   editor: string;
@@ -30,149 +30,6 @@ export type EmployeeDisplayLineGaps = {
   editorExport: number;
   employees: number;
   units: number;
-};
-
-export type AnalyticsDataset =
-  | { kind: "assignments" }
-  | { fieldId: EmployeeFieldId; kind: "composite" }
-  | { kind: "employees" }
-  | { kind: "tags" };
-
-export type AnalyticsDateGrouping = "day" | "month" | "quarter" | "week" | "year";
-
-export type AnalyticsDimension = {
-  dateGrouping: AnalyticsDateGrouping | null;
-  field: string;
-};
-
-export type AnalyticsMeasureOperation =
-  | "average"
-  | "countDistinct"
-  | "countDistinctEmployees"
-  | "countRows"
-  | "max"
-  | "min"
-  | "sum";
-
-export type AnalyticsMeasure = {
-  field: string | null;
-  id: string;
-  operation: AnalyticsMeasureOperation;
-};
-
-export type AnalyticsFilterOperator =
-  | "contains"
-  | "empty"
-  | "equals"
-  | "greaterThan"
-  | "greaterThanOrEqual"
-  | "in"
-  | "lessThan"
-  | "lessThanOrEqual"
-  | "notEmpty"
-  | "notEquals"
-  | "range";
-
-export type AnalyticsFilterScalar = boolean | number | string;
-
-export type AnalyticsPredicate = {
-  field: string;
-  operator: AnalyticsFilterOperator;
-  value: AnalyticsFilterScalar | AnalyticsFilterScalar[] | null;
-  valueTo: AnalyticsFilterScalar | null;
-};
-
-export type AnalyticsQuery = {
-  dimensions: AnalyticsDimension[];
-  filters: AnalyticsPredicate[];
-  measures: AnalyticsMeasure[];
-  sort: { direction: "asc" | "desc"; key: string } | null;
-  topN: number | null;
-};
-
-export type AnalyticsPalette = {
-  name: "aurora" | "categorical" | "cool" | "warm";
-  overrides: Record<string, string>;
-};
-
-export type AnalyticsWidgetPresentation = {
-  numberFormat: "compact" | "decimal" | "percent";
-  palette: AnalyticsPalette;
-  showDescription: boolean;
-  showLabels: boolean;
-  showLegend: boolean;
-};
-
-type AnalyticsWidgetBase = {
-  dataset: AnalyticsDataset;
-  description: string;
-  height: "L" | "M" | "S";
-  id: string;
-  presentation: AnalyticsWidgetPresentation;
-  query: AnalyticsQuery;
-  tabId: string | null;
-  title: string;
-  viewId: ViewId;
-  width: 1 | 2;
-};
-
-export type AnalyticsWidget =
-  | (AnalyticsWidgetBase & { type: "kpi" })
-  | (AnalyticsWidgetBase & { showTotals: boolean; type: "table" })
-  | (AnalyticsWidgetBase & {
-      columnFields: string[];
-      rowFields: string[];
-      showGrandTotal: boolean;
-      showSubtotals: boolean;
-      type: "pivot";
-    })
-  | (AnalyticsWidgetBase & {
-      orientation: "horizontal" | "vertical";
-      stacked: boolean;
-      type: "bar";
-    })
-  | (AnalyticsWidgetBase & { type: "line"; variant: "area" | "line" })
-  | (AnalyticsWidgetBase & { type: "pie"; variant: "donut" | "pie" })
-  | (AnalyticsWidgetBase & { maximum: number; minimum: number; type: "gauge" });
-
-export type AnalyticsFilterValue = {
-  from: AnalyticsFilterScalar | null;
-  includeEmpty: boolean;
-  search: string;
-  to: AnalyticsFilterScalar | null;
-  values: AnalyticsFilterScalar[];
-};
-
-export type AnalyticsFilter = {
-  control: "dateRange" | "multiSelect" | "search" | "select";
-  defaultValue: AnalyticsFilterValue;
-  field: string;
-  id: string;
-  name: string;
-  targetWidgetIds: string[] | null;
-  viewId: ViewId;
-};
-
-export type AnalyticsTab = {
-  id: string;
-  name: string;
-};
-
-export type AnalyticsConfiguration = {
-  filters: AnalyticsFilter[];
-  tabs: AnalyticsTab[];
-  widgets: AnalyticsWidget[];
-};
-
-export type OrgToolsAnalyticsUiState = {
-  activeTabId: string | null;
-  drilldown: {
-    employeeIds: EmployeeId[];
-    filters: OrgToolsEmployeeFilters;
-    query: string;
-    sourceWidgetId: string | null;
-  };
-  filterValuesByFilterId: Record<string, AnalyticsFilterValue>;
 };
 
 export type OrgToolsEmployeeFilters = {
@@ -273,7 +130,6 @@ export type OrgToolsViewUiState = {
 
 export type OrgToolsUiState = {
   activeTab: UiActiveTab;
-  analytics: OrgToolsAnalyticsUiState;
   calendar: {
     monthIndex: number;
     year: number;
@@ -303,7 +159,6 @@ export type OrgToolsUiState = {
 
 export type OrgToolsState = {
   organization: {
-    analytics: AnalyticsConfiguration;
     employeeDisplayFormats: EmployeeDisplayFormats;
     employeeDisplayLineGaps: EmployeeDisplayLineGaps;
     employeeFieldDefinitions: CustomEmployeeFieldDefinition[];

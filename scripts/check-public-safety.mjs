@@ -21,7 +21,6 @@ const primaryScreenshotModules = [
   "teams",
   "employees",
   "editor",
-  "analytics",
   "calendar",
   "download",
 ];
@@ -285,7 +284,7 @@ async function validateScreenshotDemo(violations) {
   ) {
     violations.push({
       path: "README.md",
-      rule: "README must preview and directly link only the ten featured screenshots",
+      rule: "README must preview and directly link only the nine featured screenshots",
     });
   }
   if (

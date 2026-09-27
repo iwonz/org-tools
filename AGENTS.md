@@ -26,7 +26,7 @@ Run OpenSpec through `pnpm spec -- <command>` so the repository wrapper disables
 - Employee avatars are bounded embedded PNG, JPEG, or WebP data URLs. Never fetch remote avatars.
 - Employee IDs are stable UUID v4 values. Detect duplicates separately through the normalized
   first-name, last-name, and email tuple; identity edits must never change the Employee ID.
-- The system View is the canonical Unit structure used by Units, Employee Import, and Analytics.
+- The system View is the canonical Unit structure used by Units and Employee Import.
   Custom Editor Views may own isolated Unit documents, assignments, rules, history, and geometry,
   while Employees, custom fields, and Tags remain one global catalog shared by every View.
 - Every persistent Editor canvas element, anchor behavior, View presentation setting, and stable Unit
