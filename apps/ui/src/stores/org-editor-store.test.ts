@@ -124,64 +124,65 @@ describe("OrgEditorStore grid geometry", () => {
   });
 });
 
-describe("OrgEditorStore open positions", () => {
-  test("creates, edits, deletes, and restores a tagged position as one command each", () => {
+describe("OrgEditorStore Staffing Slots", () => {
+  test("creates, edits, deletes, and restores a tagged nullable-name Slot as one command each", () => {
     const store = new OrgEditorStore();
     const unitId = store.addUnit({ name: "Platform", x: 0, y: 0 });
     store.clearHistory();
 
-    const openPositionId = store.addOpenPosition(unitId, {
-      backgroundColor: "blue",
+    const staffingSlotId = store.addStaffingSlot(unitId, {
+      name: "  Platform   Engineer  ",
       tags: [{ date: "2026-10-01", tagId: "tag-platform" }],
-      title: "  Platform   Engineer  ",
     });
-    expect(openPositionId).not.toBeNull();
-    expect(store.units[0]?.openPositions).toEqual([
+    expect(staffingSlotId).not.toBeNull();
+    expect(store.units[0]?.staffingSlots).toEqual([
       {
-        backgroundColor: "blue",
-        id: openPositionId,
+        id: staffingSlotId,
+        name: "Platform Engineer",
         tags: [{ date: "2026-10-01", tagId: "tag-platform" }],
-        title: "Platform Engineer",
       },
     ]);
     expect(store.undoStack).toHaveLength(1);
 
-    if (!openPositionId) return;
-    store.updateOpenPosition(unitId, openPositionId, {
-      backgroundColor: "#7c3aed",
+    if (!staffingSlotId) return;
+    store.updateStaffingSlot(unitId, staffingSlotId, {
+      name: null,
       tags: [],
-      title: "Senior Platform Engineer",
     });
-    expect(store.units[0]?.openPositions[0]?.title).toBe("Senior Platform Engineer");
-    expect(store.units[0]?.openPositions[0]?.backgroundColor).toBe("#7c3aed");
+    expect(store.units[0]?.staffingSlots[0]?.name).toBeNull();
     store.undo();
-    expect(store.units[0]?.openPositions[0]?.title).toBe("Platform Engineer");
-    expect(store.units[0]?.openPositions[0]?.backgroundColor).toBe("blue");
+    expect(store.units[0]?.staffingSlots[0]?.name).toBe("Platform Engineer");
     store.redo();
-    expect(store.units[0]?.openPositions[0]?.title).toBe("Senior Platform Engineer");
-    expect(store.units[0]?.openPositions[0]?.backgroundColor).toBe("#7c3aed");
+    expect(store.units[0]?.staffingSlots[0]?.name).toBeNull();
 
-    store.deleteOpenPosition(unitId, openPositionId);
-    expect(store.units[0]?.openPositions).toEqual([]);
+    store.deleteStaffingSlot(unitId, staffingSlotId);
+    expect(store.units[0]?.staffingSlots).toEqual([]);
     store.undo();
-    expect(store.units[0]?.openPositions[0]?.id).toBe(openPositionId);
+    expect(store.units[0]?.staffingSlots[0]?.id).toBe(staffingSlotId);
   });
 
-  test("rekeys attachments for picker and drag replacement, then detaches on deletion", () => {
+  test("moves selected Slots between manual and Live Units while preserving attachments", () => {
     const store = new OrgEditorStore();
     const sourceUnitId = store.addUnit({
-      employeeIds: ["employee-dragged"],
       name: "Source",
       x: 0,
       y: 0,
     });
-    const targetUnitId = store.addUnit({ name: "Target", x: 480, y: 0 });
-    const pickerPositionId = store.addOpenPosition(targetUnitId, {
-      backgroundColor: null,
-      tags: [],
-      title: "Picker role",
+    const targetUnitId = store.addUnit({
+      liveFilter: { ...createEmptyEmployeeLiveFilterRule(), query: "platform" },
+      name: "Live target",
+      x: 480,
+      y: 0,
     });
-    if (!pickerPositionId) throw new Error("Expected a picker position.");
+    const firstSlotId = store.addStaffingSlot(sourceUnitId, {
+      name: "Platform role",
+      tags: [],
+    });
+    const secondSlotId = store.addStaffingSlot(sourceUnitId, {
+      name: null,
+      tags: [{ date: null, tagId: "tag-role" }],
+    });
+    if (!firstSlotId || !secondSlotId) throw new Error("Expected Staffing Slots.");
     const text = {
       ...createOrgEditorTextElement({ x: 800, y: 120 }),
       attachment: {
@@ -190,60 +191,62 @@ describe("OrgEditorStore open positions", () => {
         target: {
           anchorId: "rightCenter" as const,
           owner: {
-            openPositionId: pickerPositionId,
-            type: "openPosition" as const,
-            unitId: targetUnitId,
+            staffingSlotId: firstSlotId,
+            type: "staffingSlot" as const,
+            unitId: sourceUnitId,
           },
         },
       },
     };
     store.addCanvasElement(text);
-    store.replaceOpenPositionWithEmployee(targetUnitId, pickerPositionId, "employee-picked");
-    expect(store.units.find((unit) => unit.id === targetUnitId)?.employeeIds).toContain(
-      "employee-picked",
+    store.setSelectedItems([
+      { staffingSlotId: firstSlotId, type: "staffingSlot", unitId: sourceUnitId },
+      { staffingSlotId: secondSlotId, type: "staffingSlot", unitId: sourceUnitId },
+    ]);
+    store.clearHistory();
+    store.moveStaffingSlotsToUnit(
+      [
+        { staffingSlotId: firstSlotId, type: "staffingSlot", unitId: sourceUnitId },
+        { staffingSlotId: secondSlotId, type: "staffingSlot", unitId: sourceUnitId },
+      ],
+      targetUnitId,
     );
+
+    expect(store.units.find((unit) => unit.id === sourceUnitId)?.staffingSlots).toEqual([]);
+    expect(store.units.find((unit) => unit.id === targetUnitId)?.staffingSlots).toMatchObject([
+      { id: firstSlotId, name: "Platform role" },
+      { id: secondSlotId, name: null },
+    ]);
     expect(
       store.canvasElements[0]?.type === "text" && store.canvasElements[0].attachment?.target.owner,
     ).toEqual({
-      employeeId: "employee-picked",
-      type: "employee",
+      staffingSlotId: firstSlotId,
+      type: "staffingSlot",
       unitId: targetUnitId,
     });
     expect(store.selectedItems).toEqual([
-      { employeeId: "employee-picked", type: "employee", unitId: targetUnitId },
+      { staffingSlotId: firstSlotId, type: "staffingSlot", unitId: targetUnitId },
+      { staffingSlotId: secondSlotId, type: "staffingSlot", unitId: targetUnitId },
     ]);
+    expect(store.undoStack).toHaveLength(1);
+
     store.undo();
-    expect(store.units.find((unit) => unit.id === targetUnitId)?.openPositions[0]?.id).toBe(
-      pickerPositionId,
-    );
+    expect(store.units.find((unit) => unit.id === sourceUnitId)?.staffingSlots).toHaveLength(2);
+    store.redo();
+    expect(store.units.find((unit) => unit.id === targetUnitId)?.staffingSlots).toHaveLength(2);
 
-    const dragPositionId = store.addOpenPosition(targetUnitId, {
-      backgroundColor: null,
-      tags: [],
-      title: "Dragged role",
-    });
-    if (!dragPositionId) throw new Error("Expected a drag position.");
-    store.moveEmployeeToOpenPosition(
-      { employeeId: "employee-dragged", type: "employee", unitId: sourceUnitId },
+    const commandCount = store.undoStack.length;
+    store.moveStaffingSlotsToUnit(
+      [{ staffingSlotId: firstSlotId, type: "staffingSlot", unitId: targetUnitId }],
       targetUnitId,
-      dragPositionId,
     );
-    expect(store.units.find((unit) => unit.id === sourceUnitId)?.employeeIds).toEqual([]);
-    expect(store.units.find((unit) => unit.id === targetUnitId)?.employeeIds).toContain(
-      "employee-dragged",
-    );
-    expect(
-      store.units
-        .find((unit) => unit.id === targetUnitId)
-        ?.openPositions.some((position) => position.id === dragPositionId),
-    ).toBe(false);
+    expect(store.undoStack).toHaveLength(commandCount);
 
-    const deletedPositionId = store.addOpenPosition(targetUnitId, {
-      backgroundColor: null,
+    const deletedSlotId = store.addStaffingSlot(targetUnitId, {
+      name: "Deleted role",
       tags: [],
-      title: "Deleted role",
     });
-    if (!deletedPositionId) throw new Error("Expected a deleted position.");
+    if (!deletedSlotId) throw new Error("Expected a deleted Staffing Slot.");
     const sticker = {
       ...createOrgEditorStickerElement({ x: 900, y: 240 }),
       attachment: {
@@ -252,29 +255,28 @@ describe("OrgEditorStore open positions", () => {
         target: {
           anchorId: "rightCenter" as const,
           owner: {
-            openPositionId: deletedPositionId,
-            type: "openPosition" as const,
+            staffingSlotId: deletedSlotId,
+            type: "staffingSlot" as const,
             unitId: targetUnitId,
           },
         },
       },
     };
     store.addCanvasElement(sticker);
-    store.deleteOpenPosition(targetUnitId, deletedPositionId);
+    store.deleteStaffingSlot(targetUnitId, deletedSlotId);
     const detached = store.canvasElements.find((element) => element.id === sticker.id);
     expect(detached?.type === "sticker" && detached.attachment).toBeNull();
   });
 
-  test("does not create a standalone clipboard payload for a selected position", () => {
+  test("does not create a standalone clipboard payload for a selected Staffing Slot", () => {
     const store = new OrgEditorStore();
     const unitId = store.addUnit({ name: "Platform", x: 0, y: 0 });
-    const openPositionId = store.addOpenPosition(unitId, {
-      backgroundColor: null,
+    const staffingSlotId = store.addStaffingSlot(unitId, {
+      name: "Role",
       tags: [],
-      title: "Role",
     });
-    if (!openPositionId) throw new Error("Expected a position.");
-    store.setSelectedItems([{ openPositionId, type: "openPosition", unitId }]);
+    if (!staffingSlotId) throw new Error("Expected a Staffing Slot.");
+    store.setSelectedItems([{ staffingSlotId, type: "staffingSlot", unitId }]);
     store.copySelected();
     expect(store.clipboard).toBeNull();
   });

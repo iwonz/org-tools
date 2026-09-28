@@ -16,8 +16,8 @@ import {
   openImportDialog,
   syntheticStatePath,
 } from "./helpers.js";
-import { exerciseOpenPositions } from "./open-position-workflow.js";
 import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
+import { exerciseStaffingSlots } from "./staffing-slot-workflow.js";
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
 import { exerciseUsedColorsAndToolIcons } from "./used-colors-workflow.js";
 import { exerciseViewSettings } from "./view-settings-workflow.js";
@@ -73,13 +73,13 @@ test("reuses colors from every View and renders refined Editor tool icons", asyn
   await exerciseUsedColorsAndToolIcons(page, "pages");
 });
 
-test("manages View-local open positions and replaces one with an Employee", async ({ page }) => {
+test("manages View-local Staffing Slots", async ({ page }) => {
   await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
   await page.goto("./", { waitUntil: "domcontentloaded" });
   const dialog = await openImportDialog(page, syntheticStatePath);
   await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
-  await exerciseOpenPositions(page);
+  await exerciseStaffingSlots(page);
 });
 
 test("coalesces large Editor previews and commits each gesture once", async ({ page }) => {

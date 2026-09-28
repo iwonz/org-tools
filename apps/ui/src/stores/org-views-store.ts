@@ -40,9 +40,9 @@ const cloneStateWithRemappedUnits = (state: OrgEditorState): OrgEditorState => {
   const elementIdMap = new Map(
     state.canvasElements.map((element) => [element.id, createUuid()] as const),
   );
-  const openPositionIdMap = new Map(
+  const staffingSlotIdMap = new Map(
     state.units.flatMap((unit) =>
-      unit.openPositions.map((position) => [position.id, createUuid()] as const),
+      unit.staffingSlots.map((position) => [position.id, createUuid()] as const),
     ),
   );
   const remapElement = (source: OrgEditorCanvasElement): OrgEditorCanvasElement => {
@@ -56,7 +56,7 @@ const cloneStateWithRemappedUnits = (state: OrgEditorState): OrgEditorState => {
           unitIdMap,
           elementIdMap,
           false,
-          openPositionIdMap,
+          staffingSlotIdMap,
         );
         return { ...endpoint, attachment: target ? { ...endpoint.attachment, target } : null };
       };
@@ -73,7 +73,7 @@ const cloneStateWithRemappedUnits = (state: OrgEditorState): OrgEditorState => {
       unitIdMap,
       elementIdMap,
       false,
-      openPositionIdMap,
+      staffingSlotIdMap,
     );
     return { ...element, attachment: target ? { ...element.attachment, target } : null, id };
   };
@@ -102,9 +102,9 @@ const cloneStateWithRemappedUnits = (state: OrgEditorState): OrgEditorState => {
             }),
           }
         : null,
-      openPositions: unit.openPositions.map((position) => ({
+      staffingSlots: unit.staffingSlots.map((position) => ({
         ...position,
-        id: openPositionIdMap.get(position.id) ?? createUuid(),
+        id: staffingSlotIdMap.get(position.id) ?? createUuid(),
         tags: position.tags.map((tag) => ({ ...tag })),
       })),
       parentId: unit.parentId === null ? null : (unitIdMap.get(unit.parentId) ?? null),
@@ -340,13 +340,13 @@ export class OrgViewsStore {
     };
   }
 
-  purgeClipboardOpenPositionTag(tagId: TagId): void {
+  purgeClipboardStaffingSlotTag(tagId: TagId): void {
     if (!this.clipboard) return;
     this.clipboard = {
       ...this.clipboard,
       units: this.clipboard.units.map((unit) => ({
         ...unit,
-        openPositions: unit.openPositions.map((position) => ({
+        staffingSlots: unit.staffingSlots.map((position) => ({
           ...position,
           tags: position.tags.filter((tag) => tag.tagId !== tagId),
         })),

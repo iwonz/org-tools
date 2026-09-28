@@ -159,7 +159,7 @@ export const validateEmployeeLiveFilterRule = ({
       liveFilter: cloneEmployeeLiveFilterRule(rule),
       name: "Live",
       noteMarkdown: "",
-      openPositions: [],
+      staffingSlots: [],
       order: 0,
       parentId: null,
       updatedAt: now,

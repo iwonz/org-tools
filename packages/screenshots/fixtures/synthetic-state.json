@@ -318,8 +318,8 @@
                 "target": {
                   "anchorId": "rightCenter",
                   "owner": {
-                    "openPositionId": "abababab-abab-4aba-8aba-abababababab",
-                    "type": "openPosition",
+                    "staffingSlotId": "abababab-abab-4aba-8aba-abababababab",
+                    "type": "staffingSlot",
                     "unitId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
                   }
                 }
@@ -449,17 +449,16 @@
               "liveFilter": null,
               "name": "Product",
               "noteMarkdown": "",
-              "openPositions": [
+              "staffingSlots": [
                 {
-                  "backgroundColor": "amber",
                   "id": "abababab-abab-4aba-8aba-abababababab",
+                  "name": "Senior Product Engineer",
                   "tags": [
                     {
                       "date": "2026-10-01",
                       "tagId": "90000000-0000-4000-8000-000000000002"
                     }
-                  ],
-                  "title": "Senior Product Engineer"
+                  ]
                 }
               ],
               "order": 0,
@@ -490,7 +489,7 @@
               "liveFilter": null,
               "name": "Platform",
               "noteMarkdown": "",
-              "openPositions": [],
+              "staffingSlots": [],
               "order": 0,
               "parentId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
               "updatedAt": "2026-01-15T12:00:00.000Z",

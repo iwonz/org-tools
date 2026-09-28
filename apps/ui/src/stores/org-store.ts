@@ -1470,7 +1470,7 @@ export class OrgStore {
     const target = this.tagDefinitions.find((tag) => tag.id === tagId);
     if (!target) return;
     this.orgViews.materializeClipboardLiveUnits((rule) => rule.selectedTags.includes(tagId));
-    this.orgViews.purgeClipboardOpenPositionTag(tagId);
+    this.orgViews.purgeClipboardStaffingSlotTag(tagId);
     this.tagDefinitions = this.tagDefinitions.filter((tag) => tag.id !== tagId);
     this.organizationEmployees = this.organizationEmployees.map((employee) => ({
       ...employee,
@@ -1489,16 +1489,16 @@ export class OrgStore {
     };
     this.orgViews.forEachEditor((editor, viewId) => {
       const nextUnits = editor.units.map((unit) => {
-        const openPositions = unit.openPositions.map((position) => ({
+        const staffingSlots = unit.staffingSlots.map((position) => ({
           ...position,
           tags: position.tags.filter((tag) => tag.tagId !== tagId),
         }));
-        const positionsChanged = openPositions.some(
-          (position, index) => position.tags.length !== unit.openPositions[index]?.tags.length,
+        const positionsChanged = staffingSlots.some(
+          (position, index) => position.tags.length !== unit.staffingSlots[index]?.tags.length,
         );
         if (!unit.liveFilter?.selectedTags.includes(tagId)) {
           return positionsChanged
-            ? { ...unit, openPositions, updatedAt: new Date().toISOString() }
+            ? { ...unit, staffingSlots, updatedAt: new Date().toISOString() }
             : unit;
         }
         const liveFilter = {
@@ -1506,14 +1506,14 @@ export class OrgStore {
           selectedTags: unit.liveFilter.selectedTags.filter((id) => id !== tagId),
         };
         return hasEmployeeLiveFilterCriteria(liveFilter)
-          ? { ...unit, liveFilter, openPositions, updatedAt: new Date().toISOString() }
+          ? { ...unit, liveFilter, staffingSlots, updatedAt: new Date().toISOString() }
           : {
               ...unit,
               bossEmployeeId: null,
               employeeIds: [],
               employeePositions: [],
               liveFilter: null,
-              openPositions,
+              staffingSlots,
               updatedAt: new Date().toISOString(),
             };
       });

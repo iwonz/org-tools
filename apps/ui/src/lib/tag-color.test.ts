@@ -1,7 +1,6 @@
 import type { EmployeeTagColor } from "@org-tools/types";
 import { describe, expect, it } from "vitest";
-import { createUuid } from "@/lib/employee-data";
-import { createDefaultOrgEditorState, createOrgEditorUnitFromScratch } from "@/lib/org-editor";
+import { createDefaultOrgEditorState } from "@/lib/org-editor";
 import {
   createOrgEditorArrowElement,
   createOrgEditorStickerElement,
@@ -77,21 +76,6 @@ describe("tagColorSurfaceClassName", () => {
         distributedColor: "green" as const,
         undistributedColor: "amber" as const,
       },
-      units: [
-        createOrgEditorUnitFromScratch({
-          name: "Example Unit",
-          openPositions: [
-            {
-              backgroundColor: "#7c3aed00",
-              id: createUuid(),
-              tags: [],
-              title: "Open position",
-            },
-          ],
-          x: 0,
-          y: 0,
-        }),
-      ],
     };
     const inactiveView = {
       ...createDefaultOrgEditorState(),
@@ -113,7 +97,6 @@ describe("tagColorSurfaceClassName", () => {
       "#7c3aed80",
       "green",
       "amber",
-      "#7c3aed00",
       "red",
       "orange",
       "cyan",

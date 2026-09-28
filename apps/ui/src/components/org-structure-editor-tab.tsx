@@ -13,9 +13,9 @@ import type {
   OrgEditorEmployeePosition,
   OrgEditorInlineTypography,
   OrgEditorLayoutMode,
-  OrgEditorOpenPosition,
-  OrgEditorOpenPositionId,
   OrgEditorSelectedItem,
+  OrgEditorStaffingSlot,
+  OrgEditorStaffingSlotId,
   OrgEditorUnit,
   OrgEditorUnitId,
   OrgEditorViewSettings,
@@ -105,7 +105,6 @@ import {
   UnitSearchInput,
 } from "@/components/search-controls";
 import { SourceEmptyState, TopLevelEmptyState } from "@/components/source-empty-state";
-import { TagColorPicker } from "@/components/tag-color-picker";
 import { TagSurface } from "@/components/tag-surface";
 import { Button } from "@/components/ui/button";
 import {
@@ -170,7 +169,7 @@ import {
 } from "@/lib/employee-unit-contexts";
 import type { OrgEditorSourceIndex } from "@/lib/org-editor";
 import {
-  buildOrgEditorUnitEmployeeSummaryById,
+  buildOrgEditorUnitSummaryById,
   buildOrgEditorUnitTagSummary,
   createOrgEditorSelectedItemKey,
   createOrgEditorUnitTagFooterLayout,
@@ -199,7 +198,7 @@ import {
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
   ORG_EDITOR_UNIT_VERTICAL_GAP,
-  type OrgEditorUnitEmployeeSummary,
+  type OrgEditorUnitSummary,
   type OrgEditorUnitTagSummary,
   setOrgEditorUnitRowHeights,
   setOrgEditorUnitTagFooterHeight,
@@ -258,11 +257,7 @@ import {
   orgEditorRichTextLayoutEngine,
 } from "@/lib/org-editor-rich-text-layout";
 import { MAX_STATE_IMPORT_BYTES } from "@/lib/state-transfer";
-import {
-  customTagColorSurfaceStyle,
-  employeeTagColorToHex,
-  tagColorSurfaceClassName,
-} from "@/lib/tag-color";
+import { customTagColorSurfaceStyle, employeeTagColorToHex } from "@/lib/tag-color";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
 import { cn } from "@/lib/utils";
@@ -291,8 +286,8 @@ type UnitDialogState = {
   point: CanvasPoint;
   unitId: OrgEditorUnitId | null;
 };
-type OpenPositionDialogState = {
-  openPositionId: OrgEditorOpenPositionId | null;
+type StaffingSlotDialogState = {
+  staffingSlotId: OrgEditorStaffingSlotId | null;
   unitId: OrgEditorUnitId;
 };
 type OrgEditorConnectionEntry = {
@@ -322,9 +317,9 @@ type OrgEditorContextMenu =
       type: "elements";
     }
   | {
-      openPositionId: OrgEditorOpenPositionId;
+      staffingSlotId: OrgEditorStaffingSlotId;
       screenPoint: ScreenPoint;
-      type: "openPosition";
+      type: "staffingSlot";
       unitId: OrgEditorUnitId;
     }
   | {
@@ -349,6 +344,14 @@ type DragState =
       startScreenPoint: ScreenPoint;
       startViewport: OrgEditorCanvasViewport;
       type: "employee";
+    }
+  | {
+      currentScreenPoint: ScreenPoint;
+      selectedItems: Array<Extract<OrgEditorSelectedItem, { type: "staffingSlot" }>>;
+      startCanvasPoint: CanvasPoint;
+      startScreenPoint: ScreenPoint;
+      startViewport: OrgEditorCanvasViewport;
+      type: "staffingSlot";
     }
   | {
       historySnapshot: OrgEditorHistorySnapshot;
@@ -1584,7 +1587,6 @@ function OrgEditorNode({
   isConnectionDropTarget,
   isCanvasArrowToolActive,
   isEmployeeDropTarget,
-  employeeDropTargetOpenPositionId,
   layoutMode,
   onAddChild,
   onEditUnit,
@@ -1593,13 +1595,13 @@ function OrgEditorNode({
   onConnectionPointerDown,
   onEmployeeContextMenu,
   onEmployeePointerDown,
-  onOpenPositionContextMenu,
-  onOpenPositionPointerDown,
+  onStaffingSlotContextMenu,
+  onStaffingSlotPointerDown,
   onUnitContextMenu,
   onUnitDoubleClick,
   onUnitPointerDown,
   selectedItemKeySet,
-  openPositionTagsById,
+  staffingSlotTagsById,
   summary,
   tagSummary,
   textDirection,
@@ -1623,7 +1625,6 @@ function OrgEditorNode({
   isConnectionDropTarget: boolean;
   isCanvasArrowToolActive: boolean;
   isEmployeeDropTarget: boolean;
-  employeeDropTargetOpenPositionId: OrgEditorOpenPositionId | null;
   layoutMode: OrgEditorLayoutMode;
   onAddChild: (unitId: OrgEditorUnitId) => void;
   onEditUnit: (unit: OrgEditorUnit) => void;
@@ -1643,22 +1644,22 @@ function OrgEditorNode({
     unit: OrgEditorUnit,
     employeeId: EmployeeId,
   ) => void;
-  onOpenPositionContextMenu: (
+  onStaffingSlotContextMenu: (
     event: React.MouseEvent<HTMLButtonElement>,
     unit: OrgEditorUnit,
-    openPositionId: OrgEditorOpenPositionId,
+    staffingSlotId: OrgEditorStaffingSlotId,
   ) => void;
-  onOpenPositionPointerDown: (
+  onStaffingSlotPointerDown: (
     event: React.PointerEvent<HTMLButtonElement>,
     unit: OrgEditorUnit,
-    openPositionId: OrgEditorOpenPositionId,
+    staffingSlotId: OrgEditorStaffingSlotId,
   ) => void;
   onUnitContextMenu: (event: React.MouseEvent<HTMLFieldSetElement>, unit: OrgEditorUnit) => void;
   onUnitDoubleClick: (event: React.MouseEvent<HTMLFieldSetElement>, unit: OrgEditorUnit) => void;
   onUnitPointerDown: (event: React.PointerEvent<HTMLFieldSetElement>, unit: OrgEditorUnit) => void;
   selectedItemKeySet: ReadonlySet<string>;
-  openPositionTagsById: ReadonlyMap<OrgEditorOpenPositionId, EmployeeTag[]>;
-  summary: OrgEditorUnitEmployeeSummary;
+  staffingSlotTagsById: ReadonlyMap<OrgEditorStaffingSlotId, EmployeeTag[]>;
+  summary: OrgEditorUnitSummary;
   tagSummary: OrgEditorUnitTagSummary[];
   textDirection: "ltr" | "rtl";
   unit: OrgEditorUnit;
@@ -1808,7 +1809,7 @@ function OrgEditorNode({
         <HiOutlineDocumentText className="size-4" />
       </Button>
       <div
-        className="grid shrink-0 gap-1.5 p-2"
+        className="grid shrink-0 grid-rows-[32px_34px] gap-1.5 p-2"
         data-org-editor-unit-header
         style={{ height: ORG_EDITOR_UNIT_HEADER_HEIGHT }}
       >
@@ -1824,13 +1825,32 @@ function OrgEditorNode({
           </span>
         </div>
         <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="min-w-0 truncate">
-            {countText("employees", { count: summary.directCount })}
-            {summary.hasChildUnits && (
+          <span
+            className={cn(
+              "min-w-0 flex-1",
+              summary.hasChildUnits ? "grid content-center leading-4" : "flex h-full items-center",
+            )}
+          >
+            {summary.hasChildUnits ? (
               <>
-                {" · "}
-                {countText("totalEmployees", { count: summary.totalCount })}
+                <span className="truncate">
+                  {t("Total summary")}:{" "}
+                  {countText("employees", { count: summary.totalEmployeeCount })}
+                  {" · "}
+                  {countText("staffingSlots", { count: summary.totalStaffingSlotCount })}
+                </span>
+                <span className="truncate">
+                  {t("In Unit")}: {countText("employees", { count: summary.directEmployeeCount })}
+                  {" · "}
+                  {countText("staffingSlots", { count: summary.directStaffingSlotCount })}
+                </span>
               </>
+            ) : (
+              <span className="truncate">
+                {countText("employees", { count: summary.directEmployeeCount })}
+                {" · "}
+                {countText("staffingSlots", { count: summary.directStaffingSlotCount })}
+              </span>
             )}
           </span>
           <UnitStatusBadge
@@ -1870,37 +1890,27 @@ function OrgEditorNode({
             )
           ) : (
             renderedEmployeeRows.map(({ row, index: employeeIndex }) => {
-              if (row.type === "openPosition") {
-                const openPosition = row.openPosition;
+              if (row.type === "staffingSlot") {
+                const staffingSlot = row.staffingSlot;
                 const positionSelected = selectedItemKeySet.has(
                   createOrgEditorSelectedItemKey({
-                    openPositionId: openPosition.id,
-                    type: "openPosition",
+                    staffingSlotId: staffingSlot.id,
+                    type: "staffingSlot",
                     unitId: unit.id,
                   }),
                 );
-                const tags = openPositionTagsById.get(openPosition.id) ?? [];
-                const isDropTarget = employeeDropTargetOpenPositionId === openPosition.id;
-                const showPersistentBackground =
-                  openPosition.backgroundColor !== null && !positionSelected && !isDropTarget;
+                const tags = staffingSlotTagsById.get(staffingSlot.id) ?? [];
+                const staffingSlotName = staffingSlot.name ?? t("Staffing slot");
                 return (
                   <div
                     className={cn(
                       "relative flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
-                      showPersistentBackground &&
-                        tagColorSurfaceClassName(openPosition.backgroundColor),
                       positionSelected && "bg-primary text-primary-foreground hover:bg-primary",
-                      isDropTarget && "ring-2 ring-inset ring-signal bg-accent/70",
                     )}
-                    data-org-editor-open-position-row-container
-                    data-open-position-background={openPosition.backgroundColor ?? "none"}
-                    data-open-position-drop-target={isDropTarget ? "true" : undefined}
+                    data-org-editor-staffing-slot-row-container
                     data-selected={positionSelected ? "true" : "false"}
-                    key={`${unit.id}:${openPosition.id}`}
+                    key={`${unit.id}:${staffingSlot.id}`}
                     style={{
-                      ...(showPersistentBackground
-                        ? customTagColorSurfaceStyle(openPosition.backgroundColor)
-                        : undefined),
                       borderRadius: ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
                       height: employeeRowLayout.heights[employeeIndex],
                       ...(shouldVirtualizeEmployees
@@ -1916,29 +1926,29 @@ function OrgEditorNode({
                     }}
                   >
                     <button
-                      aria-label={openPosition.title}
+                      aria-label={staffingSlotName}
                       className="flex h-full min-w-0 flex-1 items-center gap-2 overflow-hidden bg-[inherit] px-2 text-start text-xs outline-none hover:bg-[inherit]"
-                      data-org-editor-open-position-id={openPosition.id}
-                      data-org-editor-open-position-row
+                      data-org-editor-staffing-slot-id={staffingSlot.id}
+                      data-org-editor-staffing-slot-row
                       onContextMenu={(event) =>
-                        onOpenPositionContextMenu(event, unit, openPosition.id)
+                        onStaffingSlotContextMenu(event, unit, staffingSlot.id)
                       }
                       onPointerDown={(event) =>
-                        onOpenPositionPointerDown(event, unit, openPosition.id)
+                        onStaffingSlotPointerDown(event, unit, staffingSlot.id)
                       }
-                      title={openPosition.title}
+                      title={staffingSlotName}
                       type="button"
                     >
                       <span
-                        aria-label={t("Open position avatar")}
+                        aria-label={t("Staffing slot avatar")}
                         className="flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/55 bg-muted text-muted-foreground"
-                        data-org-editor-open-position-avatar
+                        data-org-editor-staffing-slot-avatar
                         role="img"
                       >
                         <HiOutlineUserPlus className="size-3" />
                       </span>
                       <span className="flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden py-1 pe-1">
-                        <span className="truncate">{openPosition.title}</span>
+                        <span className="truncate">{staffingSlotName}</span>
                         <EmployeeTags
                           className={cn(
                             "mt-0.5",
@@ -1956,9 +1966,8 @@ function OrgEditorNode({
                       className={cn(
                         "pointer-events-none absolute inset-0 rounded-[inherit] border border-dashed border-muted-foreground/50",
                         positionSelected && "border-primary-foreground/70",
-                        isDropTarget && "border-signal",
                       )}
-                      data-org-editor-open-position-outline
+                      data-org-editor-staffing-slot-outline
                     />
                   </div>
                 );
@@ -2199,10 +2208,9 @@ const MemoizedOrgEditorNode = memo(
     previous.isConnectionDropTarget === next.isConnectionDropTarget &&
     previous.isCanvasArrowToolActive === next.isCanvasArrowToolActive &&
     previous.isEmployeeDropTarget === next.isEmployeeDropTarget &&
-    previous.employeeDropTargetOpenPositionId === next.employeeDropTargetOpenPositionId &&
     previous.layoutMode === next.layoutMode &&
     previous.selectedItemKeySet === next.selectedItemKeySet &&
-    previous.openPositionTagsById === next.openPositionTagsById &&
+    previous.staffingSlotTagsById === next.staffingSlotTagsById &&
     previous.summary === next.summary &&
     previous.tagSummary === next.tagSummary &&
     previous.textDirection === next.textDirection &&
@@ -2559,30 +2567,28 @@ function AddEmployeesDialog({
   );
 }
 
-function OpenPositionDialog({
+function StaffingSlotDialog({
   onOpenChange,
-  openPosition,
+  staffingSlot,
   unitId,
 }: {
   onOpenChange: (open: boolean) => void;
-  openPosition: OrgEditorOpenPosition | null;
+  staffingSlot: OrgEditorStaffingSlot | null;
   unitId: OrgEditorUnitId;
 }) {
   const t = useUiText();
   const store = useOrgStore();
-  const [backgroundColor, setBackgroundColor] = useState(openPosition?.backgroundColor ?? null);
-  const [title, setTitle] = useState(openPosition?.title ?? t("Open position"));
+  const [name, setName] = useState(staffingSlot?.name ?? "");
   const [tags, setTags] = useState<EmployeeTag[]>(() => {
     const definitionById = new Map(store.tagDefinitions.map((tag) => [tag.id, tag] as const));
-    return (openPosition?.tags ?? []).flatMap((assignment) => {
+    return (staffingSlot?.tags ?? []).flatMap((assignment) => {
       const definition = definitionById.get(assignment.tagId);
       return definition ? [{ ...definition, date: assignment.date } satisfies EmployeeTag] : [];
     });
   });
 
   const save = () => {
-    const normalizedTitle = title.normalize("NFKC").trim().replace(/\s+/gu, " ");
-    if (!normalizedTitle) return;
+    const normalizedName = name.normalize("NFKC").trim().replace(/\s+/gu, " ") || null;
     const assignments: EmployeeTagAssignment[] = tags.map((tag) => {
       let definition = store.tagDefinitions.find(
         (candidate) => normalizeSearchValue(candidate.label) === normalizeSearchValue(tag.label),
@@ -2593,17 +2599,15 @@ function OpenPositionDialog({
       }
       return { date: tag.date, tagId: definition.id };
     });
-    if (openPosition) {
-      store.orgEditor.updateOpenPosition(unitId, openPosition.id, {
-        backgroundColor,
+    if (staffingSlot) {
+      store.orgEditor.updateStaffingSlot(unitId, staffingSlot.id, {
+        name: normalizedName,
         tags: assignments,
-        title: normalizedTitle,
       });
     } else {
-      store.orgEditor.addOpenPosition(unitId, {
-        backgroundColor,
+      store.orgEditor.addStaffingSlot(unitId, {
+        name: normalizedName,
         tags: assignments,
-        title: normalizedTitle,
       });
     }
     onOpenChange(false);
@@ -2614,40 +2618,31 @@ function OpenPositionDialog({
       <DialogContent className="flex max-h-[min(680px,calc(100dvh-32px))] max-w-md flex-col overflow-hidden p-0">
         <DialogHeader>
           <DialogTitle>
-            {openPosition ? t("Edit open position") : t("Add open position")}
+            {staffingSlot ? t("Edit Staffing slot") : t("Add Staffing slot")}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="grid min-h-0 gap-3 overflow-auto">
-          <label className="grid gap-1.5 text-sm" htmlFor="org-editor-open-position-title">
-            <span>{t("Open position title")}</span>
+          <label className="grid gap-1.5 text-sm" htmlFor="org-editor-staffing-slot-name">
+            <span>{t("Staffing slot name")}</span>
             <Input
               autoFocus
-              data-demo-id="org-editor-open-position-title"
-              id="org-editor-open-position-title"
-              onChange={(event) => setTitle(event.currentTarget.value)}
+              data-demo-id="org-editor-staffing-slot-name"
+              id="org-editor-staffing-slot-name"
+              onChange={(event) => setName(event.currentTarget.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && title.trim()) save();
+                if (event.key === "Enter") save();
               }}
-              value={title}
+              placeholder={t("Staffing slot")}
+              value={name}
             />
           </label>
-          <div className="grid gap-1.5 text-sm" data-demo-id="org-editor-open-position-background">
-            <span>{t("Background color")}</span>
-            <TagColorPicker
-              allowNoColor
-              label={t("Background color")}
-              noColorLabel={t("No background")}
-              onChange={setBackgroundColor}
-              value={backgroundColor}
-            />
-          </div>
           <EmployeeTagPickerPanel
             autoFocus={false}
             className="w-full p-0"
-            dataDemoId="org-editor-open-position-tags"
+            dataDemoId="org-editor-staffing-slot-tags"
             employees={[
               {
-                id: openPosition?.id ?? "00000000-0000-4000-8000-000000000000",
+                id: staffingSlot?.id ?? "00000000-0000-4000-8000-000000000000",
                 tags,
               },
             ]}
@@ -2660,12 +2655,7 @@ function OpenPositionDialog({
           <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
             {t("Cancel")}
           </Button>
-          <Button
-            data-demo-id="org-editor-open-position-save"
-            disabled={!title.trim()}
-            onClick={save}
-            type="button"
-          >
+          <Button data-demo-id="org-editor-staffing-slot-save" onClick={save} type="button">
             {t("Save")}
           </Button>
         </DialogFooter>
@@ -2719,13 +2709,9 @@ export const OrgStructureEditorTab = observer(() => {
   const [contextMenu, setContextMenu] = useState<OrgEditorContextMenu | null>(null);
   const [addEmployeesTarget, setAddEmployeesTarget] = useState<AddEmployeesTarget | null>(null);
   const [unitDialog, setUnitDialog] = useState<UnitDialogState | null>(null);
-  const [openPositionDialog, setOpenPositionDialog] = useState<OpenPositionDialogState | null>(
+  const [staffingSlotDialog, setStaffingSlotDialog] = useState<StaffingSlotDialogState | null>(
     null,
   );
-  const [replaceOpenPositionTarget, setReplaceOpenPositionTarget] = useState<{
-    openPositionId: OrgEditorOpenPositionId;
-    unitId: OrgEditorUnitId;
-  } | null>(null);
   const [employeeDialogState, setEmployeeDialogState] = useState<{
     employee: Employee | null;
     initialUnitIds: OrgEditorUnitId[];
@@ -3074,11 +3060,11 @@ export const OrgStructureEditorTab = observer(() => {
   const positionOptions = activeEditorStructure?.indexes.positionOptions ?? [];
   const tagOptions = activeEditorStructure?.indexes.tagOptions ?? [];
   const tagOrder = useMemo(() => store.tagDefinitions.map((tag) => tag.id), [store.tagDefinitions]);
-  const openPositionTagsById = useMemo(() => {
+  const staffingSlotTagsById = useMemo(() => {
     const definitionById = new Map(store.tagDefinitions.map((tag) => [tag.id, tag] as const));
     return new Map(
       editor.units.flatMap((unit) =>
-        unit.openPositions.map(
+        unit.staffingSlots.map(
           (position) =>
             [
               position.id,
@@ -3192,7 +3178,7 @@ export const OrgStructureEditorTab = observer(() => {
           if (richLayout) layouts.set(row.key, richLayout);
           continue;
         }
-        const tags = openPositionTagsById.get(row.openPosition.id) ?? [];
+        const tags = staffingSlotTagsById.get(row.staffingSlot.id) ?? [];
         const formattedTags = tags.map((tag) =>
           tag.date
             ? `${tag.label} · ${format.dateTime(new Date(`${tag.date}T00:00:00Z`), {
@@ -3220,7 +3206,7 @@ export const OrgStructureEditorTab = observer(() => {
     employeeById,
     format,
     measurementRevision,
-    openPositionTagsById,
+    staffingSlotTagsById,
     store.employeeDisplayFormats.editor,
     store.employeeDisplayLineGaps.editor,
     store.employeeFieldDefinitions,
@@ -3365,7 +3351,7 @@ export const OrgStructureEditorTab = observer(() => {
     units,
   ]);
   const employeeSummaryByUnitId = useMemo(
-    () => buildOrgEditorUnitEmployeeSummaryById(displayUnits),
+    () => buildOrgEditorUnitSummaryById(displayUnits),
     [displayUnits],
   );
 
@@ -3695,7 +3681,7 @@ export const OrgStructureEditorTab = observer(() => {
       const rowIndex = rowLayout.rows.findIndex((row) =>
         owner.type === "employee"
           ? row.type === "employee" && row.employeeId === owner.employeeId
-          : row.type === "openPosition" && row.openPosition.id === owner.openPositionId,
+          : row.type === "staffingSlot" && row.staffingSlot.id === owner.staffingSlotId,
       );
       if (rowIndex < 0) return null;
       if (positionedUnit.collapsed) {
@@ -3920,8 +3906,8 @@ export const OrgStructureEditorTab = observer(() => {
                   row.type === "employee"
                     ? { employeeId: row.employeeId, type: "employee" as const, unitId: unit.id }
                     : {
-                        openPositionId: row.openPosition.id,
-                        type: "openPosition" as const,
+                        staffingSlotId: row.staffingSlot.id,
+                        type: "staffingSlot" as const,
                         unitId: unit.id,
                       },
               },
@@ -3938,7 +3924,7 @@ export const OrgStructureEditorTab = observer(() => {
               ownerKey:
                 row.type === "employee"
                   ? `employee:${unit.id}:${row.employeeId}`
-                  : `openPosition:${unit.id}:${row.openPosition.id}`,
+                  : `staffingSlot:${unit.id}:${row.staffingSlot.id}`,
               priority: 300,
               rotation: 0,
             });
@@ -4163,11 +4149,7 @@ export const OrgStructureEditorTab = observer(() => {
   );
 
   const getEmployeeDropTarget = useCallback(
-    (
-      point: CanvasPoint,
-      excludedUnitIds?: ReadonlySet<OrgEditorUnitId>,
-      allowOpenPosition = false,
-    ) => {
+    (point: CanvasPoint, excludedUnitIds?: ReadonlySet<OrgEditorUnitId>) => {
       const unit = [...visibleUnits]
         .reverse()
         .find(
@@ -4177,25 +4159,16 @@ export const OrgStructureEditorTab = observer(() => {
             isPointInsideRect(point, getOrgEditorUnitBounds(unit)),
         );
       if (!unit) return null;
-      if (!allowOpenPosition || unit.collapsed) return { openPositionId: null, unit };
-      const rowLayout = getOrgEditorEmployeeRowLayout(unit);
-      const rowIndex = findOrgEditorEmployeeRowIndex(
-        rowLayout,
-        point.y -
-          unit.y -
-          ORG_EDITOR_UNIT_HEADER_HEIGHT -
-          ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
-      );
-      const row = rowLayout.rows[rowIndex];
-      const rowBounds = row ? getOrgEditorEmployeeBounds(unit, rowIndex) : null;
-      return {
-        openPositionId:
-          row?.type === "openPosition" && rowBounds && isPointInsideRect(point, rowBounds)
-            ? row.openPosition.id
-            : null,
-        unit,
-      };
+      return unit;
     },
+    [visibleUnits],
+  );
+
+  const getStaffingSlotDropTarget = useCallback(
+    (point: CanvasPoint) =>
+      [...visibleUnits]
+        .reverse()
+        .find((unit) => isPointInsideRect(point, getOrgEditorUnitBounds(unit))) ?? null,
     [visibleUnits],
   );
 
@@ -4222,9 +4195,11 @@ export const OrgStructureEditorTab = observer(() => {
   );
   const getConnectionDropTargetRef = useRef(getConnectionDropTarget);
   const getEmployeeDropTargetRef = useRef(getEmployeeDropTarget);
+  const getStaffingSlotDropTargetRef = useRef(getStaffingSlotDropTarget);
   const getUnitsInsideCanvasRectRef = useRef(getUnitsInsideCanvasRect);
   getConnectionDropTargetRef.current = getConnectionDropTarget;
   getEmployeeDropTargetRef.current = getEmployeeDropTarget;
+  getStaffingSlotDropTargetRef.current = getStaffingSlotDropTarget;
   getUnitsInsideCanvasRectRef.current = getUnitsInsideCanvasRect;
 
   const setActiveDragState = useCallback((nextDragState: DragState | null) => {
@@ -4443,7 +4418,7 @@ export const OrgStructureEditorTab = observer(() => {
         return;
       }
 
-      if (currentDragState.type === "employee") {
+      if (currentDragState.type === "employee" || currentDragState.type === "staffingSlot") {
         scheduleActiveDragState({ ...currentDragState, currentScreenPoint });
         ensureEdgePan();
         return;
@@ -4659,24 +4634,25 @@ export const OrgStructureEditorTab = observer(() => {
           const targetUnit = getEmployeeDropTargetRef.current(
             screenToCanvasPoint(currentScreenPoint),
             getOrgEditorEmployeeDragSourceUnitIds(currentDragState.selectedItems),
-            currentDragState.selectedItems.filter((item) => item.type === "employee").length === 1,
           );
 
           if (targetUnit) {
-            const employeeItems = currentDragState.selectedItems.filter(
-              (item): item is Extract<OrgEditorSelectedItem, { type: "employee" }> =>
-                item.type === "employee",
-            );
-            const [employeeItem] = employeeItems;
-            if (targetUnit.openPositionId && employeeItems.length === 1 && employeeItem) {
-              editor.moveEmployeeToOpenPosition(
-                employeeItem,
-                targetUnit.unit.id,
-                targetUnit.openPositionId,
-              );
-            } else {
-              editor.moveEmployeesToUnit(currentDragState.selectedItems, targetUnit.unit.id);
-            }
+            editor.moveEmployeesToUnit(currentDragState.selectedItems, targetUnit.id);
+          }
+        }
+      }
+
+      if (currentDragState.type === "staffingSlot") {
+        const startDistance = Math.hypot(
+          currentScreenPoint.x - currentDragState.startScreenPoint.x,
+          currentScreenPoint.y - currentDragState.startScreenPoint.y,
+        );
+        if (startDistance > DRAG_START_THRESHOLD) {
+          const targetUnit = getStaffingSlotDropTargetRef.current(
+            screenToCanvasPoint(currentScreenPoint),
+          );
+          if (targetUnit) {
+            editor.moveStaffingSlotsToUnit(currentDragState.selectedItems, targetUnit.id);
           }
         }
       }
@@ -5827,36 +5803,68 @@ export const OrgStructureEditorTab = observer(() => {
     });
   };
 
-  const handleOpenPositionPointerDown = (
+  const handleStaffingSlotPointerDown = (
     event: React.PointerEvent<HTMLButtonElement>,
     unit: OrgEditorUnit,
-    openPositionId: OrgEditorOpenPositionId,
+    staffingSlotId: OrgEditorStaffingSlotId,
   ) => {
     if (event.button !== 0) return;
     if (startCanvasArrowGesture(event)) return;
     event.preventDefault();
     event.stopPropagation();
-    editor.selectItem(
-      { openPositionId, type: "openPosition", unitId: unit.id },
-      event.metaKey || event.ctrlKey ? "toggle" : "replace",
+    const item = { staffingSlotId, type: "staffingSlot", unitId: unit.id } as const;
+    const hasOnlyStaffingSlotSelection =
+      editor.selectedItems.length > 0 &&
+      editor.selectedItems.every((selectedItem) => selectedItem.type === "staffingSlot");
+    const itemSelected = selectedItemKeySet.has(createOrgEditorSelectedItemKey(item));
+    const selectedItems =
+      !event.metaKey && !event.ctrlKey && hasOnlyStaffingSlotSelection && itemSelected
+        ? editor.selectedItems.filter(
+            (
+              selectedItem,
+            ): selectedItem is Extract<OrgEditorSelectedItem, { type: "staffingSlot" }> =>
+              selectedItem.type === "staffingSlot",
+          )
+        : event.metaKey || event.ctrlKey
+          ? itemSelected
+            ? editor.selectedItems.filter(
+                (selectedItem) =>
+                  createOrgEditorSelectedItemKey(selectedItem) !==
+                  createOrgEditorSelectedItemKey(item),
+              )
+            : [...editor.selectedItems, item]
+          : [item];
+    const selectedSlots = selectedItems.filter(
+      (selectedItem): selectedItem is Extract<OrgEditorSelectedItem, { type: "staffingSlot" }> =>
+        selectedItem.type === "staffingSlot",
     );
+    editor.setSelectedItems(selectedSlots);
+    const screenPoint = getPointerScreenPoint(event.nativeEvent);
+    setActiveDragState({
+      currentScreenPoint: screenPoint,
+      selectedItems: selectedSlots,
+      startCanvasPoint: screenToCanvasPoint(screenPoint),
+      startScreenPoint: screenPoint,
+      startViewport: { ...renderViewportRef.current },
+      type: "staffingSlot",
+    });
   };
 
-  const handleOpenPositionContextMenu = (
+  const handleStaffingSlotContextMenu = (
     event: React.MouseEvent<HTMLButtonElement>,
     unit: OrgEditorUnit,
-    openPositionId: OrgEditorOpenPositionId,
+    staffingSlotId: OrgEditorStaffingSlotId,
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    const item = { openPositionId, type: "openPosition", unitId: unit.id } as const;
+    const item = { staffingSlotId, type: "staffingSlot", unitId: unit.id } as const;
     if (!selectedItemKeySet.has(createOrgEditorSelectedItemKey(item))) {
       editor.setSelectedItems([item]);
     }
     setContextMenu({
-      openPositionId,
+      staffingSlotId,
       screenPoint: { x: event.clientX, y: event.clientY },
-      type: "openPosition",
+      type: "staffingSlot",
       unitId: unit.id,
     });
   };
@@ -5869,12 +5877,12 @@ export const OrgStructureEditorTab = observer(() => {
     contextMenu?.type === "employees" ? (unitById.get(contextMenu.unitId) ?? null) : null;
   const contextEmployee =
     contextMenu?.type === "employees" ? employeeById.get(contextMenu.employeeId) : null;
-  const contextOpenPositionUnit =
-    contextMenu?.type === "openPosition" ? (unitById.get(contextMenu.unitId) ?? null) : null;
-  const contextOpenPosition =
-    contextMenu?.type === "openPosition"
-      ? (contextOpenPositionUnit?.openPositions.find(
-          (position) => position.id === contextMenu.openPositionId,
+  const contextStaffingSlotUnit =
+    contextMenu?.type === "staffingSlot" ? (unitById.get(contextMenu.unitId) ?? null) : null;
+  const contextStaffingSlot =
+    contextMenu?.type === "staffingSlot"
+      ? (contextStaffingSlotUnit?.staffingSlots.find(
+          (position) => position.id === contextMenu.staffingSlotId,
         ) ?? null)
       : null;
   const contextTagEmployees = (() => {
@@ -5899,10 +5907,10 @@ export const OrgStructureEditorTab = observer(() => {
     unitDialog?.unitId !== null && unitDialog?.unitId !== undefined
       ? (editor.units.find((unit) => unit.id === unitDialog.unitId) ?? null)
       : null;
-  const editedOpenPosition = openPositionDialog
+  const editedStaffingSlot = staffingSlotDialog
     ? (unitById
-        .get(openPositionDialog.unitId)
-        ?.openPositions.find((position) => position.id === openPositionDialog.openPositionId) ??
+        .get(staffingSlotDialog.unitId)
+        ?.staffingSlots.find((position) => position.id === staffingSlotDialog.staffingSlotId) ??
       null)
     : null;
   const unitDialogParentName =
@@ -5935,9 +5943,16 @@ export const OrgStructureEditorTab = observer(() => {
     ? getEmployeeDropTarget(
         screenToCanvasPoint(employeeDragPreview.point),
         employeeDragSourceUnitIds ?? undefined,
-        employeeDragPreview.count === 1,
       )
     : null;
+  const staffingSlotDropTarget =
+    dragState?.type === "staffingSlot" &&
+    Math.hypot(
+      dragState.currentScreenPoint.x - dragState.startScreenPoint.x,
+      dragState.currentScreenPoint.y - dragState.startScreenPoint.y,
+    ) > DRAG_START_THRESHOLD
+      ? getStaffingSlotDropTarget(screenToCanvasPoint(dragState.currentScreenPoint))
+      : null;
   const renderedViewport = renderViewportRef.current;
   const canvasGridSize = getAdaptiveOrgEditorGridSize(renderedViewport.scale);
   const canvasGridScreenSize = canvasGridSize * renderedViewport.scale;
@@ -6067,11 +6082,7 @@ export const OrgStructureEditorTab = observer(() => {
                 isConnectionDropTarget={connectionDropTargetUnit?.id === unit.id}
                 isCanvasArrowToolActive={activeCanvasTool === "arrow"}
                 isEmployeeDropTarget={
-                  employeeDropTarget?.unit.id === unit.id &&
-                  employeeDropTarget.openPositionId === null
-                }
-                employeeDropTargetOpenPositionId={
-                  employeeDropTarget?.unit.id === unit.id ? employeeDropTarget.openPositionId : null
+                  employeeDropTarget?.id === unit.id || staffingSlotDropTarget?.id === unit.id
                 }
                 key={unit.id}
                 layoutMode={editor.layoutMode}
@@ -6084,18 +6095,20 @@ export const OrgStructureEditorTab = observer(() => {
                 }
                 onEmployeeContextMenu={handleEmployeeContextMenu}
                 onEmployeePointerDown={handleEmployeePointerDown}
-                onOpenPositionContextMenu={handleOpenPositionContextMenu}
-                onOpenPositionPointerDown={handleOpenPositionPointerDown}
+                onStaffingSlotContextMenu={handleStaffingSlotContextMenu}
+                onStaffingSlotPointerDown={handleStaffingSlotPointerDown}
                 onUnitContextMenu={handleUnitContextMenu}
                 onUnitDoubleClick={handleUnitDoubleClick}
                 onUnitPointerDown={handleUnitPointerDown}
                 selectedItemKeySet={selectedItemKeySet}
-                openPositionTagsById={openPositionTagsById}
+                staffingSlotTagsById={staffingSlotTagsById}
                 summary={
                   employeeSummaryByUnitId.get(unit.id) ?? {
-                    directCount: unit.employeeIds.length,
+                    directEmployeeCount: unit.employeeIds.length,
+                    directStaffingSlotCount: unit.staffingSlots.length,
                     hasChildUnits: false,
-                    totalCount: unit.employeeIds.length,
+                    totalEmployeeCount: unit.employeeIds.length,
+                    totalStaffingSlotCount: unit.staffingSlots.length,
                   }
                 }
                 tagSummary={unitTagSummaryByUnitId.get(unit.id) ?? []}
@@ -6381,13 +6394,13 @@ export const OrgStructureEditorTab = observer(() => {
               )}
             </OrgEditorFloatingMenu>
           )}
-          {contextMenu?.type === "openPosition" && contextOpenPosition && (
+          {contextMenu?.type === "staffingSlot" && contextStaffingSlot && (
             <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
               <OrgEditorMenuButton
-                dataDemoId="org-editor-edit-open-position-action"
+                dataDemoId="org-editor-edit-staffing-slot-action"
                 onClick={() => {
-                  setOpenPositionDialog({
-                    openPositionId: contextMenu.openPositionId,
+                  setStaffingSlotDialog({
+                    staffingSlotId: contextMenu.staffingSlotId,
                     unitId: contextMenu.unitId,
                   });
                   setContextMenu(null);
@@ -6396,23 +6409,10 @@ export const OrgStructureEditorTab = observer(() => {
                 <HiOutlinePencilSquare />
                 {t("Edit")}
               </OrgEditorMenuButton>
-              <OrgEditorMenuButton
-                dataDemoId="org-editor-replace-open-position-action"
-                onClick={() => {
-                  setReplaceOpenPositionTarget({
-                    openPositionId: contextMenu.openPositionId,
-                    unitId: contextMenu.unitId,
-                  });
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlineUserPlus />
-                {t("Replace with Employee")}
-              </OrgEditorMenuButton>
               <span className="my-1 h-px bg-border" />
               <OrgEditorMenuButton
                 onClick={() => {
-                  editor.deleteOpenPosition(contextMenu.unitId, contextMenu.openPositionId);
+                  editor.deleteStaffingSlot(contextMenu.unitId, contextMenu.staffingSlotId);
                   setContextMenu(null);
                 }}
                 variant="destructive"
@@ -6421,7 +6421,7 @@ export const OrgStructureEditorTab = observer(() => {
                 {t("Delete")}
               </OrgEditorMenuButton>
               <span className="max-w-60 truncate px-2 pb-1 pt-1.5 text-xs text-muted-foreground">
-                {contextOpenPosition.title}
+                {contextStaffingSlot.name ?? t("Staffing slot")}
               </span>
             </OrgEditorFloatingMenu>
           )}
@@ -6449,35 +6449,33 @@ export const OrgStructureEditorTab = observer(() => {
                     </OrgEditorMenuButton>
                   )}
                   {contextMenuSingleUnit?.liveFilter === null && (
-                    <>
-                      <OrgEditorMenuButton
-                        dataDemoId="org-editor-create-employee-action"
-                        onClick={() => {
-                          const [unitId] = contextMenu.unitIds;
-                          if (unitId) {
-                            openCreateEmployeeForUnits([unitId]);
-                          }
-                          setContextMenu(null);
-                        }}
-                      >
-                        <HiOutlineUserPlus />
-                        {t("Create Employee")}
-                      </OrgEditorMenuButton>
-                      <OrgEditorMenuButton
-                        dataDemoId="org-editor-add-open-position-action"
-                        onClick={() => {
-                          const [unitId] = contextMenu.unitIds;
-                          if (unitId) {
-                            setOpenPositionDialog({ openPositionId: null, unitId });
-                          }
-                          setContextMenu(null);
-                        }}
-                      >
-                        <HiOutlineUserPlus />
-                        {t("Add open position")}
-                      </OrgEditorMenuButton>
-                    </>
+                    <OrgEditorMenuButton
+                      dataDemoId="org-editor-create-employee-action"
+                      onClick={() => {
+                        const [unitId] = contextMenu.unitIds;
+                        if (unitId) {
+                          openCreateEmployeeForUnits([unitId]);
+                        }
+                        setContextMenu(null);
+                      }}
+                    >
+                      <HiOutlineUserPlus />
+                      {t("Create Employee")}
+                    </OrgEditorMenuButton>
                   )}
+                  <OrgEditorMenuButton
+                    dataDemoId="org-editor-add-staffing-slot-action"
+                    onClick={() => {
+                      const [unitId] = contextMenu.unitIds;
+                      if (unitId) {
+                        setStaffingSlotDialog({ staffingSlotId: null, unitId });
+                      }
+                      setContextMenu(null);
+                    }}
+                  >
+                    <HiOutlineUserPlus />
+                    {t("Add Staffing slot")}
+                  </OrgEditorMenuButton>
                 </>
               )}
               <OrgEditorDistributionScopeSubmenu
@@ -6797,36 +6795,11 @@ export const OrgStructureEditorTab = observer(() => {
         unitContextsByEmployeeId={employeeUnitContextsByEmployeeId}
         units={activeEditorStructure ?? units}
       />
-      {openPositionDialog && (
-        <OpenPositionDialog
-          onOpenChange={(open) => !open && setOpenPositionDialog(null)}
-          openPosition={editedOpenPosition}
-          unitId={openPositionDialog.unitId}
-        />
-      )}
-      {replaceOpenPositionTarget && (
-        <AddEmployeesDialog
-          employeeSearchDocumentByEmployeeId={employeeSearchDocumentByEmployeeId}
-          employeeUnitMembershipsByEmployeeId={employeeUnitMembershipsByEmployeeId}
-          employees={availableEmployees}
-          onAdd={(employeeIds) => {
-            const employeeId = employeeIds[0];
-            if (employeeId) {
-              editor.replaceOpenPositionWithEmployee(
-                replaceOpenPositionTarget.unitId,
-                replaceOpenPositionTarget.openPositionId,
-                employeeId,
-              );
-            }
-          }}
-          onOpenChange={(open) => !open && setReplaceOpenPositionTarget(null)}
-          open
-          positionOptions={positionOptions}
-          selectionMode="single"
-          tagOptions={tagOptions}
-          title={t("Replace with Employee")}
-          unitContextsByEmployeeId={employeeUnitContextsByEmployeeId}
-          units={activeEditorStructure ?? units}
+      {staffingSlotDialog && (
+        <StaffingSlotDialog
+          onOpenChange={(open) => !open && setStaffingSlotDialog(null)}
+          staffingSlot={editedStaffingSlot}
+          unitId={staffingSlotDialog.unitId}
         />
       )}
       {employeeDialogState && (

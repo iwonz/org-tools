@@ -59,15 +59,14 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   deterministic bounded ring layout, and keeps pan/zoom outside state. Image export receives the
   same complete memoized index and enabled-Unit set, so Unit-only and subtree status remains correct
   without rebuilding or rescanning the active View for each preview.
-- Virtualize discriminated Employee/open-position Unit rows, Unit-aware pickers, filter options,
+- Virtualize discriminated Employee/Staffing Slot Unit rows, Unit-aware pickers, filter options,
   and event dialogs. Stable row keys share cached rich-line heights and prefix
   offsets. The prefix sum includes one four-pixel gap before every row after the first, so DOM,
   virtual windows, hit testing, anchors, Unit bounds, hierarchy placement, and PNG reuse one O(n)
-  geometry pass without per-row margins or measurements. Open-position anchor and drop hit testing
-  resolves one indexed row instead of scanning a
-  roster. An optional open-position background is one O(1) tonal-style lookup on an already-mounted
-  row and adds no geometry invalidation, scan, index, or subscription; Employee-only projections
-  continue to consume the existing assignment indexes.
+  geometry pass without per-row margins or measurements. Staffing Slot anchor and drop hit testing
+  resolves one indexed row instead of scanning a roster. Slot movement updates only affected Units,
+  selected ownership references, and the reverse attachment dependency closure; Employee-only
+  projections continue to consume the existing assignment indexes.
 - Tag-filter search preserves the catalog array order and normalizes labels for matching. Its
   virtualized visible result derives from a deferred transient query; search-scoped bulk selection
   emits one filter update and never depends on mounted rows.
@@ -89,7 +88,7 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   visible content is omitted. Memoized connection, Unit, and canvas-element nodes receive stable
   indexed inputs; a gesture re-renders only selected owners, attachment dependents, and overlays.
 - Index committed canvas-element bounds and forward/reverse anchor dependencies beside Unit bounds.
-  Snap gestures query only nearby Unit/element cells, derive Employee or open-position candidates from cached row
+  Snap gestures query only nearby Unit/element cells, derive Employee or Staffing Slot candidates from cached row
   offsets, and update only the affected dependency closure. Move, resize, rotation, endpoint,
   Bezier, anchor, and text drafts use the latest-value frame scheduler; only pointer release or edit
   completion mutates the View document once. Four visible corner handles, four transparent side
@@ -132,8 +131,8 @@ display-line heights and prefix geometry. Mounted list cards measure their infor
 with `ResizeObserver` and reuse the same bounded layout cache; font readiness, width, locale,
 direction, content, or fixed image font invalidates the applicable measurements and virtual rows
 remeasure only after the resolved height changes. Focused Display setters skip identical values, while the existing latest-
-snapshot writer coalesces valid keystroke updates. Open-position rows continue to use deterministic Tag
-packing. Image export measures each included open-position Tag once
+snapshot writer coalesces valid keystroke updates. Staffing Slot rows continue to use deterministic
+Tag packing. Image export measures each included Staffing Slot Tag once
 with the system UI output font, retains complete multi-line chip layouts, and builds one immutable
 render entry per included Unit before painting cards and connections without measuring mounted or
 virtualized DOM.

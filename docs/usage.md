@@ -152,21 +152,22 @@ control.
   the dialog are temporary and do not update the Employee model. Settings
   apply immediately, support Undo/Redo, remain independent between Views, and are copied with a
   complete View. Pasted Units follow the target View settings.
-  Manual Unit context menus also provide **Add open position**. An open position is a View-local
-  employee-shaped row with a neutral avatar, editable title, the shared dated Tag picker, and a
-  **Background color** control that accepts the bundled named/custom palette, independent opacity,
-  or **No background**. The alpha-preserving background covers the complete row beneath its dashed vacancy outline and appears in
-  Editor PNG. It is hidden by collapse and participates in Group by tag and canvas side attachments,
-  but does not
-  appear in Employees, Calendar, distribution, Employee totals, Tag-cloud counts, or
-  data exports. Its context menu supports Edit, **Replace with Employee**, and Delete. Picker
-  replacement adds the chosen Employee occurrence without removing other assignments; dropping one
-  Employee from another manual Unit moves that occurrence and consumes the position. Both preserve
-  attached annotations, while a multi-Employee drop remains an ordinary Unit drop. A thin dashed
-  outline surrounds the complete open-position row on the canvas and in Editor PNG output without
-  changing its geometry; selection and drop feedback temporarily take visual priority while keeping
-  the outline visible with semantic color. Employee and open-position surfaces have a compact four
-  logical pixel interval only between adjacent rows; the first and last rows add no outer interval.
+  Every Unit context menu, including a Live Unit, provides **Add staffing slot**. A Staffing Slot is
+  a View-local employee-shaped row with a neutral placeholder avatar, an optional name, and the
+  shared dated Tag picker. Empty names display the localized **Staffing slot** fallback without
+  storing translated text. A thin dashed outline surrounds the complete row on the canvas and in
+  Editor PNG output without changing its geometry; selection and drop feedback temporarily take
+  visual priority while keeping the outline visible. Its context menu contains only Edit and Delete.
+  Dragging an unselected Slot moves it; dragging a selected Slot moves all selected Slots, excluding
+  Employees, between manual or Live Units in one Undo step. IDs, Tags, selection, and attached canvas
+  elements remain connected after the owner Unit changes. Employee drops keep their ordinary Unit
+  behavior and do not consume Slots. Collapse hides Slot rows. Group by tag may reorder them, while
+  Employees, Calendar, distribution, Employee totals, Unit Tag clouds, filters, and data exports
+  ignore them. Employee and Staffing Slot surfaces have a compact four logical pixel interval only
+  between adjacent rows; the first and last rows add no outer interval.
+  Unit headers always show Employees and Staffing Slots separately. A parent shows **Total** counts
+  for its complete branch above **In Unit** direct counts; a leaf shows one unprefixed direct line.
+  Employees are unique in each scope, Slots are summed, and a zero Slot count stays visible.
   The bottom-center tools row provides Select, Text, Arrow, Sticker, and embedded Image, including in
   an empty View. Arrow uses one Bezier curve with a free start and filled triangular end marker;
   Image uses a rounded-square photo glyph. Choosing a creation tool clears the current canvas selection; a plain element click selects
@@ -200,7 +201,7 @@ control.
   rectangle receives whole-pixel Width and Height values, one attached element keeps the center of
   its current bounds fixed, and groups use their shared bounds center. Resting selections have no
   connector markers. With the Arrow tool armed, or while an endpoint is being attached, hovering an
-  eligible Unit, Employee or open-position row, element, or Arrow outlines that one owner and reveals all of its
+  eligible Unit, Employee or Staffing Slot row, element, or Arrow outlines that one owner and reveals all of its
   anchors; the nearest in-range anchor is emphasized and an exact point can start the Arrow. There
   is no detached rotation handle, persistent aspect lock, or permanent anchor field. Clicking outside an
   active Text or Sticker editor saves once before normal selection routing; the first Escape saves

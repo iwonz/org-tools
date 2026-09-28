@@ -4,7 +4,7 @@ import type { EmployeeDisplayLine } from "@/lib/employee-display";
 import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 
 import {
-  buildOrgEditorUnitEmployeeSummaryById,
+  buildOrgEditorUnitSummaryById,
   buildOrgEditorUnitTagSummary,
   createOrgEditorUnitTagFooterLayout,
   findOrgEditorEmployeeRowIndex,
@@ -29,10 +29,11 @@ import {
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_GRID_MIN_SCREEN_SIZE,
   ORG_EDITOR_GRID_SIZE,
+  ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
-  type OrgEditorUnitEmployeeSummary,
+  type OrgEditorUnitSummary,
   setOrgEditorUnitEmployeeRowHeights,
   setOrgEditorUnitRowHeights,
   setOrgEditorUnitTagFooterHeight,
@@ -94,7 +95,7 @@ describe("Org Editor Employee display geometry", () => {
         lineCount: 3,
         unitY: 100,
       }),
-    ).toEqual([214, 230, 246]);
+    ).toEqual([230, 246, 262]);
     expect(
       getOrgEditorEmployeeDisplayLineBaselines({
         employeeRowHeight: 72,
@@ -103,7 +104,7 @@ describe("Org Editor Employee display geometry", () => {
         lineGap: 4,
         unitY: 100,
       }),
-    ).toEqual([214, 234, 254]);
+    ).toEqual([230, 250, 270]);
     expect(
       getOrgEditorEmployeeDisplayLineBaselines({
         employeeRowHeight: 112,
@@ -112,7 +113,7 @@ describe("Org Editor Employee display geometry", () => {
         lineGap: 24,
         unitY: 100,
       }),
-    ).toEqual([214, 254, 294]);
+    ).toEqual([230, 270, 310]);
   });
 
   test("expands rich rows for wrapped native Tags", () => {
@@ -208,7 +209,7 @@ const createUnit = (unit: Partial<OrgEditorUnit> & Pick<OrgEditorUnit, "id">): O
   liveFilter: null,
   name: unit.id,
   noteMarkdown: "",
-  openPositions: [],
+  staffingSlots: [],
   order: 0,
   parentId: null,
   updatedAt: "2026-07-31T00:00:00.000Z",
@@ -217,10 +218,7 @@ const createUnit = (unit: Partial<OrgEditorUnit> & Pick<OrgEditorUnit, "id">): O
   ...unit,
 });
 
-const getSummary = (
-  summaries: ReadonlyMap<string, OrgEditorUnitEmployeeSummary>,
-  unitId: string,
-) => {
+const getSummary = (summaries: ReadonlyMap<string, OrgEditorUnitSummary>, unitId: string) => {
   const summary = summaries.get(unitId);
   if (!summary) throw new Error(`Summary for ${unitId} was not created.`);
   return summary;
@@ -228,20 +226,36 @@ const getSummary = (
 
 describe("Org Editor Employee summaries", () => {
   test("keeps semantic direct and total counts for localized presentation", () => {
-    const summaries = buildOrgEditorUnitEmployeeSummaryById([
-      createUnit({ employeeIds: ["employee-1", "employee-2"], id: "root" }),
-      createUnit({ employeeIds: ["employee-3"], id: "leaf", parentId: "root" }),
+    const summaries = buildOrgEditorUnitSummaryById([
+      createUnit({
+        employeeIds: ["employee-1", "employee-2"],
+        id: "root",
+        staffingSlots: [{ id: "slot-root", name: null, tags: [] }],
+      }),
+      createUnit({
+        employeeIds: ["employee-3"],
+        id: "leaf",
+        parentId: "root",
+        staffingSlots: [
+          { id: "slot-leaf-1", name: "Designer", tags: [] },
+          { id: "slot-leaf-2", name: null, tags: [] },
+        ],
+      }),
     ]);
 
     expect(getSummary(summaries, "root")).toEqual({
-      directCount: 2,
+      directEmployeeCount: 2,
+      directStaffingSlotCount: 1,
       hasChildUnits: true,
-      totalCount: 3,
+      totalEmployeeCount: 3,
+      totalStaffingSlotCount: 3,
     });
     expect(getSummary(summaries, "leaf")).toEqual({
-      directCount: 1,
+      directEmployeeCount: 1,
+      directStaffingSlotCount: 2,
       hasChildUnits: false,
-      totalCount: 1,
+      totalEmployeeCount: 1,
+      totalStaffingSlotCount: 2,
     });
   });
 
@@ -265,14 +279,29 @@ describe("Org Editor Employee summaries", () => {
         createUnit({ id: "empty" }),
       ];
       for (const collapsed of [false, true]) {
-        const summaries = buildOrgEditorUnitEmployeeSummaryById(
+        const summaries = buildOrgEditorUnitSummaryById(
           units.map((unit) => ({ ...unit, collapsed })),
         );
-        expect(summaries.get("root")).toMatchObject({ directCount: 1, totalCount: 3 });
-        expect(summaries.get("child")).toMatchObject({ directCount: 2, totalCount: 3 });
-        expect(summaries.get("grandchild")).toMatchObject({ directCount: 2, totalCount: 2 });
-        expect(summaries.get("sibling")).toMatchObject({ directCount: 1, totalCount: 1 });
-        expect(summaries.get("empty")).toMatchObject({ directCount: 0, totalCount: 0 });
+        expect(summaries.get("root")).toMatchObject({
+          directEmployeeCount: 1,
+          totalEmployeeCount: 3,
+        });
+        expect(summaries.get("child")).toMatchObject({
+          directEmployeeCount: 2,
+          totalEmployeeCount: 3,
+        });
+        expect(summaries.get("grandchild")).toMatchObject({
+          directEmployeeCount: 2,
+          totalEmployeeCount: 2,
+        });
+        expect(summaries.get("sibling")).toMatchObject({
+          directEmployeeCount: 1,
+          totalEmployeeCount: 1,
+        });
+        expect(summaries.get("empty")).toMatchObject({
+          directEmployeeCount: 0,
+          totalEmployeeCount: 0,
+        });
       }
     },
   );
@@ -288,7 +317,7 @@ describe("Org Editor Employee summaries", () => {
         ],
       }),
     );
-    const summaries = buildOrgEditorUnitEmployeeSummaryById(units);
+    const summaries = buildOrgEditorUnitSummaryById(units);
     const expected = new Map(units.map((unit) => [unit.id, new Set(unit.employeeIds)]));
     const byId = new Map(units.map((unit) => [unit.id, unit]));
     // Walk ancestors from each direct assignment, independently of the production subtree traversal.
@@ -300,8 +329,8 @@ describe("Org Editor Employee summaries", () => {
       }
     }
     for (const unit of units) {
-      expect(summaries.get(unit.id)?.totalCount).toBe(expected.get(unit.id)?.size);
-      expect(summaries.get(unit.id)?.directCount).toBe(new Set(unit.employeeIds).size);
+      expect(summaries.get(unit.id)?.totalEmployeeCount).toBe(expected.get(unit.id)?.size);
+      expect(summaries.get(unit.id)?.directEmployeeCount).toBe(new Set(unit.employeeIds).size);
     }
   });
 });
@@ -342,10 +371,10 @@ describe("Org Editor variable Employee geometry", () => {
       }),
     ).toEqual({
       avatarX: 51,
-      avatarY: 153,
-      rowTop: 129,
-      tagY: 152,
-      textBaselineY: 147,
+      avatarY: 169,
+      rowTop: 145,
+      tagY: 168,
+      textBaselineY: 163,
       textMaxWidth: 214,
       textX: 69,
     });
@@ -353,7 +382,7 @@ describe("Org Editor variable Employee geometry", () => {
       getOrgEditorUnitHeightForEmployeeRows({ collapsed: false, employeeRowHeights: [] }),
     ).toBe(120);
     expect(getOrgEditorUnitHeightForEmployeeRows({ collapsed: true, employeeRowHeights: [] })).toBe(
-      72,
+      ORG_EDITOR_UNIT_HEADER_HEIGHT,
     );
   });
 
@@ -381,7 +410,7 @@ describe("Org Editor variable Employee geometry", () => {
     expect(layout.totalHeight).toBe(firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP + 48);
     expect(findOrgEditorEmployeeRowIndex(layout, firstHeight + 1)).toBe(1);
     expect(getOrgEditorEmployeeBounds(unit, 1).y).toBe(
-      unit.y + 72 + 8 + firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP,
+      unit.y + ORG_EDITOR_UNIT_HEADER_HEIGHT + 8 + firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP,
     );
     expect(getOrgEditorUnitHeight(unit)).toBeGreaterThan(120);
   });
@@ -401,7 +430,7 @@ describe("Org Editor variable Employee geometry", () => {
 });
 
 describe("Org Editor mixed Unit rows", () => {
-  test("orders Employees and open positions together while keeping the boss first", () => {
+  test("orders Employees and Staffing Slots together while keeping the boss first", () => {
     const employee = (id: string, fullName: string, tagPriority: number | null): Employee =>
       ({ fullName, id, tagPriority }) as Employee;
     const employees = new Map([
@@ -412,20 +441,19 @@ describe("Org Editor mixed Unit rows", () => {
       bossEmployeeId: "boss",
       employeeIds: ["member", "boss"],
       id: "mixed-rows",
-      openPositions: [
-        { backgroundColor: null, id: "position-b", tags: [], title: "Gamma Role" },
+      staffingSlots: [
+        { id: "position-b", name: "Gamma Role", tags: [] },
         {
-          backgroundColor: "blue",
           id: "position-a",
+          name: "Alpha Role",
           tags: [{ date: null, tagId: "tag-first" }],
-          title: "Alpha Role",
         },
       ],
     });
 
     const rows = getOrgEditorOrderedUnitRows(unit, employees, true, ["tag-first"]);
     expect(
-      rows.map((row) => (row.type === "employee" ? row.employeeId : row.openPosition.id)),
+      rows.map((row) => (row.type === "employee" ? row.employeeId : row.staffingSlot.id)),
     ).toEqual(["boss", "position-a", "member", "position-b"]);
     setOrgEditorUnitRowHeights(
       unit.id,
@@ -442,16 +470,15 @@ describe("Org Editor mixed Unit rows", () => {
     expect(getOrgEditorEmployeeRowLayout(unit).rows).toEqual([rows[0]]);
   });
 
-  test("does not include open positions in Employee summaries or Tag-cloud counts", () => {
+  test("counts Staffing Slots separately and excludes them from Tag-cloud counts", () => {
     const unit = createUnit({
       employeeIds: ["employee"],
       id: "position-exclusions",
-      openPositions: [
+      staffingSlots: [
         {
-          backgroundColor: null,
           id: "position",
+          name: "Future role",
           tags: [{ date: null, tagId: "position-tag" }],
-          title: "Future role",
         },
       ],
     });
@@ -459,7 +486,12 @@ describe("Org Editor mixed Unit rows", () => {
       id: "employee",
       tags: [{ color: "blue", date: null, label: "Employee tag", tagId: "employee-tag" }],
     } as Employee;
-    expect(buildOrgEditorUnitEmployeeSummaryById([unit]).get(unit.id)?.directCount).toBe(1);
+    expect(buildOrgEditorUnitSummaryById([unit]).get(unit.id)).toMatchObject({
+      directEmployeeCount: 1,
+      directStaffingSlotCount: 1,
+      totalEmployeeCount: 1,
+      totalStaffingSlotCount: 1,
+    });
     expect(
       buildOrgEditorUnitTagSummary(unit, new Map([[employee.id, employee]]), [
         "position-tag",
@@ -570,6 +602,6 @@ describe("Org Editor Unit Tag footer", () => {
     setOrgEditorUnitTagFooterHeight(unit.id, footerHeight);
     expect(getOrgEditorUnitHeight(unit)).toBe(baseHeight + footerHeight);
     unit.collapsed = true;
-    expect(getOrgEditorUnitHeight(unit)).toBe(72);
+    expect(getOrgEditorUnitHeight(unit)).toBe(ORG_EDITOR_UNIT_HEADER_HEIGHT);
   });
 });

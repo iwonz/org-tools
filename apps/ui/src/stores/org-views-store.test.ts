@@ -21,12 +21,11 @@ describe("OrgViewsStore shared clipboard", () => {
     if (!source) return;
     const employeeId = createUuid();
     const rootId = source.addUnit({ employeeIds: [employeeId], name: "Root", x: 0, y: 0 });
-    const openPositionId = source.addOpenPosition(rootId, {
-      backgroundColor: "rose",
+    const staffingSlotId = source.addStaffingSlot(rootId, {
+      name: "Platform Engineer",
       tags: [{ date: "2026-10-01", tagId: "tag-role" }],
-      title: "Platform Engineer",
     });
-    if (!openPositionId) throw new Error("Expected an open position.");
+    if (!staffingSlotId) throw new Error("Expected a Staffing Slot.");
     source.setUnitNoteMarkdown(rootId, "# Source note");
     source.setViewSettings({ groupByTag: false });
     const childId = source.addUnit({
@@ -45,8 +44,8 @@ describe("OrgViewsStore shared clipboard", () => {
         target: {
           anchorId: "rightCenter" as const,
           owner: {
-            openPositionId,
-            type: "openPosition" as const,
+            staffingSlotId,
+            type: "staffingSlot" as const,
             unitId: rootId,
           },
         },
@@ -82,14 +81,13 @@ describe("OrgViewsStore shared clipboard", () => {
     const pastedRoot = target.units.find((unit) => unit.parentId === null);
     const pastedChild = target.units.find((unit) => unit.parentId !== null);
     expect(pastedRoot?.employeeIds).toEqual([employeeId]);
-    expect(pastedRoot?.openPositions).toMatchObject([
+    expect(pastedRoot?.staffingSlots).toMatchObject([
       {
-        backgroundColor: "rose",
+        name: "Platform Engineer",
         tags: [{ date: "2026-10-01", tagId: "tag-role" }],
-        title: "Platform Engineer",
       },
     ]);
-    expect(pastedRoot?.openPositions[0]?.id).not.toBe(openPositionId);
+    expect(pastedRoot?.staffingSlots[0]?.id).not.toBe(staffingSlotId);
     expect(pastedRoot?.noteMarkdown).toBe("# Source note");
     expect(target.settings.groupByTag).toBe(true);
     expect(pastedRoot).not.toHaveProperty("groupByTag");
@@ -99,8 +97,8 @@ describe("OrgViewsStore shared clipboard", () => {
     const pastedText = target.canvasElements.find((element) => element.type === "text");
     expect(pastedSticker?.id).not.toBe(sticker.id);
     expect(pastedSticker?.type === "sticker" && pastedSticker.attachment?.target.owner).toEqual({
-      openPositionId: pastedRoot?.openPositions[0]?.id,
-      type: "openPosition",
+      staffingSlotId: pastedRoot?.staffingSlots[0]?.id,
+      type: "staffingSlot",
       unitId: pastedRoot?.id,
     });
     expect(pastedText?.id).not.toBe(text.id);

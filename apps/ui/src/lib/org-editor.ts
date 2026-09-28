@@ -6,9 +6,9 @@ import type {
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
-  OrgEditorOpenPosition,
-  OrgEditorOpenPositionId,
   OrgEditorSelectedItem,
+  OrgEditorStaffingSlot,
+  OrgEditorStaffingSlotId,
   OrgEditorState,
   OrgEditorUnit,
   OrgEditorUnitId,
@@ -29,7 +29,7 @@ import {
 import { layoutInlineSurfaces, TAG_SURFACE_METRICS } from "@/lib/tag-surface";
 
 export const ORG_EDITOR_UNIT_MIN_WIDTH = 280;
-export const ORG_EDITOR_UNIT_HEADER_HEIGHT = 72;
+export const ORG_EDITOR_UNIT_HEADER_HEIGHT = 88;
 export const ORG_EDITOR_UNIT_BORDER_WIDTH = 1;
 export const ORG_EDITOR_UNIT_BORDER_RADIUS = 8;
 export const ORG_EDITOR_EMPLOYEE_ROW_HEIGHT = 48;
@@ -88,10 +88,12 @@ export type OrgEditorSourceIndex = {
   employeesById: ReadonlyMap<EmployeeId, Employee>;
 };
 
-export type OrgEditorUnitEmployeeSummary = {
-  directCount: number;
+export type OrgEditorUnitSummary = {
+  directEmployeeCount: number;
+  directStaffingSlotCount: number;
   hasChildUnits: boolean;
-  totalCount: number;
+  totalEmployeeCount: number;
+  totalStaffingSlotCount: number;
 };
 
 export type OrgEditorUnitTagSummary = {
@@ -103,11 +105,11 @@ export type OrgEditorUnitTagSummary = {
 
 export type OrgEditorUnitRow =
   | { employeeId: EmployeeId; key: string; type: "employee" }
-  | { key: string; openPosition: OrgEditorOpenPosition; type: "openPosition" };
+  | { key: string; staffingSlot: OrgEditorStaffingSlot; type: "staffingSlot" };
 
 export const createOrgEditorEmployeeRowKey = (employeeId: EmployeeId) => `employee:${employeeId}`;
-export const createOrgEditorOpenPositionRowKey = (openPositionId: OrgEditorOpenPositionId) =>
-  `openPosition:${openPositionId}`;
+export const createOrgEditorStaffingSlotRowKey = (staffingSlotId: OrgEditorStaffingSlotId) =>
+  `staffingSlot:${staffingSlotId}`;
 
 export type OrgEditorUnitTagFooterLine = {
   id: string;
@@ -175,8 +177,8 @@ export const normalizeOrgEditorUnitNoteMarkdown = (value: string): string | null
   return normalized.trim() ? normalized : "";
 };
 
-export const normalizeOrgEditorOpenPositionTitle = (value: string) =>
-  value.normalize("NFKC").trim().replace(/\s+/gu, " ");
+export const normalizeOrgEditorStaffingSlotName = (value: string): string | null =>
+  value.normalize("NFKC").trim().replace(/\s+/gu, " ") || null;
 
 const employeeRowLayoutSourceByUnitId = new Map<
   OrgEditorUnitId,
@@ -559,7 +561,7 @@ export const getOrgEditorEmployeeRowStackLayout = (heights: readonly number[]) =
 export const getOrgEditorEmployeeRowLayout = (
   unit: Pick<
     OrgEditorUnit,
-    "bossEmployeeId" | "collapsed" | "employeeIds" | "id" | "openPositions"
+    "bossEmployeeId" | "collapsed" | "employeeIds" | "id" | "staffingSlots"
   >,
 ): OrgEditorEmployeeRowLayout => {
   const source = employeeRowLayoutSourceByUnitId.get(unit.id);
@@ -569,10 +571,10 @@ export const getOrgEditorEmployeeRowLayout = (
       key: createOrgEditorEmployeeRowKey(employeeId),
       type: "employee" as const,
     })),
-    ...unit.openPositions.map((openPosition) => ({
-      key: createOrgEditorOpenPositionRowKey(openPosition.id),
-      openPosition,
-      type: "openPosition" as const,
+    ...unit.staffingSlots.map((staffingSlot) => ({
+      key: createOrgEditorStaffingSlotRowKey(staffingSlot.id),
+      staffingSlot,
+      type: "staffingSlot" as const,
     })),
   ];
   const rows = unit.collapsed
@@ -625,17 +627,17 @@ export const createOrgEditorSelectedItemKey = (item: OrgEditorSelectedItem) =>
     ? `unit:${item.unitId}`
     : item.type === "employee"
       ? `employee:${item.unitId}:${item.employeeId}`
-      : item.type === "openPosition"
-        ? `openPosition:${item.unitId}:${item.openPositionId}`
+      : item.type === "staffingSlot"
+        ? `staffingSlot:${item.unitId}:${item.staffingSlotId}`
         : `element:${item.elementId}`;
 
 export const getOrgEditorUnitWidth = (unit: Pick<OrgEditorUnit, "name">) =>
   Math.max(ORG_EDITOR_UNIT_MIN_WIDTH, 124 + getOrgEditorUnitDisplayName(unit).length * 9);
 
 export const getOrgEditorUnitVisibleEmployeeCount = (
-  unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds" | "openPositions">,
+  unit: Pick<OrgEditorUnit, "bossEmployeeId" | "collapsed" | "employeeIds" | "staffingSlots">,
 ) => {
-  if (!unit.collapsed) return Math.max(1, unit.employeeIds.length + unit.openPositions.length);
+  if (!unit.collapsed) return Math.max(1, unit.employeeIds.length + unit.staffingSlots.length);
 
   return unit.bossEmployeeId !== null && unit.employeeIds.includes(unit.bossEmployeeId) ? 1 : 0;
 };
@@ -660,7 +662,7 @@ export const getOrgEditorUnitHeightForEmployeeRows = ({
 export const getOrgEditorUnitHeight = (
   unit: Pick<
     OrgEditorUnit,
-    "bossEmployeeId" | "collapsed" | "employeeIds" | "id" | "openPositions"
+    "bossEmployeeId" | "collapsed" | "employeeIds" | "id" | "staffingSlots"
   >,
 ) => {
   const rowLayout = getOrgEditorEmployeeRowLayout(unit);
@@ -898,10 +900,10 @@ export const buildOrgEditorUnitTree = (units: OrgEditorUnit[]): OrgEditorUnitTre
   return (childrenByParentId.get(null) ?? []).map((unit) => buildNode(unit, new Set()));
 };
 
-export const buildOrgEditorUnitEmployeeSummaryById = (units: OrgEditorUnit[]) => {
+export const buildOrgEditorUnitSummaryById = (units: OrgEditorUnit[]) => {
   const unitById = new Map(units.map((unit) => [unit.id, unit] as const));
   const childrenByParentId = new Map<OrgEditorUnitId | null, OrgEditorUnit[]>();
-  const summaryByUnitId = new Map<OrgEditorUnitId, OrgEditorUnitEmployeeSummary>();
+  const summaryByUnitId = new Map<OrgEditorUnitId, OrgEditorUnitSummary>();
 
   for (const unit of units) {
     const parentId = unit.parentId && unitById.has(unit.parentId) ? unit.parentId : null;
@@ -916,7 +918,7 @@ export const buildOrgEditorUnitEmployeeSummaryById = (units: OrgEditorUnit[]) =>
     visitedUnitIds: ReadonlySet<OrgEditorUnitId>,
   ) => {
     if (visitedUnitIds.has(unit.id)) {
-      return new Set<EmployeeId>();
+      return { employeeIds: new Set<EmployeeId>(), staffingSlotCount: 0 };
     }
 
     const nextVisitedUnitIds = new Set(visitedUnitIds);
@@ -924,21 +926,26 @@ export const buildOrgEditorUnitEmployeeSummaryById = (units: OrgEditorUnit[]) =>
 
     const ownUniqueEmployeeIds = new Set(unit.employeeIds);
     const totalEmployeeIds = new Set(ownUniqueEmployeeIds);
+    let totalStaffingSlotCount = unit.staffingSlots.length;
     const childUnits = childrenByParentId.get(unit.id) ?? [];
 
     for (const childUnit of childUnits) {
-      for (const employeeId of collectUnitSummary(childUnit, nextVisitedUnitIds)) {
+      const childSummary = collectUnitSummary(childUnit, nextVisitedUnitIds);
+      for (const employeeId of childSummary.employeeIds) {
         totalEmployeeIds.add(employeeId);
       }
+      totalStaffingSlotCount += childSummary.staffingSlotCount;
     }
 
     summaryByUnitId.set(unit.id, {
-      directCount: ownUniqueEmployeeIds.size,
+      directEmployeeCount: ownUniqueEmployeeIds.size,
+      directStaffingSlotCount: unit.staffingSlots.length,
       hasChildUnits: childUnits.length > 0,
-      totalCount: totalEmployeeIds.size,
+      totalEmployeeCount: totalEmployeeIds.size,
+      totalStaffingSlotCount,
     });
 
-    return totalEmployeeIds;
+    return { employeeIds: totalEmployeeIds, staffingSlotCount: totalStaffingSlotCount };
   };
 
   for (const rootUnit of childrenByParentId.get(null) ?? []) {
@@ -948,9 +955,11 @@ export const buildOrgEditorUnitEmployeeSummaryById = (units: OrgEditorUnit[]) =>
   for (const unit of units) {
     if (!summaryByUnitId.has(unit.id)) {
       summaryByUnitId.set(unit.id, {
-        directCount: new Set(unit.employeeIds).size,
+        directEmployeeCount: new Set(unit.employeeIds).size,
+        directStaffingSlotCount: unit.staffingSlots.length,
         hasChildUnits: false,
-        totalCount: new Set(unit.employeeIds).size,
+        totalEmployeeCount: new Set(unit.employeeIds).size,
+        totalStaffingSlotCount: unit.staffingSlots.length,
       });
     }
   }
@@ -1051,10 +1060,10 @@ export const getOrgEditorOrderedUnitRows = (
       key: createOrgEditorEmployeeRowKey(employeeId),
       type: "employee" as const,
     })),
-    ...unit.openPositions.map((openPosition) => ({
-      key: createOrgEditorOpenPositionRowKey(openPosition.id),
-      openPosition,
-      type: "openPosition" as const,
+    ...unit.staffingSlots.map((staffingSlot) => ({
+      key: createOrgEditorStaffingSlotRowKey(staffingSlot.id),
+      staffingSlot,
+      type: "staffingSlot" as const,
     })),
   ];
   const priority = (row: OrgEditorUnitRow) => {
@@ -1062,7 +1071,7 @@ export const getOrgEditorOrderedUnitRows = (
     if (row.type === "employee") {
       return employeeById.get(row.employeeId)?.tagPriority ?? Number.MAX_SAFE_INTEGER;
     }
-    return row.openPosition.tags.reduce(
+    return row.staffingSlot.tags.reduce(
       (best, assignment) => Math.min(best, tagRankById.get(assignment.tagId) ?? best),
       Number.MAX_SAFE_INTEGER,
     );
@@ -1070,9 +1079,9 @@ export const getOrgEditorOrderedUnitRows = (
   const label = (row: OrgEditorUnitRow) =>
     row.type === "employee"
       ? (employeeById.get(row.employeeId)?.fullName ?? "")
-      : row.openPosition.title;
+      : (row.staffingSlot.name ?? "");
   const id = (row: OrgEditorUnitRow) =>
-    row.type === "employee" ? row.employeeId : row.openPosition.id;
+    row.type === "employee" ? row.employeeId : row.staffingSlot.id;
 
   return rows.sort((first, second) => {
     if (first.type === "employee" && first.employeeId === unit.bossEmployeeId) return -1;
@@ -1128,7 +1137,7 @@ export const createOrgEditorUnitFromScratch = ({
   liveFilter = null,
   name,
   noteMarkdown = "",
-  openPositions = [],
+  staffingSlots = [],
   order = 0,
   parentId = null,
   x,
@@ -1142,7 +1151,7 @@ export const createOrgEditorUnitFromScratch = ({
   liveFilter?: OrgEditorUnit["liveFilter"];
   name: string;
   noteMarkdown?: string;
-  openPositions?: OrgEditorOpenPosition[];
+  staffingSlots?: OrgEditorStaffingSlot[];
   order?: number;
   parentId?: OrgEditorUnitId | null;
   x: number;
@@ -1175,14 +1184,11 @@ export const createOrgEditorUnitFromScratch = ({
     liveFilter,
     name,
     noteMarkdown: normalizeOrgEditorUnitNoteMarkdown(noteMarkdown) ?? "",
-    openPositions:
-      liveFilter === null
-        ? openPositions.map((position) => ({
-            ...position,
-            tags: position.tags.map((tag) => ({ ...tag })),
-            title: normalizeOrgEditorOpenPositionTitle(position.title),
-          }))
-        : [],
+    staffingSlots: staffingSlots.map((slot) => ({
+      ...slot,
+      name: slot.name === null ? null : normalizeOrgEditorStaffingSlotName(slot.name),
+      tags: slot.tags.map((tag) => ({ ...tag })),
+    })),
     order,
     parentId,
     updatedAt: now,

@@ -33,14 +33,13 @@ import {
   getOrgEditorExportEmployeeTagRowCount,
   getOrgEditorExportEmployeeTags,
   getOrgEditorExportFontRequests,
-  getOrgEditorExportOpenPositionRowBackground,
-  getOrgEditorExportOpenPositionRowOutline,
+  getOrgEditorExportStaffingSlotRowOutline,
   getOrgEditorImageSolidBackgroundColor,
   ORG_EDITOR_EXPORT_DENSITY,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_EXPORT_FONT_FAMILY,
   ORG_EDITOR_EXPORT_GRADIENTS,
-  ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE,
+  ORG_EDITOR_EXPORT_STAFFING_SLOT_OUTLINE_STYLE,
 } from "@/lib/org-editor-export";
 import { getTagColorCanvasStyle } from "@/lib/tag-color";
 
@@ -74,7 +73,7 @@ const unit: OrgEditorUnit = {
   liveFilter: null,
   name: "Research & Development / Lab",
   noteMarkdown: "",
-  openPositions: [],
+  staffingSlots: [],
   order: 0,
   parentId: null,
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -155,13 +154,13 @@ describe("Org Editor image export", () => {
     expect(createOrgEditorExportFileBaseName(unit)).toBe("Research-Development-Lab");
   });
 
-  test("keeps the dashed open-position outline inside complete shared row bounds", () => {
+  test("keeps the dashed staffing-slot outline inside complete shared row bounds", () => {
     const defaultSurface = getOrgEditorEmployeeRowSurfaceBounds({
       employeeRowHeight: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
       employeeRowOffset: 0,
       unit,
     });
-    const defaultOutline = getOrgEditorExportOpenPositionRowOutline({
+    const defaultOutline = getOrgEditorExportStaffingSlotRowOutline({
       employeeRowHeight: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
       employeeRowOffset: 0,
       unit,
@@ -170,13 +169,13 @@ describe("Org Editor image export", () => {
       ORG_EDITOR_EMPLOYEE_ROW_HEIGHT +
       ORG_EDITOR_EMPLOYEE_TAG_STYLE.height * 2 +
       ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
-    const taggedOutline = getOrgEditorExportOpenPositionRowOutline({
+    const taggedOutline = getOrgEditorExportStaffingSlotRowOutline({
       employeeRowHeight: taggedHeight,
       employeeRowOffset: ORG_EDITOR_EMPLOYEE_ROW_HEIGHT + ORG_EDITOR_EMPLOYEE_ROW_GAP,
       unit,
     });
 
-    expect(ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE).toEqual({
+    expect(ORG_EDITOR_EXPORT_STAFFING_SLOT_OUTLINE_STYLE).toEqual({
       dash: [4, 3],
       lineWidth: 1,
       strokeStyle: "rgba(71, 85, 105, 0.5)",
@@ -195,20 +194,6 @@ describe("Org Editor image export", () => {
     expect(taggedOutline.bounds.y).toBe(
       defaultOutline.bounds.y + ORG_EDITOR_EMPLOYEE_ROW_HEIGHT + ORG_EDITOR_EMPLOYEE_ROW_GAP,
     );
-  });
-
-  test("resolves optional open-position backgrounds through the shared tonal palette", () => {
-    expect(getOrgEditorExportOpenPositionRowBackground(null)).toBeNull();
-    expect(getOrgEditorExportOpenPositionRowBackground("blue")).toEqual(
-      getTagColorCanvasStyle("blue"),
-    );
-    expect(getOrgEditorExportOpenPositionRowBackground("#7c3aed80")).toEqual(
-      getTagColorCanvasStyle("#7c3aed80"),
-    );
-    expect(getOrgEditorExportOpenPositionRowBackground("#7c3aed66")).toEqual({
-      fillStyle: "#7c3aed66",
-      textStyle: expect.stringMatching(/^#[0-9a-f]{6}$/u),
-    });
   });
 
   test("resolves preset, custom, and alpha image backgrounds through the shared palette", () => {
@@ -370,10 +355,10 @@ describe("Org Editor image export", () => {
     expect(getOrgEditorEmployeeTextMaxWidth(unitWidth)).toBe(310);
     expect(getOrgEditorExportEmployeeGeometry(unit, 0, 76, 40)).toEqual({
       avatarX: 27,
-      avatarY: 119,
+      avatarY: 135,
       rowTop: ORG_EDITOR_UNIT_HEADER_HEIGHT + 9,
-      tagY: 108,
-      textBaselineY: 103,
+      tagY: 124,
+      textBaselineY: 119,
       textMaxWidth: 310,
       textX: 45,
     });
@@ -382,7 +367,7 @@ describe("Org Editor image export", () => {
         collapsed: false,
         employeeRowHeights: [76, 48],
       }),
-    ).toBe(216);
+    ).toBe(232);
     expect(getOrgEditorUnitBounds({ ...unit, noteMarkdown: "# Private note" })).toEqual(
       getOrgEditorUnitBounds(unit),
     );
@@ -396,7 +381,7 @@ describe("Org Editor image export", () => {
       height: 76,
       width: getOrgEditorUnitBounds(unit).width - 18,
       x: 9,
-      y: 81,
+      y: ORG_EDITOR_UNIT_HEADER_HEIGHT + 9,
     });
     expect(ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS).toBe(6);
   });
@@ -485,12 +470,11 @@ describe("Org Editor structured export scope", () => {
       ...unit,
       employeeIds: [employee.id],
       noteMarkdown: "# Private note",
-      openPositions: [
+      staffingSlots: [
         {
-          backgroundColor: "teal",
           id: "00000000-0000-4000-8000-000000000014",
+          name: "Platform Engineer",
           tags: [{ date: "2026-10-01", tagId: "tag-role" }],
-          title: "Platform Engineer",
         },
       ],
     };

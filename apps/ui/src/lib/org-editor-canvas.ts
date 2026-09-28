@@ -1026,8 +1026,8 @@ const anchorOwnerKey = (ref: OrgEditorAnchorRef) => {
       return `unit:${ref.owner.unitId}`;
     case "employee":
       return `employee:${ref.owner.unitId}:${ref.owner.employeeId}`;
-    case "openPosition":
-      return `openPosition:${ref.owner.unitId}:${ref.owner.openPositionId}`;
+    case "staffingSlot":
+      return `staffingSlot:${ref.owner.unitId}:${ref.owner.staffingSlotId}`;
     case "element":
       return `element:${ref.owner.elementId}`;
   }
@@ -1308,7 +1308,7 @@ export const remapOrgEditorAnchorRef = (
   unitIdMap: ReadonlyMap<string, string>,
   elementIdMap: ReadonlyMap<string, string>,
   preserveExternal: boolean,
-  openPositionIdMap: ReadonlyMap<string, string> = new Map(),
+  staffingSlotIdMap: ReadonlyMap<string, string> = new Map(),
 ): OrgEditorAnchorRef | null => {
   if (ref.owner.type === "unit") {
     const unitId = unitIdMap.get(ref.owner.unitId);
@@ -1326,11 +1326,11 @@ export const remapOrgEditorAnchorRef = (
         ? cloneOrgEditorAnchorRef(ref)
         : null;
   }
-  if (ref.owner.type === "openPosition") {
+  if (ref.owner.type === "staffingSlot") {
     const unitId = unitIdMap.get(ref.owner.unitId);
-    const openPositionId = openPositionIdMap.get(ref.owner.openPositionId);
-    return unitId && openPositionId
-      ? { ...ref, owner: { openPositionId, type: "openPosition", unitId } }
+    const staffingSlotId = staffingSlotIdMap.get(ref.owner.staffingSlotId);
+    return unitId && staffingSlotId
+      ? { ...ref, owner: { staffingSlotId, type: "staffingSlot", unitId } }
       : preserveExternal
         ? cloneOrgEditorAnchorRef(ref)
         : null;

@@ -44,7 +44,7 @@ import {
 } from "@/lib/export-format";
 import type { OrgEditorSourceIndex } from "@/lib/org-editor";
 import {
-  buildOrgEditorUnitEmployeeSummaryById,
+  buildOrgEditorUnitSummaryById,
   buildOrgEditorUnitTagSummary,
   createOrgEditorUnitTagFooterLayout,
   getOrgEditorEmployeeDisplayVisualLineTops,
@@ -74,8 +74,8 @@ import {
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
   ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
-  type OrgEditorUnitEmployeeSummary,
   type OrgEditorUnitRow,
+  type OrgEditorUnitSummary,
   type OrgEditorUnitTagSummary,
   sortOrgEditorEmployeeIds,
 } from "@/lib/org-editor";
@@ -171,7 +171,7 @@ export const ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE = {
   fillStyle: "rgba(29, 29, 29, 0.1)",
   textStyle: "#1d1d1d",
 } as const;
-export const ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE = {
+export const ORG_EDITOR_EXPORT_STAFFING_SLOT_OUTLINE_STYLE = {
   dash: [4, 3] as const,
   lineWidth: 1,
   strokeStyle: "rgba(71, 85, 105, 0.5)",
@@ -186,7 +186,7 @@ export const ORG_EDITOR_EXPORT_DENSITY = 3;
 export const ORG_EDITOR_EXPORT_FONT_FAMILY = "system-ui";
 export const ORG_EDITOR_DEFAULT_EMPLOYEE_IMAGE_FORMAT = "{fullName} {isBoss ? '· Manager' : ''}";
 
-export const getOrgEditorExportOpenPositionRowOutline = ({
+export const getOrgEditorExportStaffingSlotRowOutline = ({
   employeeRowHeight,
   employeeRowOffset,
   unit,
@@ -200,10 +200,10 @@ export const getOrgEditorExportOpenPositionRowOutline = ({
     employeeRowOffset,
     unit,
   });
-  const inset = ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE.lineWidth / 2;
+  const inset = ORG_EDITOR_EXPORT_STAFFING_SLOT_OUTLINE_STYLE.lineWidth / 2;
 
   return {
-    ...ORG_EDITOR_EXPORT_OPEN_POSITION_OUTLINE_STYLE,
+    ...ORG_EDITOR_EXPORT_STAFFING_SLOT_OUTLINE_STYLE,
     bounds: {
       height: Math.max(0, surfaceBounds.height - inset * 2),
       width: Math.max(0, surfaceBounds.width - inset * 2),
@@ -213,10 +213,6 @@ export const getOrgEditorExportOpenPositionRowOutline = ({
     radius: Math.max(0, ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS - inset),
   };
 };
-
-export const getOrgEditorExportOpenPositionRowBackground = (
-  backgroundColor: EmployeeTagColor | null,
-) => (backgroundColor === null ? null : getTagColorCanvasStyle(backgroundColor));
 
 type OrgEditorExportGradientLayer =
   | {
@@ -1494,6 +1490,7 @@ export const createOrgEditorImageExportResult = async ({
   locale,
   maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
   positionNotSpecifiedLabel = "Position not specified",
+  staffingSlotLabel = "Staffing slot",
   rootUnit,
   scope,
   settings,
@@ -1508,11 +1505,12 @@ export const createOrgEditorImageExportResult = async ({
   viewSettings: OrgEditorViewSettings;
   avatarLoadLimit?: number;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
-  formatUnitSummary: (summary: OrgEditorUnitEmployeeSummary) => string;
+  formatUnitSummary: (summary: OrgEditorUnitSummary) => readonly string[];
   layoutMode: OrgEditorLayoutMode;
   locale: string;
   maxCanvasPixels?: number;
   positionNotSpecifiedLabel?: string;
+  staffingSlotLabel?: string;
   rootUnit: OrgEditorUnit | null;
   scope: OrgEditorExportScope | "view";
   settings: OrgEditorImageExportSettings;
@@ -1544,7 +1542,7 @@ export const createOrgEditorImageExportResult = async ({
     });
   const imageUnits =
     scope === "view" ? units : rootUnit ? getOrgEditorExportUnits({ rootUnit, scope, units }) : [];
-  const employeeSummaryByUnitId = buildOrgEditorUnitEmployeeSummaryById(units);
+  const employeeSummaryByUnitId = buildOrgEditorUnitSummaryById(units);
   const tagDefinitionById = new Map(tagDefinitions.map((tag) => [tag.id, tag] as const));
   const imageUnitRenderData = imageUnits.map((unit) => {
     const rows = getOrgEditorVisibleUnitRows(unit, employeeById, viewSettings.groupByTag, tagOrder);
@@ -1589,7 +1587,7 @@ export const createOrgEditorImageExportResult = async ({
       const tags =
         row.type === "employee"
           ? []
-          : row.openPosition.tags.flatMap((assignment) => {
+          : row.staffingSlot.tags.flatMap((assignment) => {
               const definition = tagDefinitionById.get(assignment.tagId);
               return definition
                 ? [{ ...definition, date: assignment.date } satisfies EmployeeTag]
@@ -1648,7 +1646,7 @@ export const createOrgEditorImageExportResult = async ({
               ...rows.map((row) =>
                 row.type === "employee"
                   ? `employee:${unit.id}:${row.employeeId}`
-                  : `openPosition:${unit.id}:${row.openPosition.id}`,
+                  : `staffingSlot:${unit.id}:${row.staffingSlot.id}`,
               ),
             ]),
           ),
@@ -1676,7 +1674,7 @@ export const createOrgEditorImageExportResult = async ({
       const employeeIndex = unitData.rows.findIndex((row) =>
         owner.type === "employee"
           ? row.type === "employee" && row.employeeId === owner.employeeId
-          : row.type === "openPosition" && row.openPosition.id === owner.openPositionId,
+          : row.type === "staffingSlot" && row.staffingSlot.id === owner.staffingSlotId,
       );
       if (employeeIndex < 0) return null;
       if (unitData.unit.collapsed) {
@@ -1861,10 +1859,12 @@ export const createOrgEditorImageExportResult = async ({
     const summary =
       employeeSummaryByUnitId.get(unit.id) ??
       ({
-        directCount: unit.employeeIds.length,
+        directEmployeeCount: unit.employeeIds.length,
+        directStaffingSlotCount: unit.staffingSlots.length,
         hasChildUnits: false,
-        totalCount: unit.employeeIds.length,
-      } satisfies OrgEditorUnitEmployeeSummary);
+        totalEmployeeCount: unit.employeeIds.length,
+        totalStaffingSlotCount: unit.staffingSlots.length,
+      } satisfies OrgEditorUnitSummary);
     context.textAlign = "start";
     context.textBaseline = "middle";
     context.fillStyle = "#64748b";
@@ -1873,22 +1873,35 @@ export const createOrgEditorImageExportResult = async ({
       400,
       ORG_EDITOR_EXPORT_UNIT_SUMMARY_FONT_SIZE,
     );
-    drawTrimmedText(
-      context,
-      formatUnitSummary(summary),
-      unit.x + ORG_EDITOR_UNIT_BORDER_WIDTH + ORG_EDITOR_UNIT_CONTENT_PADDING,
+    const summaryLines = formatUnitSummary(summary);
+    const summaryLineHeight = 16;
+    const summaryAreaTop =
       unit.y +
-        ORG_EDITOR_UNIT_BORDER_WIDTH +
-        ORG_EDITOR_UNIT_HEADER_HEIGHT -
-        ORG_EDITOR_UNIT_CONTENT_PADDING -
-        8 +
-        0.5,
-      summaryMaxWidth,
-    );
+      ORG_EDITOR_UNIT_BORDER_WIDTH +
+      ORG_EDITOR_UNIT_CONTENT_PADDING +
+      ORG_EDITOR_EXPORT_UNIT_ICON_SIZE +
+      6;
+    const summaryAreaHeight =
+      ORG_EDITOR_UNIT_HEADER_HEIGHT -
+      ORG_EDITOR_UNIT_BORDER_WIDTH -
+      ORG_EDITOR_UNIT_CONTENT_PADDING * 2 -
+      ORG_EDITOR_EXPORT_UNIT_ICON_SIZE -
+      6;
+    const firstSummaryBaseline =
+      summaryAreaTop + (summaryAreaHeight - summaryLines.length * summaryLineHeight) / 2 + 8 + 0.5;
+    for (const [lineIndex, line] of summaryLines.entries()) {
+      drawTrimmedText(
+        context,
+        line,
+        unit.x + ORG_EDITOR_UNIT_BORDER_WIDTH + ORG_EDITOR_UNIT_CONTENT_PADDING,
+        firstSummaryBaseline + lineIndex * summaryLineHeight,
+        summaryMaxWidth,
+      );
+    }
 
     for (const [employeeIndex, row] of rows.entries()) {
       const employee = row.type === "employee" ? employeeById.get(row.employeeId) : undefined;
-      const openPosition = row.type === "openPosition" ? row.openPosition : null;
+      const staffingSlot = row.type === "staffingSlot" ? row.staffingSlot : null;
       const employeeGeometry = getOrgEditorExportEmployeeGeometry(
         unit,
         employeeRowOffsets[employeeIndex] ?? 0,
@@ -1919,17 +1932,8 @@ export const createOrgEditorImageExportResult = async ({
         context.fill();
       }
 
-      const openPositionBackground = openPosition
-        ? getOrgEditorExportOpenPositionRowBackground(openPosition.backgroundColor)
-        : null;
-      if (openPositionBackground) {
-        drawRoundedRect(context, rowSurfaceBounds, ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS);
-        context.fillStyle = openPositionBackground.fillStyle;
-        context.fill();
-      }
-
-      if (openPosition) {
-        const outline = getOrgEditorExportOpenPositionRowOutline({
+      if (staffingSlot) {
+        const outline = getOrgEditorExportStaffingSlotRowOutline({
           employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
           employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,
           unit,
@@ -1971,7 +1975,7 @@ export const createOrgEditorImageExportResult = async ({
         context.textAlign = "center";
         context.textBaseline = "middle";
         context.fillText(
-          openPosition ? "+" : employee ? getEmployeeInitials(employee) : "?",
+          staffingSlot ? "+" : employee ? getEmployeeInitials(employee) : "?",
           avatarX,
           avatarY + 0.5,
         );
@@ -1982,14 +1986,14 @@ export const createOrgEditorImageExportResult = async ({
       context.arc(avatarX, avatarY, ORG_EDITOR_AVATAR_RADIUS, 0, Math.PI * 2);
       context.strokeStyle = "rgba(15, 23, 42, 0.2)";
       context.lineWidth = 1;
-      context.setLineDash(openPosition ? [2, 2] : []);
+      context.setLineDash(staffingSlot ? [2, 2] : []);
       context.stroke();
       context.setLineDash([]);
       if (isBoss) drawOrgEditorBossBadge(context, avatarX, avatarY);
 
       context.textAlign = "start";
       context.textBaseline = "alphabetic";
-      context.fillStyle = openPositionBackground?.textStyle ?? "#0f172a";
+      context.fillStyle = "#0f172a";
       if (row.type === "employee") {
         const layout = employeeDisplayLayouts[employeeIndex] ?? {
           blocks: [],
@@ -2018,7 +2022,7 @@ export const createOrgEditorImageExportResult = async ({
             x: employeeGeometry.textX,
           });
         }
-      } else if (openPosition) {
+      } else if (staffingSlot) {
         context.font = getCanvasFont(
           ORG_EDITOR_EXPORT_FONT_FAMILY,
           400,
@@ -2026,7 +2030,7 @@ export const createOrgEditorImageExportResult = async ({
         );
         drawTrimmedText(
           context,
-          openPosition.title,
+          staffingSlot.name ?? staffingSlotLabel,
           employeeGeometry.textX,
           employeeGeometry.textBaselineY,
           employeeGeometry.textMaxWidth,

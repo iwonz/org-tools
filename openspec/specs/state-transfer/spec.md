@@ -252,40 +252,7 @@ remain atomic and MUST NOT add a format version, migration, or compatibility rea
 - **WHEN** an Image element contains a remote URL, unsupported MIME, malformed base64, mismatched intrinsic dimensions, more than 25 MiB compressed bytes, or more than 40 megapixels
 - **THEN** the complete candidate is rejected without decoding or fetching remote content
 
-### Requirement: Current State persists exact open-position data
 
-Every Unit in the current exact State contract SHALL contain `openPositions`. Each entry MUST have
-exactly a nullable validated `backgroundColor`, UUID `id`, normalized non-empty `title`, and unique
-current Tag assignments with canonical optional dates. IDs MUST be unique inside the View,
-referenced Tags MUST exist, Live Units MUST have an empty array, and open-position selection or
-anchors MUST resolve to the named containing Unit. The parser MUST reject previous, mixed, missing,
-extra, invalid-color, or dangling shapes atomically without a version marker, migration, or
-compatibility reader.
-
-#### Scenario: Import current open positions
-- **WHEN** complete State contains valid transparent or colored manual-Unit open positions, Tags,
-  selection, and anchors
-- **THEN** Import accepts the complete State and round-trips the exact current data
-
-#### Scenario: Reject invalid open-position State
-- **WHEN** a position has a missing or invalid background color, invalid or duplicate ID, blank
-  title, duplicate or missing Tag, non-canonical date, Live owner, dangling selection, or dangling
-  anchor
-- **THEN** the complete State is rejected without partially replacing current data
-
-#### Scenario: Reject the preceding open-position shape
-- **WHEN** complete State contains an open position without required `backgroundColor`
-- **THEN** strict parsing rejects it without runtime conversion
-
-### Requirement: Employee-oriented exports exclude open positions
-
-Open positions SHALL remain present only in complete State Export and Editor PNG. Employee transfer,
-JSON, Template, Units, and Calendar projections MUST continue to operate only on global Employees and
-MUST NOT serialize, count, search, or emit open positions.
-
-#### Scenario: Export data from a View with positions
-- **WHEN** a source View contains open positions and a user exports Employees, JSON, or Template data
-- **THEN** output is identical to the same Employee assignments without those positions
 
 ### Requirement: Employee Import maps advanced custom values
 Mapped Employee Import SHALL accept arrays for current multi-option fields and arrays of objects for current Composite fields. Option values SHALL resolve by UUID or normalized label, Composite object properties SHALL resolve by stable subfield UUID or configured name, and the complete candidate SHALL be rejected atomically for unknown, duplicate, missing-required, or incorrectly typed values. Staging a new Import-created field SHALL remain limited to ordinary Value fields.
@@ -327,3 +294,23 @@ name and Tags; Editor export MUST use full name with a conditional manager marke
 #### Scenario: Create blank State
 - **WHEN** the application creates a new blank organization
 - **THEN** its four required display formats exactly match the maintained defaults
+
+### Requirement: Current State persists exact Staffing Slot data
+
+Every Unit in the current exact State contract SHALL contain `staffingSlots`. Each entry MUST have exactly a UUID `id`, nullable normalized `name`, and unique current Tag assignments with canonical optional dates. Slot IDs MUST be unique inside the View, referenced Tags MUST exist, and Staffing Slot selections or anchors MUST resolve to the named containing Unit. Manual and Live Units MAY contain slots. The parser MUST reject previous, mixed, missing, extra, invalid, duplicate, or dangling shapes atomically without a version marker or compatibility reader.
+
+#### Scenario: Import current Staffing Slots
+- **WHEN** complete State contains valid named and unnamed slots in manual or Live Units with Tags, selections, and anchors
+- **THEN** Import accepts and round-trips the exact current data
+
+#### Scenario: Reject preceding open-position State
+- **WHEN** complete State contains `openPositions`, an open-position discriminant, or a background/title record
+- **THEN** strict parsing rejects it without partially replacing current data
+
+### Requirement: Employee-oriented projections exclude Staffing Slots
+
+Staffing Slots SHALL remain present only in complete State Export and Editor PNG. Units, Employee transfer, JSON, Template, Calendar, filters, search, distribution, and Tag-cloud projections MUST operate only on global Employees and MUST NOT serialize, count, or emit slots.
+
+#### Scenario: Export Employees from a View with slots
+- **WHEN** a source View contains Staffing Slots and a user exports Employee JSON or Template data
+- **THEN** output is identical to the same Employee assignments without those slots

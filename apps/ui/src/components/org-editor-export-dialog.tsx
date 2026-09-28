@@ -53,7 +53,7 @@ import {
   exportUnitFields,
   validateExportFieldNames,
 } from "@/lib/export-format";
-import type { OrgEditorSourceIndex, OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
+import type { OrgEditorSourceIndex, OrgEditorUnitSummary } from "@/lib/org-editor";
 import type {
   OrgEditorExportScope,
   OrgEditorExportTab,
@@ -147,6 +147,7 @@ export function OrgEditorExportDialog({
   const locale = useLocale();
   const countText = useCountText();
   const positionNotSpecifiedLabel = t("Position not specified");
+  const staffingSlotLabel = t("Staffing slot");
   const [scope, setScope] = useState<OrgEditorExportScope>("subtree");
   const [activeTab, setActiveTab] = useState<OrgEditorExportTab>("image");
   const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() =>
@@ -186,13 +187,15 @@ export function OrgEditorExportDialog({
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewSize, setPreviewSize] = useState({ height: 0, width: 0 });
   const formatUnitSummary = useCallback(
-    (summary: OrgEditorUnitEmployeeSummary) => {
-      const direct = countText("employees", { count: summary.directCount });
-      return summary.hasChildUnits
-        ? `${direct} · ${countText("totalEmployees", { count: summary.totalCount })}`
-        : direct;
+    (summary: OrgEditorUnitSummary) => {
+      const direct = `${countText("employees", { count: summary.directEmployeeCount })} · ${countText("staffingSlots", { count: summary.directStaffingSlotCount })}`;
+      if (!summary.hasChildUnits) return [direct];
+      return [
+        `${t("Total summary")}: ${countText("employees", { count: summary.totalEmployeeCount })} · ${countText("staffingSlots", { count: summary.totalStaffingSlotCount })}`,
+        `${t("In Unit")}: ${direct}`,
+      ];
     },
-    [countText],
+    [countText, t],
   );
   const hasAvatarBase64UrlField = useMemo(
     () => [...employeeById.values()].some((employee) => Boolean(employee.avatarBase64Url)),
@@ -302,6 +305,7 @@ export function OrgEditorExportDialog({
       locale,
       maxCanvasPixels: ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
       positionNotSpecifiedLabel,
+      staffingSlotLabel,
       rootUnit: unit,
       scope,
       settings: imageSettings,
@@ -343,6 +347,7 @@ export function OrgEditorExportDialog({
     locale,
     open,
     positionNotSpecifiedLabel,
+    staffingSlotLabel,
     scope,
     store.employeeFieldDefinitions,
     tagOrder,
@@ -387,6 +392,7 @@ export function OrgEditorExportDialog({
       locale,
       rootUnit: unit,
       positionNotSpecifiedLabel,
+      staffingSlotLabel,
       scope,
       settings: imageSettings,
       tagOrder,

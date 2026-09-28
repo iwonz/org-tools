@@ -18,8 +18,8 @@ import {
   resetServerState,
   syntheticStatePath,
 } from "./helpers.js";
-import { exerciseOpenPositions } from "./open-position-workflow.js";
 import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
+import { exerciseStaffingSlots } from "./staffing-slot-workflow.js";
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
 import { exerciseUsedColorsAndToolIcons } from "./used-colors-workflow.js";
 import { exerciseViewSettings } from "./view-settings-workflow.js";
@@ -55,12 +55,12 @@ test("reuses colors from every View and renders refined Editor tool icons", asyn
   await exerciseUsedColorsAndToolIcons(page, "server");
 });
 
-test("manages View-local open positions and replaces one with an Employee", async ({ page }) => {
+test("manages View-local Staffing Slots", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
-  await exerciseOpenPositions(page);
+  await exerciseStaffingSlots(page);
   await assertLocalRequests();
 });
 
@@ -3435,7 +3435,7 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
     avatarCenterX: 27,
     borderRadius: 8,
     contentX: 45,
-    headerHeight: 72,
+    headerHeight: 88,
     rowX: 9,
   });
   expect(geometry.avatarCenterY).toBe(geometry.rowHeight / 2);
@@ -3684,7 +3684,7 @@ test("coalesces large Editor previews and commits each gesture once", async ({ p
       liveFilter: null,
       name: `Unit ${String(index + 1).padStart(4, "0")}`,
       noteMarkdown: "",
-      openPositions: [],
+      staffingSlots: [],
       order: index,
       parentId: null,
       updatedAt: timestamp,

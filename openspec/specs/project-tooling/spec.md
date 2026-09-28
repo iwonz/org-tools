@@ -345,13 +345,13 @@ for `en`, `zh`, `ru`, `es`, `fr`, and `ar` in both production runtimes.
 - **THEN** locale-only UI changes do not serialize organization state or trigger per-frame full scans
 
 ### Requirement: Gallery documents Employee schema, Tags, and Calendar
-The deterministic gallery SHALL contain 59 PNG files: the maintained workflows plus View selection,
+The deterministic gallery SHALL contain 56 PNG files: the maintained workflows plus View selection,
 copy creation, isolated editing, rename/delete, and Unit note Preview/Editor scenarios. Every PNG SHALL use synthetic data and
 appear identically across two generations.
 
 #### Scenario: Regenerate the gallery
 - **WHEN** screenshots are generated twice from the same clean production build
-- **THEN** all 59 referenced PNG files exist and their SHA-256 manifests match
+- **THEN** all 56 referenced PNG files exist and their SHA-256 manifests match
 
 ### Requirement: Large-model validation remains bounded
 Automated checks SHALL exercise 20,000 Employees and 4,000 Units with identity, Tag, custom field,
@@ -371,7 +371,7 @@ preset chips, and Apply or Cancel actions, plus the full Employee membership dia
 Template token frame SHALL show the Format help affordance and localized guidance.
 
 #### Scenario: Regenerate Tag-bearing frames
-- **WHEN** the maintained 59-frame gallery is generated twice from unchanged source
+- **WHEN** the maintained 56-frame gallery is generated twice from unchanged source
 - **THEN** affected PNGs show named, arbitrary, and transparent fills, compact presets, opacity, draft actions, flat rows, rename, membership, and identical hash manifests
 
 #### Scenario: Validate exact custom color behavior
@@ -379,8 +379,8 @@ Template token frame SHALL show the Format help affordance and localized guidanc
 - **THEN** valid drafts preview locally and Apply resolves one canonical color, invalid or canceled drafts preserve the previous value, and the type Select remains inside its parent Popover
 
 #### Scenario: Validate shared picker consumers
-- **WHEN** browser validation opens Tag, distribution, open-position, Text, Sticker, and Arrow color controls
-- **THEN** every shared Popover exposes the same compact presets, opacity, atomic Apply, and Cancel behavior while native Image-export color inputs remain unchanged
+- **WHEN** browser validation opens Tag, distribution, Text, Sticker, and Arrow color controls
+- **THEN** every shared Popover exposes the same compact presets, opacity, atomic Apply, and Cancel behavior while the Image-export background uses the same picker contract
 
 #### Scenario: Validate Format guidance
 - **WHEN** browser validation visits each token-aware Format surface
@@ -389,11 +389,11 @@ Template token frame SHALL show the Format help affordance and localized guidanc
 ### Requirement: Gallery verifies universal Unit Tag footers
 The maintained Editor screenshots SHALL show content-sized direct-Tag footer chips with the
 universal 8 pixel inline inset, 6 pixel two-axis gaps, and no extra trailing area after the measured
-count. Screenshot generation SHALL retain the maintained 59 declared scenarios.
+count. Screenshot generation SHALL retain the maintained 56 declared scenarios.
 
 #### Scenario: Regenerate Editor frames
 - **WHEN** the deterministic gallery is generated twice from unchanged source
-- **THEN** affected Editor frames show universally sized evenly inset footer chips and all 59 PNG hashes match between runs
+- **THEN** affected Editor frames show universally sized evenly inset footer chips and all 56 PNG hashes match between runs
 
 ### Requirement: Large multi-View validation remains bounded
 Automated checks SHALL exercise global Employee mutation, active View switching, Data Download source
@@ -405,13 +405,13 @@ rebuilds, UI-triggered organization serialization, or complete-list rendering.
 - **THEN** only required derived structures build and no organization write occurs until a structural command
 
 ### Requirement: Gallery and browser checks cover refined cross-View interactions
-The maintained 59-frame deterministic gallery SHALL cover the current scenario set while updating the
+The maintained 56-frame deterministic gallery SHALL cover the current scenario set while updating the
 Editor View, clipboard, and Unit footer frames. Browser validation SHALL exercise cross-View paste,
 all four edge-pan drag modes, nested and multi-selection deletion, and tooltip absence in both server
 and Pages runtimes without console, page, resource, or external-network diagnostics.
 
 #### Scenario: Regenerate affected Editor frames
-- **WHEN** the 59-frame gallery is generated twice from unchanged source and fixtures
+- **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
 - **THEN** complete wrapping footer Tags and the current View interactions appear with identical SHA-256 manifests
 
 #### Scenario: Validate large interaction performance
@@ -421,24 +421,24 @@ and Pages runtimes without console, page, resource, or external-network diagnost
 ### Requirement: Validation and gallery cover Unit Markdown notes
 Repository validation SHALL cover strict Unit note state, View-local history and copying, safe
 Markdown, both runtime persistence paths, localization, accessibility, and browser diagnostics. The
-deterministic gallery SHALL contain exactly 59 PNGs including Unit note Preview and Editor scenarios
+deterministic gallery SHALL contain exactly 56 PNGs including Unit note Preview and Editor scenarios
 while the README retains its ten featured frames.
 
 #### Scenario: Generate Unit note frames
 - **WHEN** screenshot generation runs twice from unchanged source and fixtures
-- **THEN** all 59 PNGs have identical hashes and the two note frames show Preview and Editor with
+- **THEN** all 56 PNGs have identical hashes and the two note frames show Preview and Editor with
   synthetic Markdown content
 
 ### Requirement: Validation and gallery cover Editor distribution mode
 Repository validation SHALL cover strict View UI state, manual and Live membership, bounded
 derivation, context-switch accessibility, persisted highlighting, single-selection connections,
 multi-selection suppression, collapsed fallbacks, output exclusion, localization, and browser
-diagnostics. The deterministic gallery SHALL contain exactly 59 PNGs while README retains ten
+diagnostics. The deterministic gallery SHALL contain exactly 56 PNGs while README retains ten
 featured frames.
 
 #### Scenario: Generate distribution frames
 - **WHEN** screenshot generation runs twice from unchanged source and fixtures
-- **THEN** all 59 hashes match and supporting frames show status highlighting plus selected placement connections
+- **THEN** all 56 hashes match and supporting frames show status highlighting plus selected placement connections
 
 #### Scenario: Validate the large Editor
 - **WHEN** 20,000 Employees and 4,000 Units exercise distribution mode
@@ -452,7 +452,7 @@ featured frames.
 ### Requirement: Validation covers Tag-filter bulk selection
 Repository validation SHALL cover complete Tag selection, complete deselection, disabled states,
 Without tags independence, shared filter consumers, six locales, RTL, large virtualized catalogs,
-both runtimes, and browser diagnostics. The maintained deterministic gallery SHALL remain exactly 59
+both runtimes, and browser diagnostics. The maintained deterministic gallery SHALL remain exactly 56
 PNGs and update its existing Employee-filter frame without adding a scenario.
 
 #### Scenario: Validate shared filter consumers
@@ -461,13 +461,13 @@ PNGs and update its existing Employee-filter frame without adding a scenario.
 
 #### Scenario: Regenerate the gallery
 - **WHEN** screenshot generation runs twice from unchanged source and fixtures
-- **THEN** all 59 hashes match and the existing Employee-filter frame shows the bulk Tag actions
+- **THEN** all 56 hashes match and the existing Employee-filter frame shows the bulk Tag actions
 
 ### Requirement: Validation covers bulk distribution and Tag discovery
 Repository validation SHALL cover single, all, and mixed distribution selections, one bounded UI
 update, multi-placement row actions, read-only map navigation, searchable locale-aware Tag options,
 search-scoped bulk selection, inline catalog counts, both runtimes, six locales, RTL, browser
-diagnostics, and maintained large-model limits. The deterministic gallery SHALL contain exactly 59
+diagnostics, and maintained large-model limits. The deterministic gallery SHALL contain exactly 56
 PNGs while README retains ten featured frames.
 
 #### Scenario: Validate both runtimes
@@ -480,10 +480,10 @@ PNGs while README retains ten featured frames.
 
 #### Scenario: Regenerate the gallery
 - **WHEN** screenshot generation runs twice from unchanged source and fixtures
-- **THEN** all 59 hashes match and supporting frames show bulk distribution plus Employee placement navigation
+- **THEN** all 56 hashes match and supporting frames show bulk distribution plus Employee placement navigation
 
 ### Requirement: Validation covers catalog ordering and Unit grouping
-Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtered insertion and cancellation, scrollable nested color presets, conditional dated counts, strict grouping state, earliest-Tag grouping, boss placement, View-local history and copying, manual and Live membership, ordered output, both runtime persistence paths, accessibility, localization, and bounded derivation. The 59-frame deterministic gallery SHALL include View settings with default-enabled grouping and Tag cloud switches plus distribution colors and catalog rows with leading reorder handles. README SHALL retain ten featured frames.
+Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtered insertion and cancellation, scrollable nested color presets, conditional dated counts, strict grouping state, earliest-Tag grouping, boss placement, View-local history and copying, manual and Live membership, ordered output, both runtime persistence paths, accessibility, localization, and bounded derivation. The 56-frame deterministic gallery SHALL include View settings with default-enabled grouping and Tag cloud switches plus distribution colors and catalog rows with leading reorder handles. README SHALL retain ten featured frames.
 
 #### Scenario: Validate ordered presentation in both runtimes
 - **WHEN** users reorder Tags and toggle View grouping in browser validation
@@ -495,17 +495,17 @@ Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtere
 
 #### Scenario: Regenerate settings and catalog frames
 - **WHEN** the gallery is generated twice from unchanged source and fixtures
-- **THEN** all 59 PNG hashes match and the new settings frame shows the View display switches and distribution color fields
+- **THEN** all 56 PNG hashes match and the new settings frame shows the View display switches and distribution color fields
 
 ### Requirement: Validation covers reference-aware placements and reliable Editor controls
-Browser and unit coverage SHALL exercise ordinary/reference placement eligibility, live mode changes, full-row pointer sorting, gaps, auto-scroll, cancellation and peer replacement, independent layout buttons, and exact unique subtree counts in both runtimes. The maintained 59-frame gallery SHALL remain deterministic and be visually reviewed. The 20,000 Employee and 4,000 Unit bounds SHALL remain covered without organization writes during drag preview or eager per-row membership scans.
+Browser and unit coverage SHALL exercise ordinary/reference placement eligibility, live mode changes, full-row pointer sorting, gaps, auto-scroll, cancellation and peer replacement, independent layout buttons, and exact unique subtree counts in both runtimes. The maintained 56-frame gallery SHALL remain deterministic and be visually reviewed. The 20,000 Employee and 4,000 Unit bounds SHALL remain covered without organization writes during drag preview or eager per-row membership scans.
 
 #### Scenario: Validate the refined interactions
 - **WHEN** the complete repository checks and both production browser suites run
 - **THEN** placement maps, drag completion, direction history, and hierarchy counts match the requirements without unexpected diagnostics
 
 #### Scenario: Regenerate the gallery
-- **WHEN** all 59 PNGs are generated twice from unchanged source and fixtures
+- **WHEN** all 56 PNGs are generated twice from unchanged source and fixtures
 - **THEN** their hashes match and each frame passes visual review
 
 ### Requirement: View settings receive end-to-end verification
@@ -522,7 +522,7 @@ strict state boundaries, live-tab synchronization, canvas/PNG agreement, and the
 - **THEN** a consistent backup precedes production validation and one revision-incrementing transaction, failure leaves the original unchanged, already-current data is a no-op, and no database or temporary tool enters Git
 
 ### Requirement: Gallery demonstrates canvas tools and complete View export
-The deterministic 59-frame gallery SHALL keep its existing frame count while updating the featured
+The deterministic 56-frame gallery SHALL keep its existing frame count while updating the featured
 Editor frame to show the tools surface and representative Text, Sticker, embedded Image, and curved
 Arrow elements. The Editor image-export and image-settings frames SHALL show the complete View
 preview, selected density, actual dimensions, and shared settings using obviously synthetic embedded
@@ -530,7 +530,7 @@ content.
 
 #### Scenario: Generate the updated gallery twice
 - **WHEN** the maintained screenshot workflow runs twice from the same clean production state
-- **THEN** every PNG is visually valid, the second run has identical hashes, no real organization or remote image appears, and the catalog still contains exactly 59 frames
+- **THEN** every PNG is visually valid, the second run has identical hashes, no real organization or remote image appears, and the catalog still contains exactly 56 frames
 
 ### Requirement: Canvas interaction retains large-Editor bounds
 Automated checks SHALL cover canvas-element spatial queries, dependency resolution, frame-coalesced
@@ -561,54 +561,14 @@ applicable, the change SHALL record that the database is absent or already curre
 - **WHEN** the snapshot does not match the converter's exact expected source shape or preservation checks fail
 - **THEN** delivery stops without publishing a claimed-successful change or mutating the authoritative state
 
-### Requirement: Open-position delivery updates deterministic Editor evidence
 
-The existing Editor screenshot catalog SHALL demonstrate an open-position row and its interaction
-without increasing the catalog size. Gallery generation MUST remain deterministic across two runs,
-and fixtures MUST use synthetic titles, Employees, and Tags. A release that changes the exact Unit
-State shape MUST record whether the configured owned SQLite database is absent, already current, or
-safely converted from the immediately previous valid shape with the required backup and production
-parser checks.
-
-#### Scenario: Verify the updated gallery
-- **WHEN** the screenshot gallery is generated twice after the change
-- **THEN** every PNG is visually inspected and both SHA-256 sets are identical
-
-#### Scenario: Prepare an owned previous-schema database
-- **WHEN** the configured owned database contains the immediately previous valid Unit shape
-- **THEN** the stopped-runtime backup, detached conversion, production-parser validation, atomic
-  installation, committed-row validation, and normal-startup proof complete without committing the
-  converter or database artifacts
-
-### Requirement: Gallery verifies open-position vacancy styling
-
-The maintained deterministic Editor gallery SHALL show a complete dashed open-position row with its
-configured tonal surface in the live canvas and applicable Image-export previews without adding a
-screenshot scenario. Browser coverage SHALL additionally verify the explicit transparent choice.
-The style MUST remain visible at the maintained capture size and MUST NOT alter Employee-row
-presentation. Delivery MUST record the configured owned database as absent, already current, or
-safely converted from the immediately previous exact open-position shape.
-
-#### Scenario: Regenerate vacancy evidence
-- **WHEN** the 59-frame gallery is generated twice from unchanged source and fixtures
-- **THEN** affected Editor and Image-export frames show the reviewed colored vacancy, every PNG
-  passes visual inspection, and both SHA-256 manifests are identical
-
-#### Scenario: Prepare an owned previous-shape database
-- **WHEN** the configured owned database contains open positions without required background colors
-- **THEN** stopped-runtime backup, detached conversion to `null`, production-parser validation,
-  atomic installation, committed-row validation, and normal-startup proof complete without committing
-  the converter or database artifacts
 
 ### Requirement: Browser and gallery checks cover organization color reuse and refined tool glyphs
 
-Automated Server and Pages checks SHALL verify Used colors across every shared picker consumer,
-including inactive-View sources, alpha variants, atomic Apply/Cancel behavior, keyboard operation,
-narrow width, and RTL. The maintained deterministic gallery SHALL show the Used colors section and
-the refined Arrow and Image icons without increasing its 59 scenarios.
+Automated Server and Pages checks SHALL verify Used colors across every remaining shared picker consumer, including inactive-View sources, alpha variants, atomic Apply/Cancel behavior, keyboard operation, narrow width, and RTL. The maintained deterministic gallery SHALL show the Used colors section and refined Arrow and Image icons without increasing its 56 scenarios.
 
 #### Scenario: Validate every shared picker consumer
-- **WHEN** browser validation opens Tag, distribution, open-position, Text, Sticker, and Arrow color controls
+- **WHEN** browser validation opens Tag, distribution, Text, Sticker, and Arrow color controls
 - **THEN** each exposes the same organization-wide Used colors and reuses a swatch only through Apply
 
 #### Scenario: Validate refined toolbar icons
@@ -616,23 +576,20 @@ the refined Arrow and Image icons without increasing its 59 scenarios.
 - **THEN** the Arrow SVG has one cubic path plus a filled end triangle, the Image tool uses the rounded photo glyph, and both retain their accessible names
 
 #### Scenario: Regenerate maintained screenshots
-- **WHEN** the 59-frame gallery is generated twice from unchanged source
-- **THEN** affected color-picker and Editor frames show the new section and icons and both SHA-256 manifests match
+- **WHEN** the 56-frame gallery is generated twice from unchanged source
+- **THEN** affected color-picker and Editor frames show the current section and icons and both SHA-256 manifests match
 
 ### Requirement: Validation covers Editor Unit row spacing
 
-Unit and browser validation SHALL cover first, middle, and last Employee/open-position rows,
-variable Tag heights, virtualization, collapse, attachments, DOM/PNG agreement, and both production
-runtimes. The deterministic gallery SHALL retain its existing 59 scenarios while showing the revised
-row rhythm in current Editor frames.
+Unit and browser validation SHALL cover first, middle, and last Employee/Staffing Slot rows, variable Tag heights, virtualization, collapse, attachments, DOM/PNG agreement, and both production runtimes. The deterministic gallery SHALL retain its existing 56 scenarios while showing the current row rhythm.
 
 #### Scenario: Validate both runtimes
 - **WHEN** Server and Pages browser checks inspect a mixed expanded Unit
 - **THEN** computed row bounds contain only interior four-pixel intervals and interaction geometry remains aligned
 
 #### Scenario: Regenerate Editor evidence
-- **WHEN** the 59-frame gallery is generated twice from unchanged source and fixtures
-- **THEN** affected Editor and Image-export frames show the revised spacing and both SHA-256 manifests match
+- **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
+- **THEN** affected Editor and Image-export frames show matching spacing and both SHA-256 manifests match
 
 ### Requirement: Advanced fields and paste arbitration are regression tested
 Automated checks SHALL cover exact state parsing, definition and value validation, filters, Template and JSON output, mapped Import, Calendar indexing, accessible switches, custom-option commits, and keyboard paste event ordering while retaining the 20,000 Employee and 4,000 Unit target.
@@ -642,7 +599,7 @@ Automated checks SHALL cover exact state parsing, definition and value validatio
 - **THEN** advanced-field workflows and single-paste behavior pass in both server and browser-only runtimes without console, resource, localization, or privacy failures
 
 ### Requirement: Screenshot gallery covers Employee display formats
-The deterministic gallery SHALL remain exactly 59 PNG files. The primary Employee-model frame SHALL
+The deterministic gallery SHALL remain exactly 56 PNG files. The primary Employee-model frame SHALL
 show the icon-labeled Display tab, flat format sections, numeric line-gap inputs, per-format Reset
 actions, a rich native preview, the Markdown selection menu, and no Display Save button. Existing
 Value and Template frames SHALL continue to cover Model. Repeated unchanged generation MUST produce
@@ -650,7 +607,7 @@ identical hashes.
 
 #### Scenario: Generate the Employee model gallery
 - **WHEN** the maintained gallery is generated twice from unchanged source
-- **THEN** all 59 PNG hashes match and the Employee-model frames cover live Markdown Display editing, Reset actions, numeric gaps, and the existing Model workflows
+- **THEN** all 56 PNG hashes match and the Employee-model frames cover live Markdown Display editing, Reset actions, numeric gaps, and the existing Model workflows
 
 ### Requirement: Maintained validation covers unified Employee inline layout
 The deterministic gallery and browser suite SHALL retain the maintained scenario count and cover
@@ -661,14 +618,14 @@ Calendar, and Unit Tag footers. Two unchanged gallery runs MUST produce identica
 
 #### Scenario: Regenerate unified layout frames
 - **WHEN** the maintained gallery is generated twice after the shared layout change
-- **THEN** every one of the 59 hashes matches and affected frames show complete identity text plus aligned DOM and PNG Tag geometry
+- **THEN** every one of the 56 hashes matches and affected frames show complete identity text plus aligned DOM and PNG Tag geometry
 
 #### Scenario: Exercise multilingual measurement
 - **WHEN** browser validation renders Latin, Cyrillic, Arabic, CJK, emoji, Markdown marks, dates, and counts across supported surfaces
 - **THEN** no final glyph is clipped and every Tag suffix retains the exact shared trailing inset
 
 ### Requirement: Simplified export controls retain deterministic coverage
-Browser smoke tests and the maintained 59-frame gallery SHALL cover the recognizable Arrow icon,
+Browser smoke tests and the maintained 56-frame gallery SHALL cover the recognizable Arrow icon,
 all-assignment Template output, both transient line filters, fixed-density PNG output, simplified
 image settings, and the shared solid-background color dropdown in both production runtimes. Gallery
 generation SHALL remain deterministic and SHALL add or remove no frames.
@@ -679,4 +636,24 @@ generation SHALL remain deterministic and SHALL add or remove no frames.
 
 #### Scenario: Preserve the gallery contract
 - **WHEN** screenshots are generated twice from the same commit
-- **THEN** exactly 59 PNG files are produced with matching hashes and every updated image is visually reviewed
+- **THEN** exactly 56 PNG files are produced with matching hashes and every updated image is visually reviewed
+
+### Requirement: Staffing Slot delivery has deterministic Editor evidence
+
+Browser validation SHALL cover named and unnamed Staffing Slots in manual and Live Units, create/edit/delete, one-slot and selected-slot movement, Tags, strict State, selection, anchors, Unit/View copy, separate summary counts, collapse, virtualization, Undo/Redo, and DOM/PNG parity in both production runtimes. The maintained 56-frame gallery SHALL show the revised Editor without adding a scenario and SHALL remain deterministic across two runs.
+
+#### Scenario: Validate Staffing Slot workflows
+- **WHEN** Server and Pages browser checks exercise a mixed Unit hierarchy
+- **THEN** slot lifecycle and geometry pass while Units and Employee-oriented surfaces remain unchanged
+
+#### Scenario: Regenerate maintained screenshots
+- **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
+- **THEN** every PNG is visually inspected and both SHA-256 sets are identical
+
+### Requirement: Delivery converts an owned previous-schema database safely
+
+A release replacing the exact open-position State shape MUST record whether the configured owned SQLite database is absent, already current, or safely converted from the immediately previous valid shape. Conversion MUST occur with the runtime stopped, a timestamped database-family backup, detached and committed-row production-parser validation, preservation comparison, and ordinary startup proof. Converter and database artifacts MUST remain uncommitted.
+
+#### Scenario: Convert the configured previous snapshot
+- **WHEN** the owned database contains the immediately previous valid open-position shape
+- **THEN** slot names, Tags, IDs, selections, and anchors are retained, obsolete colors are removed, revision advances once, and all checks complete before publication

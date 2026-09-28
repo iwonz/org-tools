@@ -88,26 +88,31 @@ the boss. DOM, PNG, virtual row offsets, selection, reveal, and distribution anc
 sequence. Hidden Tag clouds contribute zero footer height to every geometry consumer and PNG;
 Employee Tags remain visible. No group headings or duplicate rows are introduced.
 
-Manual Units also own required `openPositions`. These View-local UUID records contain a normalized
-title, a required nullable named/custom background color, and dated or undated assignments to the
-global Tag catalog, but never create an Employee. The shared color resolver paints a configured
-background over the complete shared row bounds in DOM and PNG, preserving an eight-digit color's
-actual alpha; `null` keeps the surface unconfigured, and transient selection or drop feedback takes
-precedence.
-Employee and open-position rows form one discriminated, prefix-offset layout for sorting,
-virtualization, hit testing, side anchors, DOM, and PNG. Boss Employees remain first; position Tags
-affect grouping without changing Employee counts or the Unit Tag cloud. Live Units require an empty
-position array. The layout inserts exactly four logical pixels between adjacent row surfaces and no
-row gap before the first or after the last surface; Unit height, hierarchy placement, anchors, DOM,
-and PNG all consume those same offsets. View clone and Unit Paste preserve backgrounds, regenerate
-position IDs, and remap
-attachments; replacement rekeys the owner to an Employee occurrence in one history command, while
-deletion detaches at the last resolved world point.
+Every Unit owns required `staffingSlots`. These View-local UUID records contain a normalized nullable
+name and dated or undated assignments to the global Tag catalog, but never create an Employee. An
+unnamed record stays `null` and resolves to the current locale's Staffing Slot label only while
+rendering. Manual and Live Units use the same Slot contract.
+Employee and Staffing Slot rows form one discriminated, prefix-offset layout for sorting,
+virtualization, hit testing, side anchors, DOM, and PNG. Boss Employees remain first; Slot Tags
+affect grouping without changing Employee counts or the Unit Tag cloud. The layout inserts exactly
+four logical pixels between adjacent row surfaces and no row gap before the first or after the last
+surface; Unit height, hierarchy placement, anchors, DOM, and PNG all consume those same offsets.
+Slots retain a neutral placeholder avatar and one-pixel dashed outline without a configurable
+background. One selected Slot or all selected Slots can move between manual and Live Units in one
+command; IDs, Tags, selection, and attachments remain stable while anchor ownership changes. View
+clone and Unit Paste regenerate Slot IDs and remap copied attachments. Deletion detaches at the last
+resolved world point. Employee drops use ordinary Unit behavior and never consume a Slot.
+
+The shared Unit summary derives direct unique Employees, unique Employees across descendants,
+direct Staffing Slots, and the sum of descendant Slots. Parent Units reserve two lines for total and
+direct counts; leaf Units center one direct-count line in the same fixed header area. Zero Slot
+counts remain visible. DOM, Unit bounds, row origins, hit testing, anchors, hierarchy layout, and
+both PNG exports use the same header height and summary lines.
 
 Each View also owns a required ordered `structure.canvasElements` discriminated union for Text,
 Sticker, embedded Image, and cubic Arrow content. Rectangular tools share bounds, rotation, layer,
 typography, and optional attachment state; Arrow endpoints use the same anchor references. One
-anchor registry resolves Unit corners/sides/center, Employee and open-position row sides, rectangular tool anchors,
+anchor registry resolves Unit corners/sides/center, Employee and Staffing Slot row sides, rectangular tool anchors,
 and Arrow start/middle/end. References are same-View, acyclic, and preserve fallback world geometry.
 The array order is z-order inside `behindUnits` and `aboveUnits`; canvas elements participate in
 View-local history, cloning, persistence, live-tab synchronization, and complete State transfer.

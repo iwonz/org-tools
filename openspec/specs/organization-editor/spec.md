@@ -122,7 +122,8 @@ not current. Activating it SHALL restore the current local month and year.
 - **THEN** Calendar displays the current month and the Today action disappears
 
 ### Requirement: Org Editor Employee geometry follows wrapped tags
-The Org Editor SHALL compute Employee and open-position row heights from one actual-font-measured
+
+The Org Editor SHALL compute Employee and Staffing Slot row heights from one actual-font-measured
 inline layout of text, localized Tag fragments, and assignment fragments. The same layout MUST drive
 virtual offsets, hitboxes, selection, connectors, layout, bounds, DOM rendering, and PNG drawing.
 Tags SHALL use the one catalog-colored decoration with complete `label · date` content. Oversized
@@ -134,7 +135,7 @@ ellipsis, overflow, hidden content, or unused colored row width.
 - **THEN** every downstream canvas geometry consumer uses the updated shared layout without overlap
 
 #### Scenario: Large structure virtualization
-- **WHEN** a large current structure contains variable-height Employee or open-position rows
+- **WHEN** a large current structure contains variable-height Employee or Staffing Slot rows
 - **THEN** only visible rows render while hit testing and connector anchors remain aligned with their rows
 
 #### Scenario: Export Employee tags to PNG
@@ -144,7 +145,7 @@ ellipsis, overflow, hidden content, or unused colored row width.
 ### Requirement: Unit people rows keep compact interior spacing
 
 Every expanded Editor Unit SHALL place one four-logical-pixel vertical interval between adjacent
-visible Employee or open-position rows. The first visible row SHALL remain flush with the existing
+visible Employee or Staffing Slot rows. The first visible row SHALL remain flush with the existing
 list start and the last visible row SHALL remain flush with the existing list end, so a row stack of
 `n` items contains exactly `max(0, n - 1)` intervals. The interval MUST remain outside each row's
 surface and MUST NOT change row content padding, ordering, selection, or persistent State.
@@ -157,9 +158,9 @@ tag-height layout.
 - **WHEN** an expanded Unit shows three Employee rows
 - **THEN** exactly two four-pixel intervals separate them with no added interval above the first or below the last row
 
-#### Scenario: Mix Employees and an open position
-- **WHEN** sorting places an open position between Employee rows
-- **THEN** every adjacent pair has the same interval while the vacancy outline and all row surfaces retain their own bounds
+#### Scenario: Mix Employees and a Staffing Slot
+- **WHEN** sorting places a Staffing Slot between Employee rows
+- **THEN** every adjacent pair has the same interval while the dashed Slot outline and all row surfaces retain their own bounds
 
 #### Scenario: Render one visible row
 - **WHEN** an expanded or collapsed Unit has exactly one visible row
@@ -171,7 +172,7 @@ tag-height layout.
 
 #### Scenario: Export Unit rows
 - **WHEN** full-View or scoped PNG includes a Unit with multiple variable-height rows
-- **THEN** row content, surfaces, vacancy outlines, anchors, footer, Unit bounds, and hierarchy connections use the same intervals as the DOM
+- **THEN** row content, surfaces, dashed Slot outlines, anchors, footer, Unit bounds, and hierarchy connections use the same intervals as the DOM
 
 ### Requirement: Editor commands retain readable interaction feedback
 Editor toolbar controls and command actions SHALL use an opaque tonal hover surface with readable
@@ -987,176 +988,37 @@ interval at 33 milliseconds, reject an interaction pause above 100 milliseconds,
 - **AND** preview writes remain absent and each completed operation retains its existing single-write
   contract
 
-### Requirement: Manual Units support View-local open positions
 
-The Org Editor SHALL let a user create and edit open positions inside manual Units. Each position
-MUST have a stable UUID, a non-empty title, zero or more dated or undated assignments to the global
-Tag catalog, and a required nullable background color using the current Employee Tag color contract.
-It SHALL render as a selectable Employee-like row with a neutral placeholder avatar, vertically
-aligned title, complete Tag chips, deterministic ordering, virtualized geometry, and no global
-Employee record. Live Units MUST NOT contain or create open positions.
 
-#### Scenario: Add and edit an open position
-- **WHEN** a user activates Add open position, chooses no background or a named/custom color,
-  confirms the default or a custom title and Tags, and later edits that position
-- **THEN** the Unit renders the updated row and one history entry is created for each confirmed
-  operation
 
-#### Scenario: Reject or cancel an invalid position
-- **WHEN** the create or edit dialog contains an empty normalized title or is cancelled
-- **THEN** no Unit, selection, history, or persistence state changes
 
-#### Scenario: Keep Live membership derived
-- **WHEN** a Unit is Live
-- **THEN** Add open position is absent and the Unit contains no open-position rows
-
-### Requirement: Open positions participate in Editor row geometry and Tags
-
-Employee and open-position rows SHALL use one discriminated ordered layout with measured Tag-chip
-heights and prefix offsets for DOM rendering, virtualization, bounds, hit testing, Unit layout, and
-canvas anchors. Boss Employees SHALL remain first; other rows SHALL follow active Tag grouping,
-display name or title, and stable ID. Open-position Tags SHALL affect row ordering and display but
-MUST NOT affect Employee counts, distribution state, or Unit Tag-cloud summaries. Collapse SHALL
-hide positions and retain a deterministic Unit-edge fallback for their anchors.
-
-#### Scenario: Group a tagged position
-- **WHEN** Group by tag is enabled for a manual Unit containing Employees and tagged open positions
-- **THEN** all rows follow the shared deterministic order while Employee counts and Tag-cloud counts
-  remain based only on distinct Employees
-
-#### Scenario: Virtualize a large mixed roster
-- **WHEN** a Unit contains enough Employee and open-position rows to cross the virtualization limit
-- **THEN** only the visible row window mounts while bounds, pointer hit testing, and anchors use the
-  complete cached prefix-offset layout
-
-#### Scenario: Collapse an attached position
-- **WHEN** a canvas element targets an open-position side anchor and the Unit collapses
-- **THEN** the target resolves to the corresponding Unit edge without losing its persistent link
-
-### Requirement: Open positions support replacement and deletion
-
-An open-position context menu SHALL expose Edit, Replace with Employee, and Delete. Replacement
-SHALL use a single-select Employee picker. Picker replacement SHALL add the chosen Employee to the
-target Unit without removing other occurrences; dropping exactly one Employee occurrence from
-another manual Unit SHALL use existing move semantics. Both paths MUST atomically remove the
-position, select the resulting Employee occurrence, and rekey all position attachments without
-changing their world geometry. Position Tags MUST NOT modify the Employee. Multi-Employee drops
-MUST use the ordinary Unit drop without consuming a position.
-
-#### Scenario: Replace from the picker
-- **WHEN** a user chooses one Employee in Replace with Employee
-- **THEN** the Employee occurs in the target Unit, remains in every other Unit, the position is
-  removed, its attachments target the Employee occurrence, and Undo restores the complete prior state
-
-#### Scenario: Replace by dragging one Employee
-- **WHEN** one Employee occurrence from another manual Unit is dropped on an open position
-- **THEN** the occurrence moves using the existing boss and position rules, consumes the open
-  position, and preserves attached canvas geometry as one command
-
-#### Scenario: Replace with an existing target Employee
-- **WHEN** the chosen Employee already occurs in the target Unit
-- **THEN** only the position is removed and its attachments are rekeyed to the existing occurrence
-
-#### Scenario: Delete an attached position
-- **WHEN** a selected open position is deleted from its context menu or the keyboard
-- **THEN** it is removed and incoming canvas attachments detach at their last resolved world
-  coordinates in the same undoable command
-
-### Requirement: Editor PNG reproduces open positions
-
-The Editor DOM and full-View or Unit/subtree PNG SHALL use the same open-position row composition,
-ordering, measured geometry, title, optional persistent background, placeholder avatar, complete Tag
-chips, collapse visibility, and anchor resolution. Scoped PNG SHALL include canvas elements
-transitively attached to included open positions. Employee-format templates SHALL apply only to
-Employees, and transient position selection, menus, focus, hover, or drop feedback MUST NOT appear
-in PNG.
-
-#### Scenario: Export a mixed Unit
-- **WHEN** an expanded Unit containing Employees plus transparent and colored open positions is
-  exported
-- **THEN** DOM and PNG contain the same ordered rows, titles, backgrounds, Tags, placeholder avatars,
-  and Unit bounds while the header summary counts only Employees
-
-#### Scenario: Export attached annotations
-- **WHEN** a Unit or subtree PNG includes an open position with attached canvas elements
-- **THEN** the transitively attached elements are included and resolve to the same row anchors as
-  the full-View renderer
-
-### Requirement: Open-position rows have a distinct vacancy outline
-
-Every visible open-position row SHALL have a persistent one-pixel dashed outline around its complete
-Employee-row bounds with the existing row radius and placeholder avatar. The outline itself MUST NOT
-add a fill, while the row MAY render its configured persistent background beneath it. Neither the
-outline nor background MUST change measured height, content width, sorting, virtualization, hit
-testing, selection, drop handling, or anchor geometry. Ordinary Employee rows MUST NOT receive the
-vacancy outline or open-position background.
-
-#### Scenario: Render resting vacancies
-- **WHEN** an expanded manual Unit contains transparent and colored open positions
-- **THEN** each complete row, including any wrapped Tag area, has the neutral dashed outline, only
-  the configured rows have a tonal background, and neighboring Employee rows remain ordinary
-
-#### Scenario: Interact with a vacancy
-- **WHEN** a colored open position is hovered, focused, selected, or targeted by a single-Employee
-  drop
-- **THEN** the dashed outline remains visible and the existing primary or signal transient feedback
-  retains semantic contrast
-
-#### Scenario: Preserve row geometry
-- **WHEN** the vacancy outline or configured background renders or its interaction state changes
-- **THEN** the row bounds, text and Tag layout, pointer target, side anchors, Unit bounds, and attached
-  canvas geometry remain unchanged
-
-#### Scenario: Export a vacancy
-- **WHEN** full-View or Unit/subtree Image export includes transparent and colored open positions
-- **THEN** PNG paints each configured tonal background and the same unfilled one-logical-pixel dashed
-  outline over complete shared row bounds while excluding transient interaction styling
 
 ### Requirement: Editor color controls and renderers preserve real alpha
 
-Every Editor control backed by the shared color dropdown SHALL provide the same independent opacity
-draft and explicit Apply or Cancel workflow as the Tag catalog. Canonical eight-digit colors SHALL
-retain their actual alpha in Text foreground and fill, Sticker foreground, surface, and border,
-Arrow stroke and markers, distribution rows, open-position backgrounds, Tag-bearing DOM surfaces,
-and matching full-View or Unit/subtree PNG. Foreground text on semantic surfaces SHALL remain opaque
-and readable after the fill is composited against maintained light or dark backgrounds. Selection
-and drop feedback SHALL retain precedence over a persistent open-position background.
+Every Editor control backed by the shared color dropdown SHALL provide the same independent opacity draft and explicit Apply or Cancel workflow as the Tag catalog. Canonical eight-digit colors SHALL retain their actual alpha in Text foreground and fill, Sticker foreground, surface, and border, Arrow stroke and markers, distribution rows, Tag-bearing DOM surfaces, and matching full-View or Unit/subtree PNG. Foreground text on semantic surfaces SHALL remain opaque and readable after the fill is composited against maintained light or dark backgrounds.
 
 #### Scenario: Apply an Editor tool color
-
 - **WHEN** a user drafts a color and opacity for Text, Sticker, or Arrow and activates Apply
 - **THEN** one history command stores the canonical value and the resting DOM plus PNG use the same actual alpha
 
 #### Scenario: Apply a View presentation color
-
-- **WHEN** a user applies a transparent distribution or open-position color
-- **THEN** one View operation stores it, live rows show real transparency, and light-palette PNG composites the same source color and alpha
+- **WHEN** a user applies a transparent distribution color
+- **THEN** one View operation stores it and live rows plus light-palette PNG composite the same source color and alpha
 
 #### Scenario: Cancel an Editor color draft
-
 - **WHEN** a user changes color or opacity and cancels, presses Escape, clicks outside, or leaves invalid input
 - **THEN** no View history, persistence, or synchronization write occurs and the preceding rendered color remains
 
-#### Scenario: Override a transparent vacancy during interaction
-
-- **WHEN** a transparent open position becomes selected or accepts an Employee drop target
-- **THEN** the existing primary or signal feedback replaces its persistent fill without changing row geometry
-
 #### Scenario: Retain existing State
-
 - **WHEN** current State contains semantic, six-digit, or eight-digit Editor colors
-- **THEN** strict parsing accepts the unchanged shape and opening or canceling a picker does not rewrite those values
+- **THEN** strict parsing accepts the unchanged color shape and opening or canceling a picker does not rewrite those values
 
 ### Requirement: Editor contributes every configured canvas color to the shared palette
 
-The organization-wide Used colors palette SHALL include each View's distributed and undistributed
-settings, open-position backgrounds, Text base, range, and fill colors, Sticker base, range, and
-background colors, and Arrow strokes. Collection SHALL include inactive Views in stable View, Unit,
-open-position, canvas-element, and format-run order without cloning or serializing full State. Closed
-shared pickers MUST NOT trigger collection work on ordinary Editor renders.
+The organization-wide Used colors palette SHALL include each View's distributed and undistributed settings, Text base, range, and fill colors, Sticker base, range, and background colors, and Arrow strokes. Collection SHALL include inactive Views in stable View, Unit, canvas-element, and format-run order without cloning or serializing full State. Closed shared pickers MUST NOT trigger collection work on ordinary Editor renders.
 
 #### Scenario: Reuse an inactive View color
-- **WHEN** an inactive View contains a unique Text, Sticker, Arrow, distribution, or open-position color
+- **WHEN** an inactive View contains a unique Text, Sticker, Arrow, or distribution color
 - **THEN** opening any shared picker exposes that exact color and alpha for reuse
 
 #### Scenario: Preserve Editor performance
@@ -1164,7 +1026,7 @@ shared pickers MUST NOT trigger collection work on ordinary Editor renders.
 - **THEN** Used colors derivation does not scan Views or cause canvas-element or Unit re-renders
 
 #### Scenario: Apply a used color to an Editor property
-- **WHEN** a Used colors swatch is selected for Text, Sticker, Arrow, distribution, or an open position and Apply is activated
+- **WHEN** a Used colors swatch is selected for Text, Sticker, Arrow, or distribution and Apply is activated
 - **THEN** the existing owning View operation commits once and Undo restores its complete prior value
 
 ### Requirement: Editor tool glyphs distinguish Arrow and Image creation
@@ -1432,3 +1294,59 @@ Calendar SHALL fit its week-aligned grid and bounded Tag rail without page scrol
 #### Scenario: Calendar navigation layout
 - **WHEN** Calendar has birthday or dated-tag data on a maintained desktop viewport
 - **THEN** its header keeps the Tag rail, month, year, Previous, and Next visible while the week-aligned grid fits without horizontal or vertical page overflow
+
+### Requirement: Units own View-local Staffing Slots
+
+The Org Editor SHALL let users create, edit, select, and delete Staffing Slots inside manual and Live Units. Each slot MUST have a stable UUID, a normalized optional name, and zero or more unique dated or undated assignments to the global Tag catalog. An unnamed slot SHALL render the localized Staffing Slot label without persisting that translation.
+
+#### Scenario: Create an unnamed slot in a Live Unit
+- **WHEN** a user adds a Staffing Slot with an empty name and Tags to a Live Unit
+- **THEN** one history command stores a null name and the selected Tags while the row displays the localized fallback label
+
+#### Scenario: Cancel slot editing
+- **WHEN** a user cancels a create or edit dialog
+- **THEN** no Unit, selection, history, persistence, or global Tag state changes
+
+### Requirement: Staffing Slots share Editor row geometry without Employee semantics
+
+Employee and Staffing Slot rows SHALL use one discriminated ordered layout with measured Tag-chip heights and prefix offsets for DOM rendering, virtualization, bounds, hit testing, Unit layout, and canvas anchors. Slots SHALL retain the neutral placeholder avatar and one-pixel dashed vacancy outline, and SHALL NOT have a persistent configurable background. Slot Tags MAY affect row ordering but MUST NOT affect Employee counts, distribution, Employee search, or Unit Tag-cloud summaries. Collapse SHALL hide slots and retain a deterministic Unit-edge anchor fallback.
+
+#### Scenario: Render a mixed Live Unit
+- **WHEN** an expanded Live Unit contains derived Employees and named or unnamed tagged slots
+- **THEN** the Editor renders all rows with shared geometry while Employee-only projections remain unchanged
+
+#### Scenario: Collapse an attached slot
+- **WHEN** a canvas element targets a Staffing Slot side anchor and its Unit collapses
+- **THEN** the target resolves to the corresponding Unit edge without losing its persistent link
+
+### Requirement: Staffing Slots move independently between Units
+
+Dragging an unselected slot SHALL move that slot, and dragging a selected slot SHALL move every selected slot, excluding Employees, between any manual or Live Units as one undoable command. The operation MUST preserve slot IDs, names, Tags, selection, and attachments while rewriting Unit ownership. A drop that changes no owner MUST be a no-op. Slot menus SHALL expose only Edit and Delete, and Employee drops MUST use ordinary Unit behavior without consuming a slot.
+
+#### Scenario: Move selected slots from several Units
+- **WHEN** selected slots from multiple source Units are dragged onto another Unit
+- **THEN** all selected slots move once, their anchors reference the target Unit, and one Undo restores the complete preceding state
+
+#### Scenario: Delete an attached slot
+- **WHEN** a selected Staffing Slot is deleted from its menu or the keyboard
+- **THEN** the slot is removed and incoming canvas attachments detach at their last resolved world coordinates in the same command
+
+### Requirement: Unit headers report Employees and Staffing Slots separately
+
+Every Editor Unit summary SHALL derive distinct direct and descendant Employee counts plus direct and descendant Staffing Slot counts. A Unit with children SHALL render a total line followed by an in-Unit line; a leaf SHALL render one unprefixed direct line. Zero slot counts MUST remain visible. Slots MUST NOT contribute to either Employee count.
+
+#### Scenario: Summarize a parent Unit
+- **WHEN** a Unit and its descendants contain repeated Employee assignments and several unique Staffing Slots
+- **THEN** the first line reports distinct subtree Employees and all subtree slots and the second reports only the direct values
+
+#### Scenario: Summarize a leaf Unit
+- **WHEN** a Unit has no children
+- **THEN** its fixed summary area centers one line containing direct Employees and direct Staffing Slots
+
+### Requirement: Editor PNG reproduces Staffing Slots and Unit summaries
+
+The Editor DOM and full-View or Unit/subtree PNG SHALL use the same Staffing Slot rows, ordering, measured geometry, fallback names, placeholder avatars, dashed outlines, complete Tag chips, collapse visibility, anchor resolution, and Unit summary lines. Scoped PNG SHALL include canvas elements transitively attached to included slots. Employee-format templates SHALL apply only to Employees, and transient interaction styling MUST NOT appear in PNG.
+
+#### Scenario: Export a mixed hierarchy
+- **WHEN** a hierarchy containing Employees and Staffing Slots is exported
+- **THEN** DOM and PNG contain matching rows, summaries, bounds, and attachments while employee-only counts remain distinct

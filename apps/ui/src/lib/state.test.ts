@@ -257,16 +257,15 @@ describe("OrgToolsState", () => {
     expect(() => parseOrgToolsState(unsafe)).toThrow();
   });
 
-  test("round-trips exact open positions and rejects preceding or dangling shapes atomically", () => {
+  test("round-trips exact Staffing Slots and rejects preceding or dangling shapes atomically", () => {
     const { store, unitId } = populatedStore();
     const tag = store.tagDefinitions[0];
     if (!tag) throw new Error("Expected a Tag.");
-    const openPositionId = store.mainOrgEditor.addOpenPosition(unitId, {
-      backgroundColor: "#7c3aed",
+    const staffingSlotId = store.mainOrgEditor.addStaffingSlot(unitId, {
+      name: "Platform Engineer",
       tags: [{ date: "2026-10-01", tagId: tag.id }],
-      title: "Platform Engineer",
     });
-    if (!openPositionId) throw new Error("Expected an open position.");
+    if (!staffingSlotId) throw new Error("Expected a Staffing Slot.");
     const text = {
       ...createOrgEditorTextElement({ x: 640, y: 120 }),
       attachment: {
@@ -274,61 +273,71 @@ describe("OrgToolsState", () => {
         sourceAnchorId: "leftCenter" as const,
         target: {
           anchorId: "rightCenter" as const,
-          owner: { openPositionId, type: "openPosition" as const, unitId },
+          owner: { staffingSlotId, type: "staffingSlot" as const, unitId },
         },
       },
     };
     store.mainOrgEditor.addCanvasElement(text);
-    store.mainOrgEditor.setSelectedItems([{ openPositionId, type: "openPosition", unitId }]);
+    store.mainOrgEditor.setSelectedItems([{ staffingSlotId, type: "staffingSlot", unitId }]);
     const state = store.createOrgToolsState();
     expect(parseOrgToolsState(state)).toEqual(state);
 
-    const precedingPositionShape = structuredClone(state) as unknown as {
+    const precedingSlotShape = structuredClone(state) as unknown as {
       organization: {
         views: Array<{
-          structure: { units: Array<{ openPositions: Array<Record<string, unknown>> }> };
+          structure: { units: Array<{ staffingSlots: Array<Record<string, unknown>> }> };
         }>;
       };
     };
-    delete precedingPositionShape.organization.views[0]?.structure.units[0]?.openPositions[0]
-      ?.backgroundColor;
-    expect(() => parseOrgToolsState(precedingPositionShape)).toThrow("invalid View structure");
+    const precedingSlot =
+      precedingSlotShape.organization.views[0]?.structure.units[0]?.staffingSlots[0];
+    if (!precedingSlot) throw new Error("Expected a persisted Staffing Slot.");
+    precedingSlot.title = precedingSlot.name;
+    precedingSlot.backgroundColor = "blue";
+    delete precedingSlot.name;
+    expect(() => parseOrgToolsState(precedingSlotShape)).toThrow("invalid View structure");
 
-    const invalidColor = structuredClone(state) as unknown as {
+    const extraField = structuredClone(state) as unknown as {
       organization: {
         views: Array<{
-          structure: { units: Array<{ openPositions: Array<Record<string, unknown>> }> };
+          structure: { units: Array<{ staffingSlots: Array<Record<string, unknown>> }> };
         }>;
       };
     };
-    const invalidColorPosition =
-      invalidColor.organization.views[0]?.structure.units[0]?.openPositions[0];
-    if (!invalidColorPosition) throw new Error("Expected a persisted position.");
-    invalidColorPosition.backgroundColor = "not-a-color";
-    expect(() => parseOrgToolsState(invalidColor)).toThrow("invalid View structure");
+    const slotWithExtraField =
+      extraField.organization.views[0]?.structure.units[0]?.staffingSlots[0];
+    if (!slotWithExtraField) throw new Error("Expected a persisted Staffing Slot.");
+    slotWithExtraField.backgroundColor = "blue";
+    expect(() => parseOrgToolsState(extraField)).toThrow("invalid View structure");
 
     const preceding = structuredClone(state) as unknown as {
       organization: { views: Array<{ structure: { units: Array<Record<string, unknown>> } }> };
     };
-    delete preceding.organization.views[0]?.structure.units[0]?.openPositions;
+    delete preceding.organization.views[0]?.structure.units[0]?.staffingSlots;
     expect(() => parseOrgToolsState(preceding)).toThrow("invalid View structure");
 
     const duplicate = structuredClone(state);
     const duplicateUnit = duplicate.organization.views[0]?.structure.units[0];
-    const position = duplicateUnit?.openPositions[0];
-    if (!duplicateUnit || !position) throw new Error("Expected a persisted position.");
-    duplicateUnit.openPositions.push(structuredClone(position));
-    expect(() => parseOrgToolsState(duplicate)).toThrow("duplicate open position IDs");
+    const position = duplicateUnit?.staffingSlots[0];
+    if (!duplicateUnit || !position) throw new Error("Expected a persisted Staffing Slot.");
+    duplicateUnit.staffingSlots.push(structuredClone(position));
+    expect(() => parseOrgToolsState(duplicate)).toThrow("duplicate Staffing Slot IDs");
 
     const blank = structuredClone(state);
-    const blankPosition = blank.organization.views[0]?.structure.units[0]?.openPositions[0];
-    if (!blankPosition) throw new Error("Expected a persisted position.");
-    blankPosition.title = " ";
+    const blankSlot = blank.organization.views[0]?.structure.units[0]?.staffingSlots[0];
+    if (!blankSlot) throw new Error("Expected a persisted Staffing Slot.");
+    blankSlot.name = " ";
     expect(() => parseOrgToolsState(blank)).toThrow("invalid View structure");
+
+    const unnamed = structuredClone(state);
+    const unnamedSlot = unnamed.organization.views[0]?.structure.units[0]?.staffingSlots[0];
+    if (!unnamedSlot) throw new Error("Expected a persisted Staffing Slot.");
+    unnamedSlot.name = null;
+    expect(parseOrgToolsState(unnamed)).toEqual(unnamed);
 
     const missingTag = structuredClone(state);
     const missingTagPosition =
-      missingTag.organization.views[0]?.structure.units[0]?.openPositions[0];
+      missingTag.organization.views[0]?.structure.units[0]?.staffingSlots[0];
     if (!missingTagPosition) throw new Error("Expected a persisted position.");
     missingTagPosition.tags[0] = { date: null, tagId: uuid(999) };
     expect(() => parseOrgToolsState(missingTag)).toThrow("references a missing Tag");
@@ -347,13 +356,13 @@ describe("OrgToolsState", () => {
       ...createEmptyEmployeeLiveFilterRule(),
       selectedTags: [tag.id],
     };
-    expect(() => parseOrgToolsState(live)).toThrow("invalid View structure");
+    expect(parseOrgToolsState(live)).toEqual(live);
 
     const danglingSelection = structuredClone(state);
     const viewUi = danglingSelection.ui.editor.views[0];
     if (!viewUi) throw new Error("Expected View UI.");
-    viewUi.selectedItems = [{ openPositionId: uuid(998), type: "openPosition", unitId }];
-    expect(() => parseOrgToolsState(danglingSelection)).toThrow("selects a missing open position");
+    viewUi.selectedItems = [{ staffingSlotId: uuid(998), type: "staffingSlot", unitId }];
+    expect(() => parseOrgToolsState(danglingSelection)).toThrow("selects a missing Staffing Slot");
 
     const danglingAnchor = structuredClone(state);
     const anchoredText = danglingAnchor.organization.views[0]?.structure.canvasElements.find(
@@ -363,11 +372,11 @@ describe("OrgToolsState", () => {
       throw new Error("Expected an attached Text element.");
     }
     anchoredText.attachment.target.owner = {
-      openPositionId: uuid(997),
-      type: "openPosition",
+      staffingSlotId: uuid(997),
+      type: "staffingSlot",
       unitId,
     };
-    expect(() => parseOrgToolsState(danglingAnchor)).toThrow("references a missing open position");
+    expect(() => parseOrgToolsState(danglingAnchor)).toThrow("references a missing Staffing Slot");
   });
 
   test("normalizes preceding Text and Sticker shapes and rejects invalid rich ranges atomically", () => {
@@ -1008,12 +1017,11 @@ describe("OrgToolsState", () => {
     const { store, unitId } = populatedStore();
     const tag = store.tagDefinitions[0];
     if (!tag) throw new Error("Expected a Tag definition.");
-    const openPositionId = store.mainOrgEditor.addOpenPosition(unitId, {
-      backgroundColor: null,
+    const staffingSlotId = store.mainOrgEditor.addStaffingSlot(unitId, {
+      name: "Platform Engineer",
       tags: [{ date: "2026-10-01", tagId: tag.id }],
-      title: "Platform Engineer",
     });
-    if (!openPositionId) throw new Error("Expected an open position.");
+    if (!staffingSlotId) throw new Error("Expected a Staffing Slot.");
     store.mainOrgEditor.setSelectedItems([{ type: "unit", unitId }]);
     store.mainOrgEditor.copySelected();
     store.setEmployeesUi("", {
@@ -1042,13 +1050,13 @@ describe("OrgToolsState", () => {
     expect(store.employeesUi.filters.selectedTags).toEqual([]);
     expect(store.mainOrgEditor.units.find((unit) => unit.id === liveUnitId)?.liveFilter).toBeNull();
     expect(
-      store.mainOrgEditor.units.find((unit) => unit.id === unitId)?.openPositions[0]?.tags,
+      store.mainOrgEditor.units.find((unit) => unit.id === unitId)?.staffingSlots[0]?.tags,
     ).toEqual([]);
-    expect(store.orgViews.clipboard?.units[0]?.openPositions[0]?.tags).toEqual([]);
+    expect(store.orgViews.clipboard?.units[0]?.staffingSlots[0]?.tags).toEqual([]);
     expect(
       store.orgViews.editorByViewId
         .get(customViewId)
-        ?.units.flatMap((unit) => unit.openPositions)[0]?.tags,
+        ?.units.flatMap((unit) => unit.staffingSlots)[0]?.tags,
     ).toEqual([]);
     expect(
       store.orgViews.editorByViewId
@@ -1089,7 +1097,7 @@ describe("OrgToolsState", () => {
         liveFilter: rule([secondId]),
         name: "First",
         noteMarkdown: "",
-        openPositions: [],
+        staffingSlots: [],
         order: 0,
         parentId: null,
         updatedAt: now,
@@ -1107,7 +1115,7 @@ describe("OrgToolsState", () => {
         liveFilter: rule([firstId]),
         name: "Second",
         noteMarkdown: "",
-        openPositions: [],
+        staffingSlots: [],
         order: 1,
         parentId: null,
         updatedAt: now,

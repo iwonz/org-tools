@@ -695,7 +695,7 @@ export const applyEmployeeImport = ({
           liveFilter: null,
           name: part,
           noteMarkdown: "",
-          openPositions: [],
+          staffingSlots: [],
           order: units.length,
           parentId,
           updatedAt: now,

@@ -67,7 +67,7 @@ const units = Array.from({ length: unitCount }, (_, index) => {
     liveFilter: null,
     name: `Unit ${String(index + 1).padStart(4, "0")}`,
     noteMarkdown: "",
-    openPositions: [],
+    staffingSlots: [],
     order: index,
     parentId: null,
     updatedAt: timestamp,

@@ -7,7 +7,7 @@ import {
 import { getExportEmployeeFieldValue } from "@/lib/export-format";
 import { createEmptyEmployeeLiveFilterRule } from "@/lib/live-unit-filter";
 import {
-  buildOrgEditorUnitEmployeeSummaryById,
+  buildOrgEditorUnitSummaryById,
   buildOrgEditorUnitTagSummary,
   getOrgEditorOrderedEmployeeIds,
   getOrgEditorUnitHeight,
@@ -214,13 +214,13 @@ describe("Catalog order and Unit grouping", () => {
           : unit.employeeIds,
       }));
     const derived = required(store.units);
-    const summaries = buildOrgEditorUnitEmployeeSummaryById(materialized());
+    const summaries = buildOrgEditorUnitSummaryById(materialized());
     for (const unit of editor.units) {
-      expect(summaries.get(unit.id)?.totalCount).toBe(
+      expect(summaries.get(unit.id)?.totalEmployeeCount).toBe(
         derived.indexes.unitsById.get(unit.id)?.deepEmployeeIds.length,
       );
     }
-    expect(summaries.get(liveId)?.totalCount).toBe(5);
+    expect(summaries.get(liveId)?.totalEmployeeCount).toBe(5);
     const complete = buildEditorEmployeeUnitIndex(materialized());
     expect(complete.get(boss)).toEqual([unitId, liveId]);
     editor.toggleUnitDistributionMode(liveId);
@@ -232,7 +232,7 @@ describe("Catalog order and Unit grouping", () => {
     ).toEqual([unitId]);
     editor.setViewSettings({ groupByTag: false });
     editor.setUnitsCollapsed([unitId, liveId], true);
-    expect(buildOrgEditorUnitEmployeeSummaryById(materialized())).toEqual(summaries);
+    expect(buildOrgEditorUnitSummaryById(materialized())).toEqual(summaries);
     store.createOrgView("Empty scenario", { type: "blank" });
     expect(buildEditorEmployeeUnitIndex(store.orgEditor.units).size).toBe(0);
     expect(buildEditorEmployeeUnitIndex(materialized()).get(boss)).toEqual([unitId, liveId]);

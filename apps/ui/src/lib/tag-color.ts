@@ -362,9 +362,6 @@ export const collectUsedEmployeeTagColors = (
   for (const view of viewSources) {
     append(view.settings.distributedColor);
     append(view.settings.undistributedColor);
-    for (const unit of view.units) {
-      for (const position of unit.openPositions) append(position.backgroundColor);
-    }
     for (const element of view.canvasElements) {
       if (element.type === "image") continue;
       if (element.type === "arrow") {

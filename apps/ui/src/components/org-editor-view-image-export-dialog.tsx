@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { UiTextKey } from "@/i18n/messages";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
-import type { OrgEditorUnitEmployeeSummary } from "@/lib/org-editor";
+import type { OrgEditorUnitSummary } from "@/lib/org-editor";
 import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorImageExportResult,
@@ -85,6 +85,7 @@ export function OrgEditorViewImageExportDialog({
   const locale = useLocale();
   const countText = useCountText();
   const positionNotSpecifiedLabel = t("Position not specified");
+  const staffingSlotLabel = t("Staffing slot");
   const [settings, setSettings] = useState(() =>
     createDefaultOrgEditorImageExportSettings(
       store.employeeDisplayFormats.editorExport,
@@ -114,13 +115,15 @@ export function OrgEditorViewImageExportDialog({
   }, [open, store.employeeDisplayFormats.editorExport, store.employeeDisplayLineGaps.editorExport]);
 
   const formatUnitSummary = useCallback(
-    (summary: OrgEditorUnitEmployeeSummary) => {
-      const direct = countText("employees", { count: summary.directCount });
-      return summary.hasChildUnits
-        ? `${direct} · ${countText("totalEmployees", { count: summary.totalCount })}`
-        : direct;
+    (summary: OrgEditorUnitSummary) => {
+      const direct = `${countText("employees", { count: summary.directEmployeeCount })} · ${countText("staffingSlots", { count: summary.directStaffingSlotCount })}`;
+      if (!summary.hasChildUnits) return [direct];
+      return [
+        `${t("Total summary")}: ${countText("employees", { count: summary.totalEmployeeCount })} · ${countText("staffingSlots", { count: summary.totalStaffingSlotCount })}`,
+        `${t("In Unit")}: ${direct}`,
+      ];
     },
-    [countText],
+    [countText, t],
   );
   const hasContent = units.length > 0 || canvasElements.length > 0;
   const render = useCallback(
@@ -136,6 +139,7 @@ export function OrgEditorViewImageExportDialog({
         locale,
         maxCanvasPixels,
         positionNotSpecifiedLabel,
+        staffingSlotLabel,
         rootUnit: null,
         scope: "view",
         settings,
@@ -157,6 +161,7 @@ export function OrgEditorViewImageExportDialog({
       layoutMode,
       locale,
       positionNotSpecifiedLabel,
+      staffingSlotLabel,
       settings,
       tagOrder,
       tagDefinitions,

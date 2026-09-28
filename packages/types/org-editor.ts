@@ -2,7 +2,7 @@ import type { EmployeeTagAssignment, EmployeeTagColor } from "./employee.js";
 import type {
   EmployeeId,
   OrgEditorCanvasElementId,
-  OrgEditorOpenPositionId,
+  OrgEditorStaffingSlotId,
   UnitId,
 } from "./ids.js";
 import type { EmployeeLiveFilterRule } from "./organization.js";
@@ -28,8 +28,8 @@ export type OrgEditorSelectedItem =
       employeeId: EmployeeId;
     }
   | {
-      openPositionId: OrgEditorOpenPositionId;
-      type: "openPosition";
+      staffingSlotId: OrgEditorStaffingSlotId;
+      type: "staffingSlot";
       unitId: OrgEditorUnitId;
     }
   | {
@@ -60,8 +60,8 @@ export type OrgEditorAnchorOwner =
   | { type: "unit"; unitId: OrgEditorUnitId }
   | { employeeId: EmployeeId; type: "employee"; unitId: OrgEditorUnitId }
   | {
-      openPositionId: OrgEditorOpenPositionId;
-      type: "openPosition";
+      staffingSlotId: OrgEditorStaffingSlotId;
+      type: "staffingSlot";
       unitId: OrgEditorUnitId;
     }
   | { elementId: OrgEditorCanvasElementId; type: "element" };
@@ -173,11 +173,10 @@ export type OrgEditorEmployeePosition = {
   position: string | null;
 };
 
-export type OrgEditorOpenPosition = {
-  backgroundColor: EmployeeTagColor | null;
-  id: OrgEditorOpenPositionId;
+export type OrgEditorStaffingSlot = {
+  id: OrgEditorStaffingSlotId;
+  name: string | null;
   tags: EmployeeTagAssignment[];
-  title: string;
 };
 
 /** Unit persisted inside one organization View document. */
@@ -198,7 +197,7 @@ export type OrgEditorUnit = {
   employeePositions: OrgEditorEmployeePosition[];
   liveFilter: EmployeeLiveFilterRule | null;
   noteMarkdown: string;
-  openPositions: OrgEditorOpenPosition[];
+  staffingSlots: OrgEditorStaffingSlot[];
   createdAt: string;
   updatedAt: string;
 };

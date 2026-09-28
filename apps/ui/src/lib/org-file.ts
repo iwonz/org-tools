@@ -19,8 +19,8 @@ import type {
   OrgEditorEmployeePosition,
   OrgEditorInlineTypography,
   OrgEditorLayoutMode,
-  OrgEditorOpenPosition,
   OrgEditorSelectedItem,
+  OrgEditorStaffingSlot,
   OrgEditorTextFormatRun,
   OrgEditorTypography,
   OrgEditorUnit,
@@ -62,7 +62,7 @@ import { isValidEmployeeTagDate } from "@/lib/employee-tags";
 import { getLiveUnitTopologicalOrder, hasEmployeeLiveFilterCriteria } from "@/lib/live-unit-filter";
 import {
   createDefaultOrgEditorState,
-  normalizeOrgEditorOpenPositionTitle,
+  normalizeOrgEditorStaffingSlotName,
   normalizeOrgEditorUnitNoteMarkdown,
 } from "@/lib/org-editor";
 import {
@@ -618,31 +618,28 @@ const normalizeEmployeePositions = (value: unknown): OrgEditorEmployeePosition[]
   return positions;
 };
 
-const normalizeOpenPositions = (value: unknown): OrgEditorOpenPosition[] | null => {
+const normalizeStaffingSlots = (value: unknown): OrgEditorStaffingSlot[] | null => {
   if (!Array.isArray(value)) return null;
-  const positions: OrgEditorOpenPosition[] = [];
-  for (const position of value) {
+  const slots: OrgEditorStaffingSlot[] = [];
+  for (const slot of value) {
     if (
-      !isRecord(position) ||
-      !hasExactKeys(position, ["backgroundColor", "id", "tags", "title"]) ||
-      !(position.backgroundColor === null || isOrgEditorCanvasColor(position.backgroundColor)) ||
-      !isUuid(position.id) ||
-      !isString(position.title) ||
-      !normalizeOrgEditorOpenPositionTitle(position.title) ||
-      position.title !== normalizeOrgEditorOpenPositionTitle(position.title)
+      !isRecord(slot) ||
+      !hasExactKeys(slot, ["id", "name", "tags"]) ||
+      !isUuid(slot.id) ||
+      !(slot.name === null || isString(slot.name)) ||
+      (isString(slot.name) && slot.name !== normalizeOrgEditorStaffingSlotName(slot.name))
     ) {
       return null;
     }
-    const tags = normalizeTagAssignments(position.tags);
+    const tags = normalizeTagAssignments(slot.tags);
     if (!tags) return null;
-    positions.push({
-      backgroundColor: position.backgroundColor,
-      id: position.id,
+    slots.push({
+      id: slot.id,
+      name: slot.name,
       tags,
-      title: position.title,
     });
   }
-  return positions;
+  return slots;
 };
 
 const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
@@ -658,7 +655,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
       "liveFilter",
       "name",
       "noteMarkdown",
-      "openPositions",
+      "staffingSlots",
       "order",
       "parentId",
       "updatedAt",
@@ -683,13 +680,13 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     return null;
   }
   const employeePositions = normalizeEmployeePositions(value.employeePositions);
-  const openPositions = normalizeOpenPositions(value.openPositions);
-  if (!employeePositions || !openPositions) return null;
+  const staffingSlots = normalizeStaffingSlots(value.staffingSlots);
+  if (!employeePositions || !staffingSlots) return null;
   const noteMarkdown = normalizeOrgEditorUnitNoteMarkdown(value.noteMarkdown);
   if (noteMarkdown === null || noteMarkdown !== value.noteMarkdown) return null;
   const liveFilter = value.liveFilter === null ? null : normalizeLiveFilterRule(value.liveFilter);
   if (value.liveFilter !== null && !liveFilter) return null;
-  if (liveFilter && (value.employeeIds.length > 0 || openPositions.length > 0)) return null;
+  if (liveFilter && value.employeeIds.length > 0) return null;
   return {
     bossEmployeeId: value.bossEmployeeId,
     collapsed: value.collapsed,
@@ -700,7 +697,7 @@ const normalizeEditorUnit = (value: unknown): OrgEditorUnit | null => {
     liveFilter,
     name: value.name.trim(),
     noteMarkdown,
-    openPositions,
+    staffingSlots,
     order: value.order as number,
     parentId: value.parentId,
     updatedAt: value.updatedAt,
@@ -730,13 +727,13 @@ const normalizeSelectedItem = (value: unknown): OrgEditorSelectedItem | null => 
     return { employeeId: value.employeeId, type: "employee", unitId: value.unitId };
   }
   if (
-    value.type === "openPosition" &&
-    hasExactKeys(value, ["openPositionId", "type", "unitId"]) &&
-    isUuid(value.openPositionId)
+    value.type === "staffingSlot" &&
+    hasExactKeys(value, ["staffingSlotId", "type", "unitId"]) &&
+    isUuid(value.staffingSlotId)
   ) {
     return {
-      openPositionId: value.openPositionId,
-      type: "openPosition",
+      staffingSlotId: value.staffingSlotId,
+      type: "staffingSlot",
       unitId: value.unitId,
     };
   }
@@ -1082,14 +1079,14 @@ const normalizeCanvasAnchorOwner = (value: unknown): OrgEditorAnchorOwner | null
     return { employeeId: value.employeeId, type: "employee", unitId: value.unitId };
   }
   if (
-    value.type === "openPosition" &&
-    hasExactKeys(value, ["openPositionId", "type", "unitId"]) &&
-    isUuid(value.openPositionId) &&
+    value.type === "staffingSlot" &&
+    hasExactKeys(value, ["staffingSlotId", "type", "unitId"]) &&
+    isUuid(value.staffingSlotId) &&
     isUuid(value.unitId)
   ) {
     return {
-      openPositionId: value.openPositionId,
-      type: "openPosition",
+      staffingSlotId: value.staffingSlotId,
+      type: "staffingSlot",
       unitId: value.unitId,
     };
   }
@@ -1535,8 +1532,8 @@ const validateStateGraph = (state: OrgToolsState): void => {
     const units = view.structure.units;
     const unitIds = new Set(units.map((unit) => unit.id));
     const unitById = new Map(units.map((unit) => [unit.id, unit] as const));
-    const openPositionIds = units.flatMap((unit) =>
-      unit.openPositions.map((position) => position.id),
+    const staffingSlotIds = units.flatMap((unit) =>
+      unit.staffingSlots.map((position) => position.id),
     );
     const canvasElements = view.structure.canvasElements;
     const elementById = new Map(canvasElements.map((element) => [element.id, element] as const));
@@ -1549,7 +1546,7 @@ const validateStateGraph = (state: OrgToolsState): void => {
       canvasElements.map((element) => element.id),
       "State has duplicate canvas element IDs inside a View.",
     );
-    assertUniqueIds(openPositionIds, "State has duplicate open position IDs inside a View.");
+    assertUniqueIds(staffingSlotIds, "State has duplicate Staffing Slot IDs inside a View.");
     const validateAnchorRef = (ref: OrgEditorAnchorRef) => {
       if (ref.owner.type === "unit") {
         if (!unitIds.has(ref.owner.unitId))
@@ -1575,14 +1572,14 @@ const validateStateGraph = (state: OrgToolsState): void => {
         }
         return;
       }
-      if (ref.owner.type === "openPosition") {
+      if (ref.owner.type === "staffingSlot") {
         const owner = ref.owner;
         const ownerUnit = unitById.get(owner.unitId);
-        if (!ownerUnit?.openPositions.some((position) => position.id === owner.openPositionId)) {
-          throw new Error("Canvas anchor references a missing open position.");
+        if (!ownerUnit?.staffingSlots.some((position) => position.id === owner.staffingSlotId)) {
+          throw new Error("Canvas anchor references a missing Staffing Slot.");
         }
         if (!(ORG_EDITOR_EMPLOYEE_ANCHOR_IDS as readonly string[]).includes(ref.anchorId)) {
-          throw new Error("Canvas open position anchor is invalid.");
+          throw new Error("Canvas Staffing Slot anchor is invalid.");
         }
         return;
       }
@@ -1619,9 +1616,9 @@ const validateStateGraph = (state: OrgToolsState): void => {
       if (referenced.some((employeeId) => !employeeIds.has(employeeId))) {
         throw new Error(`Unit "${unit.name}" references a missing Employee.`);
       }
-      for (const openPosition of unit.openPositions) {
-        if (openPosition.tags.some((tag) => !tagIds.has(tag.tagId))) {
-          throw new Error(`Unit "${unit.name}" open position references a missing Tag.`);
+      for (const staffingSlot of unit.staffingSlots) {
+        if (staffingSlot.tags.some((tag) => !tagIds.has(tag.tagId))) {
+          throw new Error(`Unit "${unit.name}" Staffing Slot references a missing Tag.`);
         }
       }
       if (!unit.liveFilter) {
@@ -1632,9 +1629,6 @@ const validateStateGraph = (state: OrgToolsState): void => {
           throw new Error(`Unit "${unit.name}" has an unassigned boss.`);
         }
       } else {
-        if (unit.openPositions.length > 0) {
-          throw new Error(`Live Unit "${unit.name}" contains an open position.`);
-        }
         allFilters.push(unit.liveFilter);
         if (!hasEmployeeLiveFilterCriteria(unit.liveFilter)) {
           throw new Error(`Live Unit "${unit.name}" has an empty filter rule.`);
@@ -1722,10 +1716,10 @@ const validateStateGraph = (state: OrgToolsState): void => {
       if (item.type === "employee" && !employeeIds.has(item.employeeId)) {
         throw new Error("Editor selects a missing Employee.");
       }
-      if (item.type === "openPosition") {
+      if (item.type === "staffingSlot") {
         const unit = unitsByViewId.get(viewUi.viewId)?.get(item.unitId);
-        if (!unit?.openPositions.some((position) => position.id === item.openPositionId)) {
-          throw new Error("Editor selects a missing open position.");
+        if (!unit?.staffingSlots.some((position) => position.id === item.staffingSlotId)) {
+          throw new Error("Editor selects a missing Staffing Slot.");
         }
       }
     }

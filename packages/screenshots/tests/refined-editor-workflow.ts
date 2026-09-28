@@ -75,13 +75,15 @@ export async function exerciseRefinedEditor(page: Page) {
       .locator(`[data-org-editor-employee-id="${first.id}"]`)
       .locator("..")
       .locator('[data-demo-id="org-editor-employee-placements-action"]');
-  await expect(card("Product")).toContainText("1 Employee · 3 Employees total");
-  await expect(card("Platform")).toContainText("2 Employees · 3 Employees total");
-  await expect(card("Delivery")).toContainText("2 Employees");
+  await expect(card("Product")).toContainText("Total: 3 Employees · 1 staffing slot");
+  await expect(card("Product")).toContainText("In Unit: 1 Employee · 1 staffing slot");
+  await expect(card("Platform")).toContainText("Total: 3 Employees · 0 staffing slots");
+  await expect(card("Platform")).toContainText("In Unit: 2 Employees · 0 staffing slots");
+  await expect(card("Delivery")).toContainText("2 Employees · 0 staffing slots");
   await card("Live reference").click({ button: "right", position: { x: 70, y: 40 } });
-  await expect(page.getByRole("menuitem", { name: "Add open position", exact: true })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("menuitem", { name: "Add staffing slot", exact: true }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   const map = page.locator('[data-demo-id="employee-placement-dialog"]');
   for (const name of ["Product", "Live reference"]) {
@@ -163,7 +165,12 @@ export async function exerciseRefinedEditor(page: Page) {
   await expect
     .poll(() => page.evaluate(() => Reflect.get(window, "__refinedPaint") as string[]))
     .toEqual(
-      expect.arrayContaining(["1 Employee · 3 Employees total", "2 Employees · 3 Employees total"]),
+      expect.arrayContaining([
+        "Total: 3 Employees · 1 staffing slot",
+        "In Unit: 1 Employee · 1 staffing slot",
+        "Total: 3 Employees · 0 staffing slots",
+        "In Unit: 2 Employees · 0 staffing slots",
+      ]),
     );
   await page.keyboard.press("Escape");
   await page.getByRole("tab", { name: "Units", exact: true }).click();

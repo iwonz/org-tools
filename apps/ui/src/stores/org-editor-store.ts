@@ -2,7 +2,6 @@ import type {
   EmployeeId,
   EmployeeLiveFilterRule,
   EmployeeTagAssignment,
-  EmployeeTagColor,
   OrgEditorAnchorRef,
   OrgEditorCanvasElement,
   OrgEditorCanvasElementId,
@@ -10,10 +9,10 @@ import type {
   OrgEditorCanvasViewport,
   OrgEditorEmployeePosition,
   OrgEditorLayoutMode,
-  OrgEditorOpenPosition,
-  OrgEditorOpenPositionId,
   OrgEditorRectAnchorId,
   OrgEditorSelectedItem,
+  OrgEditorStaffingSlot,
+  OrgEditorStaffingSlotId,
   OrgEditorState,
   OrgEditorUnit,
   OrgEditorUnitId,
@@ -40,7 +39,7 @@ import {
   getOrgEditorUnitHeight,
   getOrgEditorUnitWidth,
   layoutOrgEditorUnits,
-  normalizeOrgEditorOpenPositionTitle,
+  normalizeOrgEditorStaffingSlotName,
   normalizeOrgEditorUnitNoteMarkdown,
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
@@ -198,12 +197,10 @@ const cloneUnit = (unit: OrgEditorUnit): OrgEditorUnit => ({
     ...employeePosition,
   })),
   liveFilter: unit.liveFilter ? cloneEmployeeLiveFilterRule(unit.liveFilter) : null,
-  openPositions: unit.liveFilter
-    ? []
-    : unit.openPositions.map((position) => ({
-        ...position,
-        tags: position.tags.map((tag) => ({ ...tag })),
-      })),
+  staffingSlots: unit.staffingSlots.map((slot) => ({
+    ...slot,
+    tags: slot.tags.map((tag) => ({ ...tag })),
+  })),
   order: Number.isFinite(unit.order) ? unit.order : 0,
 });
 
@@ -215,7 +212,7 @@ const remapCanvasElementForPaste = (
   elementIdMap: ReadonlyMap<string, string>,
   preserveExternal: boolean,
   offset: OrgEditorCanvasPoint,
-  openPositionIdMap: ReadonlyMap<string, string> = new Map(),
+  staffingSlotIdMap: ReadonlyMap<string, string> = new Map(),
 ): OrgEditorCanvasElement => {
   const moved = moveOrgEditorCanvasElement(source, offset, (target) =>
     target.owner.type === "element"
@@ -231,7 +228,7 @@ const remapCanvasElementForPaste = (
         unitIdMap,
         elementIdMap,
         preserveExternal,
-        openPositionIdMap,
+        staffingSlotIdMap,
       );
       return {
         ...endpoint,
@@ -246,7 +243,7 @@ const remapCanvasElementForPaste = (
     unitIdMap,
     elementIdMap,
     preserveExternal,
-    openPositionIdMap,
+    staffingSlotIdMap,
   );
   return {
     ...moved,
@@ -339,8 +336,8 @@ const filterSelectedItemsForUnits = (
     const unit = unitById.get(item.unitId);
     if (!unit) return false;
     if (item.type === "unit") return true;
-    if (item.type === "openPosition") {
-      return unit.openPositions.some((position) => position.id === item.openPositionId);
+    if (item.type === "staffingSlot") {
+      return unit.staffingSlots.some((position) => position.id === item.staffingSlotId);
     }
     return unit.liveFilter !== null || unit.employeeIds.includes(item.employeeId);
   });
@@ -394,43 +391,29 @@ const rekeyCanvasElementEmployee = (
   return { ...element, attachment: rekeyAttachment(element.attachment) };
 };
 
-const rekeyCanvasElementOpenPosition = (
+const rekeyCanvasElementStaffingSlotUnit = (
   source: OrgEditorCanvasElement,
-  unitId: OrgEditorUnitId,
-  openPositionId: OrgEditorOpenPositionId,
-  employeeId: EmployeeId,
-  resolvePreviousAnchor: (ref: OrgEditorAnchorRef) => OrgEditorCanvasPoint | null,
-  resolveNextAnchor: (ref: OrgEditorAnchorRef) => OrgEditorCanvasPoint | null,
+  previousUnitId: OrgEditorUnitId,
+  nextUnitId: OrgEditorUnitId,
+  staffingSlotId: OrgEditorStaffingSlotId,
 ) => {
   const element = cloneOrgEditorCanvasElement(source);
-  const rekeyAttachment = <
-    Attachment extends { offset: OrgEditorCanvasPoint; target: OrgEditorAnchorRef } | null,
-  >(
+  const rekeyAttachment = <Attachment extends { target: OrgEditorAnchorRef } | null>(
     attachment: Attachment,
   ): Attachment => {
     if (
-      attachment?.target.owner.type !== "openPosition" ||
-      attachment.target.owner.unitId !== unitId ||
-      attachment.target.owner.openPositionId !== openPositionId
+      attachment?.target.owner.type !== "staffingSlot" ||
+      attachment.target.owner.unitId !== previousUnitId ||
+      attachment.target.owner.staffingSlotId !== staffingSlotId
     ) {
       return attachment;
     }
-    const previousAnchor = resolvePreviousAnchor(attachment.target);
-    const target: OrgEditorAnchorRef = {
-      ...attachment.target,
-      owner: { employeeId, type: "employee", unitId },
-    };
-    const nextAnchor = resolveNextAnchor(target);
     return {
       ...attachment,
-      offset:
-        previousAnchor && nextAnchor
-          ? {
-              x: attachment.offset.x + previousAnchor.x - nextAnchor.x,
-              y: attachment.offset.y + previousAnchor.y - nextAnchor.y,
-            }
-          : { ...attachment.offset },
-      target,
+      target: {
+        ...attachment.target,
+        owner: { staffingSlotId, type: "staffingSlot", unitId: nextUnitId },
+      },
     } as Attachment;
   };
   if (element.type === "arrow") {
@@ -591,19 +574,18 @@ const areEmployeePositionsEqual = (
   });
 };
 
-const areOpenPositionsEqual = (
-  firstPositions: OrgEditorOpenPosition[],
-  secondPositions: OrgEditorOpenPosition[],
+const areStaffingSlotsEqual = (
+  firstSlots: OrgEditorStaffingSlot[],
+  secondSlots: OrgEditorStaffingSlot[],
 ) =>
-  firstPositions.length === secondPositions.length &&
-  firstPositions.every((position, index) => {
-    const secondPosition = secondPositions[index];
+  firstSlots.length === secondSlots.length &&
+  firstSlots.every((slot, index) => {
+    const secondSlot = secondSlots[index];
     return (
-      secondPosition !== undefined &&
-      position.backgroundColor === secondPosition.backgroundColor &&
-      position.id === secondPosition.id &&
-      position.title === secondPosition.title &&
-      JSON.stringify(position.tags) === JSON.stringify(secondPosition.tags)
+      secondSlot !== undefined &&
+      slot.id === secondSlot.id &&
+      slot.name === secondSlot.name &&
+      JSON.stringify(slot.tags) === JSON.stringify(secondSlot.tags)
     );
   });
 
@@ -629,7 +611,7 @@ const areUnitsEqual = (firstUnits: OrgEditorUnit[], secondUnits: OrgEditorUnit[]
       JSON.stringify(firstUnit.liveFilter) === JSON.stringify(secondUnit.liveFilter) &&
       areEmployeeIdsEqual(firstUnit.employeeIds, secondUnit.employeeIds) &&
       areEmployeePositionsEqual(firstUnit.employeePositions, secondUnit.employeePositions) &&
-      areOpenPositionsEqual(firstUnit.openPositions, secondUnit.openPositions)
+      areStaffingSlotsEqual(firstUnit.staffingSlots, secondUnit.staffingSlots)
     );
   });
 };
@@ -776,14 +758,12 @@ export class OrgEditorStore {
     }
     if (!ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.includes(ref.anchorId as never)) return null;
     const rowLayout = getOrgEditorEmployeeRowLayout(
-      unit.liveFilter === null
-        ? unit
-        : { ...unit, employeeIds: this.getUnitEmployeeIds(unit.id), openPositions: [] },
+      unit.liveFilter === null ? unit : { ...unit, employeeIds: this.getUnitEmployeeIds(unit.id) },
     );
     const rowIndex = rowLayout.rows.findIndex((row) =>
       owner.type === "employee"
         ? row.type === "employee" && row.employeeId === owner.employeeId
-        : row.type === "openPosition" && row.openPosition.id === owner.openPositionId,
+        : row.type === "staffingSlot" && row.staffingSlot.id === owner.staffingSlotId,
     );
     if (rowIndex < 0) return null;
     if (unit.collapsed) {
@@ -1362,7 +1342,7 @@ export class OrgEditorStore {
     id,
     liveFilter = null,
     name,
-    openPositions = [],
+    staffingSlots = [],
     order,
     parentId = null,
     x,
@@ -1375,7 +1355,7 @@ export class OrgEditorStore {
     id?: OrgEditorUnitId;
     liveFilter?: EmployeeLiveFilterRule | null;
     name: string;
-    openPositions?: OrgEditorOpenPosition[];
+    staffingSlots?: OrgEditorStaffingSlot[];
     order?: number;
     parentId?: OrgEditorUnitId | null;
     x: number;
@@ -1391,7 +1371,7 @@ export class OrgEditorStore {
         ...(id === undefined ? {} : { id }),
         liveFilter,
         name,
-        openPositions,
+        staffingSlots,
         order:
           order ??
           this.units.reduce(
@@ -1499,17 +1479,6 @@ export class OrgEditorStore {
     }
 
     this.runCommand("Edit Unit", () => {
-      const removedOpenPositionIds =
-        normalizedConfiguration.membershipMode === "live"
-          ? new Set(currentUnit.openPositions.map((position) => position.id))
-          : new Set<OrgEditorOpenPositionId>();
-      const resolvedCanvasElements =
-        removedOpenPositionIds.size > 0
-          ? resolveOrgEditorCanvasElements({
-              elements: this.canvasElements,
-              resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
-            })
-          : null;
       const now = new Date().toISOString();
       const employeeIds =
         normalizedConfiguration.membershipMode === "manual"
@@ -1537,26 +1506,11 @@ export class OrgEditorStore {
                   ? cloneEmployeeLiveFilterRule(normalizedConfiguration.liveFilter)
                   : null,
               name: normalizedConfiguration.name,
-              openPositions:
-                normalizedConfiguration.membershipMode === "live" ? [] : unit.openPositions,
+              staffingSlots: unit.staffingSlots,
               updatedAt: now,
             }
           : unit,
       );
-      if (resolvedCanvasElements) {
-        this.canvasElements = this.canvasElements.map((element) =>
-          detachOrgEditorCanvasElementTargets(
-            resolvedCanvasElements.get(element.id)?.element ?? element,
-            (target) =>
-              target.owner.type === "openPosition" &&
-              target.owner.unitId === unitId &&
-              removedOpenPositionIds.has(target.owner.openPositionId),
-          ),
-        );
-        this.selectedItems = this.selectedItems.filter(
-          (item) => item.type !== "openPosition" || item.unitId !== unitId,
-        );
-      }
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
     });
   }
@@ -1766,72 +1720,62 @@ export class OrgEditorStore {
     });
   }
 
-  addOpenPosition(
+  addStaffingSlot(
     unitId: OrgEditorUnitId,
     input: {
-      backgroundColor: EmployeeTagColor | null;
+      name: string | null;
       tags: EmployeeTagAssignment[];
-      title: string;
     },
-  ): OrgEditorOpenPositionId | null {
-    const title = normalizeOrgEditorOpenPositionTitle(input.title);
-    if (!title) throw new LocalizedError(uiMessage("Enter an open position title."));
+  ): OrgEditorStaffingSlotId | null {
+    const name = normalizeOrgEditorStaffingSlotName(input.name ?? "");
     const unit = this.units.find((candidate) => candidate.id === unitId);
-    if (!unit || unit.liveFilter !== null) return null;
-    const openPosition: OrgEditorOpenPosition = {
-      backgroundColor: input.backgroundColor,
+    if (!unit) return null;
+    const staffingSlot: OrgEditorStaffingSlot = {
       id: createUuid(),
+      name,
       tags: input.tags.map((tag) => ({ ...tag })),
-      title,
     };
-    return this.runCommand("Add open position", () => {
+    return this.runCommand("Add Staffing Slot", () => {
       this.units = this.units.map((candidate) =>
         candidate.id === unitId
           ? {
               ...candidate,
               collapsed: false,
-              openPositions: [...candidate.openPositions, openPosition],
+              staffingSlots: [...candidate.staffingSlots, staffingSlot],
               updatedAt: new Date().toISOString(),
             }
           : candidate,
       );
-      this.selectedItems = [{ openPositionId: openPosition.id, type: "openPosition", unitId }];
+      this.selectedItems = [{ staffingSlotId: staffingSlot.id, type: "staffingSlot", unitId }];
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
-      return openPosition.id;
+      return staffingSlot.id;
     });
   }
 
-  updateOpenPosition(
+  updateStaffingSlot(
     unitId: OrgEditorUnitId,
-    openPositionId: OrgEditorOpenPositionId,
+    staffingSlotId: OrgEditorStaffingSlotId,
     input: {
-      backgroundColor: EmployeeTagColor | null;
+      name: string | null;
       tags: EmployeeTagAssignment[];
-      title: string;
     },
   ): void {
-    const title = normalizeOrgEditorOpenPositionTitle(input.title);
-    if (!title) throw new LocalizedError(uiMessage("Enter an open position title."));
+    const name = normalizeOrgEditorStaffingSlotName(input.name ?? "");
     const unit = this.units.find((candidate) => candidate.id === unitId);
-    if (
-      !unit ||
-      unit.liveFilter !== null ||
-      !unit.openPositions.some((position) => position.id === openPositionId)
-    ) {
+    if (!unit?.staffingSlots.some((position) => position.id === staffingSlotId)) {
       return;
     }
-    this.runCommand("Edit open position", () => {
+    this.runCommand("Edit Staffing Slot", () => {
       this.units = this.units.map((candidate) =>
         candidate.id === unitId
           ? {
               ...candidate,
-              openPositions: candidate.openPositions.map((position) =>
-                position.id === openPositionId
+              staffingSlots: candidate.staffingSlots.map((position) =>
+                position.id === staffingSlotId
                   ? {
                       ...position,
-                      backgroundColor: input.backgroundColor,
+                      name,
                       tags: input.tags.map((tag) => ({ ...tag })),
-                      title,
                     }
                   : position,
               ),
@@ -1839,15 +1783,15 @@ export class OrgEditorStore {
             }
           : candidate,
       );
-      this.selectedItems = [{ openPositionId, type: "openPosition", unitId }];
+      this.selectedItems = [{ staffingSlotId, type: "staffingSlot", unitId }];
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
     });
   }
 
-  deleteOpenPosition(unitId: OrgEditorUnitId, openPositionId: OrgEditorOpenPositionId): void {
+  deleteStaffingSlot(unitId: OrgEditorUnitId, staffingSlotId: OrgEditorStaffingSlotId): void {
     const unit = this.units.find((candidate) => candidate.id === unitId);
-    if (!unit?.openPositions.some((position) => position.id === openPositionId)) return;
-    this.runCommand("Delete open position", () => {
+    if (!unit?.staffingSlots.some((position) => position.id === staffingSlotId)) return;
+    this.runCommand("Delete Staffing Slot", () => {
       const resolvedCanvasElements = resolveOrgEditorCanvasElements({
         elements: this.canvasElements,
         resolveExternalAnchor: (ref) => this.resolveExternalCanvasAnchor(ref),
@@ -1856,8 +1800,8 @@ export class OrgEditorStore {
         candidate.id === unitId
           ? {
               ...candidate,
-              openPositions: candidate.openPositions.filter(
-                (position) => position.id !== openPositionId,
+              staffingSlots: candidate.staffingSlots.filter(
+                (position) => position.id !== staffingSlotId,
               ),
               updatedAt: new Date().toISOString(),
             }
@@ -1867,95 +1811,77 @@ export class OrgEditorStore {
         detachOrgEditorCanvasElementTargets(
           resolvedCanvasElements.get(element.id)?.element ?? element,
           (target) =>
-            target.owner.type === "openPosition" &&
+            target.owner.type === "staffingSlot" &&
             target.owner.unitId === unitId &&
-            target.owner.openPositionId === openPositionId,
+            target.owner.staffingSlotId === staffingSlotId,
         ),
       );
       this.selectedItems = this.selectedItems.filter(
         (item) =>
-          item.type !== "openPosition" ||
+          item.type !== "staffingSlot" ||
           item.unitId !== unitId ||
-          item.openPositionId !== openPositionId,
+          item.staffingSlotId !== staffingSlotId,
       );
       this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, [unitId]));
     });
   }
 
-  replaceOpenPositionWithEmployee(
-    unitId: OrgEditorUnitId,
-    openPositionId: OrgEditorOpenPositionId,
-    employeeId: EmployeeId,
+  moveStaffingSlotsToUnit(
+    items: readonly Extract<OrgEditorSelectedItem, { type: "staffingSlot" }>[],
+    targetUnitId: OrgEditorUnitId,
   ): void {
-    this.replaceOpenPosition(unitId, openPositionId, employeeId, null);
-  }
+    if (!this.units.some((unit) => unit.id === targetUnitId)) return;
+    const uniqueItems = [...new Map(items.map((item) => [item.staffingSlotId, item])).values()]
+      .filter((item) => item.unitId !== targetUnitId)
+      .filter((item) =>
+        this.units
+          .find((unit) => unit.id === item.unitId)
+          ?.staffingSlots.some((slot) => slot.id === item.staffingSlotId),
+      );
+    if (uniqueItems.length === 0) return;
 
-  moveEmployeeToOpenPosition(
-    item: Extract<OrgEditorSelectedItem, { type: "employee" }>,
-    unitId: OrgEditorUnitId,
-    openPositionId: OrgEditorOpenPositionId,
-  ): void {
-    if (item.unitId === unitId) return;
-    this.replaceOpenPosition(unitId, openPositionId, item.employeeId, item);
-  }
-
-  private replaceOpenPosition(
-    unitId: OrgEditorUnitId,
-    openPositionId: OrgEditorOpenPositionId,
-    employeeId: EmployeeId,
-    movedItem: Extract<OrgEditorSelectedItem, { type: "employee" }> | null,
-  ): void {
-    const targetUnit = this.units.find((unit) => unit.id === unitId);
-    const sourceUnit = movedItem ? this.units.find((unit) => unit.id === movedItem.unitId) : null;
-    if (
-      !targetUnit ||
-      targetUnit.liveFilter !== null ||
-      !targetUnit.openPositions.some((position) => position.id === openPositionId) ||
-      (movedItem && (!sourceUnit || sourceUnit.liveFilter !== null))
-    ) {
-      return;
-    }
-    const previousAnchorById = new Map(
-      ORG_EDITOR_EMPLOYEE_ANCHOR_IDS.flatMap((anchorId) => {
-        const ref: OrgEditorAnchorRef = {
-          anchorId,
-          owner: { openPositionId, type: "openPosition", unitId },
+    this.runCommand("Move Staffing Slots", () => {
+      const itemBySlotId = new Map(uniqueItems.map((item) => [item.staffingSlotId, item]));
+      const movedSlots = uniqueItems.flatMap(
+        (item) =>
+          this.units
+            .find((unit) => unit.id === item.unitId)
+            ?.staffingSlots.filter((slot) => slot.id === item.staffingSlotId) ?? [],
+      );
+      const affectedUnitIds = new Set<OrgEditorUnitId>([
+        targetUnitId,
+        ...uniqueItems.map((item) => item.unitId),
+      ]);
+      const now = new Date().toISOString();
+      this.units = this.units.map((unit) => {
+        if (!affectedUnitIds.has(unit.id)) return unit;
+        const retainedSlots = unit.staffingSlots.filter((slot) => !itemBySlotId.has(slot.id));
+        return {
+          ...unit,
+          collapsed: unit.id === targetUnitId ? false : unit.collapsed,
+          staffingSlots:
+            unit.id === targetUnitId ? [...retainedSlots, ...movedSlots] : retainedSlots,
+          updatedAt: now,
         };
-        const point = this.resolveExternalCanvasAnchor(ref);
-        return point ? [[anchorId, point] as const] : [];
-      }),
-    );
-    this.runCommand("Replace open position", () => {
-      if (movedItem) this.moveEmployeesToUnit([movedItem], unitId);
-      else this.addEmployeesToUnit(unitId, [employeeId]);
-      this.units = this.units.map((unit) =>
-        unit.id === unitId
-          ? {
-              ...unit,
-              openPositions: unit.openPositions.filter(
-                (position) => position.id !== openPositionId,
-              ),
-              updatedAt: new Date().toISOString(),
-            }
-          : unit,
+      });
+      this.canvasElements = this.canvasElements.map((element) => {
+        let next = element;
+        for (const item of uniqueItems) {
+          next = rekeyCanvasElementStaffingSlotUnit(
+            next,
+            item.unitId,
+            targetUnitId,
+            item.staffingSlotId,
+          );
+        }
+        return next;
+      });
+      this.selectedItems = this.selectedItems.map((item) =>
+        item.type === "staffingSlot" && itemBySlotId.has(item.staffingSlotId)
+          ? { ...item, unitId: targetUnitId }
+          : item,
       );
-      this.canvasElements = this.canvasElements.map((element) =>
-        rekeyCanvasElementOpenPosition(
-          element,
-          unitId,
-          openPositionId,
-          employeeId,
-          (ref) =>
-            previousAnchorById.get(
-              ref.anchorId as (typeof ORG_EDITOR_EMPLOYEE_ANCHOR_IDS)[number],
-            ) ?? null,
-          (ref) => this.resolveExternalCanvasAnchor(ref),
-        ),
-      );
-      this.selectedItems = [{ employeeId, type: "employee", unitId }];
-      this.realignRootSubtrees(
-        getRootUnitIdsForUnitIds(this.units, [unitId, ...(movedItem ? [movedItem.unitId] : [])]),
-      );
+      this.realignRootSubtrees(getRootUnitIdsForUnitIds(this.units, affectedUnitIds));
     });
   }
 
@@ -2286,9 +2212,9 @@ export class OrgEditorStore {
           item.type === "employee" ? [`${item.unitId}:${item.employeeId}`] : [],
         ),
       );
-      const deletedOpenPositionOccurrences = new Set(
+      const deletedStaffingSlotOccurrences = new Set(
         this.selectedItems.flatMap((item) =>
-          item.type === "openPosition" ? [`${item.unitId}:${item.openPositionId}`] : [],
+          item.type === "staffingSlot" ? [`${item.unitId}:${item.staffingSlotId}`] : [],
         ),
       );
       const resolvedEmployeeIdsByUnitId = new Map(
@@ -2315,16 +2241,16 @@ export class OrgEditorStore {
       }
 
       const removableEmployeesByUnitId = new Map<OrgEditorUnitId, Set<EmployeeId>>();
-      const removableOpenPositionsByUnitId = new Map<
+      const removableStaffingSlotsByUnitId = new Map<
         OrgEditorUnitId,
-        Set<OrgEditorOpenPositionId>
+        Set<OrgEditorStaffingSlotId>
       >();
       for (const item of this.selectedItems) {
-        if (item.type === "openPosition" && !deletedUnitIds.has(item.unitId)) {
-          const openPositionIds =
-            removableOpenPositionsByUnitId.get(item.unitId) ?? new Set<OrgEditorOpenPositionId>();
-          openPositionIds.add(item.openPositionId);
-          removableOpenPositionsByUnitId.set(item.unitId, openPositionIds);
+        if (item.type === "staffingSlot" && !deletedUnitIds.has(item.unitId)) {
+          const staffingSlotIds =
+            removableStaffingSlotsByUnitId.get(item.unitId) ?? new Set<OrgEditorStaffingSlotId>();
+          staffingSlotIds.add(item.staffingSlotId);
+          removableStaffingSlotsByUnitId.set(item.unitId, staffingSlotIds);
           const rootUnitId = getRootUnitId(this.units, item.unitId);
           if (rootUnitId) affectedRootUnitIds.add(rootUnitId);
           continue;
@@ -2345,7 +2271,7 @@ export class OrgEditorStore {
         .filter((unit) => !deletedUnitIds.has(unit.id))
         .map((unit) => {
           const removableEmployeeIds = removableEmployeesByUnitId.get(unit.id);
-          const removableOpenPositionIds = removableOpenPositionsByUnitId.get(unit.id);
+          const removableStaffingSlotIds = removableStaffingSlotsByUnitId.get(unit.id);
           const materializeLiveUnit = Boolean(
             unit.liveFilter?.selectedUnitIds.some((unitId) => deletedUnitIds.has(unitId)),
           );
@@ -2353,7 +2279,7 @@ export class OrgEditorStore {
             ? (resolvedEmployeeIdsByUnitId.get(unit.id) ?? [])
             : unit.employeeIds;
 
-          if (!removableEmployeeIds && !removableOpenPositionIds && !materializeLiveUnit) {
+          if (!removableEmployeeIds && !removableStaffingSlotIds && !materializeLiveUnit) {
             return unit;
           }
 
@@ -2374,8 +2300,8 @@ export class OrgEditorStore {
                 !removableEmployeeIds?.has(employeePosition.employeeId),
             ),
             liveFilter: materializeLiveUnit ? null : unit.liveFilter,
-            openPositions: unit.openPositions.filter(
-              (position) => !removableOpenPositionIds?.has(position.id),
+            staffingSlots: unit.staffingSlots.filter(
+              (position) => !removableStaffingSlotIds?.has(position.id),
             ),
             updatedAt: now,
           };
@@ -2395,8 +2321,8 @@ export class OrgEditorStore {
                 ? deletedEmployeeOccurrences.has(
                     `${target.owner.unitId}:${target.owner.employeeId}`,
                   )
-                : deletedOpenPositionOccurrences.has(
-                    `${target.owner.unitId}:${target.owner.openPositionId}`,
+                : deletedStaffingSlotOccurrences.has(
+                    `${target.owner.unitId}:${target.owner.staffingSlotId}`,
                   );
             },
           ),
@@ -2435,8 +2361,8 @@ export class OrgEditorStore {
       for (const employeeId of this.getUnitEmployeeIds(unitId)) {
         scopedOwnerKeys.add(`employee:${unitId}:${employeeId}`);
       }
-      for (const position of unitsById.get(unitId)?.openPositions ?? []) {
-        scopedOwnerKeys.add(`openPosition:${unitId}:${position.id}`);
+      for (const position of unitsById.get(unitId)?.staffingSlots ?? []) {
+        scopedOwnerKeys.add(`staffingSlot:${unitId}:${position.id}`);
       }
     }
     const copiedElementIds = getOrgEditorScopedCanvasElementIds({
@@ -2484,7 +2410,7 @@ export class OrgEditorStore {
 
       const pastedUnits: OrgEditorUnit[] = [];
       const unitIdMap = new Map<OrgEditorUnitId, OrgEditorUnitId>();
-      const openPositionIdMap = new Map<OrgEditorOpenPositionId, OrgEditorOpenPositionId>();
+      const staffingSlotIdMap = new Map<OrgEditorStaffingSlotId, OrgEditorStaffingSlotId>();
       const isCrossViewPaste =
         this.clipboard.sourceViewId !== null && this.clipboard.sourceViewId !== this.viewId;
       const unitBounds = this.clipboard.units.map(getOrgEditorUnitBounds);
@@ -2508,8 +2434,8 @@ export class OrgEditorStore {
 
       for (const unit of this.clipboard.units) {
         unitIdMap.set(unit.id, createOrgEditorUnitFromScratch({ name: unit.name, x: 0, y: 0 }).id);
-        for (const position of unit.openPositions) {
-          openPositionIdMap.set(position.id, createUuid());
+        for (const position of unit.staffingSlots) {
+          staffingSlotIdMap.set(position.id, createUuid());
         }
       }
       const elementIdMap = new Map(
@@ -2562,9 +2488,9 @@ export class OrgEditorStore {
                   ),
                 }
               : null,
-          openPositions: unit.openPositions.map((position) => ({
+          staffingSlots: unit.staffingSlots.map((position) => ({
             ...position,
-            id: openPositionIdMap.get(position.id) ?? createUuid(),
+            id: staffingSlotIdMap.get(position.id) ?? createUuid(),
             tags: position.tags.map((tag) => ({ ...tag })),
           })),
           parentId: nextParentId,
@@ -2605,7 +2531,7 @@ export class OrgEditorStore {
           elementIdMap,
           !isCrossViewPaste,
           offset,
-          openPositionIdMap,
+          staffingSlotIdMap,
         ),
       );
 
