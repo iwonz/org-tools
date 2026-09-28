@@ -8,6 +8,20 @@ export type SpatialRect = {
 export type EditorViewport = { scale: number; x: number; y: number };
 export type EditorViewportSize = { height: number; width: number };
 
+export const shouldClearOrgEditorSelectionAfterPan = ({
+  clearOnClick,
+  currentPoint,
+  dragThreshold,
+  startPoint,
+}: {
+  clearOnClick: boolean;
+  currentPoint: { x: number; y: number };
+  dragThreshold: number;
+  startPoint: { x: number; y: number };
+}) =>
+  clearOnClick &&
+  Math.hypot(currentPoint.x - startPoint.x, currentPoint.y - startPoint.y) <= dragThreshold;
+
 export const getEditorViewportWorldRect = (
   viewport: EditorViewport,
   size: EditorViewportSize,

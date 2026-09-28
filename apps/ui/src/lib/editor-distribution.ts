@@ -87,6 +87,38 @@ export const applyEditorDistributionBulkToggle = (
   return [...currentIdSet];
 };
 
+export const getEditorDistributionScopeUnitIds = (
+  units: readonly OrgEditorUnit[],
+  selectedUnitIds: readonly OrgEditorUnitId[],
+  scope: "branches" | "selected",
+) => {
+  const existingUnitIds = new Set(units.map((unit) => unit.id));
+  const selectedIdSet = new Set(selectedUnitIds.filter((unitId) => existingUnitIds.has(unitId)));
+  if (scope === "selected") {
+    return units.flatMap((unit) => (selectedIdSet.has(unit.id) ? [unit.id] : []));
+  }
+
+  const childrenByParentId = new Map<OrgEditorUnitId | null, OrgEditorUnitId[]>();
+  for (const unit of units) {
+    const children = childrenByParentId.get(unit.parentId) ?? [];
+    children.push(unit.id);
+    childrenByParentId.set(unit.parentId, children);
+  }
+
+  const scopedUnitIds = new Set<OrgEditorUnitId>();
+  const pendingUnitIds = [...selectedIdSet];
+  while (pendingUnitIds.length > 0) {
+    const unitId = pendingUnitIds.pop();
+    if (!unitId || scopedUnitIds.has(unitId)) continue;
+    scopedUnitIds.add(unitId);
+    for (const childUnitId of childrenByParentId.get(unitId) ?? []) {
+      pendingUnitIds.push(childUnitId);
+    }
+  }
+
+  return units.flatMap((unit) => (scopedUnitIds.has(unit.id) ? [unit.id] : []));
+};
+
 export const createEditorPlacementMapLayout = (
   unitIds: readonly OrgEditorUnitId[],
 ): EditorPlacementMapLayout => {

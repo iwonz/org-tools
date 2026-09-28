@@ -73,6 +73,7 @@ export type OrgEditorClipboard = {
   employeeIds: EmployeeId[];
   resolvedEmployeeIdsByUnitId: Map<OrgEditorUnitId, EmployeeId[]>;
   sourceViewId: ViewId | null;
+  token: string;
   units: OrgEditorUnit[];
 };
 
@@ -2406,7 +2407,7 @@ export class OrgEditorStore {
     });
   }
 
-  copySelected(): void {
+  copySelected(): OrgEditorClipboard | null {
     const selectedUnitIds = this.selectedUnitIds;
     const copiedUnitIds = new Set<OrgEditorUnitId>();
     const unitsById = createUnitIdMap(this.units);
@@ -2451,10 +2452,10 @@ export class OrgEditorStore {
     });
 
     if (copiedUnitIds.size === 0 && selectedEmployeeIds.size === 0 && copiedElementIds.size === 0) {
-      return;
+      return null;
     }
 
-    this.setClipboard({
+    const clipboard: OrgEditorClipboard = {
       canvasElements: this.canvasElements
         .filter((element) => copiedElementIds.has(element.id))
         .map((element) =>
@@ -2465,11 +2466,14 @@ export class OrgEditorStore {
         [...copiedUnitIds].map((unitId) => [unitId, [...this.getUnitEmployeeIds(unitId)]]),
       ),
       sourceViewId: this.viewId,
+      token: createUuid(),
       units: [...copiedUnitIds]
         .map((unitId) => unitsById.get(unitId))
         .filter((unit): unit is OrgEditorUnit => Boolean(unit))
         .map(cloneUnit),
-    });
+    };
+    this.setClipboard(clipboard);
+    return clipboard;
   }
 
   pasteAt(point: { x: number; y: number }): void {

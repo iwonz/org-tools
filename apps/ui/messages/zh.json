@@ -111,6 +111,8 @@
     "Deselect all": "取消全选",
     "Drag Unit connection": "拖动团队连接",
     "Distribution mode": "分配模式",
+    "Selected Units only": "仅选中的团队",
+    "Selected Units and descendants": "选中的团队及其下级",
     "Distributed to {count} other Units": "已分配到另外 {count} 个团队",
     "Only in this Unit": "仅在此团队",
     "Show {name} in {count} Units": "显示 {name} 在 {count} 个团队中的位置",

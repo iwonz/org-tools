@@ -98,6 +98,7 @@ export async function exerciseRefinedEditor(page: Page) {
   const toggle = async (name: string) => {
     await card(name, peer).click({ button: "right", position: { x: 70, y: 40 } });
     await peer.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+    await peer.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
   };
   await toggle("Delivery");
   await expect(map).toBeHidden();

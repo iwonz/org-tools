@@ -149,6 +149,7 @@ test("synchronizes Editor distribution mode between live Pages tabs", async ({ c
   const productUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
   await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await page.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
   const sharedRow = productUnit.locator(
     '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]',
   );
@@ -177,22 +178,30 @@ test("synchronizes Editor distribution mode between live Pages tabs", async ({ c
   await peerProductUnit.click({ button: "right", position: { x: 80, y: 40 } });
   await expect(
     peer.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+  ).toHaveAttribute("aria-haspopup", "menu");
+  await peer.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await expect(
+    peer.locator('[data-demo-id="org-editor-distribution-selected-action"]'),
   ).toHaveAttribute("aria-checked", "true");
+  await peer.keyboard.press("Escape");
   await peer.keyboard.press("Escape");
   const peerPlatformUnit = peer.locator('fieldset[aria-label="Canvas Unit Platform"]');
   await peerProductUnit.click({ position: { x: 80, y: 40 } });
   await peerPlatformUnit.click({ modifiers: ["Control"], position: { x: 80, y: 40 } });
   await peerProductUnit.click({ button: "right", position: { x: 80, y: 40 } });
-  await expect(
-    peer.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
-  ).toHaveAttribute("aria-checked", "mixed");
   await peer.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await expect(
+    peer.locator('[data-demo-id="org-editor-distribution-selected-action"]'),
+  ).toHaveAttribute("aria-checked", "mixed");
+  await peer.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
   await expect
     .poll(async () => {
       await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
+      await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
       const checked = await page
-        .locator('[data-demo-id="org-editor-distribution-mode-action"]')
+        .locator('[data-demo-id="org-editor-distribution-selected-action"]')
         .getAttribute("aria-checked");
+      await page.keyboard.press("Escape");
       await page.keyboard.press("Escape");
       return checked;
     })

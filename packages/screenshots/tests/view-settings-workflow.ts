@@ -31,6 +31,7 @@ export async function exerciseViewSettings(page: Page) {
   const normalNameColors = await nameColors();
   await card.click({ button: "right", position: { x: 50, y: 40 } });
   await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await page.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
   const assigned = card.locator('[data-distribution-status="assigned"]').first();
   const sourceOnly = card.locator('[data-distribution-status="sourceOnly"]').first();
   await assigned.click();
@@ -241,6 +242,7 @@ export async function exerciseViewSettings(page: Page) {
 
   await card.click({ button: "right", position: { x: 50, y: 40 } });
   await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await page.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
   await page.evaluate(() => Reflect.set(window, "__viewPaintedFills", []));
   await card.click({ button: "right", position: { x: 50, y: 40 } });
   await page.locator('[data-demo-id="org-editor-export-action"]').click();
@@ -258,6 +260,7 @@ export async function exerciseViewSettings(page: Page) {
   await page.keyboard.press("Escape");
   await card.click({ button: "right", position: { x: 50, y: 40 } });
   await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await page.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
   const saved = await exportState(page);
   expect(saved.organization.views[0]?.structure.settings).toEqual({
     groupByTag: true,

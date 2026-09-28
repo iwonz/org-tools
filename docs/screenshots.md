@@ -393,10 +393,11 @@ Capabilities: View-local mode, Direct membership, Manual and Live Units, Accessi
 
 [![Bulk distribution mode](screenshots/feature-editor-distribution-bulk.png)](screenshots/feature-editor-distribution-bulk.png)
 
-Apply the View-local distribution mode to a selected Unit set through one accessible mixed-state
-switch.
+Choose between selected Units and their complete descendant branches through one accessible
+mixed-state submenu.
 
-Capabilities: Multi-selection, Mixed state, Single UI update, View-local persistence.
+Capabilities: Multi-selection, Descendant scope, Mixed state, Keyboard submenu, Single UI update,
+View-local persistence.
 
 ### Employee placement map
 
@@ -585,10 +586,12 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   placement overlays, or transient editing chrome.
 - Confirm Unit, Employee, connection, and marquee drags keep moving through smooth bounded edge-pan,
   retain document-anchored previews, and commit no more than one viewport and one structural update.
+  A real blank-canvas pan preserves Employee selection and placement paths; a short blank click
+  clears them.
 - Confirm deleting nested and overlapping Unit selections produces no diagnostics after reload and
   leaves no stale Editor, Units, filter, expansion, or active Download references.
-- Confirm distribution mode can be enabled on a selected Unit set through checked, unchecked, and
-  mixed switch states, uses green and amber tonal rows for
+- Confirm distribution mode can be enabled for selected Units alone or their deduplicated complete
+  descendant branches through checked, unchecked, and mixed submenu states, uses green and amber tonal rows for
   direct manual or resolved Live membership, preserves status fill through selection, keeps Employee
   names in the normal theme text color for both statuses, and draws
   paths only for one selected Employee occurrence. Collapsed targets use an endpoint marker,
@@ -637,7 +640,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   one compact non-overlapping property row.
 - Confirm one keyboard paste gesture creates one structure when both key and paste events fire,
   the no-event fallback runs once, a late event cannot duplicate that fallback, consecutive
-  gestures remain independent, and image paste does not also paste the structural clipboard.
+  gestures remain independent, a matching opaque copy marker wins over an older image
+  representation, and a later external image or foreign text cannot paste stale structure.
 - Confirm Employee model exposes accessible switches for Required, Multiple selection, and custom
   options; Required rows have no field background, border, radius, or padding. Employee editing can
   commit a shared custom option and a dated Composite record. Confirm the Display tab previews and

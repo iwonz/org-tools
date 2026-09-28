@@ -8,6 +8,7 @@ import {
   createEditorPlacementMapLayout,
   getEditorDistributionBulkState,
   getEditorDistributionPlacement,
+  getEditorDistributionScopeUnitIds,
   getEditorDistributionSelection,
   getEditorEmployeeDistributionPresentation,
   getEditorEmployeeOtherUnitIds,
@@ -23,6 +24,55 @@ describe("Editor distribution membership", () => {
     expect(applyEditorDistributionBulkToggle(["one"], ["one", "two"])).toEqual(["one", "two"]);
     expect(applyEditorDistributionBulkToggle(["one", "two", "three"], ["one", "two"])).toEqual([
       "three",
+    ]);
+  });
+
+  test("derives direct and descendant scopes in active View order without duplicates", () => {
+    const root = createOrgEditorUnitFromScratch({ name: "Root", x: 0, y: 0 });
+    const child = createOrgEditorUnitFromScratch({
+      name: "Child",
+      parentId: root.id,
+      x: 0,
+      y: 0,
+    });
+    const grandchild = createOrgEditorUnitFromScratch({
+      name: "Grandchild",
+      parentId: child.id,
+      x: 0,
+      y: 0,
+    });
+    const outside = createOrgEditorUnitFromScratch({ name: "Outside", x: 0, y: 0 });
+    const units = [outside, child, root, grandchild];
+
+    expect(getEditorDistributionScopeUnitIds(units, [root.id, child.id], "selected")).toEqual([
+      child.id,
+      root.id,
+    ]);
+    expect(getEditorDistributionScopeUnitIds(units, [root.id, child.id], "branches")).toEqual([
+      child.id,
+      root.id,
+      grandchild.id,
+    ]);
+    expect(getEditorDistributionScopeUnitIds(units, ["missing"], "branches")).toEqual([]);
+  });
+
+  test("keeps Units outside a descendant scope unchanged and terminates malformed cycles", () => {
+    const first = createOrgEditorUnitFromScratch({ name: "First", x: 0, y: 0 });
+    const second = createOrgEditorUnitFromScratch({
+      name: "Second",
+      parentId: first.id,
+      x: 0,
+      y: 0,
+    });
+    const outside = createOrgEditorUnitFromScratch({ name: "Outside", x: 0, y: 0 });
+    const cyclicUnits = [{ ...first, parentId: second.id }, second, outside];
+    const scope = getEditorDistributionScopeUnitIds(cyclicUnits, [first.id], "branches");
+
+    expect(scope).toEqual([first.id, second.id]);
+    expect(applyEditorDistributionBulkToggle([outside.id], scope)).toEqual([
+      outside.id,
+      first.id,
+      second.id,
     ]);
   });
 

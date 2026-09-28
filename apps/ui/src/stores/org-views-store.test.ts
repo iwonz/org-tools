@@ -161,8 +161,12 @@ describe("OrgViewsStore shared clipboard", () => {
     if (!source) return;
     const unitId = source.addUnit({ name: "Copied", x: 0, y: 0 });
     source.setSelectedItems([{ type: "unit", unitId }]);
-    source.copySelected();
-    expect(views.clipboard).not.toBeNull();
+    const firstCopy = source.copySelected();
+    const secondCopy = source.copySelected();
+    expect(firstCopy?.token).toBeTruthy();
+    expect(secondCopy?.token).toBeTruthy();
+    expect(secondCopy?.token).not.toBe(firstCopy?.token);
+    expect(views.clipboard?.token).toBe(secondCopy?.token);
 
     const state = createBlankOrgToolsState("light", "en");
     views.load(state.organization.views, state.ui.editor.views, state.ui.editor.activeViewId);

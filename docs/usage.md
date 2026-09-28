@@ -118,7 +118,10 @@ control.
   system View is protected and stays synchronized with Units. Unit hierarchy, assignments, rules,
   history, selection, and geometry are View-local; Employee profiles, custom fields, and Tags are
   global. Copy and Paste share one transient clipboard across Views in the current tab, regenerate
-  Unit identity on Paste, and keep Undo limited to the target View. A copied Live Unit whose source
+  Unit identity on Paste, and keep Undo limited to the target View. Ctrl/Cmd+C places an opaque
+  ownership marker in the system clipboard, so Ctrl/Cmd+V follows the most recent real copy: a
+  matching marker pastes structure, a later supported image pastes only that image, and foreign
+  content never revives an older structure. A copied Live Unit whose source
   is outside the copied group is pasted as a static snapshot of its visible membership. View
   selection and management occupy the top logical start; Search, layout, Collapse/Expand,
   and always-available **Export image** occupy the top logical end. Undo/Redo share the bottom
@@ -229,15 +232,17 @@ control.
   discard confirmation. View cloning and cross-View Copy/Paste carry notes; Image, JSON, and
   Template Editor exports omit them. **Distribution mode** in a Unit context menu independently
   highlights direct members with the View distributed color when they also belong to another Unit
-  in the active View and its undistributed color when they exist only in the source Unit. Its tri-state context switch can update one Unit or the whole
-  selected Unit set in one operation. Ordinary Units expose placement links only for Employees
+  in the active View and its undistributed color when they exist only in the source Unit. Its
+  accessible submenu exposes tri-state actions for the selected Units alone or the selected Units
+  with every descendant; overlapping branches are applied once in View order. Ordinary Units expose placement links only for Employees
   assigned to at least two ordinary Units
   in that View; reference Units do not count or appear in their maps. Distribution-enabled sources
   retain all direct placements, including other references. The independent action opens a
   read-only local map with pan, zoom, Fit, and exact navigation back to an
   expanded and selected Employee occurrence. Selecting exactly one Employee draws local placement links,
   including a card-edge marker for a collapsed target; multi-selection hides the links without
-  disabling the highlights. The setting is View-local and does not alter Units, history, geometry,
+  disabling the highlights. Dragging blank canvas to pan preserves the selected Employee and these
+  links, while a short blank click clears them. The setting is View-local and does not alter Units, history, geometry,
   JSON, or Template output. Editor Image exports preserve its stable row tones without selection,
   placement lines, or endpoint markers. The dedicated View Image dialog previews the entire durable
   scene in a preview-first vertical dialog, with the background picker, padding, Unit radius, and

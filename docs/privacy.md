@@ -77,6 +77,10 @@ the 25 MiB transfer bound. Original bytes remain an embedded data URL without up
 object-URL persistence, or quality-reducing re-encoding. Decode failure produces the same inert
 local placeholder in the Editor and PNG. Full-View and scoped preview/copy/save rasterization loads
 only validated embedded data URLs with bounded concurrency and never creates a network request.
+Editor structural Copy keeps Units, Employees, Tags, canvas elements, and View data only in the
+current tab. The system clipboard receives a fixed format identifier and a random ownership token;
+the token is useless without the matching in-memory clipboard and is never persisted, broadcast,
+logged, exported, placed in a URL, or sent over the network.
 Canvas selection, tool activation, contextual target outlines and anchors, perimeter
 resize/rotation previews, context menus, Format token suggestions, Format help, and the Keep only
 unique values and Remove empty lines choices remain transient browser UI. PNG preview Fit/manual

@@ -8,7 +8,37 @@ import {
   getEditorViewportWorldRect,
   getOrgEditorEdgePanVelocity,
   getUnitPointerSelectionIntent,
+  shouldClearOrgEditorSelectionAfterPan,
 } from "@/lib/org-editor-interaction";
+
+describe("Editor canvas click and pan", () => {
+  it("clears only a short primary-button canvas click", () => {
+    expect(
+      shouldClearOrgEditorSelectionAfterPan({
+        clearOnClick: true,
+        currentPoint: { x: 103, y: 103 },
+        dragThreshold: 4,
+        startPoint: { x: 100, y: 100 },
+      }),
+    ).toBe(false);
+    expect(
+      shouldClearOrgEditorSelectionAfterPan({
+        clearOnClick: true,
+        currentPoint: { x: 102, y: 102 },
+        dragThreshold: 4,
+        startPoint: { x: 100, y: 100 },
+      }),
+    ).toBe(true);
+    expect(
+      shouldClearOrgEditorSelectionAfterPan({
+        clearOnClick: false,
+        currentPoint: { x: 100, y: 100 },
+        dragThreshold: 4,
+        startPoint: { x: 100, y: 100 },
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("Editor buffered render window", () => {
   const size = { height: 720, width: 1280 };

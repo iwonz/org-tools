@@ -111,6 +111,8 @@
     "Deselect all": "Deseleccionar todo",
     "Drag Unit connection": "Arrastre de la unidad de conexión",
     "Distribution mode": "Modo de distribución",
+    "Selected Units only": "Solo equipos seleccionados",
+    "Selected Units and descendants": "Equipos seleccionados y descendientes",
     "Distributed to {count} other Units": "Asignado a {count} equipos más",
     "Only in this Unit": "Solo en este equipo",
     "Show {name} in {count} Units": "Mostrar a {name} en {count} equipos",

@@ -282,12 +282,15 @@ history, collaborative cursors, or remote synchronization.
   internal hierarchy, Live, and anchor references, and materializes unavailable external references
   at their fallback geometry. Each View has one `OrgEditorStore` with isolated structure, history,
   selection, and viewport. Complete state replacement clears the clipboard, which is never
-  persisted, broadcast, or written to the system clipboard.
+  persisted or broadcast. A successful copy assigns a new transient UUID and writes only an opaque
+  ownership marker to the system clipboard; organization content remains in current-tab memory.
 
 Editor keyboard paste assigns each key gesture a transient request ID. The browser paste event
-consumes that request and cancels its fallback; if no event arrives, one delayed fallback performs
-the structural paste. Recently completed fallbacks suppress the matching late event, while later
-request IDs remain independent.
+consumes that request and cancels its fallback. A marker matching the current transient clipboard
+selects structural paste over an older image representation; without a match, a supported image is
+inserted and foreign content cannot paste stale structure. If no usable event arrives, one delayed
+fallback performs the structural paste. Recently completed fallbacks suppress the matching late
+event, while later request IDs remain independent.
 - `AutomaticStateWriter` owns write serialization and retry state.
 - Unit note drafts stay outside every store until Save. The lazily imported Markdown renderer uses
   GitHub Flavored Markdown without raw HTML or image elements; safe links require an explicit click
@@ -407,6 +410,9 @@ observation. Unit, connection, and canvas-element layers are memoized around sta
 so text drafts and unrelated gesture previews cannot invalidate stable cards. A geometry-keyed
 spatial index limits Unit and connection rendering to the buffered world rectangle and is rebuilt
 only when document geometry changes.
+Primary blank-canvas input defers deselection until pointer release. Motion within the maintained
+threshold is a blank click and clears selection; a real primary or middle-button pan, wheel zoom,
+edge pan, and pointer cancellation preserve selection and transient distribution connections.
 
 Text and Sticker DOM rendering share one runtime rich-text layout engine. It owns one lazy canvas
 measurement context, a bounded 32,768-entry glyph-width LRU, weakly cached element layouts, and one
@@ -437,7 +443,9 @@ placements remain. Membership and mode changes update both eligible discovery an
 Its transient read-only modal lays only that Employee's Units on deterministic rings, offers bounded
 pan/zoom/Fit controls, and delegates exact reveal, centering, and selection back to the Editor's
 shared occurrence-navigation coordinator. The Unit context menu derives checked, unchecked, or
-mixed state for the selected Unit set and persists one bounded UI update.
+mixed state independently for the selected Unit set and for its cycle-safe deduplicated descendant
+closure in active View order. One accessible submenu applies either scope through one bounded UI
+update without document history or selection changes.
 Unit, Employee, connection, and marquee drags share one edge-pan loop. After the movement threshold,
 the last 64 screen pixels accelerate quadratically to a bounded six-pixel-per-frame viewport delta;
 diagonal motion uses the same total cap. Drag and document-anchored marquee previews remain

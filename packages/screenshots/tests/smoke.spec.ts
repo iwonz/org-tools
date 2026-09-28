@@ -2922,11 +2922,29 @@ test("persists Editor distribution highlighting and selected placement connectio
   const platformUnit = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
   await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
   let distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
-  await expect(distributionAction).toHaveAttribute("role", "menuitemcheckbox");
-  await expect(distributionAction).toHaveAttribute("aria-checked", "false");
+  await expect(distributionAction).toHaveAttribute("role", "menuitem");
+  await expect(distributionAction).toHaveAttribute("aria-haspopup", "menu");
   await distributionAction.focus();
   await distributionAction.press("Enter");
+  let distributionSelectedAction = page.locator(
+    '[data-demo-id="org-editor-distribution-selected-action"]',
+  );
+  await expect(distributionSelectedAction).toHaveAttribute("aria-checked", "false");
+  await distributionSelectedAction.press("Enter");
   await expect(distributionAction).toHaveCount(0);
+  await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  const distributionBranchAction = page.locator(
+    '[data-demo-id="org-editor-distribution-branch-action"]',
+  );
+  await expect(distributionBranchAction).toHaveAttribute("aria-checked", "mixed");
+  await distributionBranchAction.click();
+  await platformUnit.click({ button: "right", position: { x: 80, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await expect(
+    page.locator('[data-demo-id="org-editor-distribution-selected-action"]'),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
 
   const sharedRow = productUnit.locator(
     '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]',
@@ -2949,6 +2967,22 @@ test("persists Editor distribution highlighting and selected placement connectio
   await sharedRow.click();
   await expect(page.locator("[data-distribution-connection]")).toHaveCount(1);
   await expect(page.locator("[data-distribution-connection] circle")).toHaveCount(1);
+  const editorCanvas = page.locator('[data-demo-id="org-editor-canvas"]');
+  const editorCanvasBox = await editorCanvas.boundingBox();
+  if (!editorCanvasBox) throw new Error("Editor canvas is unavailable.");
+  const blankCanvasPoint = {
+    x: editorCanvasBox.x + editorCanvasBox.width - 180,
+    y: editorCanvasBox.y + editorCanvasBox.height - 90,
+  };
+  await page.mouse.move(blankCanvasPoint.x, blankCanvasPoint.y);
+  await page.mouse.down();
+  await page.mouse.move(blankCanvasPoint.x - 80, blankCanvasPoint.y - 40, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.locator("[data-distribution-connection]")).toHaveCount(1);
+  await page.mouse.click(blankCanvasPoint.x - 80, blankCanvasPoint.y - 40);
+  await expect(page.locator("[data-distribution-connection]")).toHaveCount(0);
+  await sharedRow.click();
+  await expect(page.locator("[data-distribution-connection]")).toHaveCount(1);
   await sourceOnlyRow.click({ modifiers: ["Control"] });
   await expect(page.locator("[data-distribution-connection]")).toHaveCount(0);
   await expect(sharedRow).toHaveAttribute("data-distribution-status", "assigned");
@@ -2993,29 +3027,43 @@ test("persists Editor distribution highlighting and selected placement connectio
   await platformUnit.click({ modifiers: ["Control"], position: { x: 80, y: 40 } });
   await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
   distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
-  await expect(distributionAction).toHaveAttribute("aria-checked", "mixed");
   await distributionAction.press("Enter");
+  distributionSelectedAction = page.locator(
+    '[data-demo-id="org-editor-distribution-selected-action"]',
+  );
+  await expect(distributionSelectedAction).toHaveAttribute("aria-checked", "mixed");
+  await distributionSelectedAction.press("Enter");
   await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
   distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
-  await expect(distributionAction).toHaveAttribute("aria-checked", "true");
-  await distributionAction.press("Space");
+  await distributionAction.press("Enter");
+  distributionSelectedAction = page.locator(
+    '[data-demo-id="org-editor-distribution-selected-action"]',
+  );
+  await expect(distributionSelectedAction).toHaveAttribute("aria-checked", "true");
+  await distributionSelectedAction.press("Space");
   await productUnit.click({ button: "right", position: { x: 80, y: 40 } });
   distributionAction = page.locator('[data-demo-id="org-editor-distribution-mode-action"]');
-  await expect(distributionAction).toHaveAttribute("aria-checked", "false");
   await distributionAction.press("Enter");
+  distributionSelectedAction = page.locator(
+    '[data-demo-id="org-editor-distribution-selected-action"]',
+  );
+  await expect(distributionSelectedAction).toHaveAttribute("aria-checked", "false");
+  await distributionSelectedAction.press("Enter");
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
 
   const restoredProduct = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   await restoredProduct.click({ button: "right", position: { x: 80, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
   await expect(
-    page.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+    page.locator('[data-demo-id="org-editor-distribution-selected-action"]'),
   ).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
   const restoredPlatform = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
   await restoredPlatform.click({ button: "right", position: { x: 80, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
   await expect(
-    page.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+    page.locator('[data-demo-id="org-editor-distribution-selected-action"]'),
   ).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
 
@@ -3052,6 +3100,11 @@ test("persists Editor distribution highlighting and selected placement connectio
   await expect(page.locator('[data-demo-id="org-editor-distribution-mode-action"]')).toContainText(
     arMessages.Ui["Distribution mode"],
   );
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').focus();
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').press("ArrowLeft");
+  await expect(
+    page.locator('[data-demo-id="org-editor-distribution-branch-action"]'),
+  ).toContainText(arMessages.Ui["Selected Units and descendants"]);
   await assertLocalRequests();
 });
 
@@ -3096,6 +3149,47 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
   const canvasImages = page.locator('[data-canvas-element-type="image"]');
   const initialCanvasImageCount = await canvasImages.count();
+  await page.keyboard.press("Control+v");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(1);
+  await expect(canvasImages).toHaveCount(initialCanvasImageCount);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Scenario A", exact: true }).click();
+  await page
+    .locator('fieldset[aria-label="Canvas Unit Future Product"]')
+    .click({ position: { x: 80, y: 54 } });
+  const internalMarker = await page.evaluate(() => {
+    const transfer = new DataTransfer();
+    window.dispatchEvent(new ClipboardEvent("copy", { bubbles: true, clipboardData: transfer }));
+    return transfer.getData("text/plain");
+  });
+  expect(internalMarker).toMatch(/^org-tools-editor-clipboard:/u);
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Units", exact: true }).click();
+  await page.evaluate(
+    ({ marker, pngBase64 }) => {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { bubbles: true, ctrlKey: true, key: "v" }),
+      );
+      const bytes = Uint8Array.from(atob(pngBase64), (character) => character.charCodeAt(0));
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([bytes], "canvas.png", { type: "image/png" }));
+      transfer.setData("text/plain", marker);
+      window.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData: transfer }));
+    },
+    {
+      marker: internalMarker,
+      pngBase64:
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2R2sAAAAASUVORK5CYII=",
+    },
+  );
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(1);
+  await expect(canvasImages).toHaveCount(initialCanvasImageCount);
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
+
   await page.evaluate((pngBase64) => {
     window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ctrlKey: true, key: "v" }));
     const bytes = Uint8Array.from(atob(pngBase64), (character) => character.charCodeAt(0));
@@ -3107,9 +3201,12 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
   await page.keyboard.press("Control+z");
   await expect(canvasImages).toHaveCount(initialCanvasImageCount);
-  await page.keyboard.press("Control+v");
-  await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(1);
-  await page.keyboard.press("Control+z");
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ctrlKey: true, key: "v" }));
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", "external text");
+    window.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData: transfer }));
+  });
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
 
   await page.evaluate(() => {

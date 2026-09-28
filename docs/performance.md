@@ -191,7 +191,9 @@ content and are neither persisted nor transmitted. The suite also requires bound
 candidates, observes no state write during preview, and allows one final write for each completed
 pan or structural drag. The shared cross-View clipboard stores only the
 copied closure and resolved membership in current-tab memory, is sanitized on catalog changes, and
-is cleared on complete state replacement. Atomic Unit deletion computes its closure and dependent
+is cleared on complete state replacement. Its system clipboard representation is one constant-size
+opaque marker. Distribution branch toggles build one linear descendant closure and retain active
+View order without repeated subtree work. Atomic Unit deletion computes its closure and dependent
 Live materialization once before exposing the valid final state to persistence.
 
 Tag sorting measures row slots once at gesture start and coalesces pointer movement and bounded

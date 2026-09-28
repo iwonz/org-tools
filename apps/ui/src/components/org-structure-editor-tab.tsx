@@ -125,6 +125,12 @@ import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
+  readEditorClipboardMarker,
+  resolveEditorClipboardPasteSource,
+  setEditorClipboardMarker,
+  writeEditorClipboardMarker,
+} from "@/lib/editor-clipboard";
+import {
   applyEditorDistributionBulkToggle,
   buildEditorEmployeeUnitIndex,
   buildEditorOrdinaryEmployeeUnitIndex,
@@ -132,6 +138,7 @@ import {
   editorDistributionConnectionIntersectsRect,
   getEditorDistributionBulkState,
   getEditorDistributionPlacement,
+  getEditorDistributionScopeUnitIds,
   getEditorDistributionSelection,
   getEditorEmployeeDistributionPresentation,
   getEditorEmployeeOtherUnitIds,
@@ -238,6 +245,7 @@ import {
   createSpatialIndex,
   getOrgEditorEdgePanVelocity,
   getUnitPointerSelectionIntent,
+  shouldClearOrgEditorSelectionAfterPan,
 } from "@/lib/org-editor-interaction";
 import {
   getOrgEditorPerformanceDiagnostics,
@@ -329,6 +337,7 @@ type OrgEditorContextMenu =
 
 type DragState =
   | {
+      clearSelectionOnClick: boolean;
       startScreenPoint: ScreenPoint;
       startViewport: { scale: number; x: number; y: number };
       type: "pan";
@@ -1008,6 +1017,7 @@ function OrgEditorEmployeeTagSubmenu({
             placement.side === "right" ? "left-[calc(100%+0.25rem)]" : "right-[calc(100%+0.25rem)]",
           )}
           data-demo-id="org-editor-employee-tags-submenu"
+          data-org-editor-submenu
           ref={panelRef}
           role="menu"
           style={{ top: placement.offsetY }}
@@ -1023,6 +1033,246 @@ function OrgEditorEmployeeTagSubmenu({
             }}
             tagOptions={tagOptions}
           />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrgEditorDistributionScopeSubmenu({
+  enabledUnitIds,
+  onChange,
+  selectedUnitIds,
+  units,
+}: {
+  enabledUnitIds: readonly OrgEditorUnitId[];
+  onChange: (unitIds: OrgEditorUnitId[]) => void;
+  selectedUnitIds: readonly OrgEditorUnitId[];
+  units: readonly OrgEditorUnit[];
+}) {
+  const t = useUiText();
+  const { locale } = useAppLocale();
+  const isRtl = locale === "ar";
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const suppressNextFocusOpenRef = useRef(false);
+  const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<{
+    offsetY: number;
+    side: "left" | "right";
+  }>({ offsetY: 0, side: isRtl ? "left" : "right" });
+  const directUnitIds = useMemo(
+    () => getEditorDistributionScopeUnitIds(units, selectedUnitIds, "selected"),
+    [selectedUnitIds, units],
+  );
+  const branchUnitIds = useMemo(
+    () => getEditorDistributionScopeUnitIds(units, selectedUnitIds, "branches"),
+    [selectedUnitIds, units],
+  );
+  const enabledUnitIdSet = useMemo(() => new Set(enabledUnitIds), [enabledUnitIds]);
+  const options = [
+    {
+      demoId: "org-editor-distribution-selected-action",
+      label: t("Selected Units only"),
+      unitIds: directUnitIds,
+    },
+    {
+      demoId: "org-editor-distribution-branch-action",
+      label: t("Selected Units and descendants"),
+      unitIds: branchUnitIds,
+    },
+  ];
+
+  const cancelClose = () => {
+    if (closeTimeoutRef.current === null) return;
+    window.clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = null;
+  };
+  const openSubmenu = () => {
+    cancelClose();
+    setOpen(true);
+  };
+  const closeSubmenu = () => {
+    cancelClose();
+    setOpen(false);
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setOpen(false);
+      closeTimeoutRef.current = null;
+    }, 120);
+  };
+  const focusOption = (index = 0) => {
+    window.requestAnimationFrame(() => {
+      const buttons = panelRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitemcheckbox"]',
+      );
+      buttons?.[index]?.focus();
+    });
+  };
+
+  useEffect(
+    () => () => {
+      if (closeTimeoutRef.current !== null) window.clearTimeout(closeTimeoutRef.current);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current;
+    const panel = panelRef.current;
+    if (!trigger || !panel) return;
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const viewportPadding = 8;
+    const preferredSide = isRtl ? "left" : "right";
+    const fitsRight =
+      triggerRect.right + 4 + panelRect.width <= window.innerWidth - viewportPadding;
+    const fitsLeft = triggerRect.left - 4 - panelRect.width >= viewportPadding;
+    const side =
+      preferredSide === "right"
+        ? fitsRight || !fitsLeft
+          ? "right"
+          : "left"
+        : fitsLeft || !fitsRight
+          ? "left"
+          : "right";
+    const minOffsetY = viewportPadding - triggerRect.top;
+    const maxOffsetY = window.innerHeight - viewportPadding - panelRect.height - triggerRect.top;
+    setPlacement({
+      offsetY: Math.min(Math.max(0, minOffsetY), Math.max(minOffsetY, maxOffsetY)),
+      side,
+    });
+  }, [isRtl, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const closeArrow = isRtl ? "ArrowRight" : "ArrowLeft";
+      if (event.key !== "Escape" && event.key !== closeArrow) return;
+      if (!(event.target instanceof Node) || !panelRef.current?.contains(event.target)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+      setOpen(false);
+      suppressNextFocusOpenRef.current = true;
+      triggerRef.current?.focus();
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [isRtl, open]);
+
+  const moveFocus = (event: ReactKeyboardEvent<HTMLButtonElement>, optionIndex: number) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    const delta = event.key === "ArrowDown" ? 1 : -1;
+    focusOption((optionIndex + delta + options.length) % options.length);
+  };
+
+  return (
+    <div
+      className="relative"
+      onBlurCapture={(event) => {
+        if (!rootRef.current?.contains(event.relatedTarget as Node | null)) scheduleClose();
+      }}
+      onPointerEnter={openSubmenu}
+      onPointerLeave={scheduleClose}
+      ref={rootRef}
+    >
+      <OrgEditorMenuButton
+        ariaExpanded={open}
+        ariaHasPopup="menu"
+        buttonRef={triggerRef}
+        dataDemoId="org-editor-distribution-mode-action"
+        onClick={() => {
+          openSubmenu();
+          focusOption();
+        }}
+        onFocus={() => {
+          if (suppressNextFocusOpenRef.current) {
+            suppressNextFocusOpenRef.current = false;
+            return;
+          }
+          openSubmenu();
+        }}
+        onKeyDown={(event) => {
+          const openArrow = isRtl ? "ArrowLeft" : "ArrowRight";
+          if (event.key === openArrow || event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            event.stopPropagation();
+            openSubmenu();
+            focusOption();
+          } else if (event.key === "Escape" && open) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeSubmenu();
+          }
+        }}
+      >
+        <HiOutlineArrowsRightLeft />
+        <span className="min-w-0 flex-1 truncate">{t("Distribution mode")}</span>
+        <HiOutlineChevronRight className="ms-auto rtl:rotate-180" />
+      </OrgEditorMenuButton>
+      {open && (
+        <div
+          className={cn(
+            "absolute z-[70] grid min-w-80 gap-1 rounded-md border border-border/80 bg-popover p-1 text-popover-foreground shadow-[0_10px_28px_-22px_rgb(0_0_0/0.45)]",
+            placement.side === "right" ? "left-[calc(100%+0.25rem)]" : "right-[calc(100%+0.25rem)]",
+          )}
+          data-demo-id="org-editor-distribution-mode-submenu"
+          data-org-editor-submenu
+          ref={panelRef}
+          role="menu"
+          style={{ top: placement.offsetY }}
+        >
+          {options.map((option, optionIndex) => {
+            const state = getEditorDistributionBulkState(enabledUnitIdSet, option.unitIds);
+            return (
+              <OrgEditorMenuButton
+                ariaChecked={state === "mixed" ? "mixed" : state === "checked"}
+                dataDemoId={option.demoId}
+                key={option.demoId}
+                onClick={() => {
+                  onChange(applyEditorDistributionBulkToggle(enabledUnitIds, option.unitIds));
+                  closeSubmenu();
+                }}
+                onKeyDown={(event) => moveFocus(event, optionIndex)}
+              >
+                <HiOutlineArrowsRightLeft />
+                <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "relative ms-auto h-4 w-7 shrink-0 rounded-full transition-colors",
+                    state === "checked"
+                      ? "bg-signal"
+                      : state === "mixed"
+                        ? "bg-signal/45"
+                        : "bg-muted-foreground/35",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 size-3 rounded-full bg-background transition-[inset-inline-start]",
+                      state === "checked"
+                        ? "start-3.5"
+                        : state === "mixed"
+                          ? "start-2"
+                          : "start-0.5",
+                    )}
+                  />
+                </span>
+              </OrgEditorMenuButton>
+            );
+          })}
         </div>
       )}
     </div>
@@ -2441,6 +2691,10 @@ export const OrgStructureEditorTab = observer(() => {
   }, [store.locale]);
   const units = store.editorUnits;
   const editor = store.orgEditor;
+  const copyEditorSelection = useCallback(() => {
+    const clipboard = editor.copySelected();
+    if (clipboard) void writeEditorClipboardMarker(clipboard.token);
+  }, [editor]);
   const viewSettings = editor.settings;
   const distributionStyles = useMemo(
     () => ({
@@ -2548,6 +2802,7 @@ export const OrgStructureEditorTab = observer(() => {
   const pasteRequestSequenceRef = useRef(0);
   const pendingPasteRequestIdsRef = useRef<number[]>([]);
   const lastPasteFallbackAtRef = useRef(0);
+  const pendingKeyboardCopyTokenRef = useRef<string | null>(null);
   const [unitDragDelta, setUnitDragDelta] = useState<CanvasPoint | null>(null);
   const unitDragDeltaRef = useRef<CanvasPoint | null>(null);
   const unitDragFrameSchedulerRef = useRef<ReturnType<
@@ -2710,6 +2965,7 @@ export const OrgStructureEditorTab = observer(() => {
       pasteFallbackTimeoutsRef.current.clear();
       pendingPasteRequestIdsRef.current = [];
       lastPasteFallbackAtRef.current = 0;
+      pendingKeyboardCopyTokenRef.current = null;
       if (edgePanFrameIdRef.current !== null) {
         window.cancelAnimationFrame(edgePanFrameIdRef.current);
         edgePanFrameIdRef.current = null;
@@ -4044,15 +4300,12 @@ export const OrgStructureEditorTab = observer(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
 
-      if (document.querySelector('[data-demo-id="org-editor-employee-tags-submenu"]')) {
+      if (document.querySelector("[data-org-editor-submenu]")) {
         return;
       }
 
       const eventTarget = event.target;
-      if (
-        eventTarget instanceof Element &&
-        eventTarget.closest('[data-demo-id="org-editor-employee-tags-submenu"]')
-      ) {
+      if (eventTarget instanceof Element && eventTarget.closest("[data-org-editor-submenu]")) {
         return;
       }
 
@@ -4230,6 +4483,16 @@ export const OrgStructureEditorTab = observer(() => {
             currentScreenPoint.y -
             currentDragState.startScreenPoint.y,
         });
+        if (
+          shouldClearOrgEditorSelectionAfterPan({
+            clearOnClick: currentDragState.clearSelectionOnClick,
+            currentPoint: currentScreenPoint,
+            dragThreshold: DRAG_START_THRESHOLD,
+            startPoint: currentDragState.startScreenPoint,
+          })
+        ) {
+          editor.clearSelection();
+        }
       }
 
       if (currentDragState.type === "select") {
@@ -4531,8 +4794,15 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if ((event.metaKey || event.ctrlKey) && key === "c") {
-        event.preventDefault();
-        editor.copySelected();
+        const clipboard = editor.copySelected();
+        pendingKeyboardCopyTokenRef.current = clipboard?.token ?? null;
+        if (clipboard) void writeEditorClipboardMarker(clipboard.token);
+        const pendingToken = clipboard?.token ?? null;
+        window.setTimeout(() => {
+          if (pendingKeyboardCopyTokenRef.current === pendingToken) {
+            pendingKeyboardCopyTokenRef.current = null;
+          }
+        }, 0);
         return;
       }
 
@@ -4572,9 +4842,42 @@ export const OrgStructureEditorTab = observer(() => {
   });
 
   useEffect(() => {
+    const handleCopy = (event: ClipboardEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("input, textarea, [contenteditable=true]")) {
+        return;
+      }
+      const pendingToken = pendingKeyboardCopyTokenRef.current;
+      const clipboard =
+        pendingToken && editor.clipboard?.token === pendingToken
+          ? editor.clipboard
+          : editor.copySelected();
+      pendingKeyboardCopyTokenRef.current = null;
+      if (!clipboard) return;
+
+      if (event.clipboardData) {
+        try {
+          setEditorClipboardMarker(event.clipboardData, clipboard.token);
+          event.preventDefault();
+          return;
+        } catch {
+          // A restricted clipboard falls back to the async API without affecting internal copy.
+        }
+      }
+      void writeEditorClipboardMarker(clipboard.token);
+    };
+    window.addEventListener("copy", handleCopy);
+    return () => window.removeEventListener("copy", handleCopy);
+  }, [editor]);
+
+  useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       const target = event.target;
       if (target instanceof Element && target.closest("input, textarea, [contenteditable=true]")) {
+        return;
+      }
+      if (!event.clipboardData) {
+        if (Date.now() - lastPasteFallbackAtRef.current < 250) event.preventDefault();
         return;
       }
       const requestId = pendingPasteRequestIdsRef.current.shift();
@@ -4589,17 +4892,22 @@ export const OrgStructureEditorTab = observer(() => {
         return;
       }
       lastPasteFallbackAtRef.current = 0;
-      const imageFile = [...(event.clipboardData?.items ?? [])]
+      const imageFile = [...event.clipboardData.items]
         .find((item) => item.kind === "file" && item.type.startsWith("image/"))
         ?.getAsFile();
-      if (imageFile) {
-        event.preventDefault();
-        void insertCanvasImageFile(imageFile);
+      const pasteSource = resolveEditorClipboardPasteSource({
+        currentToken: editor.clipboard?.token ?? null,
+        hasImage: Boolean(imageFile),
+        markerToken: readEditorClipboardMarker(event.clipboardData),
+      });
+      event.preventDefault();
+      if (pasteSource === "structure") {
+        if (editor.canPaste) editor.pasteAt(getCanvasCenterPoint());
         return;
       }
-      if (!editor.canPaste) return;
-      event.preventDefault();
-      editor.pasteAt(getCanvasCenterPoint());
+      if (pasteSource === "image" && imageFile) {
+        void insertCanvasImageFile(imageFile);
+      }
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
@@ -4791,6 +5099,7 @@ export const OrgStructureEditorTab = observer(() => {
     if (event.button === 1) {
       event.preventDefault();
       setActiveDragState({
+        clearSelectionOnClick: false,
         startScreenPoint: getPointerScreenPoint(event.nativeEvent),
         startViewport: renderViewportRef.current,
         type: "pan",
@@ -4838,8 +5147,8 @@ export const OrgStructureEditorTab = observer(() => {
     }
 
     event.preventDefault();
-    editor.clearSelection();
     setActiveDragState({
+      clearSelectionOnClick: true,
       startScreenPoint: screenPoint,
       startViewport: renderViewportRef.current,
       type: "pan",
@@ -5586,10 +5895,6 @@ export const OrgStructureEditorTab = observer(() => {
       : null;
   const contextMenuSingleUnit =
     contextMenuSingleUnitId !== null ? (unitById.get(contextMenuSingleUnitId) ?? null) : null;
-  const contextMenuDistributionState =
-    contextMenu?.type === "units"
-      ? getEditorDistributionBulkState(distributionModeUnitIdSet, contextMenu.unitIds)
-      : "unchecked";
   const editedUnit =
     unitDialog?.unitId !== null && unitDialog?.unitId !== undefined
       ? (editor.units.find((unit) => unit.id === unitDialog.unitId) ?? null)
@@ -6050,7 +6355,7 @@ export const OrgStructureEditorTab = observer(() => {
                   <span className="my-1 h-px bg-border" />
                   <OrgEditorMenuButton
                     onClick={() => {
-                      editor.copySelected();
+                      copyEditorSelection();
                       setContextMenu(null);
                     }}
                   >
@@ -6175,48 +6480,15 @@ export const OrgStructureEditorTab = observer(() => {
                   )}
                 </>
               )}
-              <OrgEditorMenuButton
-                ariaChecked={
-                  contextMenuDistributionState === "mixed"
-                    ? "mixed"
-                    : contextMenuDistributionState === "checked"
-                }
-                dataDemoId="org-editor-distribution-mode-action"
-                onClick={() => {
-                  editor.setDistributionModeUnitIds(
-                    applyEditorDistributionBulkToggle(
-                      editor.distributionModeUnitIds,
-                      contextMenu.unitIds,
-                    ),
-                  );
+              <OrgEditorDistributionScopeSubmenu
+                enabledUnitIds={editor.distributionModeUnitIds}
+                onChange={(unitIds) => {
+                  editor.setDistributionModeUnitIds(unitIds);
                   setContextMenu(null);
                 }}
-              >
-                <HiOutlineArrowsRightLeft />
-                <span className="min-w-0 flex-1 truncate">{t("Distribution mode")}</span>
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "relative ms-auto h-4 w-7 shrink-0 rounded-full transition-colors",
-                    contextMenuDistributionState === "checked"
-                      ? "bg-signal"
-                      : contextMenuDistributionState === "mixed"
-                        ? "bg-signal/45"
-                        : "bg-muted-foreground/35",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute top-0.5 size-3 rounded-full bg-background transition-[inset-inline-start]",
-                      contextMenuDistributionState === "checked"
-                        ? "start-3.5"
-                        : contextMenuDistributionState === "mixed"
-                          ? "start-2"
-                          : "start-0.5",
-                    )}
-                  />
-                </span>
-              </OrgEditorMenuButton>
+                selectedUnitIds={contextMenu.unitIds}
+                units={editor.units}
+              />
               <span className="my-1 h-px bg-border" />
               <OrgEditorMenuButton
                 onClick={() => {
@@ -6243,7 +6515,7 @@ export const OrgStructureEditorTab = observer(() => {
               <span className="my-1 h-px bg-border" />
               <OrgEditorMenuButton
                 onClick={() => {
-                  editor.copySelected();
+                  copyEditorSelection();
                   setContextMenu(null);
                 }}
               >

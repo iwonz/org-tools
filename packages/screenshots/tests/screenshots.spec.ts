@@ -42,8 +42,8 @@ function screenshotPath(id: string): string {
   return `${screenshotsDirectory}/${scenario.file}`;
 }
 
-async function capture(page: Page, id: string) {
-  await stabilizeForScreenshot(page);
+async function capture(page: Page, id: string, options: { stabilized?: boolean } = {}) {
+  if (!options.stabilized) await stabilizeForScreenshot(page);
   const screenshot = await page.screenshot({ animations: "disabled" });
   const path = screenshotPath(id);
   try {
@@ -608,6 +608,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   const distributionProduct = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   await distributionProduct.click({ button: "right", position: { x: 20, y: 20 } });
   await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await page.locator('[data-demo-id="org-editor-distribution-selected-action"]').click();
   await expect(distributionProduct.locator('[data-distribution-status="assigned"]')).toBeVisible();
   await expect(
     distributionProduct.locator('[data-distribution-status="sourceOnly"]'),
@@ -617,10 +618,17 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await distributionProduct.click({ position: { x: 40, y: 40 } });
   await distributionPlatform.click({ modifiers: ["Control"], position: { x: 40, y: 40 } });
   await distributionProduct.click({ button: "right", position: { x: 40, y: 40 } });
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
   await expect(
-    page.locator('[data-demo-id="org-editor-distribution-mode-action"]'),
+    page.locator('[data-demo-id="org-editor-distribution-selected-action"]'),
   ).toHaveAttribute("aria-checked", "mixed");
-  await capture(page, "editor-distribution-bulk");
+  await stabilizeForScreenshot(page);
+  await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();
+  await expect(
+    page.locator('[data-demo-id="org-editor-distribution-selected-action"]'),
+  ).toHaveAttribute("aria-checked", "mixed");
+  await capture(page, "editor-distribution-bulk", { stabilized: true });
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   const distributionSharedRow = distributionProduct.locator(
     '[data-org-editor-employee-id="10000000-0000-4000-8000-000000000001"]',
