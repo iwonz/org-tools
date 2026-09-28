@@ -63,7 +63,9 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   and event dialogs. Stable row keys share cached rich-line heights and prefix
   offsets. The prefix sum includes one four-pixel gap before every row after the first, so DOM,
   virtual windows, hit testing, anchors, Unit bounds, hierarchy placement, and PNG reuse one O(n)
-  geometry pass without per-row margins or measurements. Staffing Slot anchor and drop hit testing
+  geometry pass without per-row margins or measurements. Slot-first ordering sorts only the Slot
+  block before appending the existing Employee order; the cached combined rows feed every geometry
+  consumer. The zero-filtering summary formatter handles at most four counters per Unit. Staffing Slot anchor and drop hit testing
   resolves one indexed row instead of scanning a roster. Slot movement updates only affected Units,
   selected ownership references, and the reverse attachment dependency closure; Employee-only
   projections continue to consume the existing assignment indexes.

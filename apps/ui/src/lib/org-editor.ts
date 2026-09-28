@@ -41,6 +41,8 @@ export const ORG_EDITOR_EMPLOYEE_NAME_LINE_HEIGHT = 16;
 export const ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS = 6;
 export const ORG_EDITOR_EMPLOYEE_ROW_GAP = 4;
 export const ORG_EDITOR_EMPLOYEE_ROW_HORIZONTAL_PADDING = 8;
+export const ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL = "rgba(244, 63, 94, 0.15)";
+export const ORG_EDITOR_STAFFING_SLOT_SURFACE_HOVER_FILL = "rgba(244, 63, 94, 0.20)";
 export const ORG_EDITOR_EMPLOYEE_TAG_STYLE = {
   fontSize: TAG_SURFACE_METRICS.fontSize,
   gap: TAG_SURFACE_METRICS.gap,
@@ -96,6 +98,33 @@ export type OrgEditorUnitSummary = {
   totalStaffingSlotCount: number;
 };
 
+export type OrgEditorUnitSummaryFormat = {
+  formatCount: (key: "employees" | "staffingSlots", count: number) => string;
+  inUnitLabel: string;
+  totalLabel: string;
+};
+
+export const formatOrgEditorUnitSummary = (
+  summary: OrgEditorUnitSummary,
+  format: OrgEditorUnitSummaryFormat,
+): string[] => {
+  const formatCounts = (employeeCount: number, staffingSlotCount: number) =>
+    [
+      employeeCount > 0 ? format.formatCount("employees", employeeCount) : null,
+      staffingSlotCount > 0 ? format.formatCount("staffingSlots", staffingSlotCount) : null,
+    ]
+      .filter((value): value is string => value !== null)
+      .join(" · ");
+  const direct = formatCounts(summary.directEmployeeCount, summary.directStaffingSlotCount);
+  if (!summary.hasChildUnits) return direct ? [direct] : [];
+  const total = formatCounts(summary.totalEmployeeCount, summary.totalStaffingSlotCount);
+
+  return [
+    total ? `${format.totalLabel}: ${total}` : null,
+    direct ? `${format.inUnitLabel}: ${direct}` : null,
+  ].filter((value): value is string => value !== null);
+};
+
 export type OrgEditorUnitTagSummary = {
   color: EmployeeTagColor | null;
   count: number;
@@ -110,6 +139,19 @@ export type OrgEditorUnitRow =
 export const createOrgEditorEmployeeRowKey = (employeeId: EmployeeId) => `employee:${employeeId}`;
 export const createOrgEditorStaffingSlotRowKey = (staffingSlotId: OrgEditorStaffingSlotId) =>
   `staffingSlot:${staffingSlotId}`;
+
+const compareOrgEditorStaffingSlotsByNameAndId = (
+  first: OrgEditorStaffingSlot,
+  second: OrgEditorStaffingSlot,
+) =>
+  (first.name ?? "").localeCompare(second.name ?? "", "en-US", {
+    numeric: true,
+    sensitivity: "base",
+  }) ||
+  String(first.id).localeCompare(String(second.id), "en-US", {
+    numeric: true,
+    sensitivity: "base",
+  });
 
 export type OrgEditorUnitTagFooterLine = {
   id: string;
@@ -566,16 +608,24 @@ export const getOrgEditorEmployeeRowLayout = (
 ): OrgEditorEmployeeRowLayout => {
   const source = employeeRowLayoutSourceByUnitId.get(unit.id);
   const orderedRows = source?.orderedRows ?? [
-    ...unit.employeeIds.map((employeeId) => ({
-      employeeId,
-      key: createOrgEditorEmployeeRowKey(employeeId),
-      type: "employee" as const,
-    })),
-    ...unit.staffingSlots.map((staffingSlot) => ({
-      key: createOrgEditorStaffingSlotRowKey(staffingSlot.id),
-      staffingSlot,
-      type: "staffingSlot" as const,
-    })),
+    ...[...unit.staffingSlots]
+      .sort(compareOrgEditorStaffingSlotsByNameAndId)
+      .map((staffingSlot) => ({
+        key: createOrgEditorStaffingSlotRowKey(staffingSlot.id),
+        staffingSlot,
+        type: "staffingSlot" as const,
+      })),
+    ...[...unit.employeeIds]
+      .sort((first, second) => {
+        if (first === unit.bossEmployeeId) return -1;
+        if (second === unit.bossEmployeeId) return 1;
+        return 0;
+      })
+      .map((employeeId) => ({
+        employeeId,
+        key: createOrgEditorEmployeeRowKey(employeeId),
+        type: "employee" as const,
+      })),
   ];
   const rows = unit.collapsed
     ? orderedRows
@@ -1054,45 +1104,35 @@ export const getOrgEditorOrderedUnitRows = (
   tagOrder: readonly TagId[] = [],
 ): OrgEditorUnitRow[] => {
   const tagRankById = new Map(tagOrder.map((tagId, index) => [tagId, index]));
-  const rows: OrgEditorUnitRow[] = [
-    ...unit.employeeIds.map((employeeId) => ({
-      employeeId,
-      key: createOrgEditorEmployeeRowKey(employeeId),
-      type: "employee" as const,
-    })),
-    ...unit.staffingSlots.map((staffingSlot) => ({
+  const staffingSlotRows: OrgEditorUnitRow[] = [...unit.staffingSlots]
+    .sort((first, second) => {
+      if (groupByTag) {
+        const priority = (staffingSlot: OrgEditorStaffingSlot) =>
+          staffingSlot.tags.reduce(
+            (best, assignment) => Math.min(best, tagRankById.get(assignment.tagId) ?? best),
+            Number.MAX_SAFE_INTEGER,
+          );
+        const priorityDifference = priority(first) - priority(second);
+        if (priorityDifference !== 0) return priorityDifference;
+      }
+      return compareOrgEditorStaffingSlotsByNameAndId(first, second);
+    })
+    .map((staffingSlot) => ({
       key: createOrgEditorStaffingSlotRowKey(staffingSlot.id),
       staffingSlot,
       type: "staffingSlot" as const,
-    })),
-  ];
-  const priority = (row: OrgEditorUnitRow) => {
-    if (!groupByTag) return Number.MAX_SAFE_INTEGER;
-    if (row.type === "employee") {
-      return employeeById.get(row.employeeId)?.tagPriority ?? Number.MAX_SAFE_INTEGER;
-    }
-    return row.staffingSlot.tags.reduce(
-      (best, assignment) => Math.min(best, tagRankById.get(assignment.tagId) ?? best),
-      Number.MAX_SAFE_INTEGER,
-    );
-  };
-  const label = (row: OrgEditorUnitRow) =>
-    row.type === "employee"
-      ? (employeeById.get(row.employeeId)?.fullName ?? "")
-      : (row.staffingSlot.name ?? "");
-  const id = (row: OrgEditorUnitRow) =>
-    row.type === "employee" ? row.employeeId : row.staffingSlot.id;
+    }));
+  const employeeRows: OrgEditorUnitRow[] = getOrgEditorOrderedEmployeeIds(
+    unit,
+    employeeById,
+    groupByTag,
+  ).map((employeeId) => ({
+    employeeId,
+    key: createOrgEditorEmployeeRowKey(employeeId),
+    type: "employee" as const,
+  }));
 
-  return rows.sort((first, second) => {
-    if (first.type === "employee" && first.employeeId === unit.bossEmployeeId) return -1;
-    if (second.type === "employee" && second.employeeId === unit.bossEmployeeId) return 1;
-    const priorityDifference = priority(first) - priority(second);
-    if (priorityDifference !== 0) return priorityDifference;
-    return (
-      label(first).localeCompare(label(second), "en-US", { numeric: true, sensitivity: "base" }) ||
-      id(first).localeCompare(id(second), "en-US", { numeric: true, sensitivity: "base" })
-    );
-  });
+  return [...staffingSlotRows, ...employeeRows];
 };
 
 export const getOrgEditorEmployeePosition = (

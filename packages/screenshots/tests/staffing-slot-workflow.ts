@@ -65,6 +65,23 @@ export async function exerciseStaffingSlots(page: Page) {
   await expect(
     seededSlot.locator("..").locator("[data-org-editor-staffing-slot-outline]"),
   ).toHaveCSS("border-top-style", "dashed");
+  const seededSlotContainer = seededSlot.locator("..");
+  await expect(seededSlotContainer).toHaveCSS("background-color", "rgba(244, 63, 94, 0.15)");
+  const productRows = productUnit.locator(
+    "[data-org-editor-employee-row-container], [data-org-editor-staffing-slot-row-container]",
+  );
+  await expect(productRows.first()).toHaveAttribute(
+    "data-org-editor-staffing-slot-row-container",
+    "true",
+  );
+  await seededSlotContainer.hover();
+  await expect(seededSlotContainer).toHaveCSS("background-color", "rgba(244, 63, 94, 0.2)");
+  await page.mouse.move(900, 900);
+  await page.locator('[data-demo-id="theme-toggle"]').click();
+  await page.locator('[data-demo-id="theme-dialog"] label:has(input[value="dark"])').click();
+  await expect(seededSlotContainer).toHaveCSS("background-color", "rgba(244, 63, 94, 0.15)");
+  await page.locator('[data-demo-id="theme-toggle"]').click();
+  await page.locator('[data-demo-id="theme-dialog"] label:has(input[value="light"])').click();
   await expectUnitRowSpacing(productUnit, 3);
   await expect(productUnit.locator("[data-org-editor-unit-header]")).toContainText(
     "Total: 4 Employees · 1 staffing slot",
@@ -72,9 +89,67 @@ export async function exerciseStaffingSlots(page: Page) {
   await expect(productUnit.locator("[data-org-editor-unit-header]")).toContainText(
     "In Unit: 2 Employees · 1 staffing slot",
   );
-  await expect(platformUnit.locator("[data-org-editor-unit-header]")).toContainText(
-    "2 Employees · 0 staffing slots",
+  await expect(platformUnit.locator("[data-org-editor-unit-header]")).toContainText("2 Employees");
+  await expect(platformUnit.locator("[data-org-editor-unit-header]")).not.toContainText(
+    "staffing slot",
   );
+
+  await page.evaluate(() => {
+    const events: Array<{ operation: "fill" | "stroke"; style: string }> = [];
+    Reflect.set(window, "__staffingSlotCanvasPaints", events);
+    const originalFill = CanvasRenderingContext2D.prototype.fill;
+    const originalStroke = CanvasRenderingContext2D.prototype.stroke;
+    CanvasRenderingContext2D.prototype.fill = function () {
+      events.push({ operation: "fill", style: String(this.fillStyle) });
+      return Reflect.apply(originalFill, this, []);
+    };
+    CanvasRenderingContext2D.prototype.stroke = function () {
+      events.push({ operation: "stroke", style: String(this.strokeStyle) });
+      return Reflect.apply(originalStroke, this, []);
+    };
+  });
+  await productUnit.click({ button: "right", position: { x: 80, y: 24 } });
+  await page.locator('[data-demo-id="org-editor-export-action"]').click();
+  await expect(page.locator('[data-demo-id="org-editor-export-image"]')).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const events = Reflect.get(window, "__staffingSlotCanvasPaints") as Array<{
+          operation: "fill" | "stroke";
+          style: string;
+        }>;
+        const fillIndex = events.findIndex(
+          (event) => event.operation === "fill" && event.style === "rgba(244, 63, 94, 0.15)",
+        );
+        const outlineIndex = events.findIndex(
+          (event, index) =>
+            index > fillIndex &&
+            event.operation === "stroke" &&
+            event.style === "rgba(71, 85, 105, 0.5)",
+        );
+        return { fillIndex, outlineIndex };
+      }),
+    )
+    .toEqual({ fillIndex: expect.any(Number), outlineIndex: expect.any(Number) });
+  const paintOrder = await page.evaluate(() => {
+    const events = Reflect.get(window, "__staffingSlotCanvasPaints") as Array<{
+      operation: "fill" | "stroke";
+      style: string;
+    }>;
+    const fillIndex = events.findIndex(
+      (event) => event.operation === "fill" && event.style === "rgba(244, 63, 94, 0.15)",
+    );
+    const outlineIndex = events.findIndex(
+      (event, index) =>
+        index > fillIndex &&
+        event.operation === "stroke" &&
+        event.style === "rgba(71, 85, 105, 0.5)",
+    );
+    return { fillIndex, outlineIndex };
+  });
+  expect(paintOrder.fillIndex).toBeGreaterThanOrEqual(0);
+  expect(paintOrder.outlineIndex).toBeGreaterThan(paintOrder.fillIndex);
+  await page.keyboard.press("Escape");
 
   await seededSlot.click({ button: "right" });
   const slotMenu = page.getByRole("menu");
@@ -125,6 +200,8 @@ export async function exerciseStaffingSlots(page: Page) {
 
   const stickerBeforeMove = await attachedSticker.boundingBox();
   await seededSlot.click();
+  await expect(seededSlotContainer).toHaveAttribute("data-selected", "true");
+  await expect(seededSlotContainer).not.toHaveCSS("background-color", "rgba(244, 63, 94, 0.15)");
   await unnamedSlot.click({ modifiers: ["ControlOrMeta"] });
   await dragCenterToCenter(page, seededSlot, platformUnit);
   await expect(productUnit.locator("[data-org-editor-staffing-slot-row]")).toHaveCount(0);

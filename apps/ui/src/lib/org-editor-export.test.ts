@@ -11,6 +11,7 @@ import {
   ORG_EDITOR_EMPLOYEE_ROW_GAP,
   ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
+  ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
 } from "@/lib/org-editor";
@@ -180,6 +181,7 @@ describe("Org Editor image export", () => {
       lineWidth: 1,
       strokeStyle: "rgba(71, 85, 105, 0.5)",
     });
+    expect(ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL).toBe("rgba(244, 63, 94, 0.15)");
     expect(defaultOutline).toMatchObject({
       bounds: {
         height: defaultSurface.height - 1,

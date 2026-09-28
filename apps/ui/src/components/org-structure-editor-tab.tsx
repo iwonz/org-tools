@@ -174,6 +174,7 @@ import {
   createOrgEditorSelectedItemKey,
   createOrgEditorUnitTagFooterLayout,
   findOrgEditorEmployeeRowIndex,
+  formatOrgEditorUnitSummary,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeRowHeightForDisplayLines,
@@ -194,6 +195,8 @@ import {
   ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
   ORG_EDITOR_EMPLOYEE_ROW_GAP,
   ORG_EDITOR_GRID_SIZE,
+  ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
+  ORG_EDITOR_STAFFING_SLOT_SURFACE_HOVER_FILL,
   ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_HORIZONTAL_GAP,
@@ -1572,6 +1575,11 @@ function OrgEditorEmployeeDragPreview({
   );
 }
 
+const ORG_EDITOR_STAFFING_SLOT_SURFACE_STYLE = {
+  "--org-editor-staffing-slot-fill": ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
+  "--org-editor-staffing-slot-hover-fill": ORG_EDITOR_STAFFING_SLOT_SURFACE_HOVER_FILL,
+} as CSSProperties;
+
 function OrgEditorNode({
   employeeDisplayLayouts,
   employeeDisplayFormat,
@@ -1668,6 +1676,11 @@ function OrgEditorNode({
   recordOrgEditorPerformance("unitRenders");
   const t = useUiText();
   const countText = useCountText();
+  const summaryLines = formatOrgEditorUnitSummary(summary, {
+    formatCount: (key, count) => countText(key, { count }),
+    inUnitLabel: t("In Unit"),
+    totalLabel: t("Total summary"),
+  });
   const selected = selectedItemKeySet.has(
     createOrgEditorSelectedItemKey({ type: "unit", unitId: unit.id }),
   );
@@ -1825,33 +1838,12 @@ function OrgEditorNode({
           </span>
         </div>
         <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span
-            className={cn(
-              "min-w-0 flex-1",
-              summary.hasChildUnits ? "grid content-center leading-4" : "flex h-full items-center",
-            )}
-          >
-            {summary.hasChildUnits ? (
-              <>
-                <span className="truncate">
-                  {t("Total summary")}:{" "}
-                  {countText("employees", { count: summary.totalEmployeeCount })}
-                  {" · "}
-                  {countText("staffingSlots", { count: summary.totalStaffingSlotCount })}
-                </span>
-                <span className="truncate">
-                  {t("In Unit")}: {countText("employees", { count: summary.directEmployeeCount })}
-                  {" · "}
-                  {countText("staffingSlots", { count: summary.directStaffingSlotCount })}
-                </span>
-              </>
-            ) : (
-              <span className="truncate">
-                {countText("employees", { count: summary.directEmployeeCount })}
-                {" · "}
-                {countText("staffingSlots", { count: summary.directStaffingSlotCount })}
+          <span className="grid min-w-0 flex-1 content-center leading-4">
+            {summaryLines.map((line) => (
+              <span className="truncate" key={line}>
+                {line}
               </span>
-            )}
+            ))}
           </span>
           <UnitStatusBadge
             className="rounded px-1.5 py-0.5 text-[9px]"
@@ -1904,13 +1896,16 @@ function OrgEditorNode({
                 return (
                   <div
                     className={cn(
-                      "relative flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring",
-                      positionSelected && "bg-primary text-primary-foreground hover:bg-primary",
+                      "relative flex min-w-0 items-center overflow-hidden rounded-md outline-none transition-colors focus-within:ring-2 focus-within:ring-ring",
+                      positionSelected
+                        ? "bg-primary text-primary-foreground hover:bg-primary"
+                        : "bg-[var(--org-editor-staffing-slot-fill)] hover:bg-[var(--org-editor-staffing-slot-hover-fill)]",
                     )}
                     data-org-editor-staffing-slot-row-container
                     data-selected={positionSelected ? "true" : "false"}
                     key={`${unit.id}:${staffingSlot.id}`}
                     style={{
+                      ...ORG_EDITOR_STAFFING_SLOT_SURFACE_STYLE,
                       borderRadius: ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
                       height: employeeRowLayout.heights[employeeIndex],
                       ...(shouldVirtualizeEmployees

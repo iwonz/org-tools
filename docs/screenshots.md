@@ -281,7 +281,7 @@ Capabilities: UUID validation, Identity matching, Three review columns, Atomic i
 Arrange opaque Unit cards and representative rich Text, flat bordered Sticker, embedded Image, and curved Arrow tools
 on the adaptive snap grid, including bounded edge-pan, hierarchy lines, zoom, history, anchors, and
 the bottom-centered canvas toolbar, including a synthetic tagged Staffing Slot whose complete
-dashed outline distinguishes planned capacity from Employee rows in the Unit and Editor PNG. The
+dashed outline and translucent Rose surface distinguish planned capacity above Employee rows in the Unit and Editor PNG. The
 mixed roster demonstrates the shared four-pixel interval between adjacent surfaces without an extra
 row interval above the first or below the last card. Unit headers show separate Employee and Slot
 totals for direct and descendant scopes.
@@ -582,8 +582,8 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   content, complete content-sized Tag fragments without ellipsis or trailing fill, boss marker, variable row
   heights, exactly four logical pixels between adjacent Employee/Staffing Slot surfaces with no
   outer row gap, content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
-  row tones, neutral dashed Staffing Slots with complete Tags, distinct direct/descendant Employee
-  and Slot summaries, and connection endpoints without card overlap, membership-type labels,
+  row tones, Rose-filled dashed Staffing Slots with complete Tags above every Employee, nonzero-only
+  direct/descendant Employee and Slot summaries, and connection endpoints without card overlap, membership-type labels,
   placement overlays, or transient editing chrome.
 - Confirm Unit, Employee, connection, and marquee drags keep moving through smooth bounded edge-pan,
   retain document-anchored previews, and commit no more than one viewport and one structural update.

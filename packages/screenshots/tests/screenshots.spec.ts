@@ -670,6 +670,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await dialog.getByLabel("Format", { exact: true }).fill("{fullName}\n{fullName}\n\n");
   await dialog.getByRole("checkbox", { name: "Keep only unique values", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "Remove empty lines", exact: true }).click();
+  await dialog.getByRole("tab", { name: "Template", exact: true }).focus();
   await capture(page, "editor-template-export");
   await dialog.getByRole("tab", { name: "JSON", exact: true }).click();
   await capture(page, "editor-json-export");

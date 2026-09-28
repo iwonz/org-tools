@@ -8,6 +8,7 @@ import {
   buildOrgEditorUnitTagSummary,
   createOrgEditorUnitTagFooterLayout,
   findOrgEditorEmployeeRowIndex,
+  formatOrgEditorUnitSummary,
   getAdaptiveOrgEditorGridSize,
   getOrgEditorEmployeeBounds,
   getOrgEditorEmployeeDisplayLineBaselines,
@@ -29,6 +30,8 @@ import {
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_GRID_MIN_SCREEN_SIZE,
   ORG_EDITOR_GRID_SIZE,
+  ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
+  ORG_EDITOR_STAFFING_SLOT_SURFACE_HOVER_FILL,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
@@ -225,6 +228,61 @@ const getSummary = (summaries: ReadonlyMap<string, OrgEditorUnitSummary>, unitId
 };
 
 describe("Org Editor Employee summaries", () => {
+  test("omits zero fragments and complete empty summary lines", () => {
+    const format = (summary: OrgEditorUnitSummary) =>
+      formatOrgEditorUnitSummary(summary, {
+        formatCount: (key, count) => `${count} ${key}`,
+        inUnitLabel: "In Unit",
+        totalLabel: "Total",
+      });
+
+    expect(
+      format({
+        directEmployeeCount: 0,
+        directStaffingSlotCount: 0,
+        hasChildUnits: false,
+        totalEmployeeCount: 0,
+        totalStaffingSlotCount: 0,
+      }),
+    ).toEqual([]);
+    expect(
+      format({
+        directEmployeeCount: 2,
+        directStaffingSlotCount: 0,
+        hasChildUnits: false,
+        totalEmployeeCount: 2,
+        totalStaffingSlotCount: 0,
+      }),
+    ).toEqual(["2 employees"]);
+    expect(
+      format({
+        directEmployeeCount: 0,
+        directStaffingSlotCount: 3,
+        hasChildUnits: false,
+        totalEmployeeCount: 0,
+        totalStaffingSlotCount: 3,
+      }),
+    ).toEqual(["3 staffingSlots"]);
+    expect(
+      format({
+        directEmployeeCount: 0,
+        directStaffingSlotCount: 0,
+        hasChildUnits: true,
+        totalEmployeeCount: 4,
+        totalStaffingSlotCount: 1,
+      }),
+    ).toEqual(["Total: 4 employees · 1 staffingSlots"]);
+    expect(
+      format({
+        directEmployeeCount: 1,
+        directStaffingSlotCount: 2,
+        hasChildUnits: true,
+        totalEmployeeCount: 4,
+        totalStaffingSlotCount: 3,
+      }),
+    ).toEqual(["Total: 4 employees · 3 staffingSlots", "In Unit: 1 employees · 2 staffingSlots"]);
+  });
+
   test("keeps semantic direct and total counts for localized presentation", () => {
     const summaries = buildOrgEditorUnitSummaryById([
       createUnit({
@@ -430,7 +488,7 @@ describe("Org Editor variable Employee geometry", () => {
 });
 
 describe("Org Editor mixed Unit rows", () => {
-  test("orders Employees and Staffing Slots together while keeping the boss first", () => {
+  test("keeps the Tag-sorted Staffing Slot block above boss-first Employees", () => {
     const employee = (id: string, fullName: string, tagPriority: number | null): Employee =>
       ({ fullName, id, tagPriority }) as Employee;
     const employees = new Map([
@@ -454,7 +512,7 @@ describe("Org Editor mixed Unit rows", () => {
     const rows = getOrgEditorOrderedUnitRows(unit, employees, true, ["tag-first"]);
     expect(
       rows.map((row) => (row.type === "employee" ? row.employeeId : row.staffingSlot.id)),
-    ).toEqual(["boss", "position-a", "member", "position-b"]);
+    ).toEqual(["position-a", "position-b", "boss", "member"]);
     setOrgEditorUnitRowHeights(
       unit.id,
       new Map(rows.map((row, index) => [row.key, index === 1 ? 76 : 48])),
@@ -467,7 +525,40 @@ describe("Org Editor mixed Unit rows", () => {
     });
 
     unit.collapsed = true;
-    expect(getOrgEditorEmployeeRowLayout(unit).rows).toEqual([rows[0]]);
+    expect(getOrgEditorEmployeeRowLayout(unit).rows).toEqual([rows[2]]);
+  });
+
+  test("uses name and ID order for Slots without Tag grouping and in uncached layout", () => {
+    const employees = new Map([
+      ["boss", { fullName: "Zed Boss", id: "boss", tagPriority: null } as Employee],
+      ["member", { fullName: "Alpha Member", id: "member", tagPriority: 0 } as Employee],
+    ]);
+    const unit = createUnit({
+      bossEmployeeId: "boss",
+      employeeIds: ["member", "boss"],
+      id: "slot-name-order",
+      staffingSlots: [
+        { id: "slot-b", name: "Beta", tags: [{ date: null, tagId: "first" }] },
+        { id: "slot-a", name: "Alpha", tags: [] },
+      ],
+    });
+    const keys = (rows: ReturnType<typeof getOrgEditorOrderedUnitRows>) =>
+      rows.map((row) => (row.type === "employee" ? row.employeeId : row.staffingSlot.id));
+
+    expect(keys(getOrgEditorOrderedUnitRows(unit, employees, false, ["first"]))).toEqual([
+      "slot-a",
+      "slot-b",
+      "boss",
+      "member",
+    ]);
+    expect(keys(getOrgEditorEmployeeRowLayout(unit).rows)).toEqual([
+      "slot-a",
+      "slot-b",
+      "boss",
+      "member",
+    ]);
+    expect(ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL).toBe("rgba(244, 63, 94, 0.15)");
+    expect(ORG_EDITOR_STAFFING_SLOT_SURFACE_HOVER_FILL).toBe("rgba(244, 63, 94, 0.20)");
   });
 
   test("counts Staffing Slots separately and excludes them from Tag-cloud counts", () => {

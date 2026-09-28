@@ -67,6 +67,7 @@ import {
   ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS,
   ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
+  ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
   ORG_EDITOR_UNIT_BORDER_WIDTH,
   ORG_EDITOR_UNIT_CONTENT_PADDING,
@@ -1933,6 +1934,9 @@ export const createOrgEditorImageExportResult = async ({
       }
 
       if (staffingSlot) {
+        drawRoundedRect(context, rowSurfaceBounds, ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS);
+        context.fillStyle = ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL;
+        context.fill();
         const outline = getOrgEditorExportStaffingSlotRowOutline({
           employeeRowHeight: employeeRowHeights[employeeIndex] ?? ORG_EDITOR_EMPLOYEE_ROW_HEIGHT,
           employeeRowOffset: employeeRowOffsets[employeeIndex] ?? 0,

@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { UiTextKey } from "@/i18n/messages";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
-import type { OrgEditorUnitSummary } from "@/lib/org-editor";
+import { formatOrgEditorUnitSummary, type OrgEditorUnitSummary } from "@/lib/org-editor";
 import {
   createDefaultOrgEditorImageExportSettings,
   createOrgEditorImageExportResult,
@@ -115,14 +115,12 @@ export function OrgEditorViewImageExportDialog({
   }, [open, store.employeeDisplayFormats.editorExport, store.employeeDisplayLineGaps.editorExport]);
 
   const formatUnitSummary = useCallback(
-    (summary: OrgEditorUnitSummary) => {
-      const direct = `${countText("employees", { count: summary.directEmployeeCount })} · ${countText("staffingSlots", { count: summary.directStaffingSlotCount })}`;
-      if (!summary.hasChildUnits) return [direct];
-      return [
-        `${t("Total summary")}: ${countText("employees", { count: summary.totalEmployeeCount })} · ${countText("staffingSlots", { count: summary.totalStaffingSlotCount })}`,
-        `${t("In Unit")}: ${direct}`,
-      ];
-    },
+    (summary: OrgEditorUnitSummary) =>
+      formatOrgEditorUnitSummary(summary, {
+        formatCount: (key, count) => countText(key, { count }),
+        inUnitLabel: t("In Unit"),
+        totalLabel: t("Total summary"),
+      }),
     [countText, t],
   );
   const hasContent = units.length > 0 || canvasElements.length > 0;

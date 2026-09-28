@@ -68,6 +68,8 @@ references use the same complete State, loopback SQLite, and in-memory Broadcast
 as the rest of the Editor document. Slot rendering performs no remote lookup. Slots are deliberately
 excluded from the global Units projection and every Employee-oriented search, count, filter,
 Calendar, transfer, and data export, so they introduce no new storage or network path.
+Their fixed Slot-first order and translucent Rose surface are derived locally for DOM and Canvas and
+add no persistent color, telemetry, or external asset.
 
 Editor canvas Images are accepted only from an explicit local file choice or an image clipboard
 paste. PNG, JPEG, and WebP headers, bytes, and intrinsic dimensions are validated before commit;

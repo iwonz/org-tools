@@ -93,21 +93,25 @@ name and dated or undated assignments to the global Tag catalog, but never creat
 unnamed record stays `null` and resolves to the current locale's Staffing Slot label only while
 rendering. Manual and Live Units use the same Slot contract.
 Employee and Staffing Slot rows form one discriminated, prefix-offset layout for sorting,
-virtualization, hit testing, side anchors, DOM, and PNG. Boss Employees remain first; Slot Tags
-affect grouping without changing Employee counts or the Unit Tag cloud. The layout inserts exactly
+virtualization, hit testing, side anchors, DOM, and PNG. Slots form the first block and use Tag,
+name, and ID order while grouping is active or name and ID order otherwise. The boss remains first
+inside the following Employee block. Slot Tags affect only their block without changing Employee
+counts or the Unit Tag cloud. The layout inserts exactly
 four logical pixels between adjacent row surfaces and no row gap before the first or after the last
 surface; Unit height, hierarchy placement, anchors, DOM, and PNG all consume those same offsets.
-Slots retain a neutral placeholder avatar and one-pixel dashed outline without a configurable
-background. One selected Slot or all selected Slots can move between manual and Live Units in one
+Slots retain a neutral placeholder avatar, a one-pixel dashed outline, and the same fixed translucent
+Rose surface in DOM and PNG without a configurable State field. Selection replaces that surface with
+the existing primary feedback. One selected Slot or all selected Slots can move between manual and Live Units in one
 command; IDs, Tags, selection, and attachments remain stable while anchor ownership changes. View
 clone and Unit Paste regenerate Slot IDs and remap copied attachments. Deletion detaches at the last
 resolved world point. Employee drops use ordinary Unit behavior and never consume a Slot.
 
 The shared Unit summary derives direct unique Employees, unique Employees across descendants,
-direct Staffing Slots, and the sum of descendant Slots. Parent Units reserve two lines for total and
-direct counts; leaf Units center one direct-count line in the same fixed header area. Zero Slot
-counts remain visible. DOM, Unit bounds, row origins, hit testing, anchors, hierarchy layout, and
-both PNG exports use the same header height and summary lines.
+direct Staffing Slots, and the sum of descendant Slots. Its localized formatter removes each zero
+fragment and separator, then removes the complete Total or In Unit line when both values are zero.
+The fixed header area centers the remaining zero, one, or two lines. DOM, Unit bounds, row origins,
+hit testing, anchors, hierarchy layout, and both PNG exports use the same header height and summary
+lines.
 
 Each View also owns a required ordered `structure.canvasElements` discriminated union for Text,
 Sticker, embedded Image, and cubic Arrow content. Rectangular tools share bounds, rotation, layer,

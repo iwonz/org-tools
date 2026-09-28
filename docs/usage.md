@@ -161,13 +161,17 @@ control.
   Dragging an unselected Slot moves it; dragging a selected Slot moves all selected Slots, excluding
   Employees, between manual or Live Units in one Undo step. IDs, Tags, selection, and attached canvas
   elements remain connected after the owner Unit changes. Employee drops keep their ordinary Unit
-  behavior and do not consume Slots. Collapse hides Slot rows. Group by tag may reorder them, while
+  behavior and do not consume Slots. Collapse hides Slot rows. Slots always appear above the boss
+  and other Employees. Group by tag orders Slots only within that first block; without grouping they
+  use name and stable ID order. Every resting Slot has a light translucent Rose surface beneath its
+  dashed outline in both Editor and PNG, while selection keeps the existing primary feedback. Meanwhile,
   Employees, Calendar, distribution, Employee totals, Unit Tag clouds, filters, and data exports
   ignore them. Employee and Staffing Slot surfaces have a compact four logical pixel interval only
   between adjacent rows; the first and last rows add no outer interval.
-  Unit headers always show Employees and Staffing Slots separately. A parent shows **Total** counts
-  for its complete branch above **In Unit** direct counts; a leaf shows one unprefixed direct line.
-  Employees are unique in each scope, Slots are summed, and a zero Slot count stays visible.
+  Unit headers show only nonzero Employee and Staffing Slot counts. A parent shows each nonempty
+  **Total** or **In Unit** line in that order; a leaf shows its unprefixed direct line only when it has
+  content. A line containing one kind has no middle dot, and a completely empty summary leaves the
+  fixed header area blank. Employees are unique in each scope and Slots are summed.
   The bottom-center tools row provides Select, Text, Arrow, Sticker, and embedded Image, including in
   an empty View. Arrow uses one Bezier curve with a free start and filled triangular end marker;
   Image uses a rounded-square photo glyph. Choosing a creation tool clears the current canvas selection; a plain element click selects

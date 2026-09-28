@@ -53,7 +53,11 @@ import {
   exportUnitFields,
   validateExportFieldNames,
 } from "@/lib/export-format";
-import type { OrgEditorSourceIndex, OrgEditorUnitSummary } from "@/lib/org-editor";
+import {
+  formatOrgEditorUnitSummary,
+  type OrgEditorSourceIndex,
+  type OrgEditorUnitSummary,
+} from "@/lib/org-editor";
 import type {
   OrgEditorExportScope,
   OrgEditorExportTab,
@@ -187,14 +191,12 @@ export function OrgEditorExportDialog({
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewSize, setPreviewSize] = useState({ height: 0, width: 0 });
   const formatUnitSummary = useCallback(
-    (summary: OrgEditorUnitSummary) => {
-      const direct = `${countText("employees", { count: summary.directEmployeeCount })} · ${countText("staffingSlots", { count: summary.directStaffingSlotCount })}`;
-      if (!summary.hasChildUnits) return [direct];
-      return [
-        `${t("Total summary")}: ${countText("employees", { count: summary.totalEmployeeCount })} · ${countText("staffingSlots", { count: summary.totalStaffingSlotCount })}`,
-        `${t("In Unit")}: ${direct}`,
-      ];
-    },
+    (summary: OrgEditorUnitSummary) =>
+      formatOrgEditorUnitSummary(summary, {
+        formatCount: (key, count) => countText(key, { count }),
+        inUnitLabel: t("In Unit"),
+        totalLabel: t("Total summary"),
+      }),
     [countText, t],
   );
   const hasAvatarBase64UrlField = useMemo(
