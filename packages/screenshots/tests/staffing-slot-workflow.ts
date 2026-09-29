@@ -5,6 +5,30 @@ const PRODUCT_UNIT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const PLATFORM_UNIT_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const SEEDED_SLOT_ID = "abababab-abab-4aba-8aba-abababababab";
 
+const expectUnitHeaderContentGap = async (unit: Locator) => {
+  const geometry = await unit.evaluate((element) => {
+    if (!(element instanceof HTMLElement)) throw new Error("Unit element is unavailable.");
+    const summaryLines = element.querySelectorAll<HTMLElement>(
+      "[data-org-editor-unit-summary-line]",
+    );
+    const firstRow = element.querySelector<HTMLElement>(
+      "[data-org-editor-staffing-slot-row-container], [data-org-editor-employee-row-container]",
+    );
+    const lastSummaryLine = summaryLines.item(summaryLines.length - 1);
+    if (!lastSummaryLine || !firstRow) throw new Error("Unit spacing targets are unavailable.");
+    const unitBounds = element.getBoundingClientRect();
+    const logicalHeight = Number.parseFloat(getComputedStyle(element).height);
+    const scale = unitBounds.height / logicalHeight;
+
+    return (
+      (firstRow.getBoundingClientRect().top - lastSummaryLine.getBoundingClientRect().bottom) /
+      scale
+    );
+  });
+
+  expect(geometry).toBeCloseTo(8, 4);
+};
+
 const expectUnitRowSpacing = async (unit: Locator, expectedCount: number) => {
   const rows = unit.locator(
     "[data-org-editor-employee-row-container], [data-org-editor-staffing-slot-row-container]",
@@ -93,6 +117,16 @@ export async function exerciseStaffingSlots(page: Page) {
   await expect(platformUnit.locator("[data-org-editor-unit-header]")).not.toContainText(
     "staffing slot",
   );
+  await expectUnitHeaderContentGap(productUnit);
+  await expectUnitHeaderContentGap(platformUnit);
+  const zoomIn = page.getByRole("button", { name: "Zoom in", exact: true });
+  await zoomIn.click();
+  await zoomIn.click();
+  await expect(page.getByRole("button", { name: "Reset zoom", exact: true })).toContainText("121%");
+  await expectUnitHeaderContentGap(productUnit);
+  await expectUnitHeaderContentGap(platformUnit);
+  await page.getByRole("button", { name: "Reset zoom", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Reset zoom", exact: true })).toContainText("100%");
 
   await page.evaluate(() => {
     const events: Array<{ operation: "fill" | "stroke"; style: string }> = [];

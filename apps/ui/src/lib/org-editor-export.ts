@@ -59,6 +59,7 @@ import {
   getOrgEditorUnitDescendantIds,
   getOrgEditorUnitDisplayName,
   getOrgEditorUnitHeightForEmployeeRows,
+  getOrgEditorUnitSummaryLineTops,
   getOrgEditorUnitTagFooterHeight,
   getOrgEditorVisibleUnitRows,
   ORG_EDITOR_EMPLOYEE_AVATAR_SIZE,
@@ -71,7 +72,7 @@ import {
   ORG_EDITOR_UNIT_BORDER_RADIUS,
   ORG_EDITOR_UNIT_BORDER_WIDTH,
   ORG_EDITOR_UNIT_CONTENT_PADDING,
-  ORG_EDITOR_UNIT_HEADER_HEIGHT,
+  ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
   ORG_EDITOR_UNIT_TAG_FOOTER_LINE_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
@@ -1875,27 +1876,13 @@ export const createOrgEditorImageExportResult = async ({
       ORG_EDITOR_EXPORT_UNIT_SUMMARY_FONT_SIZE,
     );
     const summaryLines = formatUnitSummary(summary);
-    const summaryLineHeight = 16;
-    const summaryAreaTop =
-      unit.y +
-      ORG_EDITOR_UNIT_BORDER_WIDTH +
-      ORG_EDITOR_UNIT_CONTENT_PADDING +
-      ORG_EDITOR_EXPORT_UNIT_ICON_SIZE +
-      6;
-    const summaryAreaHeight =
-      ORG_EDITOR_UNIT_HEADER_HEIGHT -
-      ORG_EDITOR_UNIT_BORDER_WIDTH -
-      ORG_EDITOR_UNIT_CONTENT_PADDING * 2 -
-      ORG_EDITOR_EXPORT_UNIT_ICON_SIZE -
-      6;
-    const firstSummaryBaseline =
-      summaryAreaTop + (summaryAreaHeight - summaryLines.length * summaryLineHeight) / 2 + 8 + 0.5;
+    const summaryLineTops = getOrgEditorUnitSummaryLineTops(summaryLines.length, unit.y);
     for (const [lineIndex, line] of summaryLines.entries()) {
       drawTrimmedText(
         context,
         line,
         unit.x + ORG_EDITOR_UNIT_BORDER_WIDTH + ORG_EDITOR_UNIT_CONTENT_PADDING,
-        firstSummaryBaseline + lineIndex * summaryLineHeight,
+        (summaryLineTops[lineIndex] ?? unit.y) + ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT / 2 + 0.5,
         summaryMaxWidth,
       );
     }

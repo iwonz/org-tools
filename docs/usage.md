@@ -171,7 +171,9 @@ control.
   Unit headers show only nonzero Employee and Staffing Slot counts. A parent shows each nonempty
   **Total** or **In Unit** line in that order; a leaf shows its unprefixed direct line only when it has
   content. A line containing one kind has no middle dot, and a completely empty summary leaves the
-  fixed header area blank. Employees are unique in each scope and Slots are summed.
+  fixed header area blank. One or two visible summary lines share the same lower edge and leave one
+  eight-pixel interval before the first Staffing Slot, Employee, Edit Unit action, or Live message.
+  Employees are unique in each scope and Slots are summed.
   A revealed Unit with no direct Employee or Staffing Slot rows keeps its complete **Edit Unit**
   action, or its Live no-match message, inside the card. This empty body remains contained while
   zooming and disappears when the Unit collapses; image exports keep the same Unit bounds without

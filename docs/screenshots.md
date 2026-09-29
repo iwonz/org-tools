@@ -284,7 +284,8 @@ the bottom-centered canvas toolbar, including a synthetic tagged Staffing Slot w
 dashed outline and translucent Rose surface distinguish planned capacity above Employee rows in the Unit and Editor PNG. The
 mixed roster demonstrates the shared four-pixel interval between adjacent surfaces without an extra
 row interval above the first or below the last card. Unit headers show separate Employee and Slot
-totals for direct and descendant scopes.
+totals for direct and descendant scopes; their last visible summary line leaves the same compact
+eight-pixel interval before a Slot or Employee row.
 View management stays top-left, canvas commands and Image export
 stay top-right, and history joins zoom at bottom-left. The selected annotation demonstrates the
 five local fonts, partial Text/Sticker typography, line fill, bounded two-axis Text auto-fit, the Bold
@@ -581,12 +582,13 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 - Confirm Editor PNG previews preserve the live Unit header rhythm, centered avatars, aligned rich
   content, complete content-sized Tag fragments without ellipsis or trailing fill, boss marker, variable row
   heights, exactly four logical pixels between adjacent Employee/Staffing Slot surfaces with no
-  outer row gap, content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
+  outer row gap, one eight-pixel interval from the bottom-aligned final summary line to the first row,
+  content-sized direct-Employee Tag footer chips with equal insets, persistent distribution
   row tones, Rose-filled dashed Staffing Slots with complete Tags above every Employee, nonzero-only
   direct/descendant Employee and Slot summaries, and connection endpoints without card overlap, membership-type labels,
   placement overlays, or transient editing chrome.
 - Confirm an expanded Unit without direct rows contains its complete Edit Unit action or Live
-  no-match message at 100% and enlarged zoom, an empty collapsed Unit remains header-only, and both
+  no-match message inside the 128 px card at 100% and enlarged zoom, an empty collapsed Unit remains header-only, and both
   PNG scopes reuse the corrected outer bounds without painting either transient empty-state control.
 - Confirm Unit, Employee, connection, and marquee drags keep moving through smooth bounded edge-pan,
   retain document-anchored previews, and commit no more than one viewport and one structural update.

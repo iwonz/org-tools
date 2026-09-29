@@ -58,13 +58,16 @@ export const ORG_EDITOR_EMPLOYEE_TAG_GAP = ORG_EDITOR_EMPLOYEE_TAG_STYLE.gap;
 export const ORG_EDITOR_EMPLOYEE_CONTENT_VERTICAL_PADDING = 16;
 export const ORG_EDITOR_UNIT_HORIZONTAL_GAP = 40;
 export const ORG_EDITOR_UNIT_CONTENT_PADDING = 8;
-export const ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING = ORG_EDITOR_UNIT_CONTENT_PADDING;
+export const ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING = 0;
+export const ORG_EDITOR_UNIT_EMPLOYEE_LIST_BOTTOM_PADDING = ORG_EDITOR_UNIT_CONTENT_PADDING;
 export const ORG_EDITOR_UNIT_EMPLOYEE_LIST_HORIZONTAL_PADDING = ORG_EDITOR_UNIT_CONTENT_PADDING;
-export const ORG_EDITOR_UNIT_VERTICAL_PADDING = 16;
+export const ORG_EDITOR_UNIT_VERTICAL_PADDING =
+  ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING + ORG_EDITOR_UNIT_EMPLOYEE_LIST_BOTTOM_PADDING;
 export const ORG_EDITOR_UNIT_VERTICAL_GAP = 40;
 export const ORG_EDITOR_UNIT_LAYER_GAP = 64;
 export const ORG_EDITOR_UNIT_ROOT_GAP = 64;
 export const ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT = 32;
+export const ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT = 16;
 export const ORG_EDITOR_UNIT_MIN_HEIGHT =
   ORG_EDITOR_UNIT_HEADER_HEIGHT +
   ORG_EDITOR_UNIT_VERTICAL_PADDING +
@@ -127,6 +130,17 @@ export const formatOrgEditorUnitSummary = (
     total ? `${format.totalLabel}: ${total}` : null,
     direct ? `${format.inUnitLabel}: ${direct}` : null,
   ].filter((value): value is string => value !== null);
+};
+
+export const getOrgEditorUnitSummaryLineTops = (lineCount: number, unitY = 0): number[] => {
+  const resolvedLineCount = Math.max(0, Math.floor(lineCount));
+  const summaryBottom = unitY + ORG_EDITOR_UNIT_HEADER_HEIGHT - ORG_EDITOR_UNIT_CONTENT_PADDING;
+  const firstLineTop = summaryBottom - resolvedLineCount * ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT;
+
+  return Array.from(
+    { length: resolvedLineCount },
+    (_, index) => firstLineTop + index * ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT,
+  );
 };
 
 export type OrgEditorUnitTagSummary = {

@@ -109,11 +109,13 @@ resolved world point. Employee drops use ordinary Unit behavior and never consum
 The shared Unit summary derives direct unique Employees, unique Employees across descendants,
 direct Staffing Slots, and the sum of descendant Slots. Its localized formatter removes each zero
 fragment and separator, then removes the complete Total or In Unit line when both values are zero.
-The fixed header area centers the remaining zero, one, or two lines. DOM, Unit bounds, row origins,
-hit testing, anchors, hierarchy layout, and both PNG exports use the same header height and summary
-lines.
+The fixed header area bottom-aligns the remaining zero, one, or two lines so the last visible line
+always ends eight logical pixels before the following roster or empty-state block. The roster owns
+no additional top inset and retains eight-pixel horizontal and bottom padding. DOM, Unit bounds, row
+origins, hit testing, anchors, hierarchy layout, and both PNG exports use the same header height,
+summary coordinates, and compact body geometry.
 An expanded Unit without visible Employee or Staffing Slot rows reserves a 32 px empty-state body
-inside the ordinary 16 px roster padding. Its 136 px minimum is derived from that body plus the 88 px
+above the ordinary 8 px body bottom inset. Its 128 px minimum is derived from that body plus the 88 px
 header rather than maintained as an independent literal. Manual Edit Unit actions and Live no-match
 messages therefore remain inside the card at every zoom. An empty collapsed Unit remains header-only,
 and full-View or scoped PNG retains the same outer bounds while omitting those transient controls.

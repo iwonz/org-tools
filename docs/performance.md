@@ -63,7 +63,8 @@ theme, locale, tab, filter, search, viewport, or selection changes.
   and event dialogs. Stable row keys share cached rich-line heights and prefix
   offsets. The prefix sum includes one four-pixel gap before every row after the first, so DOM,
   virtual windows, hit testing, anchors, Unit bounds, hierarchy placement, and PNG reuse one O(n)
-  geometry pass without per-row margins or measurements. Slot-first ordering sorts only the Slot
+  geometry pass without per-row margins or measurements. The last summary line and first row use one
+  constant eight-pixel header inset instead of two stacked body paddings. Slot-first ordering sorts only the Slot
   block before appending the existing Employee order; the cached combined rows feed every geometry
   consumer. The zero-filtering summary formatter handles at most four counters per Unit. An empty
   expanded Unit selects one constant 32 px body minimum before the same bounds pass, without DOM
@@ -167,7 +168,7 @@ Canvas PNG generation uses current layout, shared live-card geometry, bounded em
 complete locally measured tag text, resolved local font stacks, Tag colors, and vector primitives
 without network work. Oversized tags
 increase only their Employee row and containing Unit height; the existing maximum canvas-pixel bound
-remains authoritative. Empty manual and Live Units reuse the same 136 px derived DOM height in both
+remains authoritative. Empty manual and Live Units reuse the same 128 px derived DOM height in both
 full-View and scoped plans; their transient empty-state content does not add a Canvas render pass.
 The shared image scene computes rotated rectangle and cubic Bezier bounds once, then paints hierarchy
 connections, `behindUnits`, cards, and `aboveUnits` in stable order. Preview and final output reuse the

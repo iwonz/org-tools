@@ -1838,9 +1838,12 @@ function OrgEditorNode({
           </span>
         </div>
         <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="grid min-w-0 flex-1 content-center leading-4">
+          <span
+            className="grid h-full min-w-0 flex-1 content-end leading-4"
+            data-org-editor-unit-summary
+          >
             {summaryLines.map((line) => (
-              <span className="truncate" key={line}>
+              <span className="truncate" data-org-editor-unit-summary-line key={line}>
                 {line}
               </span>
             ))}
@@ -1853,7 +1856,7 @@ function OrgEditorNode({
       </div>
       {shouldRenderEmployeeList && (
         <div
-          className={cn("p-2", shouldVirtualizeEmployees ? "relative" : "grid")}
+          className={cn("px-2 pb-2", shouldVirtualizeEmployees ? "relative" : "grid")}
           style={
             shouldVirtualizeEmployees
               ? { height: employeeListHeight }

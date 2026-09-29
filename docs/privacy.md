@@ -70,9 +70,10 @@ excluded from the global Units projection and every Employee-oriented search, co
 Calendar, transfer, and data export, so they introduce no new storage or network path.
 Their fixed Slot-first order and translucent Rose surface are derived locally for DOM and Canvas and
 add no persistent color, telemetry, or external asset.
-The empty Unit body height is likewise derived locally from shared layout constants. Its Edit Unit
-action or Live no-match message never enters State, PNG pixels, clipboard content, or a network
-request; PNG uses only the resulting outer card geometry.
+The empty Unit body height and the eight-pixel header-to-content interval are likewise derived locally
+from shared layout constants. The compact spacing adds no stored setting. Its Edit Unit action or
+Live no-match message never enters State, PNG pixels, clipboard content, or a network request; PNG
+uses only the resulting outer card geometry.
 
 Editor canvas Images are accepted only from an explicit local file choice or an image clipboard
 paste. PNG, JPEG, and WebP headers, bytes, and intrinsic dimensions are validated before commit;

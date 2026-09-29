@@ -23,6 +23,7 @@ import {
   getOrgEditorOrderedUnitRows,
   getOrgEditorUnitHeight,
   getOrgEditorUnitHeightForEmployeeRows,
+  getOrgEditorUnitSummaryLineTops,
   getOrgEditorUnitTagFooterChipWidth,
   getOrgEditorUnitTagFooterHeight,
   layoutOrgEditorUnits,
@@ -32,9 +33,12 @@ import {
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
   ORG_EDITOR_STAFFING_SLOT_SURFACE_HOVER_FILL,
+  ORG_EDITOR_UNIT_EMPLOYEE_LIST_BOTTOM_PADDING,
+  ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_MIN_HEIGHT,
+  ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
@@ -101,7 +105,7 @@ describe("Org Editor Employee display geometry", () => {
         lineCount: 3,
         unitY: 100,
       }),
-    ).toEqual([230, 246, 262]);
+    ).toEqual([222, 238, 254]);
     expect(
       getOrgEditorEmployeeDisplayLineBaselines({
         employeeRowHeight: 72,
@@ -110,7 +114,7 @@ describe("Org Editor Employee display geometry", () => {
         lineGap: 4,
         unitY: 100,
       }),
-    ).toEqual([230, 250, 270]);
+    ).toEqual([222, 242, 262]);
     expect(
       getOrgEditorEmployeeDisplayLineBaselines({
         employeeRowHeight: 112,
@@ -119,7 +123,7 @@ describe("Org Editor Employee display geometry", () => {
         lineGap: 24,
         unitY: 100,
       }),
-    ).toEqual([230, 270, 310]);
+    ).toEqual([222, 262, 302]);
   });
 
   test("expands rich rows for wrapped native Tags", () => {
@@ -432,17 +436,22 @@ describe("Org Editor variable Employee geometry", () => {
       }),
     ).toEqual({
       avatarX: 51,
-      avatarY: 169,
-      rowTop: 145,
-      tagY: 168,
-      textBaselineY: 163,
+      avatarY: 161,
+      rowTop: 137,
+      tagY: 160,
+      textBaselineY: 155,
       textMaxWidth: 214,
       textX: 69,
     });
     expect(
       getOrgEditorUnitHeightForEmployeeRows({ collapsed: false, employeeRowHeights: [] }),
-    ).toBe(136);
+    ).toBe(128);
     expect(ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT).toBe(32);
+    expect(ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING).toBe(0);
+    expect(ORG_EDITOR_UNIT_EMPLOYEE_LIST_BOTTOM_PADDING).toBe(8);
+    expect(ORG_EDITOR_UNIT_VERTICAL_PADDING).toBe(
+      ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING + ORG_EDITOR_UNIT_EMPLOYEE_LIST_BOTTOM_PADDING,
+    );
     expect(ORG_EDITOR_UNIT_MIN_HEIGHT).toBe(
       ORG_EDITOR_UNIT_HEADER_HEIGHT +
         ORG_EDITOR_UNIT_VERTICAL_PADDING +
@@ -453,7 +462,23 @@ describe("Org Editor variable Employee geometry", () => {
     );
     expect(
       getOrgEditorUnitHeightForEmployeeRows({ collapsed: false, employeeRowHeights: [48] }),
-    ).toBe(152);
+    ).toBe(144);
+    expect(
+      getOrgEditorUnitHeightForEmployeeRows({ collapsed: true, employeeRowHeights: [48] }),
+    ).toBe(144);
+  });
+
+  test("bottom-aligns one-line and two-line Unit summaries", () => {
+    expect(getOrgEditorUnitSummaryLineTops(0)).toEqual([]);
+    expect(getOrgEditorUnitSummaryLineTops(1)).toEqual([64]);
+    expect(getOrgEditorUnitSummaryLineTops(2)).toEqual([48, 64]);
+    expect(getOrgEditorUnitSummaryLineTops(1, 24)).toEqual([88]);
+    expect(getOrgEditorUnitSummaryLineTops(1).at(-1)).toBe(
+      ORG_EDITOR_UNIT_HEADER_HEIGHT - 8 - ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT,
+    );
+    expect(getOrgEditorUnitSummaryLineTops(2).at(-1)).toBe(
+      ORG_EDITOR_UNIT_HEADER_HEIGHT - 8 - ORG_EDITOR_UNIT_SUMMARY_LINE_HEIGHT,
+    );
   });
 
   test("adds the Tag footer after the complete empty-state body", () => {
@@ -491,7 +516,7 @@ describe("Org Editor variable Employee geometry", () => {
     expect(layout.totalHeight).toBe(firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP + 48);
     expect(findOrgEditorEmployeeRowIndex(layout, firstHeight + 1)).toBe(1);
     expect(getOrgEditorEmployeeBounds(unit, 1).y).toBe(
-      unit.y + ORG_EDITOR_UNIT_HEADER_HEIGHT + 8 + firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP,
+      unit.y + ORG_EDITOR_UNIT_HEADER_HEIGHT + firstHeight + ORG_EDITOR_EMPLOYEE_ROW_GAP,
     );
     expect(getOrgEditorUnitHeight(unit)).toBeGreaterThan(120);
   });

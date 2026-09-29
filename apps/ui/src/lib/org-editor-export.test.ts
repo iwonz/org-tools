@@ -13,6 +13,8 @@ import {
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
+  ORG_EDITOR_UNIT_EMPLOYEE_LIST_BOTTOM_PADDING,
+  ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING,
   ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
   ORG_EDITOR_UNIT_MIN_HEIGHT,
@@ -360,10 +362,10 @@ describe("Org Editor image export", () => {
     expect(getOrgEditorEmployeeTextMaxWidth(unitWidth)).toBe(310);
     expect(getOrgEditorExportEmployeeGeometry(unit, 0, 76, 40)).toEqual({
       avatarX: 27,
-      avatarY: 135,
-      rowTop: ORG_EDITOR_UNIT_HEADER_HEIGHT + 9,
-      tagY: 124,
-      textBaselineY: 119,
+      avatarY: 127,
+      rowTop: ORG_EDITOR_UNIT_HEADER_HEIGHT + 1,
+      tagY: 116,
+      textBaselineY: 111,
       textMaxWidth: 310,
       textX: 45,
     });
@@ -372,7 +374,7 @@ describe("Org Editor image export", () => {
         collapsed: false,
         employeeRowHeights: [76, 48],
       }),
-    ).toBe(232);
+    ).toBe(224);
     expect(
       getOrgEditorUnitHeightForEmployeeRows({
         collapsed: false,
@@ -383,6 +385,9 @@ describe("Org Editor image export", () => {
       ORG_EDITOR_UNIT_HEADER_HEIGHT +
         ORG_EDITOR_UNIT_VERTICAL_PADDING +
         ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT,
+    );
+    expect(ORG_EDITOR_UNIT_VERTICAL_PADDING).toBe(
+      ORG_EDITOR_UNIT_EMPLOYEE_LIST_TOP_PADDING + ORG_EDITOR_UNIT_EMPLOYEE_LIST_BOTTOM_PADDING,
     );
     expect(getOrgEditorUnitBounds({ ...unit, noteMarkdown: "# Private note" })).toEqual(
       getOrgEditorUnitBounds(unit),
@@ -397,7 +402,7 @@ describe("Org Editor image export", () => {
       height: 76,
       width: getOrgEditorUnitBounds(unit).width - 18,
       x: 9,
-      y: ORG_EDITOR_UNIT_HEADER_HEIGHT + 9,
+      y: ORG_EDITOR_UNIT_HEADER_HEIGHT + 1,
     });
     expect(ORG_EDITOR_EMPLOYEE_ROW_BORDER_RADIUS).toBe(6);
   });

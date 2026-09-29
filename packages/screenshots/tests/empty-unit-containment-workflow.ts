@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
 
 const EMPTY_UNIT_NAME = "Empty capacity";
-const EMPTY_UNIT_HEIGHT = 136;
+const EMPTY_UNIT_HEIGHT = 128;
 const COLLAPSED_UNIT_HEIGHT = 88;
 const IMAGE_PADDING = 20;
 const IMAGE_DENSITY = 3;
@@ -17,9 +17,12 @@ const expectEmptyStateContained = async (
     if (!(unitElement instanceof HTMLElement)) throw new Error("Unit container is unavailable.");
     const unitBounds = unitElement.getBoundingClientRect();
     const contentBounds = element.getBoundingClientRect();
+    const headerElement = unitElement.querySelector<HTMLElement>("[data-org-editor-unit-header]");
+    if (!headerElement) throw new Error("Unit header is unavailable.");
     return {
       contentBottom: contentBounds.bottom,
       contentTop: contentBounds.top,
+      headerBottom: headerElement.getBoundingClientRect().bottom,
       height: Number.parseFloat(getComputedStyle(unitElement).height),
       unitBottom: unitBounds.bottom,
       unitTop: unitBounds.top,
@@ -27,6 +30,7 @@ const expectEmptyStateContained = async (
   });
 
   expect(geometry.height).toBe(expectedHeight);
+  expect(geometry.contentTop).toBeCloseTo(geometry.headerBottom, 4);
   expect(geometry.contentTop).toBeGreaterThanOrEqual(geometry.unitTop - 0.5);
   expect(geometry.contentBottom).toBeLessThanOrEqual(geometry.unitBottom + 0.5);
 };
