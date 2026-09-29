@@ -585,6 +585,9 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   row tones, Rose-filled dashed Staffing Slots with complete Tags above every Employee, nonzero-only
   direct/descendant Employee and Slot summaries, and connection endpoints without card overlap, membership-type labels,
   placement overlays, or transient editing chrome.
+- Confirm an expanded Unit without direct rows contains its complete Edit Unit action or Live
+  no-match message at 100% and enlarged zoom, an empty collapsed Unit remains header-only, and both
+  PNG scopes reuse the corrected outer bounds without painting either transient empty-state control.
 - Confirm Unit, Employee, connection, and marquee drags keep moving through smooth bounded edge-pan,
   retain document-anchored previews, and commit no more than one viewport and one structural update.
   A real blank-canvas pan preserves Employee selection and placement paths; a short blank click

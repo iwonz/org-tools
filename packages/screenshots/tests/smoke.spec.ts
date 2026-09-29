@@ -7,6 +7,7 @@ import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" }
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
+import { exerciseEmptyUnitContainment } from "./empty-unit-containment-workflow.js";
 import {
   applyColorPickerDraft,
   createDistributionStateFile,
@@ -61,6 +62,13 @@ test("manages View-local Staffing Slots", async ({ page }) => {
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await exerciseStaffingSlots(page);
+  await assertLocalRequests();
+});
+
+test("contains empty Unit actions inside shared DOM and PNG geometry", async ({ page }) => {
+  const assertLocalRequests = await expectLocalRequestsOnly(page);
+  await openBlankState(page);
+  await exerciseEmptyUnitContainment(page);
   await assertLocalRequests();
 });
 

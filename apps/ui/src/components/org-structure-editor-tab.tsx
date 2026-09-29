@@ -1862,12 +1862,16 @@ function OrgEditorNode({
         >
           {visibleRows.length === 0 ? (
             unit.liveFilter !== null ? (
-              <div className="px-2 py-1 text-xs text-muted-foreground">
+              <div
+                className="px-2 py-1 text-xs text-muted-foreground"
+                data-demo-id="org-editor-empty-live-message"
+              >
                 {t("No Live filter matches")}
               </div>
             ) : (
               <Button
                 className="h-8 justify-start px-2 text-xs font-normal"
+                data-demo-id="org-editor-empty-manual-action"
                 onClick={(event) => {
                   event.stopPropagation();
                   onEditUnit(unit);

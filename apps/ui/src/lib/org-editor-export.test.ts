@@ -13,7 +13,10 @@ import {
   ORG_EDITOR_EMPLOYEE_TAG_STYLE,
   ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
   ORG_EDITOR_UNIT_BORDER_RADIUS,
+  ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
+  ORG_EDITOR_UNIT_MIN_HEIGHT,
+  ORG_EDITOR_UNIT_VERTICAL_PADDING,
 } from "@/lib/org-editor";
 import { createOrgEditorStickerElement, createOrgEditorTextElement } from "@/lib/org-editor-canvas";
 import {
@@ -370,6 +373,17 @@ describe("Org Editor image export", () => {
         employeeRowHeights: [76, 48],
       }),
     ).toBe(232);
+    expect(
+      getOrgEditorUnitHeightForEmployeeRows({
+        collapsed: false,
+        employeeRowHeights: [],
+      }),
+    ).toBe(ORG_EDITOR_UNIT_MIN_HEIGHT);
+    expect(ORG_EDITOR_UNIT_MIN_HEIGHT).toBe(
+      ORG_EDITOR_UNIT_HEADER_HEIGHT +
+        ORG_EDITOR_UNIT_VERTICAL_PADDING +
+        ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT,
+    );
     expect(getOrgEditorUnitBounds({ ...unit, noteMarkdown: "# Private note" })).toEqual(
       getOrgEditorUnitBounds(unit),
     );

@@ -32,10 +32,13 @@ import {
   ORG_EDITOR_GRID_SIZE,
   ORG_EDITOR_STAFFING_SLOT_SURFACE_FILL,
   ORG_EDITOR_STAFFING_SLOT_SURFACE_HOVER_FILL,
+  ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT,
   ORG_EDITOR_UNIT_HEADER_HEIGHT,
+  ORG_EDITOR_UNIT_MIN_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HEIGHT,
   ORG_EDITOR_UNIT_TAG_FOOTER_CHIP_HORIZONTAL_PADDING,
   ORG_EDITOR_UNIT_TAG_FOOTER_PADDING,
+  ORG_EDITOR_UNIT_VERTICAL_PADDING,
   type OrgEditorUnitSummary,
   setOrgEditorUnitEmployeeRowHeights,
   setOrgEditorUnitRowHeights,
@@ -438,10 +441,30 @@ describe("Org Editor variable Employee geometry", () => {
     });
     expect(
       getOrgEditorUnitHeightForEmployeeRows({ collapsed: false, employeeRowHeights: [] }),
-    ).toBe(120);
+    ).toBe(136);
+    expect(ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT).toBe(32);
+    expect(ORG_EDITOR_UNIT_MIN_HEIGHT).toBe(
+      ORG_EDITOR_UNIT_HEADER_HEIGHT +
+        ORG_EDITOR_UNIT_VERTICAL_PADDING +
+        ORG_EDITOR_UNIT_EMPTY_STATE_HEIGHT,
+    );
     expect(getOrgEditorUnitHeightForEmployeeRows({ collapsed: true, employeeRowHeights: [] })).toBe(
       ORG_EDITOR_UNIT_HEADER_HEIGHT,
     );
+    expect(
+      getOrgEditorUnitHeightForEmployeeRows({ collapsed: false, employeeRowHeights: [48] }),
+    ).toBe(152);
+  });
+
+  test("adds the Tag footer after the complete empty-state body", () => {
+    const unit = createUnit({ id: "empty-with-footer" });
+    expect(getOrgEditorUnitHeight(unit)).toBe(ORG_EDITOR_UNIT_MIN_HEIGHT);
+
+    setOrgEditorUnitTagFooterHeight(unit.id, 28);
+    expect(getOrgEditorUnitHeight(unit)).toBe(ORG_EDITOR_UNIT_MIN_HEIGHT + 28);
+
+    unit.collapsed = true;
+    expect(getOrgEditorUnitHeight(unit)).toBe(ORG_EDITOR_UNIT_HEADER_HEIGHT);
   });
 
   test("packs every tag and derives prefix offsets for bounds and virtualization", () => {

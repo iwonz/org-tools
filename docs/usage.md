@@ -172,6 +172,10 @@ control.
   **Total** or **In Unit** line in that order; a leaf shows its unprefixed direct line only when it has
   content. A line containing one kind has no middle dot, and a completely empty summary leaves the
   fixed header area blank. Employees are unique in each scope and Slots are summed.
+  A revealed Unit with no direct Employee or Staffing Slot rows keeps its complete **Edit Unit**
+  action, or its Live no-match message, inside the card. This empty body remains contained while
+  zooming and disappears when the Unit collapses; image exports keep the same Unit bounds without
+  drawing the transient action or message.
   The bottom-center tools row provides Select, Text, Arrow, Sticker, and embedded Image, including in
   an empty View. Arrow uses one Bezier curve with a free start and filled triangular end marker;
   Image uses a rounded-square photo glyph. Choosing a creation tool clears the current canvas selection; a plain element click selects

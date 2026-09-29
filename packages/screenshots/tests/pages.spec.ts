@@ -9,6 +9,7 @@ import zhMessages from "../../../apps/ui/messages/zh.json" with { type: "json" }
 import { expect, test } from "./browser-test.js";
 import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
 import { exerciseLargeEditorPerformance } from "./editor-performance-workflow.js";
+import { exerciseEmptyUnitContainment } from "./empty-unit-containment-workflow.js";
 import {
   applyColorPickerDraft,
   createDistributionStateFile,
@@ -80,6 +81,14 @@ test("manages View-local Staffing Slots", async ({ page }) => {
   await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await exerciseStaffingSlots(page);
+});
+
+test("contains empty Unit actions inside shared DOM and PNG geometry", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.addInitScript((key) => window.localStorage.setItem(key, "en"), localeStorageKey);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await exerciseEmptyUnitContainment(page);
 });
 
 test("coalesces large Editor previews and commits each gesture once", async ({ page }) => {

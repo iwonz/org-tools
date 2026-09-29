@@ -112,6 +112,11 @@ fragment and separator, then removes the complete Total or In Unit line when bot
 The fixed header area centers the remaining zero, one, or two lines. DOM, Unit bounds, row origins,
 hit testing, anchors, hierarchy layout, and both PNG exports use the same header height and summary
 lines.
+An expanded Unit without visible Employee or Staffing Slot rows reserves a 32 px empty-state body
+inside the ordinary 16 px roster padding. Its 136 px minimum is derived from that body plus the 88 px
+header rather than maintained as an independent literal. Manual Edit Unit actions and Live no-match
+messages therefore remain inside the card at every zoom. An empty collapsed Unit remains header-only,
+and full-View or scoped PNG retains the same outer bounds while omitting those transient controls.
 
 Each View also owns a required ordered `structure.canvasElements` discriminated union for Text,
 Sticker, embedded Image, and cubic Arrow content. Rectangular tools share bounds, rotation, layer,
@@ -347,7 +352,7 @@ attachment while crossing the indivisible Unit-card plane. Text, Sticker, Image,
 omit every transient selection, target outline, anchor, resize, rotation,
 Bezier, marquee, and placement affordance.
 
-Org Editor PNG output also uses the same pure card geometry as the live canvas for Unit widths, 72 px
+Org Editor PNG output also uses the same pure card geometry as the live canvas for Unit widths, 88 px
 headers, roster padding, centered avatars, Employee text columns, universal inline fragments, variable
 row heights, and hierarchy anchors. Each Employee receives one immutable rich layout that DOM,
 geometry, and PNG consume. An oversized semantic value becomes several content-sized decorated
