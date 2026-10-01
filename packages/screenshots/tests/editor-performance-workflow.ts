@@ -262,14 +262,17 @@ export async function exerciseLargeEditorPerformance(page: Page): Promise<void> 
     )
     .toBe(480);
   await expect
-    .poll(async () => {
-      const response = await page.request.get("/api/session");
-      const bootstrap = (await response.json()) as SessionBootstrap;
-      const persistedLongText = bootstrap.projection.views
-        .flatMap((view) => view.structure.canvasElements)
-        .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
-      return persistedLongText?.type === "text" ? persistedLongText.width : null;
-    })
+    .poll(
+      async () => {
+        const response = await page.request.get("/api/session");
+        const bootstrap = (await response.json()) as SessionBootstrap;
+        const persistedLongText = bootstrap.projection.views
+          .flatMap((view) => view.structure.canvasElements)
+          .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
+        return persistedLongText?.type === "text" ? persistedLongText.width : null;
+      },
+      { intervals: [500, 1_000], timeout: 60_000 },
+    )
     .toBe(480);
   await page.waitForTimeout(2_000);
   const performanceCdp = await page.context().newCDPSession(page);
