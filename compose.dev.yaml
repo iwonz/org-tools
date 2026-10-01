@@ -57,6 +57,9 @@ services:
         condition: service_completed_successfully
     environment:
       CI: "true"
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /workspace
       NODE_ENV: test
       PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
       ORG_TOOLS_TEST_UPSTREAM_ORIGIN: http://app:3000

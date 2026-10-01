@@ -18,6 +18,7 @@ describe("Compose application security", () => {
     ]);
     const productionApp = serviceBlock(productionSource, "app");
     const developmentApp = serviceBlock(developmentSource, "app");
+    const developmentToolbox = serviceBlock(developmentSource, "toolbox");
 
     expect(productionApp).toContain('cap_drop: ["ALL"]');
     expect(productionApp).toContain("read_only: true");
@@ -28,5 +29,11 @@ describe("Compose application security", () => {
     expect(developmentApp).toContain("read_only: false");
     expect(developmentApp).toContain('user: "0:0"');
     expect(developmentSource.match(/cap_add:/gu)).toHaveLength(1);
+
+    expect(developmentToolbox).toContain('GIT_CONFIG_COUNT: "1"');
+    expect(developmentToolbox).toContain("GIT_CONFIG_KEY_0: safe.directory");
+    expect(developmentToolbox).toContain("GIT_CONFIG_VALUE_0: /workspace");
+    expect(developmentApp).not.toContain("GIT_CONFIG_");
+    expect(productionSource).not.toContain("GIT_CONFIG_");
   });
 });
