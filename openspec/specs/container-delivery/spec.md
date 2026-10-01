@@ -127,6 +127,22 @@ connections, and resolve only after the listening server and tracked connections
 - **WHEN** cleanup invokes proxy shutdown more than once after success or failure
 - **THEN** every caller observes the same completed shutdown without an exception or leaked handle
 
+### Requirement: Development readiness checks are bounded and diagnosable
+
+The Compose development validation wrapper SHALL bound each readiness request and the aggregate
+readiness window. If readiness is not established, it SHALL terminate nonzero and print app service
+status and bounded recent app logs without printing environment secrets.
+
+#### Scenario: Development app becomes ready
+
+- **WHEN** the app returns a successful ready response within the bounded retry window
+- **THEN** the wrapper starts the Chromium probe and completes normally
+
+#### Scenario: Development readiness stalls
+
+- **WHEN** a ready request stalls or the app never becomes ready before the retry window ends
+- **THEN** the request is aborted, the wrapper exits nonzero, and app diagnostics are emitted within the CI job timeout
+
 ### Requirement: Gallery comparison bounds software-raster noise
 
 Screenshot generation SHALL preserve an existing maintained PNG when a candidate changes no more

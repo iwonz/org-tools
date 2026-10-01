@@ -14,9 +14,17 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 attempt=0
-until compose exec -T app node -e "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; do
+until compose exec -T app node -e "fetch('http://127.0.0.1:3000/api/health/ready',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; do
   attempt=$((attempt + 1))
-  [ "$attempt" -lt 60 ] || { echo "Development application did not become ready." >&2; exit 1; }
+  if [ "$attempt" -eq 1 ] || [ $((attempt % 6)) -eq 0 ]; then
+    echo "Waiting for the development application (attempt $attempt of 36)." >&2
+  fi
+  if [ "$attempt" -ge 36 ]; then
+    echo "Development application did not become ready within the bounded polling window." >&2
+    compose ps app >&2 || true
+    compose logs --no-color --tail 200 app >&2 || true
+    exit 1
+  fi
   sleep 1
 done
 compose run --rm -e ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 toolbox \
