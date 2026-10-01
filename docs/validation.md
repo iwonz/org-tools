@@ -74,9 +74,9 @@ or credentials.
 
 ## Measured result for this change
 
-On the development machine, `validate:fast` completed all seven cheap gates in 7.71 seconds. The
-same gates took about 20.5 seconds when invoked one after another, so concurrent execution reduced
-wall time by about 62% while still running all 392 unit tests.
+On the development machine, repeated `validate:fast` runs completed all seven cheap gates in
+6.73–7.50 seconds. The same gates took about 20.5 seconds when invoked one after another, so
+concurrent execution reduced wall time by 63–67% while still running all 393 unit tests.
 
 The four clean browser shards completed in 2.4, 3.1, 2.7, and 3.1 minutes. Their local critical path
 is therefore about 3.1 minutes, 61% below the previous 7.9-minute serial run, while coverage grew
@@ -88,3 +88,20 @@ The two complete gallery passes took 198.62 and 168.71 seconds and produced iden
 56 PNG files. Gallery work was deliberately kept complete; CI overlaps it with the browser, static,
 and image jobs instead of weakening it. A cold development-image rebuild also spent 113.8 seconds
 downloading Chromium, which confirms the value of the bounded BuildKit cache added to CI.
+
+The complete pull-request workflow finished in 11 minutes 28 seconds, down from 26 minutes 46
+seconds: a 57% reduction in authoritative wall time. Its slowest browser shard took 7 minutes 26
+seconds versus 16 minutes 54 seconds for the former serial browser job, a 56% reduction. The two-pass
+gallery became the 11-minute 22-second critical evidence job. Parallelism increased summed runner
+time from 26 minutes 46 seconds to about 45 minutes 20 seconds; this is an intentional tradeoff for
+faster feedback while retaining every gate and adding the three previously omitted browser tests.
+
+The optimized runs exposed infrastructure limits rather than hiding them. Chromium's shared disk
+cache failed during isolated multi-tab runs, so the browser harness disables that cache while still
+executing every request. A healthy API could precede the first cold Next.js page compilation, so the
+development probe now performs a bounded page prewarm. Cold compilation also made the comprehensive
+authorization scenario exceed its former five-minute timeout, and the 20,000-Employee autosave could
+take longer than ten seconds to reach PostgreSQL; only those bounded waits were increased, without
+weakening their assertions. The Container baseline spent 13 minutes 41 seconds of its 14 minutes 24
+seconds in the multi-architecture build. The new workflows share bounded BuildKit inputs between the
+verified production-image job and Container publication while keeping separate cache write scopes.

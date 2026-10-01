@@ -24,5 +24,5 @@
 ## 5. Validation and delivery
 
 - [x] 5.1 Run formatter, lint, typecheck, complete unit tests, planner tests, dev probe, production build, all browser shards, two-pass gallery verification, public safety, image inspection, strict OpenSpec validation, and diff checks through Compose.
-- [ ] 5.2 Measure the optimized GitHub Actions and Container workflows against the 26:46 and 14:24 baselines and document actual results or concrete bottlenecks.
-- [ ] 5.3 Sync and archive the OpenSpec change, integrate fresh origin/main, push main, verify CI/GHCR/release state, remove the change branch, and confirm clean matching refs.
+- [x] 5.2 Measure the optimized GitHub Actions and Container workflows against the 26:46 and 14:24 baselines and document actual results or concrete bottlenecks.
+- [x] 5.3 Sync and archive the OpenSpec change, integrate fresh origin/main, push main, verify CI/GHCR/release state, remove the change branch, and confirm clean matching refs.
