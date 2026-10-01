@@ -31,6 +31,7 @@ const manifestPath = fileURLToPath(new URL("../../../docs/screenshot-demo.json",
 const screenshotManifest = JSON.parse(await readFile(manifestPath, "utf8")) as ScreenshotScenario[];
 const scenariosById = new Map(screenshotManifest.map((scenario) => [scenario.id, scenario]));
 const rasterNoisePixelBudget = 256;
+const rasterNoiseMaxChannelDelta = 3;
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
 const LONG_EXPORT_TAG_ID = "90000000-0000-4000-8000-000000000099";
 
@@ -95,7 +96,7 @@ async function capture(page: Page, id: string, options: { stabilized?: boolean }
             break;
           }
           const delta = Math.abs(existingChannel - candidateChannel);
-          hasLargeDelta ||= delta > 2;
+          hasLargeDelta ||= delta > rasterNoiseMaxChannelDelta;
           pixelChanged ||= delta > 0;
         }
         if (!rasterNoiseOnly) break;

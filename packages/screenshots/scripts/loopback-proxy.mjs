@@ -12,6 +12,7 @@ const parseUpstream = (value) => {
 export async function startLoopbackProxy(value, port = 3000) {
   const upstream = parseUpstream(value);
   const sockets = new Set();
+  const upgradedPairs = new Set();
   const server = createServer((incoming, outgoing) => {
     const target = new URL(incoming.url ?? "/", upstream);
     const upstreamRequest = httpRequest(
@@ -35,6 +36,15 @@ export async function startLoopbackProxy(value, port = 3000) {
   });
 
   server.on("upgrade", (request, socket, head) => {
+    const pair = {
+      incoming: socket,
+      upstream: null,
+    };
+    const closePair = (closedSocket) => {
+      upgradedPairs.delete(pair);
+      const peer = closedSocket === pair.incoming ? pair.upstream : pair.incoming;
+      if (peer && !peer.destroyed) peer.destroy();
+    };
     const upstreamSocket = connect(Number(upstream.port || 80), upstream.hostname, () => {
       const headers = Object.entries({ ...request.headers, host: upstream.host })
         .flatMap(([name, value]) =>
@@ -47,6 +57,10 @@ export async function startLoopbackProxy(value, port = 3000) {
       if (head.length > 0) upstreamSocket.write(head);
       socket.pipe(upstreamSocket).pipe(socket);
     });
+    pair.upstream = upstreamSocket;
+    upgradedPairs.add(pair);
+    socket.once("close", () => closePair(socket));
+    upstreamSocket.once("close", () => closePair(upstreamSocket));
     upstreamSocket.on("error", () => socket.destroy());
     socket.on("error", () => upstreamSocket.destroy());
   });
@@ -55,9 +69,20 @@ export async function startLoopbackProxy(value, port = 3000) {
     server.once("error", reject);
     server.listen(port, resolve);
   });
-  return async () => {
-    server.close();
-    server.closeAllConnections();
-    for (const socket of sockets) socket.destroy();
+  let shutdownPromise;
+  return () => {
+    if (shutdownPromise) return shutdownPromise;
+    shutdownPromise = new Promise((resolve) => {
+      if (server.listening) server.close(resolve);
+      else resolve();
+      server.closeAllConnections();
+      for (const { incoming, upstream: upstreamSocket } of upgradedPairs) {
+        incoming.destroy();
+        upstreamSocket?.destroy();
+      }
+      upgradedPairs.clear();
+      for (const socket of sockets) socket.destroy();
+    });
+    return shutdownPromise;
   };
 }

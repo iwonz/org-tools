@@ -12,6 +12,9 @@ Org Tools is one Next.js standalone application backed by PostgreSQL.
   Next.js output and dependencies use disposable project-scoped volumes so its development lock and
   loaders cannot collide with toolbox installs/builds or another Compose project; toolbox production
   output remains in the checkout for validation.
+- Browser validation reaches Compose services through a local loopback proxy. The proxy owns normal
+  HTTP sockets and both ends of upgraded HMR connections, so success and failure cleanup release the
+  listening handle deterministically instead of leaving CI processes alive.
 
 ## Persistence and concurrency
 
