@@ -27,6 +27,21 @@ until compose exec -T app node -e "fetch('http://127.0.0.1:3000/api/health/ready
   fi
   sleep 1
 done
+
+attempt=0
+until compose exec -T app node -e "fetch('http://127.0.0.1:3000/',{signal:AbortSignal.timeout(15000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -eq 1 ]; then
+    echo "Waiting for the initial development page compilation." >&2
+  fi
+  if [ "$attempt" -ge 6 ]; then
+    echo "Development page did not render within the bounded prewarm window." >&2
+    compose ps app >&2 || true
+    compose logs --no-color --tail 200 app >&2 || true
+    exit 1
+  fi
+  sleep 1
+done
 compose run --rm -e ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 toolbox \
   node packages/screenshots/scripts/dev-check.mjs
 echo "Development Compose stack is ready."
