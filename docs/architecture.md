@@ -8,7 +8,10 @@ Org Tools is one Next.js standalone application backed by PostgreSQL.
   command contracts.
 - `packages/screenshots` owns authenticated production browser tests and the deterministic gallery.
 - `compose.yaml` runs PostgreSQL, the owner-credential migration job, backup directory preparation,
-  and the restricted non-root web image. `compose.dev.yaml` adds hot reload and a toolbox.
+  and the restricted non-root web image. `compose.dev.yaml` adds hot reload and a toolbox. The app's
+  Next.js output and dependencies use disposable project-scoped volumes so its development lock and
+  loaders cannot collide with toolbox installs/builds or another Compose project; toolbox production
+  output remains in the checkout for validation.
 
 ## Persistence and concurrency
 

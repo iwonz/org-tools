@@ -32,13 +32,16 @@ services:
         source: .
         target: /workspace
       - type: volume
-        source: dev_node_modules
+        source: dev_ui_next
+        target: /workspace/apps/ui/.next
+      - type: volume
+        source: dev_app_node_modules
         target: /workspace/node_modules
       - type: volume
-        source: dev_ui_node_modules
+        source: dev_app_ui_node_modules
         target: /workspace/apps/ui/node_modules
       - type: volume
-        source: dev_types_node_modules
+        source: dev_app_types_node_modules
         target: /workspace/packages/types/node_modules
   toolbox:
     image: org-tools-dev
@@ -89,8 +92,12 @@ services:
         target: /ms-playwright
 
 volumes:
+  dev_app_node_modules:
+  dev_app_types_node_modules:
+  dev_app_ui_node_modules:
   dev_node_modules:
   dev_playwright:
   dev_screenshots_node_modules:
   dev_types_node_modules:
+  dev_ui_next:
   dev_ui_node_modules:

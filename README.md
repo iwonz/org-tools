@@ -47,9 +47,11 @@ starts the same non-root application image with the same external bind paths.
 ./bin/org-tools run pnpm test:unit
 ```
 
-`compose.dev.yaml` supplies hot reload and a toolbox container. Schema migrations run separately
-under the database owner; the web process has only the restricted application role and refuses to
-start when migrations are pending or unknown.
+`compose.dev.yaml` supplies hot reload and a toolbox container. Its application build cache and
+dependency tree use disposable project-scoped volumes, while toolbox production builds remain
+available in the checkout for validation. Schema migrations run separately under the database
+owner; the web process has only the restricted application role and refuses to start when migrations
+are pending or unknown.
 
 ## Accounts and access
 
