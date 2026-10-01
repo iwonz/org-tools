@@ -59,6 +59,7 @@ import { ProductSurface } from "@/components/ui/product-surface";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UnitDialog } from "@/components/unit-dialog";
 import { UnitTree } from "@/components/unit-tree";
+import { useAccess } from "@/components/use-access";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
@@ -139,6 +140,7 @@ export const UnitsTab = observer(() => {
   const t = useUiText();
   const countText = useCountText();
   const getUnitEmployeeSummary = useUnitEmployeeSummary();
+  const { can } = useAccess();
   const units = store.units;
   const selectedUnit = store.selectedUnit;
   const unitSearchQuery = store.unitsUi.unitQuery;
@@ -152,13 +154,17 @@ export const UnitsTab = observer(() => {
   const [employeeDragPoint, setEmployeeDragPoint] = useState<EmployeeDragPoint | null>(null);
   const [dropTargetUnitId, setDropTargetUnitId] = useState<UnitId | null>(null);
   const dragPreviewRef = useRef<HTMLDivElement | null>(null);
-  useContextHeaderAction({
-    dataDemoId: "unit-create-root-button",
-    icon: HiOutlinePlus,
-    id: "add-unit",
-    label: t("Add Unit"),
-    onClick: () => setUnitDialog({ parentId: null, unitId: null }),
-  });
+  useContextHeaderAction(
+    can("unit.create")
+      ? {
+          dataDemoId: "unit-create-root-button",
+          icon: HiOutlinePlus,
+          id: "add-unit",
+          label: t("Add Unit"),
+          onClick: () => setUnitDialog({ parentId: null, unitId: null }),
+        }
+      : null,
+  );
   const finishEmployeeDrag = useCallback(() => {
     setEmployeeDrag(null);
     setEmployeeDragPoint(null);
@@ -369,7 +375,9 @@ export const UnitsTab = observer(() => {
                     if (
                       !employeeDrag ||
                       unit.id === employeeDrag.sourceUnitId ||
-                      unit.membershipMode === "live"
+                      unit.membershipMode === "live" ||
+                      !can("employee.assignments.update", { unitId: employeeDrag.sourceUnitId }) ||
+                      !can("employee.assignments.update", { unitId: unit.id })
                     )
                       return null;
 
@@ -414,29 +422,37 @@ export const UnitsTab = observer(() => {
                   expandedUnitIds={store.expandedUnitIds}
                   actions={(unit) => (
                     <>
-                      <ActionIconButton
-                        dataDemoId="unit-create-child-button"
-                        disabled={false}
-                        icon={<HiOutlinePlus />}
-                        label={t("Add child Unit")}
-                        onClick={() => setUnitDialog({ parentId: unit.id, unitId: null })}
-                        tooltip={t("Add child Unit")}
-                      />
-                      <ActionIconButton
-                        dataDemoId="unit-edit-button"
-                        disabled={false}
-                        icon={<HiOutlinePencilSquare />}
-                        label={t("Edit Unit")}
-                        onClick={() => setUnitDialog({ parentId: unit.parentId, unitId: unit.id })}
-                        tooltip={t("Edit Unit")}
-                      />
-                      <ActionIconButton
-                        disabled={false}
-                        icon={<HiOutlineTrash />}
-                        label={t("Delete Unit")}
-                        onClick={() => setDeletingUnit(unit)}
-                        tooltip={t("Delete Unit and descendant branch")}
-                      />
+                      {can("unit.create", { unitId: unit.id }) && (
+                        <ActionIconButton
+                          dataDemoId="unit-create-child-button"
+                          disabled={false}
+                          icon={<HiOutlinePlus />}
+                          label={t("Add child Unit")}
+                          onClick={() => setUnitDialog({ parentId: unit.id, unitId: null })}
+                          tooltip={t("Add child Unit")}
+                        />
+                      )}
+                      {can("unit.update", { unitId: unit.id }) && (
+                        <ActionIconButton
+                          dataDemoId="unit-edit-button"
+                          disabled={false}
+                          icon={<HiOutlinePencilSquare />}
+                          label={t("Edit Unit")}
+                          onClick={() =>
+                            setUnitDialog({ parentId: unit.parentId, unitId: unit.id })
+                          }
+                          tooltip={t("Edit Unit")}
+                        />
+                      )}
+                      {can("unit.delete", { unitId: unit.id }) && (
+                        <ActionIconButton
+                          disabled={false}
+                          icon={<HiOutlineTrash />}
+                          label={t("Delete Unit")}
+                          onClick={() => setDeletingUnit(unit)}
+                          tooltip={t("Delete Unit and descendant branch")}
+                        />
+                      )}
                     </>
                   )}
                   onClick={(unit, state) => {
@@ -537,26 +553,36 @@ export const UnitsTab = observer(() => {
           <EmployeeCardList
             actions={(employee) => (
               <>
-                <EmployeeTagPopover
-                  dataDemoId="units-employee-tag-picker"
-                  employee={employee}
-                  onApply={store.updateEmployeeTags}
-                  tagOptions={units.indexes.tagOptions}
-                />
-                <ActionIconButton
-                  disabled={false}
-                  icon={<HiOutlinePencilSquare />}
-                  label={t("Edit Employee")}
-                  onClick={() => setEditingEmployee(employee)}
-                  tooltip={t("Edit Employee")}
-                />
-                <ActionIconButton
-                  disabled={false}
-                  icon={<HiOutlineTrash />}
-                  label={t("Delete Employee")}
-                  onClick={() => setDeletingEmployee(employee)}
-                  tooltip={t("Delete Employee")}
-                />
+                {can("tag.assign", { employeeId: employee.id, unitId: selectedUnit.id }) && (
+                  <EmployeeTagPopover
+                    dataDemoId="units-employee-tag-picker"
+                    employee={employee}
+                    onApply={store.updateEmployeeTags}
+                    tagOptions={units.indexes.tagOptions}
+                  />
+                )}
+                {(can("employee.update", { employeeId: employee.id, unitId: selectedUnit.id }) ||
+                  can("employee.assignments.update", {
+                    employeeId: employee.id,
+                    unitId: selectedUnit.id,
+                  })) && (
+                  <ActionIconButton
+                    disabled={false}
+                    icon={<HiOutlinePencilSquare />}
+                    label={t("Edit Employee")}
+                    onClick={() => setEditingEmployee(employee)}
+                    tooltip={t("Edit Employee")}
+                  />
+                )}
+                {can("employee.delete") && (
+                  <ActionIconButton
+                    disabled={false}
+                    icon={<HiOutlineTrash />}
+                    label={t("Delete Employee")}
+                    onClick={() => setDeletingEmployee(employee)}
+                    tooltip={t("Delete Employee")}
+                  />
+                )}
               </>
             )}
             bossUnitId={selectedUnit.id}
@@ -572,7 +598,12 @@ export const UnitsTab = observer(() => {
               )
             }
             draggable={(employee) =>
-              selectedUnit.membershipMode === "manual" && directEmployeeIdSet.has(employee.id)
+              selectedUnit.membershipMode === "manual" &&
+              directEmployeeIdSet.has(employee.id) &&
+              can("employee.assignments.update", {
+                employeeId: employee.id,
+                unitId: selectedUnit.id,
+              })
             }
             emptyState={
               hasUnitEmployees && hasEmployeeSearch
@@ -622,42 +653,71 @@ export const UnitsTab = observer(() => {
           ).filter((context) => context.unitId === selectedUnit.id)}
         />
       )}
-      {unitDialog && (
-        <UnitDialog
-          editorUnits={store.mainOrgEditor.units}
-          initialUnit={editedUnit}
-          onOpenChange={(open) => !open && setUnitDialog(null)}
-          onSave={(configuration) => {
-            if (editedUnit) {
-              store.updateUnit(editedUnit.id, configuration);
-              return;
+      {unitDialog &&
+        (unitDialog.unitId
+          ? can("unit.update", { unitId: unitDialog.unitId })
+          : unitDialog.parentId
+            ? can("unit.create", { unitId: unitDialog.parentId })
+            : can("unit.create")) && (
+          <UnitDialog
+            editorUnits={store.mainOrgEditor.units}
+            initialUnit={editedUnit}
+            onOpenChange={(open) => !open && setUnitDialog(null)}
+            onSave={(configuration) => {
+              if (editedUnit) {
+                store.updateUnit(editedUnit.id, configuration);
+                return;
+              }
+              store.createUnit(configuration, unitDialog.parentId);
+            }}
+            open
+            parentName={unitDialogParentName}
+            structure={units}
+          />
+        )}
+      {editingEmployee &&
+        (can("employee.update", {
+          employeeId: editingEmployee.id,
+          unitId: selectedUnit.id,
+        }) ||
+          can("employee.assignments.update", {
+            employeeId: editingEmployee.id,
+            unitId: selectedUnit.id,
+          }) ||
+          can("tag.assign", {
+            employeeId: editingEmployee.id,
+            unitId: selectedUnit.id,
+          })) && (
+          <EmployeeDialog
+            canAssignTags={can("tag.assign", {
+              employeeId: editingEmployee.id,
+              unitId: selectedUnit.id,
+            })}
+            canEditAssignments={can("employee.assignments.update", {
+              employeeId: editingEmployee.id,
+              unitId: selectedUnit.id,
+            })}
+            canEditFields={can("employee.update", {
+              employeeId: editingEmployee.id,
+              unitId: selectedUnit.id,
+            })}
+            employee={editingEmployee}
+            mode="global"
+            onOpenChange={(open) => !open && setEditingEmployee(null)}
+            onSave={(fields, memberships, customOptionDrafts) =>
+              store.updateEmployee(
+                editingEmployee.id,
+                fields,
+                memberships,
+                store.systemOrgViewId,
+                customOptionDrafts,
+              )
             }
-            store.createUnit(configuration, unitDialog.parentId);
-          }}
-          open
-          parentName={unitDialogParentName}
-          structure={units}
-        />
-      )}
-      {editingEmployee && (
-        <EmployeeDialog
-          employee={editingEmployee}
-          mode="global"
-          onOpenChange={(open) => !open && setEditingEmployee(null)}
-          onSave={(fields, memberships, customOptionDrafts) =>
-            store.updateEmployee(
-              editingEmployee.id,
-              fields,
-              memberships,
-              store.systemOrgViewId,
-              customOptionDrafts,
-            )
-          }
-          open
-          tagOptions={units.indexes.tagOptions}
-          units={units}
-        />
-      )}
+            open
+            tagOptions={units.indexes.tagOptions}
+            units={units}
+          />
+        )}
       <AlertDialog
         onOpenChange={(open) => !open && setDeletingEmployee(null)}
         open={Boolean(deletingEmployee)}

@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-export type StateRuntimeMode = "browser" | "sqlite";
+export type StateRuntimeMode = "server";
 
 export type StateRuntimeContextValue = {
   error: "corrupt_stored_state" | "database_unavailable" | "invalid_state" | null;

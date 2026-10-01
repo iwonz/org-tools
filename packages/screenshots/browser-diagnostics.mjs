@@ -13,7 +13,7 @@ const isApplicationUrl = (value) => {
     const url = new URL(value);
     return (
       (url.protocol === "http:" || url.protocol === "https:") &&
-      (url.hostname === "127.0.0.1" || url.hostname === "localhost")
+      (url.hostname === "127.0.0.1" || url.hostname === "localhost" || url.hostname === "app")
     );
   } catch {
     return false;
@@ -25,6 +25,14 @@ const formatConsoleLocation = (location) => {
   const line = location.lineNumber ? `:${location.lineNumber}` : "";
   const column = location.columnNumber ? `:${location.columnNumber}` : "";
   return `${location.url}${line}${column}`;
+};
+
+const isExpectedUnauthenticatedSession = (url, status) => {
+  try {
+    return new URL(url).pathname === "/api/session" && status === 401;
+  } catch {
+    return false;
+  }
 };
 
 export function createBrowserDiagnostics({ runtime, scenario }) {
@@ -46,6 +54,13 @@ export function createBrowserDiagnostics({ runtime, scenario }) {
 
     page.on("console", (message) => {
       if (message.type() !== "error" && message.type() !== "warning") return;
+      if (
+        message.type() === "error" &&
+        message.text().includes("Failed to load resource") &&
+        isExpectedUnauthenticatedSession(message.location().url, 401)
+      ) {
+        return;
+      }
       record(
         `console.${message.type()}`,
         message.text(),
@@ -57,6 +72,10 @@ export function createBrowserDiagnostics({ runtime, scenario }) {
     });
     page.on("requestfailed", (request) => {
       if (!isApplicationUrl(request.url())) return;
+      const url = new URL(request.url());
+      if (url.pathname === "/api/events" && request.failure()?.errorText === "net::ERR_ABORTED") {
+        return;
+      }
       record(
         "requestfailed",
         `${request.method()} ${request.failure()?.errorText ?? "unknown failure"}`,
@@ -65,6 +84,7 @@ export function createBrowserDiagnostics({ runtime, scenario }) {
     });
     page.on("response", (response) => {
       if (response.status() < 400 || !isApplicationUrl(response.url())) return;
+      if (isExpectedUnauthenticatedSession(response.url(), response.status())) return;
       record(
         "response",
         `${response.request().method()} HTTP ${response.status()} ${response.statusText()}`,

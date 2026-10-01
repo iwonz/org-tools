@@ -1,0 +1,89 @@
+#!/bin/sh
+set -eu
+
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+environment_file="$repository_root/.env"
+[ -f "$environment_file" ] || { echo "Missing .env. Run ./bin/org-tools env init first." >&2; exit 1; }
+"$repository_root/bin/org-tools" env validate >/dev/null
+
+while IFS= read -r line || [ -n "$line" ]; do
+  case "$line" in ""|'#'*) continue ;; esac
+  key=${line%%=*}
+  value=${line#*=}
+  case "$key" in
+    ORG_TOOLS_IMAGE) ORG_TOOLS_IMAGE=$value ;;
+    ORG_TOOLS_PORT) ORG_TOOLS_PORT=$value ;;
+    ORG_TOOLS_PUBLIC_ORIGIN) ORG_TOOLS_PUBLIC_ORIGIN=$value ;;
+    ORG_TOOLS_SETUP_TOKEN) ORG_TOOLS_SETUP_TOKEN=$value ;;
+    POSTGRES_DB) POSTGRES_DB=$value ;;
+    POSTGRES_USER) POSTGRES_USER=$value ;;
+    POSTGRES_PASSWORD) POSTGRES_PASSWORD=$value ;;
+    ORG_TOOLS_DB_USER) ORG_TOOLS_DB_USER=$value ;;
+    ORG_TOOLS_DB_PASSWORD) ORG_TOOLS_DB_PASSWORD=$value ;;
+    ORG_TOOLS_DB_HOST) ORG_TOOLS_DB_HOST=$value ;;
+    ORG_TOOLS_DB_PORT) ORG_TOOLS_DB_PORT=$value ;;
+    ORG_TOOLS_DB_SSLMODE) ORG_TOOLS_DB_SSLMODE=$value ;;
+    ORG_TOOLS_POSTGRES_DATA_PATH) ORG_TOOLS_POSTGRES_DATA_PATH=$value ;;
+    ORG_TOOLS_BACKUP_PATH) ORG_TOOLS_BACKUP_PATH=$value ;;
+    *) echo "Unsupported key in .env: $key" >&2; exit 1 ;;
+  esac
+done <"$environment_file"
+
+: "${ORG_TOOLS_IMAGE:?}" "${ORG_TOOLS_PORT:?}" "${ORG_TOOLS_PUBLIC_ORIGIN:?}" "${ORG_TOOLS_SETUP_TOKEN:?}"
+: "${POSTGRES_DB:?}" "${POSTGRES_USER:?}" "${POSTGRES_PASSWORD:?}"
+: "${ORG_TOOLS_DB_USER:?}" "${ORG_TOOLS_DB_PASSWORD:?}" "${ORG_TOOLS_DB_HOST:?}" "${ORG_TOOLS_DB_PORT:?}" "${ORG_TOOLS_DB_SSLMODE:?}"
+: "${ORG_TOOLS_POSTGRES_DATA_PATH:?}" "${ORG_TOOLS_BACKUP_PATH:?}"
+
+export ORG_TOOLS_PORT ORG_TOOLS_PUBLIC_ORIGIN ORG_TOOLS_SETUP_TOKEN POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD
+export ORG_TOOLS_DB_USER ORG_TOOLS_DB_PASSWORD ORG_TOOLS_DB_HOST ORG_TOOLS_DB_PORT ORG_TOOLS_DB_SSLMODE
+mkdir -p "$ORG_TOOLS_POSTGRES_DATA_PATH" "$ORG_TOOLS_BACKUP_PATH"
+docker network inspect org-tools >/dev/null 2>&1 || docker network create org-tools >/dev/null
+
+docker run --rm \
+  --mount "type=bind,source=$ORG_TOOLS_BACKUP_PATH,target=/backups" \
+  alpine:3.22 sh -c "chmod 700 /backups && chown 10001:10001 /backups"
+
+docker rm -f org-tools-app org-tools-db >/dev/null 2>&1 || true
+docker run -d --name org-tools-db --network org-tools \
+  --env POSTGRES_DB --env POSTGRES_USER --env POSTGRES_PASSWORD \
+  --env PGDATA=/var/lib/postgresql/18/docker \
+  --mount "type=bind,source=$ORG_TOOLS_POSTGRES_DATA_PATH,target=/var/lib/postgresql" \
+  postgres:18.6-alpine >/dev/null
+
+attempt=0
+until docker exec org-tools-db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 60 ] || { echo "PostgreSQL did not become ready." >&2; exit 1; }
+  sleep 1
+done
+
+ORG_TOOLS_DB_HOST=org-tools-db
+export ORG_TOOLS_DB_HOST
+docker run --rm --network org-tools \
+  --env ORG_TOOLS_DB_HOST --env ORG_TOOLS_DB_PORT --env ORG_TOOLS_DB_SSLMODE \
+  --env ORG_TOOLS_DB_USER --env ORG_TOOLS_DB_PASSWORD --env POSTGRES_DB \
+  --env POSTGRES_USER --env POSTGRES_PASSWORD --env ORG_TOOLS_PORT \
+  --env ORG_TOOLS_PUBLIC_ORIGIN --env ORG_TOOLS_SETUP_TOKEN \
+  --env ORG_TOOLS_BACKUP_PATH=/backups \
+  --mount "type=bind,source=$ORG_TOOLS_BACKUP_PATH,target=/backups" \
+  "$ORG_TOOLS_IMAGE" node apps/ui/scripts/migrate-postgres.mjs
+
+docker run -d --name org-tools-app --network org-tools --user 10001:10001 \
+  --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:size=128m,mode=1777 \
+  --env ORG_TOOLS_DB_HOST --env ORG_TOOLS_DB_PORT --env ORG_TOOLS_DB_SSLMODE \
+  --env ORG_TOOLS_DB_USER --env ORG_TOOLS_DB_PASSWORD --env POSTGRES_DB \
+  --env ORG_TOOLS_PORT --env ORG_TOOLS_PUBLIC_ORIGIN --env ORG_TOOLS_SETUP_TOKEN \
+  --env ORG_TOOLS_BACKUP_PATH=/backups \
+  --env HOSTNAME=0.0.0.0 --env NODE_ENV=production \
+  --mount "type=bind,source=$ORG_TOOLS_BACKUP_PATH,target=/backups" \
+  --publish "127.0.0.1:$ORG_TOOLS_PORT:3000" \
+  "$ORG_TOOLS_IMAGE" >/dev/null
+
+attempt=0
+until docker exec org-tools-app node -e "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 60 ] || { echo "Org Tools did not become ready." >&2; exit 1; }
+  sleep 1
+done
+
+echo "Org Tools is ready at $ORG_TOOLS_PUBLIC_ORIGIN."

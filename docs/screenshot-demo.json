@@ -1,39 +1,48 @@
 [
   {
-    "id": "import",
-    "module": "import",
+    "id": "authentication-login",
+    "module": "authentication",
     "featured": true,
-    "title": "State import confirmation",
-    "file": "demo-import.png",
-    "description": "Review the selected filename, size, Employee, and Unit counts before atomically replacing the current state.",
-    "capabilities": ["Strict state validation", "Summary counts", "Atomic replacement"]
+    "title": "Account sign in",
+    "file": "demo-authentication.png",
+    "description": "Sign in with a local organization account using an email address and password.",
+    "capabilities": ["Email and password", "Server session", "Local authentication"]
   },
   {
-    "id": "import-invalid-state",
-    "module": "import",
-    "featured": false,
-    "title": "Invalid state recovery",
-    "file": "feature-import-invalid-state.png",
-    "description": "Reject partial, arbitrary, or malformed JSON without changing data and offer an immediate file re-selection action.",
-    "capabilities": ["Strict rejection", "No mutation", "Choose another file"]
-  },
-  {
-    "id": "export",
-    "module": "export",
+    "id": "administration-users",
+    "module": "administration",
     "featured": true,
-    "title": "Direct state Export",
-    "file": "demo-export.png",
-    "description": "Download the complete validated application state directly from the sidebar without an intermediate dialog.",
-    "capabilities": ["Complete state", "Direct download", "Unsaved live snapshot"]
+    "title": "Administration users",
+    "file": "demo-administration.png",
+    "description": "Create linked accounts, assign roles and direct grants, and revoke or deactivate access.",
+    "capabilities": ["User lifecycle", "Employee identity", "Roles", "Direct grants"]
   },
   {
-    "id": "database-create-new",
-    "module": "recovery",
+    "id": "administration-roles",
+    "module": "access",
     "featured": false,
-    "title": "Database recovery confirmation",
-    "file": "feature-database-create-new.png",
-    "description": "Recover from an unavailable or corrupt local database by confirming a timestamped backup and a clean current-schema replacement.",
-    "capabilities": ["Explicit recovery", "Timestamped backup", "Current schema", "No silent reset"]
+    "title": "Role permission sets",
+    "file": "feature-access-roles.png",
+    "description": "Build reusable roles from explicit permissions and their valid organization or management scopes.",
+    "capabilities": ["Role editor", "Permission registry", "Valid scopes", "Effective access"]
+  },
+  {
+    "id": "administration-audit",
+    "module": "administration",
+    "featured": false,
+    "title": "Security audit",
+    "file": "feature-administration-audit.png",
+    "description": "Review bounded audit events with action, result, timestamp, and correlation identifier.",
+    "capabilities": ["Audit log", "Search", "Pagination", "Correlation IDs"]
+  },
+  {
+    "id": "administration-access",
+    "module": "access",
+    "featured": false,
+    "title": "Resource access policies",
+    "file": "feature-access-policies.png",
+    "description": "Restrict fields, Tags, Units, Staffing Slots, and Views by role, account, or managed relationship.",
+    "capabilities": ["Read ACL", "Write ACL", "Inherited boundaries", "Restrictive Tags"]
   },
   {
     "id": "theme",
@@ -353,13 +362,13 @@
     ]
   },
   {
-    "id": "employee-import-mapping",
-    "module": "import",
+    "id": "administration-backup",
+    "module": "administration",
     "featured": false,
-    "title": "Employee field mapping",
-    "file": "feature-employee-import-mapping.png",
-    "description": "Inspect the richest bounded JSON record and map source paths left-to-right into Employee fields, Tags, and optional Team assignments.",
-    "capabilities": ["Representative preview", "Field mapping", "Nested paths", "Tags and Teams"]
+    "title": "Encrypted Backup and Restore",
+    "file": "feature-administration-backup.png",
+    "description": "Create and restore complete encrypted backups after re-entering the current administrator password.",
+    "capabilities": ["AES-256-GCM", "Argon2id", "Reauthentication", "Atomic Restore"]
   },
   {
     "id": "editor-search",
@@ -369,15 +378,6 @@
     "file": "feature-editor-search.png",
     "description": "Reveal the left-expanding search field, locate Units and Employees without leaving the canvas, and clear the query when Search closes.",
     "capabilities": ["Unit search", "Employee search", "Canvas navigation"]
-  },
-  {
-    "id": "employee-import-duplicates",
-    "module": "import",
-    "featured": false,
-    "title": "Employee duplicate resolution",
-    "file": "feature-employee-import-duplicates.png",
-    "description": "Resolve normalized identity-tuple matches in bulk or override individual Employees before one atomic import.",
-    "capabilities": ["Normalized identity", "Bulk policy", "Per-Employee override", "Atomic import"]
   },
   {
     "id": "editor-unit-commands",

@@ -10,7 +10,7 @@ import { expect, test } from "./browser-test.js";
 import {
   createDistributionStateFile,
   openBlankState,
-  openImportDialog,
+  replaceStateFromFile,
   replaceWithSyntheticState,
   stabilizeForScreenshot,
   syntheticStatePath,
@@ -44,6 +44,19 @@ function screenshotPath(id: string): string {
 
 async function capture(page: Page, id: string, options: { stabilized?: boolean } = {}) {
   if (!options.stabilized) await stabilizeForScreenshot(page);
+  const rasterNoiseRegions = await page
+    .locator("[data-screenshot-raster-noise]")
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          bottom: Math.ceil(bounds.bottom),
+          left: Math.floor(bounds.left),
+          right: Math.ceil(bounds.right),
+          top: Math.floor(bounds.top),
+        };
+      }),
+    );
   const screenshot = await page.screenshot({ animations: "disabled" });
   const path = screenshotPath(id);
   try {
@@ -73,6 +86,7 @@ async function capture(page: Page, id: string, options: { stabilized?: boolean }
         offset += existingPixels.info.channels
       ) {
         let pixelChanged = false;
+        let hasLargeDelta = false;
         for (let channel = 0; channel < existingPixels.info.channels; channel += 1) {
           const existingChannel = existingPixels.data[offset + channel];
           const candidateChannel = candidatePixels.data[offset + channel];
@@ -81,14 +95,25 @@ async function capture(page: Page, id: string, options: { stabilized?: boolean }
             break;
           }
           const delta = Math.abs(existingChannel - candidateChannel);
-          if (delta > 2) {
-            rasterNoiseOnly = false;
-            break;
-          }
+          hasLargeDelta ||= delta > 2;
           pixelChanged ||= delta > 0;
         }
         if (!rasterNoiseOnly) break;
         if (pixelChanged) {
+          if (hasLargeDelta) {
+            const pixelIndex = offset / existingPixels.info.channels;
+            const x = pixelIndex % existingPixels.info.width;
+            const y = Math.floor(pixelIndex / existingPixels.info.width);
+            if (
+              !rasterNoiseRegions.some(
+                (region) =>
+                  x >= region.left && x < region.right && y >= region.top && y < region.bottom,
+              )
+            ) {
+              rasterNoiseOnly = false;
+              break;
+            }
+          }
           changedPixels += 1;
           if (changedPixels > rasterNoisePixelBudget) {
             rasterNoiseOnly = false;
@@ -145,13 +170,12 @@ async function replaceWithImageExportState(page: Page) {
   const editorUi = state.ui.editor.views.find((view) => view.viewId === systemView.id);
   if (!editorUi) throw new Error("Synthetic image-export Editor UI is unavailable.");
   editorUi.distributionModeUnitIds = [product.id];
-  const dialog = await openImportDialog(page, {
+  await replaceStateFromFile(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
     name: "synthetic-image-export.json",
   });
-  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
 }
 
@@ -183,107 +207,63 @@ test.afterAll(async () => {
   expect(generatedFiles).toEqual(screenshotManifest.map((scenario) => scenario.file).sort());
 });
 
-test("captures valid and invalid state imports", async ({ page }) => {
-  await openBlankState(page);
-  let dialog = await openImportDialog(page, syntheticStatePath);
-  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
-    "4 Employees",
-  );
-  await capture(page, "import");
-
-  await page.keyboard.press("Escape");
-  dialog = await openImportDialog(page, {
-    buffer: Buffer.from('[{"name":"Unsupported row"}]'),
-    mimeType: "application/json",
-    name: "invalid-state.json",
-  });
-  await expect(
-    dialog.getByText("Only a complete Org Tools state can be imported.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(dialog.getByText("Choose another file", { exact: true })).toBeVisible();
-  await capture(page, "import-invalid-state");
-
-  await page.keyboard.press("Escape");
-  await replaceWithSyntheticState(page);
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  dialog = page.getByRole("dialog", { name: "Import", exact: true });
-  await dialog.getByRole("tab", { name: "Employees", exact: true }).click();
-  let fileChooserPromise = page.waitForEvent("filechooser");
-  await dialog.getByText("Choose file", { exact: true }).click();
-  await (await fileChooserPromise).setFiles({
-    buffer: Buffer.from(
-      JSON.stringify([
-        {
-          contact: { email: "riley.brooks@example.test", phone: "+1 555-0120" },
-          firstName: "Riley",
-          id: "00000000-0000-4000-8000-000000000099",
-          lastName: "Brooks",
-          teams: [],
-        },
-      ]),
-    ),
-    mimeType: "application/json",
-    name: "new-employees.json",
-  });
-  await expect(dialog.getByText("1 new", { exact: true })).toBeVisible();
-  await capture(page, "employee-import-mapping");
-
-  await page.keyboard.press("Escape");
-  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const existingEmployee = state.organization.employees[0];
-  if (!existingEmployee) throw new Error("Synthetic Employee is unavailable.");
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  dialog = page.getByRole("dialog", { name: "Import", exact: true });
-  await dialog.getByRole("tab", { name: "Employees", exact: true }).click();
-  fileChooserPromise = page.waitForEvent("filechooser");
-  await dialog.getByText("Choose file", { exact: true }).click();
-  await (await fileChooserPromise).setFiles({
-    buffer: Buffer.from(
-      JSON.stringify([
-        {
-          email: existingEmployee.email,
-          firstName: existingEmployee.firstName,
-          id: existingEmployee.id,
-          lastName: existingEmployee.lastName,
-          teams: [],
-        },
-      ]),
-    ),
-    mimeType: "application/json",
-    name: "existing-employees.json",
-  });
-  await expect(dialog.getByText("1 existing", { exact: true })).toBeVisible();
-  const reviewColumns = dialog.locator('[data-demo-id="employee-import-review-columns"]');
-  await reviewColumns.scrollIntoViewIfNeeded();
-  await expect(reviewColumns).toBeInViewport();
-  await capture(page, "employee-import-duplicates");
-});
-
-test("captures direct state export", async ({ page }) => {
-  await openSyntheticState(page);
-  await page.locator('[data-demo-id="sidebar-toggle"]').click();
-  const action = page.getByRole("button", { name: "Export", exact: true });
-  await action.hover();
-  await capture(page, "export");
-  const downloadPromise = page.waitForEvent("download");
-  await action.click();
-  expect((await downloadPromise).suggestedFilename()).toBe("org-tools-state.json");
-});
-
-test("captures explicit database recovery", async ({ page }) => {
-  await page.route("**/api/state", async (route) => {
-    await route.fulfill({
-      body: JSON.stringify({ error: { code: "database_unavailable" } }),
+test("captures sign-in and Administration", async ({ page }) => {
+  await page.route("**/api/session", (route) =>
+    route.fulfill({
+      body: JSON.stringify({ error: { code: "unauthenticated" } }),
       contentType: "application/json",
-      status: 200,
+      status: 401,
+    }),
+  );
+  await page.route("**/api/auth/status", (route) =>
+    route.fulfill({ body: JSON.stringify({ kind: "login" }), contentType: "application/json" }),
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-demo-id="login-form"]')).toBeVisible();
+  await capture(page, "authentication-login");
+
+  await page.unroute("**/api/session");
+  await page.unroute("**/api/auth/status");
+  await openSyntheticState(page);
+  const adminResponse = await page.request.get("/api/admin");
+  expect(adminResponse.ok()).toBe(true);
+  const deterministicAdminData = (await adminResponse.json()) as {
+    audit: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  };
+  deterministicAdminData.audit = [
+    {
+      action: "organization.replace",
+      actor_account_id: null,
+      correlation_id: "00000000-0000-4000-8000-000000000001",
+      created_at: "2026-07-31T12:00:00.000Z",
+      id: "00000000-0000-4000-8000-000000000002",
+      result: "success",
+    },
+  ];
+  await page.route("**/api/admin", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      body: JSON.stringify(deterministicAdminData),
+      contentType: "application/json",
     });
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Create new", exact: true }).click();
-  await expect(page.locator('[data-demo-id="database-create-new-dialog"]')).toBeVisible();
-  await capture(page, "database-create-new");
+  await page.getByRole("tab", { name: "Administration", exact: true }).click();
+  const administration = page.locator('[data-demo-id="administration-tab"]');
+  await expect(administration).toBeVisible();
+  await capture(page, "administration-users");
+
+  await administration.getByRole("tab", { name: "Roles", exact: true }).click();
+  await capture(page, "administration-roles");
+  await administration.getByRole("tab", { name: "Access", exact: true }).click();
+  await capture(page, "administration-access");
+  await administration.getByRole("tab", { name: "Audit", exact: true }).click();
+  await capture(page, "administration-audit");
+  await administration.getByRole("tab", { name: "Backup and Restore", exact: true }).click();
+  await capture(page, "administration-backup");
 });
 
 test("captures both themes and multilingual language states", async ({ page }) => {
@@ -310,6 +290,8 @@ test("captures both themes and multilingual language states", async ({ page }) =
     "aria-label",
     arMessages.Ui.Units,
   );
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await page.locator('[data-demo-id="language-toggle"]').click();
   await capture(page, "language-arabic-rtl");
@@ -556,7 +538,9 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await unitDialog.getByRole("button", { name: "Save", exact: true }).click();
   const futureProduct = page.locator('fieldset[aria-label="Canvas Unit Future Product"]');
   await expect(futureProduct).toBeVisible();
-  await capture(page, "editor-view-isolated");
+  await stabilizeForScreenshot(page);
+  await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeEnabled();
+  await capture(page, "editor-view-isolated", { stabilized: true });
 
   await futureProduct.click({ position: { x: 80, y: 54 } });
   await page.keyboard.press("Control+c");
@@ -571,7 +555,10 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await viewSelect.click();
   await page.getByRole("option", { name: "Growth scenario", exact: true }).click();
 
-  await page.locator('[data-demo-id="org-editor-rename-view"]').click();
+  const renameView = page.locator('[data-demo-id="org-editor-rename-view"]');
+  await expect(viewSelect).toContainText("Growth scenario");
+  await expect(renameView).toBeEnabled();
+  await renameView.click();
   viewDialog = page.getByRole("dialog", { name: "Rename View", exact: true });
   await capture(page, "editor-view-manage");
   await viewDialog.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -588,7 +575,7 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor-search");
   await page.locator('[data-demo-id="org-editor-search-button"]').click();
 
-  const platform = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
+  const platform = page.locator('[data-org-editor-unit-id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"]');
   await platform.click({ button: "right", position: { x: 20, y: 20 } });
   await expect(page.locator("[data-org-editor-context-menu]")).toBeVisible();
   await capture(page, "editor-unit-commands");
@@ -603,8 +590,8 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor-bulk-employees");
   await page.keyboard.press("Escape");
 
-  const distributionDialog = await openImportDialog(page, await createDistributionStateFile());
-  await distributionDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await replaceStateFromFile(page, await createDistributionStateFile());
+  await page.reload({ waitUntil: "domcontentloaded" });
   const distributionProduct = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   await distributionProduct.click({ button: "right", position: { x: 20, y: 20 } });
   await page.locator('[data-demo-id="org-editor-distribution-mode-action"]').click();

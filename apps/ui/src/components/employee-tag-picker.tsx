@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAccess } from "@/components/use-access";
 import { useUiText } from "@/i18n/use-ui-text";
 import type { EmployeeTagTarget, EmployeeTagUpdate } from "@/lib/employee-tags";
 import {
@@ -51,6 +52,7 @@ export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
 }) {
   const t = useUiText();
   const store = useOrgStore();
+  const { can } = useAccess();
   const [query, setQuery] = useState("");
   const [createdOptions, setCreatedOptions] = useState<string[]>([]);
   const sessionOptions = useMemo(
@@ -75,7 +77,7 @@ export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
     [normalizedQuery, sessionOptions],
   );
   const exactOption = sessionOptions.find((tag) => normalizeSearchValue(tag) === normalizedQuery);
-  const canCreate = Boolean(normalizedQuery) && !exactOption;
+  const canCreate = can("tag.create") && Boolean(normalizedQuery) && !exactOption;
   const virtualizer = useVirtualizer({
     count: visibleOptions.length,
     estimateSize: () => TAG_OPTION_HEIGHT,
@@ -124,7 +126,7 @@ export const EmployeeTagPickerPanel = observer(function EmployeeTagPickerPanel({
             event.preventDefault();
             createAndAssignTag();
           }}
-          placeholder={t("Search or create a tag")}
+          placeholder={t(can("tag.create") ? "Search or create a tag" : "Search tags")}
           type="search"
           value={query}
         />

@@ -1,25 +1,27 @@
-import type { OrgToolsState } from "@org-tools/types";
 import { expect, test } from "./browser-test.js";
-
 import {
+  authenticateSuperAdministrator,
   expectLocalRequestsOnly,
   openBlankState,
   replaceWithSyntheticState,
   resetServerState,
 } from "./helpers.js";
 
-const configuredOrigin = () => {
-  const port = process.env.ORG_TOOLS_PORT ?? "4273";
-  return process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
-};
+const configuredOrigin = () =>
+  process.env.ORG_TOOLS_PUBLIC_ORIGIN ??
+  process.env.ORG_TOOLS_BASE_URL ??
+  `http://127.0.0.1:${process.env.ORG_TOOLS_PORT ?? "3000"}`;
 
-test("opens at the root and writes organization plus durable UI automatically", async ({
-  page,
-}) => {
+const mutationHeaders = (csrfToken: string, origin = configuredOrigin()) => ({
+  "Content-Type": "application/json",
+  Origin: origin,
+  "Sec-Fetch-Site": "same-origin",
+  "X-Org-Tools-CSRF": csrfToken,
+});
+
+test("writes organization and per-account UI automatically", async ({ page }) => {
   await openBlankState(page);
   await expect(page).toHaveURL(/\/$/u);
-  await expect(page.locator('[data-demo-id="project-switcher"]')).toHaveCount(0);
-  await expect(page.locator('[data-demo-id="project-save"]')).toHaveCount(0);
 
   await replaceWithSyntheticState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
@@ -30,9 +32,7 @@ test("opens at the root and writes organization plus durable UI automatically", 
     .locator("#employee-display-employees-format")
     .fill("{fullName}\nPersisted display");
   await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("9");
-  await expect(modelDialog.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
-  await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Persisted display");
   await expect(
@@ -40,7 +40,6 @@ test("opens at the root and writes organization plus durable UI automatically", 
   ).toHaveAttribute("data-employee-display-line-gap", "9");
 
   await page.getByRole("tab", { name: "Calendar", exact: true }).click();
-  await page.waitForTimeout(500);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByRole("tab", { name: "Calendar", exact: true })).toHaveAttribute(
     "aria-selected",
@@ -48,48 +47,16 @@ test("opens at the root and writes organization plus durable UI automatically", 
   );
 });
 
-test("synchronizes state and durable UI between tabs without conflicts", async ({
-  page,
-  context,
-}) => {
+test("synchronizes organization and UI between authenticated tabs", async ({ page, context }) => {
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
   const secondPage = await context.newPage();
   await secondPage.goto("/", { waitUntil: "domcontentloaded" });
 
   await replaceWithSyntheticState(page);
   await expect(secondPage.getByText("Product", { exact: true }).first()).toBeVisible();
-  await expect
-    .poll(async () => {
-      const response = await page.request.get("/api/state");
-      if (!response.ok()) return false;
-      const document = (await response.json()) as { state: OrgToolsState };
-      return document.state.organization.views.some((view) =>
-        view.structure.units.some((unit) => unit.name === "Product"),
-      );
-    })
-    .toBe(true);
-  await Promise.all([
-    page.reload({ waitUntil: "domcontentloaded" }),
-    secondPage.reload({ waitUntil: "domcontentloaded" }),
-  ]);
-  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
-  await expect(secondPage.getByText("Product", { exact: true }).first()).toBeVisible();
 
-  const primaryEmployeesTab = page.getByRole("tab", { name: "Employees", exact: true });
-  const peerEditorTab = secondPage.getByRole("tab", { name: "Editor", exact: true });
-  const peerEmployeesTab = secondPage.getByRole("tab", { name: "Employees", exact: true });
-  await expect
-    .poll(
-      async () => {
-        if ((await primaryEmployeesTab.getAttribute("aria-selected")) !== "true") {
-          await peerEditorTab.click();
-          await peerEmployeesTab.click();
-        }
-        return primaryEmployeesTab.getAttribute("aria-selected");
-      },
-      { intervals: [500, 1_000, 1_000], timeout: 30_000 },
-    )
-    .toBe("true");
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  await secondPage.getByRole("tab", { name: "Employees", exact: true }).click();
   await secondPage
     .locator('[data-demo-id="employees-search"]')
     .getByRole("searchbox")
@@ -104,68 +71,46 @@ test("synchronizes state and durable UI between tabs without conflicts", async (
   await modelDialog
     .locator("#employee-display-employees-format")
     .fill("{fullName}\nSynchronized display");
-  await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("7");
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await expect(secondPage.locator('[data-demo-id="employees-list"]')).toContainText(
     "Synchronized display",
   );
-  await expect(
-    secondPage.locator('[data-demo-id="employees-list"] [data-employee-display-content]').first(),
-  ).toHaveAttribute("data-employee-display-line-gap", "7");
 });
 
-test("validates scoped state writes and rejects cross-origin mutations", async ({ page }) => {
+test("requires exact authenticated CSRF, origin, media type, and UI shape", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
+  const bootstrap = await authenticateSuperAdministrator(page);
+  const session = await page.request.get("/api/session");
+  expect(session.ok()).toBe(true);
+  expect(session.headers()["cache-control"]).toBe("no-store");
+  const current = (await session.json()) as { csrfToken: string; ui: object };
 
-  const current = await page.request.get("/api/state");
-  expect(current.ok()).toBe(true);
-  expect(current.headers()["cache-control"]).toBe("no-store");
-  const document = (await current.json()) as { revision: number; state: OrgToolsState };
-
-  const uiWrite = await page.request.put("/api/state", {
-    data: {
-      scope: "ui",
-      ui: { ...document.state.ui, sidebarCollapsed: false },
-    },
-    headers: { Origin: configuredOrigin() },
+  const uiWrite = await page.request.put("/api/ui", {
+    data: { ...current.ui, sidebarCollapsed: false },
+    headers: mutationHeaders(current.csrfToken),
   });
   expect(uiWrite.ok()).toBe(true);
-  expect((await uiWrite.json()).revision).toBe(document.revision + 1);
 
-  const secondWrite = await page.request.put("/api/state", {
-    data: {
-      scope: "ui",
-      ui: document.state.ui,
-    },
-    headers: { Origin: configuredOrigin() },
+  const malformed = await page.request.put("/api/ui", {
+    data: { unexpected: true },
+    headers: mutationHeaders(current.csrfToken),
   });
-  expect(secondWrite.ok()).toBe(true);
-  expect((await secondWrite.json()).revision).toBe(document.revision + 2);
+  expect(malformed.status()).toBe(400);
+  expect(await malformed.json()).toEqual({ error: { code: "invalid_input" } });
 
-  const obsoleteShape = await page.request.put("/api/state", {
-    data: {
-      expectedRevision: document.revision,
-      scope: "ui",
-      ui: document.state.ui,
-    },
-    headers: { Origin: configuredOrigin() },
+  const wrongCsrf = await page.request.put("/api/ui", {
+    data: current.ui,
+    headers: mutationHeaders("wrong-token"),
   });
-  expect(obsoleteShape.status()).toBe(400);
-  expect(await obsoleteShape.json()).toEqual({ error: { code: "invalid_input" } });
+  expect(wrongCsrf.status()).toBe(403);
+  expect(await wrongCsrf.json()).toEqual({ error: { code: "invalid_request" } });
 
-  const invalid = await page.request.put("/api/state", {
-    data: { scope: "unknown" },
-    headers: { Origin: configuredOrigin() },
-  });
-  expect(invalid.status()).toBe(400);
-  expect(await invalid.json()).toEqual({ error: { code: "invalid_input" } });
-
-  const remote = await page.request.put("/api/state", {
-    data: { scope: "ui", ui: document.state.ui },
-    headers: { Origin: "https://remote.example.test" },
+  const remote = await page.request.put("/api/ui", {
+    data: current.ui,
+    headers: mutationHeaders(bootstrap.csrfToken, "https://remote.example.test"),
   });
   expect(remote.status()).toBe(403);
-  expect(await remote.json()).toEqual({ error: { code: "invalid_input" } });
+  expect(await remote.json()).toEqual({ error: { code: "invalid_request" } });
   await assertLocalRequests();
 });

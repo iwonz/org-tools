@@ -9,7 +9,7 @@ import type {
   UiOrgStructure,
   UnitId,
 } from "@org-tools/types";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   HiOutlineBolt,
   HiOutlineBuildingOffice2,
@@ -180,6 +180,8 @@ export function UnitDialog({
   );
   const [pendingConfiguration, setPendingConfiguration] =
     useState<OrgEditorUnitConfiguration | null>(null);
+  const pendingConfigurationRef = useRef<OrgEditorUnitConfiguration | null>(null);
+  const initializedDialogKeyRef = useRef<string | null>(null);
   const [error, setError] = useState<UiMessageDescriptor | null>(null);
   const messageText = useMessageText();
   const deferredManualQuery = useDeferredValue(manualQuery);
@@ -320,7 +322,13 @@ export function UnitDialog({
   };
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedDialogKeyRef.current = null;
+      return;
+    }
+    const dialogKey = initialUnit?.id ?? "new";
+    if (initializedDialogKeyRef.current === dialogKey) return;
+    initializedDialogKeyRef.current = dialogKey;
 
     const nextRule = initialRule
       ? cloneEmployeeLiveFilterRule(initialRule)
@@ -342,6 +350,7 @@ export function UnitDialog({
         ? normalizeLivePositionOverrides(initialUnit?.employeePositions ?? [])
         : [],
     );
+    pendingConfigurationRef.current = null;
     setPendingConfiguration(null);
     setError(null);
   }, [initialMode, initialRule, initialUnit, open, structure, t]);
@@ -390,9 +399,11 @@ export function UnitDialog({
   const saveConfiguration = (configuration: OrgEditorUnitConfiguration) => {
     try {
       onSave(configuration);
+      pendingConfigurationRef.current = null;
       setPendingConfiguration(null);
       onOpenChange(false);
     } catch (saveError) {
+      pendingConfigurationRef.current = null;
       setPendingConfiguration(null);
       setError(describeError(saveError));
     }
@@ -403,6 +414,7 @@ export function UnitDialog({
 
     const configuration = createConfiguration();
     if (initialUnit && initialMode !== configuration.membershipMode) {
+      pendingConfigurationRef.current = configuration;
       setPendingConfiguration(configuration);
       return;
     }
@@ -446,7 +458,13 @@ export function UnitDialog({
 
   return (
     <>
-      <Dialog onOpenChange={onOpenChange} open={open}>
+      <Dialog
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && pendingConfigurationRef.current !== null) return;
+          onOpenChange(nextOpen);
+        }}
+        open={open}
+      >
         <DialogContent
           className="h-[min(840px,calc(100dvh-2rem))] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] p-0"
           data-demo-id="unit-dialog"
@@ -727,7 +745,10 @@ export function UnitDialog({
 
       <AlertDialog
         onOpenChange={(confirmationOpen) => {
-          if (!confirmationOpen) setPendingConfiguration(null);
+          if (!confirmationOpen) {
+            pendingConfigurationRef.current = null;
+            setPendingConfiguration(null);
+          }
         }}
         open={pendingConfiguration !== null}
       >

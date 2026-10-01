@@ -122,6 +122,7 @@ import { UnitDialog } from "@/components/unit-dialog";
 import { UnitNoteDialog } from "@/components/unit-note-dialog";
 import { UnitStatusBadge } from "@/components/unit-status-badge";
 import { UnitTree } from "@/components/unit-tree";
+import { useAccess } from "@/components/use-access";
 import { useAppFormatter, useCountText, useUiText } from "@/i18n/use-ui-text";
 import {
   readEditorClipboardMarker,
@@ -259,10 +260,12 @@ import {
   loadOrgEditorCanvasFonts,
   orgEditorRichTextLayoutEngine,
 } from "@/lib/org-editor-rich-text-layout";
-import { MAX_STATE_IMPORT_BYTES } from "@/lib/state-transfer";
 import { customTagColorSurfaceStyle, employeeTagColorToHex } from "@/lib/tag-color";
 import { getVisibleUnitIdsForNameSearch } from "@/lib/unit-search";
 import { useUnitEmployeeSummary } from "@/lib/unit-summary";
+
+const MAX_ORGANIZATION_DOCUMENT_BYTES = 25 * 1024 * 1024;
+
 import { cn } from "@/lib/utils";
 import type { OrgEditorHistorySnapshot } from "@/stores/org-editor-store";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -1581,6 +1584,10 @@ const ORG_EDITOR_STAFFING_SLOT_SURFACE_STYLE = {
 } as CSSProperties;
 
 function OrgEditorNode({
+  canAddChild,
+  canConnect,
+  canEditNote,
+  canEditUnit,
   employeeDisplayLayouts,
   employeeDisplayFormat,
   employeeDisplayLineGap,
@@ -1616,6 +1623,10 @@ function OrgEditorNode({
   unit,
   visibleWorldRect,
 }: {
+  canAddChild: boolean;
+  canConnect: boolean;
+  canEditNote: boolean;
+  canEditUnit: boolean;
   employeeDisplayLayouts: ReadonlyMap<string, EmployeeDisplayVisualLayout>;
   employeeDisplayFormat: string;
   employeeDisplayLineGap: number;
@@ -1757,70 +1768,76 @@ function OrgEditorNode({
         width: unitWidth,
       }}
     >
-      <Button
-        aria-label={t("Drag Unit connection")}
-        className={cn(
-          "absolute z-20 size-5 cursor-crosshair rounded-full bg-background/95 p-0 opacity-0 backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
-          layoutMode === "leftRight"
-            ? "-left-2.5 top-1/2 -translate-y-1/2"
-            : "-top-2.5 left-1/2 -translate-x-1/2",
-          isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
-        )}
-        onPointerDown={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onConnectionPointerDown(event, unit);
-        }}
-        size="icon"
-        title={t("Drag Unit connection")}
-        type="button"
-        variant="outline"
-      >
-        <span className="size-2 rounded-full bg-primary" />
-      </Button>
-      <Button
-        aria-label={t("Add child Unit")}
-        className={cn(
-          "absolute z-10 size-8 rounded-full bg-background/95 p-0 opacity-0 backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
-          layoutMode === "leftRight"
-            ? "-right-4 top-1/2 -translate-y-1/2"
-            : "-bottom-4 left-1/2 -translate-x-1/2",
-          isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
-        )}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAddChild(unit.id);
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
-        size="icon"
-        title={t("Add child Unit")}
-        type="button"
-        variant="outline"
-      >
-        <HiOutlinePlus className="size-4" />
-      </Button>
-      <Button
-        aria-label={t("Open Unit note for {name}", { name: unit.name })}
-        className={cn(
-          "absolute end-2 top-2 z-20 size-7 rounded-md border-0 p-0 shadow-none transition-[color,background-color,opacity]",
-          unit.noteMarkdown.trim()
-            ? "bg-signal/10 text-signal opacity-100 hover:bg-signal/15 hover:text-signal"
-            : "pointer-events-none bg-transparent text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100",
-          isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
-        )}
-        data-demo-id="unit-note-action"
-        data-note-active={unit.noteMarkdown.trim() ? "true" : "false"}
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenNote(unit);
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
-        size="icon"
-        type="button"
-        variant="ghost"
-      >
-        <HiOutlineDocumentText className="size-4" />
-      </Button>
+      {canConnect && (
+        <Button
+          aria-label={t("Drag Unit connection")}
+          className={cn(
+            "absolute z-20 size-5 cursor-crosshair rounded-full bg-background/95 p-0 opacity-0 backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
+            layoutMode === "leftRight"
+              ? "-left-2.5 top-1/2 -translate-y-1/2"
+              : "-top-2.5 left-1/2 -translate-x-1/2",
+            isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
+          )}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onConnectionPointerDown(event, unit);
+          }}
+          size="icon"
+          title={t("Drag Unit connection")}
+          type="button"
+          variant="outline"
+        >
+          <span className="size-2 rounded-full bg-primary" />
+        </Button>
+      )}
+      {canAddChild && (
+        <Button
+          aria-label={t("Add child Unit")}
+          className={cn(
+            "absolute z-10 size-8 rounded-full bg-background/95 p-0 opacity-0 backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100",
+            layoutMode === "leftRight"
+              ? "-right-4 top-1/2 -translate-y-1/2"
+              : "-bottom-4 left-1/2 -translate-x-1/2",
+            isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
+          )}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAddChild(unit.id);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          size="icon"
+          title={t("Add child Unit")}
+          type="button"
+          variant="outline"
+        >
+          <HiOutlinePlus className="size-4" />
+        </Button>
+      )}
+      {canEditNote && (
+        <Button
+          aria-label={t("Open Unit note for {name}", { name: unit.name })}
+          className={cn(
+            "absolute end-2 top-2 z-20 size-7 rounded-md border-0 p-0 shadow-none transition-[color,background-color,opacity]",
+            unit.noteMarkdown.trim()
+              ? "bg-signal/10 text-signal opacity-100 hover:bg-signal/15 hover:text-signal"
+              : "pointer-events-none bg-transparent text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100",
+            isCanvasArrowToolActive && "!pointer-events-none !opacity-0",
+          )}
+          data-demo-id="unit-note-action"
+          data-note-active={unit.noteMarkdown.trim() ? "true" : "false"}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenNote(unit);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <HiOutlineDocumentText className="size-4" />
+        </Button>
+      )}
       <div
         className="grid shrink-0 grid-rows-[32px_34px] gap-1.5 p-2"
         data-org-editor-unit-header
@@ -1871,7 +1888,7 @@ function OrgEditorNode({
               >
                 {t("No Live filter matches")}
               </div>
-            ) : (
+            ) : canEditUnit ? (
               <Button
                 className="h-8 justify-start px-2 text-xs font-normal"
                 data-demo-id="org-editor-empty-manual-action"
@@ -1886,7 +1903,7 @@ function OrgEditorNode({
                 <HiOutlinePencilSquare className="size-4" />
                 {t("Edit Unit")}
               </Button>
-            )
+            ) : null
           ) : (
             renderedEmployeeRows.map(({ row, index: employeeIndex }) => {
               if (row.type === "staffingSlot") {
@@ -2668,11 +2685,19 @@ function StaffingSlotDialog({
 
 export const OrgStructureEditorTab = observer(() => {
   const t = useUiText();
+  const { can } = useAccess();
   const { locale } = useAppLocale();
   const textDirection = locale === "ar" ? "rtl" : "ltr";
   const countText = useCountText();
   const format = useAppFormatter();
   const store = useOrgStore();
+  const activeViewKind = store.activeOrgView?.kind ?? "system";
+  const canEditLayout =
+    activeViewKind === "system" ? can("editor.system.layout.update") : can("view.update");
+  const canCreateView = can("view.create");
+  const canUpdateView = can("view.update");
+  const canDeleteView = can("view.delete");
+  const canExportImage = can("editorImageExport.create");
   const measurementRevision = useSyncExternalStore(
     subscribeEmployeeDisplayTextMeasurements,
     getEmployeeDisplayMeasurementRevision,
@@ -2715,6 +2740,7 @@ export const OrgStructureEditorTab = observer(() => {
     null,
   );
   const [employeeDialogState, setEmployeeDialogState] = useState<{
+    contextUnitId: OrgEditorUnitId | null;
     employee: Employee | null;
     initialUnitIds: OrgEditorUnitId[];
   } | null>(null);
@@ -3392,6 +3418,7 @@ export const OrgStructureEditorTab = observer(() => {
 
   const insertCanvasImageFile = useCallback(
     async (file: Blob, point = getCanvasCenterPoint()) => {
+      if (!canEditLayout) return false;
       const source = await loadOrgEditorCanvasImageFile(file);
       if (!source) {
         setCanvasToolError(
@@ -3411,7 +3438,10 @@ export const OrgStructureEditorTab = observer(() => {
       );
       if (!activeView) return false;
       activeView.structure.canvasElements.push(element);
-      if (new TextEncoder().encode(JSON.stringify(candidate)).byteLength > MAX_STATE_IMPORT_BYTES) {
+      if (
+        new TextEncoder().encode(JSON.stringify(candidate)).byteLength >
+        MAX_ORGANIZATION_DOCUMENT_BYTES
+      ) {
         setCanvasToolError(t("The complete State would exceed the 25 MiB limit."));
         return false;
       }
@@ -3420,7 +3450,7 @@ export const OrgStructureEditorTab = observer(() => {
       setCanvasToolError(null);
       return true;
     },
-    [editor, getCanvasCenterPoint, store, t],
+    [canEditLayout, editor, getCanvasCenterPoint, store, t],
   );
 
   const centerCanvasRectInViewport = useCallback(
@@ -4750,6 +4780,7 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if ((event.metaKey || event.ctrlKey) && key === "z") {
+        if (!canEditLayout) return;
         event.preventDefault();
         if (event.shiftKey) {
           editor.redo();
@@ -4760,6 +4791,7 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if ((event.metaKey || event.ctrlKey) && key === "y") {
+        if (!canEditLayout) return;
         event.preventDefault();
         editor.redo();
         return;
@@ -4784,7 +4816,7 @@ export const OrgStructureEditorTab = observer(() => {
         return;
       }
 
-      if ((event.metaKey || event.ctrlKey) && key === "v" && editor.canPaste) {
+      if ((event.metaKey || event.ctrlKey) && key === "v" && canEditLayout && editor.canPaste) {
         const requestId = pasteRequestSequenceRef.current + 1;
         pasteRequestSequenceRef.current = requestId;
         pendingPasteRequestIdsRef.current.push(requestId);
@@ -4803,12 +4835,22 @@ export const OrgStructureEditorTab = observer(() => {
       }
 
       if ((event.metaKey || event.ctrlKey) && key === "d") {
+        if (!canEditLayout) return;
         event.preventDefault();
         editor.duplicateSelectedCanvasElements();
         return;
       }
 
       if (event.key === "Backspace" || event.key === "Delete") {
+        const permitted = editor.selectedItems.every((item) => {
+          if (item.type === "element") return canEditLayout;
+          if (item.type === "unit") return can("unit.delete", { unitId: item.unitId });
+          if (item.type === "employee") {
+            return can("employee.assignments.update", { unitId: item.unitId });
+          }
+          return can("staffingSlot.delete", { unitId: item.unitId });
+        });
+        if (!permitted) return;
         event.preventDefault();
         store.deleteEditorSelection();
       }
@@ -4817,7 +4859,7 @@ export const OrgStructureEditorTab = observer(() => {
     window.addEventListener("keydown", handleKeyDown);
 
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+  }, [can, canEditLayout, contextMenu, editor, getCanvasCenterPoint, store]);
 
   useEffect(() => {
     const handleCopy = (event: ClipboardEvent) => {
@@ -4880,7 +4922,7 @@ export const OrgStructureEditorTab = observer(() => {
       });
       event.preventDefault();
       if (pasteSource === "structure") {
-        if (editor.canPaste) editor.pasteAt(getCanvasCenterPoint());
+        if (canEditLayout && editor.canPaste) editor.pasteAt(getCanvasCenterPoint());
         return;
       }
       if (pasteSource === "image" && imageFile) {
@@ -4889,7 +4931,7 @@ export const OrgStructureEditorTab = observer(() => {
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [editor, getCanvasCenterPoint, insertCanvasImageFile]);
+  }, [canEditLayout, editor, getCanvasCenterPoint, insertCanvasImageFile]);
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {
@@ -4935,11 +4977,13 @@ export const OrgStructureEditorTab = observer(() => {
   if (!units) return null;
 
   const openCreateUnit = (point: CanvasPoint, parentId: OrgEditorUnitId | null = null) => {
+    if (!can("unit.create", parentId ? { unitId: parentId } : undefined)) return;
     setUnitDialog({ parentId, point, unitId: null });
     setContextMenu(null);
   };
 
   const openEditUnit = (unit: OrgEditorUnit) => {
+    if (!can("unit.update", { unitId: unit.id })) return;
     setUnitDialog({
       parentId: unit.parentId,
       point: { x: unit.x, y: unit.y },
@@ -4949,6 +4993,7 @@ export const OrgStructureEditorTab = observer(() => {
   };
 
   const openCreateChildUnit = (unitId: OrgEditorUnitId) => {
+    if (!can("unit.create", { unitId })) return;
     const parentUnit = editor.units.find((unit) => unit.id === unitId);
     if (!parentUnit) return;
 
@@ -4969,7 +5014,13 @@ export const OrgStructureEditorTab = observer(() => {
   };
 
   const openCreateEmployeeForUnits = (unitIds: OrgEditorUnitId[]) => {
+    if (
+      !can("employee.create") ||
+      unitIds.some((unitId) => !can("employee.assignments.update", { unitId }))
+    )
+      return;
     setEmployeeDialogState({
+      contextUnitId: unitIds[0] ?? null,
       employee: null,
       initialUnitIds: unitIds,
     });
@@ -4978,6 +5029,8 @@ export const OrgStructureEditorTab = observer(() => {
   };
 
   const openCreateEmployeeAtPoint = (point: CanvasPoint) => {
+    if (!can("employee.create") || !can("employee.assignments.update") || !can("unit.create"))
+      return;
     const unitName = t("Employees");
     const unitId = editor.addUnit({
       name: unitName,
@@ -5041,7 +5094,7 @@ export const OrgStructureEditorTab = observer(() => {
   };
 
   const startCanvasArrowGesture = (event: React.PointerEvent<Element>) => {
-    if (activeCanvasTool !== "arrow" || event.button !== 0) return false;
+    if (!canEditLayout || activeCanvasTool !== "arrow" || event.button !== 0) return false;
     event.preventDefault();
     event.stopPropagation();
     const screenPoint = getPointerScreenPoint(event.nativeEvent);
@@ -5089,7 +5142,7 @@ export const OrgStructureEditorTab = observer(() => {
 
     const screenPoint = getPointerScreenPoint(event.nativeEvent);
     const canvasPoint = screenToCanvasPoint(screenPoint);
-    if (activeCanvasTool === "text" || activeCanvasTool === "sticker") {
+    if (canEditLayout && (activeCanvasTool === "text" || activeCanvasTool === "sticker")) {
       event.preventDefault();
       const element =
         activeCanvasTool === "text"
@@ -5135,6 +5188,7 @@ export const OrgStructureEditorTab = observer(() => {
 
   const handleCanvasContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
+    if (!can("unit.create") && !can("employee.create")) return;
     const screenPoint = { x: event.clientX, y: event.clientY };
 
     setContextMenu({
@@ -5148,6 +5202,7 @@ export const OrgStructureEditorTab = observer(() => {
     event.preventDefault();
     event.stopPropagation();
 
+    if (!can("unit.create") && !can("employee.create")) return;
     const screenPoint = getCanvasCenterScreenPoint();
 
     setContextMenu({
@@ -5412,6 +5467,7 @@ export const OrgStructureEditorTab = observer(() => {
       if (mode === "replace") editor.setSelectedItems([item]);
       else editor.selectItem(item, mode);
     }
+    if (!canEditLayout) return;
     const elementIds = [...editor.selectedElementIds];
     if (!editor.selectedElementIds.has(element.id)) return;
     const sourceElements = elementIds.flatMap((elementId) => {
@@ -5445,6 +5501,7 @@ export const OrgStructureEditorTab = observer(() => {
   ) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!canEditLayout) return;
     finishWheelPreview();
     const elementIds = selectedCanvasElementIds.has(element.id)
       ? [...selectedCanvasElementIds]
@@ -5464,7 +5521,7 @@ export const OrgStructureEditorTab = observer(() => {
     element: OrgEditorCanvasElement,
     handle: OrgEditorCanvasElementHandle,
   ) => {
-    if (event.button !== 0) return;
+    if (!canEditLayout || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
     setContextMenu(null);
@@ -5499,6 +5556,7 @@ export const OrgStructureEditorTab = observer(() => {
   };
 
   const startCanvasTextEditing = (elementId: OrgEditorCanvasElementId) => {
+    if (!canEditLayout) return;
     const element = editor.canvasElements.find((candidate) => candidate.id === elementId);
     if (element?.type !== "text" && element?.type !== "sticker") return;
     if (!selectedCanvasElementIds.has(elementId)) {
@@ -5538,6 +5596,7 @@ export const OrgStructureEditorTab = observer(() => {
     const screenPoint = getPointerScreenPoint(event.nativeEvent);
 
     if (!selectionIntent.preserveForPotentialGroupDrag) editor.selectItem(item, mode);
+    if (!canEditLayout) return;
     const mixedElementIds = [...editor.selectedElementIds];
     if (mixedElementIds.length > 0 && editor.selectedUnitIds.has(unit.id)) {
       const sourceElements = mixedElementIds.flatMap((elementId) => {
@@ -5592,6 +5651,7 @@ export const OrgStructureEditorTab = observer(() => {
     event: React.MouseEvent<HTMLFieldSetElement>,
     unit: OrgEditorUnit,
   ) => {
+    if (!canEditLayout) return;
     const target = event.target;
 
     if (
@@ -5612,7 +5672,7 @@ export const OrgStructureEditorTab = observer(() => {
     event: React.PointerEvent<HTMLButtonElement>,
     unit: OrgEditorUnit,
   ) => {
-    if (event.button !== 0) return;
+    if (!canEditLayout || event.button !== 0) return;
     if (startCanvasArrowGesture(event)) return;
     event.preventDefault();
     event.stopPropagation();
@@ -5762,6 +5822,7 @@ export const OrgStructureEditorTab = observer(() => {
     const screenPoint = getPointerScreenPoint(event.nativeEvent);
 
     editor.setSelectedItems(selectedItemsForDrag);
+    if (!can("employee.assignments.update", { unitId: unit.id })) return;
     setActiveDragState({
       currentScreenPoint: screenPoint,
       selectedItems: selectedItemsForDrag,
@@ -5841,6 +5902,7 @@ export const OrgStructureEditorTab = observer(() => {
         selectedItem.type === "staffingSlot",
     );
     editor.setSelectedItems(selectedSlots);
+    if (!can("staffingSlot.update", { unitId: unit.id })) return;
     const screenPoint = getPointerScreenPoint(event.nativeEvent);
     setActiveDragState({
       currentScreenPoint: screenPoint,
@@ -6063,6 +6125,10 @@ export const OrgStructureEditorTab = observer(() => {
             {renderCanvasElementLayer("behindUnits")}
             {visibleUnits.map((unit) => (
               <MemoizedOrgEditorNode
+                canAddChild={can("unit.create", { unitId: unit.id })}
+                canConnect={canEditLayout}
+                canEditNote={canEditLayout}
+                canEditUnit={can("unit.update", { unitId: unit.id })}
                 employeeDisplayLayouts={
                   employeeRowGeometryByUnitId.get(unit.id)?.layouts ??
                   EMPTY_EMPLOYEE_DISPLAY_LAYOUTS
@@ -6178,19 +6244,21 @@ export const OrgStructureEditorTab = observer(() => {
               <div className="absolute inset-0 z-20 flex">
                 <TopLevelEmptyState
                   action={
-                    <Button
-                      aria-label={t("Add to empty canvas")}
-                      data-demo-id="org-editor-empty-canvas-add"
-                      onClick={handleEmptyCanvasAddClick}
-                      onPointerDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                      }}
-                      type="button"
-                    >
-                      <HiOutlinePlus />
-                      {t("Add to canvas")}
-                    </Button>
+                    can("unit.create") || can("employee.create") ? (
+                      <Button
+                        aria-label={t("Add to empty canvas")}
+                        data-demo-id="org-editor-empty-canvas-add"
+                        onClick={handleEmptyCanvasAddClick}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        type="button"
+                      >
+                        <HiOutlinePlus />
+                        {t("Add to canvas")}
+                      </Button>
+                    ) : null
                   }
                   description={t("Add a Team or Employees to begin arranging the structure.")}
                   icon={<HiOutlineBuildingOffice2 className="size-6" />}
@@ -6219,34 +6287,42 @@ export const OrgStructureEditorTab = observer(() => {
           )}
           {contextMenu?.type === "canvas" && (
             <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
-              <OrgEditorMenuButton
-                onClick={() => {
-                  openCreateUnit(contextMenu.canvasPoint);
-                }}
-              >
-                <HiOutlinePlus />
-                {t("Add Unit")}
-              </OrgEditorMenuButton>
-              <OrgEditorMenuButton
-                onClick={() => {
-                  setAddEmployeesTarget({
-                    point: contextMenu.canvasPoint,
-                    type: "newUnit",
-                  });
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlineUserPlus />
-                {t("Add Employees")}
-              </OrgEditorMenuButton>
-              <OrgEditorMenuButton
-                dataDemoId="org-editor-create-employee-canvas-action"
-                onClick={() => openCreateEmployeeAtPoint(contextMenu.canvasPoint)}
-              >
-                <HiOutlineUserPlus />
-                {t("Create Employee")}
-              </OrgEditorMenuButton>
-              {editor.canPaste && (
+              {can("unit.create") && (
+                <OrgEditorMenuButton
+                  onClick={() => {
+                    openCreateUnit(contextMenu.canvasPoint);
+                  }}
+                >
+                  <HiOutlinePlus />
+                  {t("Add Unit")}
+                </OrgEditorMenuButton>
+              )}
+              {can("unit.create") && can("employee.assignments.update") && (
+                <OrgEditorMenuButton
+                  onClick={() => {
+                    setAddEmployeesTarget({
+                      point: contextMenu.canvasPoint,
+                      type: "newUnit",
+                    });
+                    setContextMenu(null);
+                  }}
+                >
+                  <HiOutlineUserPlus />
+                  {t("Add Employees")}
+                </OrgEditorMenuButton>
+              )}
+              {can("employee.create") &&
+                can("employee.assignments.update") &&
+                can("unit.create") && (
+                  <OrgEditorMenuButton
+                    dataDemoId="org-editor-create-employee-canvas-action"
+                    onClick={() => openCreateEmployeeAtPoint(contextMenu.canvasPoint)}
+                  >
+                    <HiOutlineUserPlus />
+                    {t("Create Employee")}
+                  </OrgEditorMenuButton>
+                )}
+              {canEditLayout && editor.canPaste && (
                 <>
                   <span className="my-1 h-px bg-border" />
                   <OrgEditorMenuButton
@@ -6262,7 +6338,7 @@ export const OrgStructureEditorTab = observer(() => {
               )}
             </OrgEditorFloatingMenu>
           )}
-          {contextMenu?.type === "elements" && (
+          {canEditLayout && contextMenu?.type === "elements" && (
             <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
               {(
                 [
@@ -6319,50 +6395,64 @@ export const OrgStructureEditorTab = observer(() => {
           )}
           {contextMenu?.type === "employees" && (
             <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
-              <OrgEditorMenuButton
-                disabled={contextEmployeeUnit?.bossEmployeeId === contextMenu.employeeId}
-                onClick={() => {
-                  editor.setUnitBoss(contextMenu.unitId, contextMenu.employeeId);
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlineUserGroup />
-                {t("Make boss")}
-              </OrgEditorMenuButton>
-              {contextEmployeeUnit?.bossEmployeeId === contextMenu.employeeId && (
+              {can("unit.boss.assign", { unitId: contextMenu.unitId }) && (
                 <OrgEditorMenuButton
+                  disabled={contextEmployeeUnit?.bossEmployeeId === contextMenu.employeeId}
                   onClick={() => {
-                    editor.setUnitBoss(contextMenu.unitId, null);
+                    editor.setUnitBoss(contextMenu.unitId, contextMenu.employeeId);
                     setContextMenu(null);
                   }}
                 >
-                  <HiOutlineUserMinus />
-                  {t("Remove boss")}
+                  <HiOutlineUserGroup />
+                  {t("Make boss")}
                 </OrgEditorMenuButton>
               )}
-              {contextEmployee && (
-                <>
-                  <span className="my-1 h-px bg-border" />
-                  <OrgEditorEmployeeTagSubmenu
-                    employees={contextTagEmployees}
-                    onApply={(updates) => {
-                      store.updateEmployeeTagsFromEditor(updates);
-                    }}
-                    tagOptions={tagOptions}
-                  />
+              {can("unit.boss.assign", { unitId: contextMenu.unitId }) &&
+                contextEmployeeUnit?.bossEmployeeId === contextMenu.employeeId && (
                   <OrgEditorMenuButton
-                    dataDemoId="org-editor-edit-employee-action"
                     onClick={() => {
-                      setEmployeeDialogState({
-                        employee: contextEmployee,
-                        initialUnitIds: [],
-                      });
+                      editor.setUnitBoss(contextMenu.unitId, null);
                       setContextMenu(null);
                     }}
                   >
-                    <HiOutlinePencilSquare />
-                    {t("Edit")}
+                    <HiOutlineUserMinus />
+                    {t("Remove boss")}
                   </OrgEditorMenuButton>
+                )}
+              {contextEmployee && (
+                <>
+                  <span className="my-1 h-px bg-border" />
+                  {can("tag.assign", {
+                    employeeId: contextMenu.employeeId,
+                    unitId: contextMenu.unitId,
+                  }) && (
+                    <OrgEditorEmployeeTagSubmenu
+                      employees={contextTagEmployees}
+                      onApply={(updates) => {
+                        store.updateEmployeeTagsFromEditor(updates);
+                      }}
+                      tagOptions={tagOptions}
+                    />
+                  )}
+                  {can("employee.update", {
+                    employeeId: contextMenu.employeeId,
+                    unitId: contextMenu.unitId,
+                  }) && (
+                    <OrgEditorMenuButton
+                      dataDemoId="org-editor-edit-employee-action"
+                      onClick={() => {
+                        setEmployeeDialogState({
+                          contextUnitId: contextMenu.unitId,
+                          employee: contextEmployee,
+                          initialUnitIds: [],
+                        });
+                        setContextMenu(null);
+                      }}
+                    >
+                      <HiOutlinePencilSquare />
+                      {t("Edit")}
+                    </OrgEditorMenuButton>
+                  )}
                 </>
               )}
               {contextEmployeeUnit?.liveFilter === null && (
@@ -6377,16 +6467,18 @@ export const OrgStructureEditorTab = observer(() => {
                     <HiOutlineDocumentDuplicate />
                     {selectedEmployeeCount > 1 ? t("Copy Employees") : t("Copy")}
                   </OrgEditorMenuButton>
-                  <OrgEditorMenuButton
-                    onClick={() => {
-                      store.deleteEditorSelection();
-                      setContextMenu(null);
-                    }}
-                    variant="destructive"
-                  >
-                    <HiOutlineTrash />
-                    {selectedEmployeeCount > 1 ? t("Delete Employees") : t("Delete")}
-                  </OrgEditorMenuButton>
+                  {can("employee.assignments.update", { unitId: contextMenu.unitId }) && (
+                    <OrgEditorMenuButton
+                      onClick={() => {
+                        store.deleteEditorSelection();
+                        setContextMenu(null);
+                      }}
+                      variant="destructive"
+                    >
+                      <HiOutlineTrash />
+                      {selectedEmployeeCount > 1 ? t("Delete Employees") : t("Delete")}
+                    </OrgEditorMenuButton>
+                  )}
                 </>
               )}
               {contextEmployee && (
@@ -6398,30 +6490,34 @@ export const OrgStructureEditorTab = observer(() => {
           )}
           {contextMenu?.type === "staffingSlot" && contextStaffingSlot && (
             <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
-              <OrgEditorMenuButton
-                dataDemoId="org-editor-edit-staffing-slot-action"
-                onClick={() => {
-                  setStaffingSlotDialog({
-                    staffingSlotId: contextMenu.staffingSlotId,
-                    unitId: contextMenu.unitId,
-                  });
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlinePencilSquare />
-                {t("Edit")}
-              </OrgEditorMenuButton>
+              {can("staffingSlot.update", { unitId: contextMenu.unitId }) && (
+                <OrgEditorMenuButton
+                  dataDemoId="org-editor-edit-staffing-slot-action"
+                  onClick={() => {
+                    setStaffingSlotDialog({
+                      staffingSlotId: contextMenu.staffingSlotId,
+                      unitId: contextMenu.unitId,
+                    });
+                    setContextMenu(null);
+                  }}
+                >
+                  <HiOutlinePencilSquare />
+                  {t("Edit")}
+                </OrgEditorMenuButton>
+              )}
               <span className="my-1 h-px bg-border" />
-              <OrgEditorMenuButton
-                onClick={() => {
-                  editor.deleteStaffingSlot(contextMenu.unitId, contextMenu.staffingSlotId);
-                  setContextMenu(null);
-                }}
-                variant="destructive"
-              >
-                <HiOutlineTrash />
-                {t("Delete")}
-              </OrgEditorMenuButton>
+              {can("staffingSlot.delete", { unitId: contextMenu.unitId }) && (
+                <OrgEditorMenuButton
+                  onClick={() => {
+                    editor.deleteStaffingSlot(contextMenu.unitId, contextMenu.staffingSlotId);
+                    setContextMenu(null);
+                  }}
+                  variant="destructive"
+                >
+                  <HiOutlineTrash />
+                  {t("Delete")}
+                </OrgEditorMenuButton>
+              )}
               <span className="max-w-60 truncate px-2 pb-1 pt-1.5 text-xs text-muted-foreground">
                 {contextStaffingSlot.name ?? t("Staffing slot")}
               </span>
@@ -6431,53 +6527,64 @@ export const OrgStructureEditorTab = observer(() => {
             <OrgEditorFloatingMenu point={contextMenu.screenPoint}>
               {contextMenu.unitIds.length === 1 && (
                 <>
-                  <OrgEditorMenuButton
-                    onClick={() => {
-                      const [unitId] = contextMenu.unitIds;
-                      if (unitId) openCreateChildUnit(unitId);
-                      setContextMenu(null);
-                    }}
-                  >
-                    <HiOutlinePlus />
-                    {t("Add child Unit")}
-                  </OrgEditorMenuButton>
-                  {contextMenuSingleUnit && (
-                    <OrgEditorMenuButton
-                      dataDemoId="org-editor-edit-unit-action"
-                      onClick={() => openEditUnit(contextMenuSingleUnit)}
-                    >
-                      <HiOutlinePencilSquare />
-                      {t("Edit Unit")}
-                    </OrgEditorMenuButton>
-                  )}
-                  {contextMenuSingleUnit?.liveFilter === null && (
-                    <OrgEditorMenuButton
-                      dataDemoId="org-editor-create-employee-action"
-                      onClick={() => {
-                        const [unitId] = contextMenu.unitIds;
-                        if (unitId) {
-                          openCreateEmployeeForUnits([unitId]);
-                        }
-                        setContextMenu(null);
-                      }}
-                    >
-                      <HiOutlineUserPlus />
-                      {t("Create Employee")}
-                    </OrgEditorMenuButton>
-                  )}
-                  <OrgEditorMenuButton
-                    dataDemoId="org-editor-add-staffing-slot-action"
-                    onClick={() => {
-                      const [unitId] = contextMenu.unitIds;
-                      if (unitId) {
-                        setStaffingSlotDialog({ staffingSlotId: null, unitId });
-                      }
-                      setContextMenu(null);
-                    }}
-                  >
-                    <HiOutlineUserPlus />
-                    {t("Add Staffing slot")}
-                  </OrgEditorMenuButton>
+                  {contextMenuSingleUnit &&
+                    can("unit.create", { unitId: contextMenuSingleUnit.id }) && (
+                      <OrgEditorMenuButton
+                        onClick={() => {
+                          const [unitId] = contextMenu.unitIds;
+                          if (unitId) openCreateChildUnit(unitId);
+                          setContextMenu(null);
+                        }}
+                      >
+                        <HiOutlinePlus />
+                        {t("Add child Unit")}
+                      </OrgEditorMenuButton>
+                    )}
+                  {contextMenuSingleUnit &&
+                    can("unit.update", { unitId: contextMenuSingleUnit.id }) && (
+                      <OrgEditorMenuButton
+                        dataDemoId="org-editor-edit-unit-action"
+                        onClick={() => openEditUnit(contextMenuSingleUnit)}
+                      >
+                        <HiOutlinePencilSquare />
+                        {t("Edit Unit")}
+                      </OrgEditorMenuButton>
+                    )}
+                  {contextMenuSingleUnit?.liveFilter === null &&
+                    can("employee.create") &&
+                    can("employee.assignments.update", {
+                      unitId: contextMenuSingleUnit.id,
+                    }) && (
+                      <OrgEditorMenuButton
+                        dataDemoId="org-editor-create-employee-action"
+                        onClick={() => {
+                          const [unitId] = contextMenu.unitIds;
+                          if (unitId) {
+                            openCreateEmployeeForUnits([unitId]);
+                          }
+                          setContextMenu(null);
+                        }}
+                      >
+                        <HiOutlineUserPlus />
+                        {t("Create Employee")}
+                      </OrgEditorMenuButton>
+                    )}
+                  {contextMenuSingleUnit &&
+                    can("staffingSlot.create", { unitId: contextMenuSingleUnit.id }) && (
+                      <OrgEditorMenuButton
+                        dataDemoId="org-editor-add-staffing-slot-action"
+                        onClick={() => {
+                          const [unitId] = contextMenu.unitIds;
+                          if (unitId) {
+                            setStaffingSlotDialog({ staffingSlotId: null, unitId });
+                          }
+                          setContextMenu(null);
+                        }}
+                      >
+                        <HiOutlineUserPlus />
+                        {t("Add Staffing slot")}
+                      </OrgEditorMenuButton>
+                    )}
                 </>
               )}
               <OrgEditorDistributionScopeSubmenu
@@ -6490,28 +6597,32 @@ export const OrgStructureEditorTab = observer(() => {
                 units={editor.units}
               />
               <span className="my-1 h-px bg-border" />
-              <OrgEditorMenuButton
-                onClick={() => {
-                  editor.setUnitsCollapsed(contextMenu.unitIds, true, {
-                    includeDescendants: true,
-                  });
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlineMinus />
-                {t("Collapse")}
-              </OrgEditorMenuButton>
-              <OrgEditorMenuButton
-                onClick={() => {
-                  editor.setUnitsCollapsed(contextMenu.unitIds, false, {
-                    includeDescendants: true,
-                  });
-                  setContextMenu(null);
-                }}
-              >
-                <HiOutlinePlus />
-                {t("Expand")}
-              </OrgEditorMenuButton>
+              {canEditLayout && (
+                <OrgEditorMenuButton
+                  onClick={() => {
+                    editor.setUnitsCollapsed(contextMenu.unitIds, true, {
+                      includeDescendants: true,
+                    });
+                    setContextMenu(null);
+                  }}
+                >
+                  <HiOutlineMinus />
+                  {t("Collapse")}
+                </OrgEditorMenuButton>
+              )}
+              {canEditLayout && (
+                <OrgEditorMenuButton
+                  onClick={() => {
+                    editor.setUnitsCollapsed(contextMenu.unitIds, false, {
+                      includeDescendants: true,
+                    });
+                    setContextMenu(null);
+                  }}
+                >
+                  <HiOutlinePlus />
+                  {t("Expand")}
+                </OrgEditorMenuButton>
+              )}
               <span className="my-1 h-px bg-border" />
               <OrgEditorMenuButton
                 onClick={() => {
@@ -6522,7 +6633,7 @@ export const OrgStructureEditorTab = observer(() => {
                 <HiOutlineDocumentDuplicate />
                 {selectedUnitCount > 1 ? t("Copy Units") : t("Copy")}
               </OrgEditorMenuButton>
-              {contextMenuSingleUnit && (
+              {contextMenuSingleUnit && canExportImage && (
                 <>
                   <span className="my-1 h-px bg-border" />
                   <OrgEditorMenuButton
@@ -6553,6 +6664,10 @@ export const OrgStructureEditorTab = observer(() => {
           >
             <OrgViewToolbar
               activeViewId={store.activeOrgViewId}
+              canCreate={canCreateView}
+              canDelete={canDeleteView}
+              canRename={canUpdateView}
+              canUpdateSettings={canEditLayout}
               settings={viewSettings}
               onSettingsChange={editor.setViewSettings}
               onCreate={store.createOrgView}
@@ -6587,38 +6702,48 @@ export const OrgStructureEditorTab = observer(() => {
                 queryTokens={orgEditorSearchTokens}
                 results={orgEditorSearchResults}
               />
-              <OrgEditorLayoutDirection
-                layoutMode={editor.layoutMode}
-                onSelect={(mode) =>
-                  selectedUnitCount >= 2
-                    ? editor.applyLayoutToUnits(selectedUnitIds, mode)
-                    : editor.applyLayout(mode)
-                }
-              />
-              <OrgEditorToolbarButton
-                ariaLabel={toggleAllUnitsLabel}
-                dataDemoId="org-editor-toggle-all-units-button"
-                onClick={() =>
-                  editor.setUnitsCollapsed(
-                    editor.units.map((unit) => unit.id),
-                    !hasCollapsedUnits,
-                  )
-                }
-                title={toggleAllUnitsLabel}
-              >
-                {hasCollapsedUnits ? <HiOutlineArrowsPointingOut /> : <HiOutlineArrowsPointingIn />}
-                <span>{toggleAllUnitsLabel}</span>
-              </OrgEditorToolbarButton>
+              {canEditLayout && (
+                <OrgEditorLayoutDirection
+                  layoutMode={editor.layoutMode}
+                  onSelect={(mode) =>
+                    selectedUnitCount >= 2
+                      ? editor.applyLayoutToUnits(selectedUnitIds, mode)
+                      : editor.applyLayout(mode)
+                  }
+                />
+              )}
+              {canEditLayout && (
+                <OrgEditorToolbarButton
+                  ariaLabel={toggleAllUnitsLabel}
+                  dataDemoId="org-editor-toggle-all-units-button"
+                  onClick={() =>
+                    editor.setUnitsCollapsed(
+                      editor.units.map((unit) => unit.id),
+                      !hasCollapsedUnits,
+                    )
+                  }
+                  title={toggleAllUnitsLabel}
+                >
+                  {hasCollapsedUnits ? (
+                    <HiOutlineArrowsPointingOut />
+                  ) : (
+                    <HiOutlineArrowsPointingIn />
+                  )}
+                  <span>{toggleAllUnitsLabel}</span>
+                </OrgEditorToolbarButton>
+              )}
             </>
           )}
-          <OrgEditorToolbarButton
-            dataDemoId="org-editor-view-image-export-action"
-            onClick={() => setViewImageExportOpen(true)}
-            title={t("Export View image")}
-          >
-            <HiOutlineArrowDownTray />
-            <span>{t("Export image")}</span>
-          </OrgEditorToolbarButton>
+          {canExportImage && (
+            <OrgEditorToolbarButton
+              dataDemoId="org-editor-view-image-export-action"
+              onClick={() => setViewImageExportOpen(true)}
+              title={t("Export View image")}
+            >
+              <HiOutlineArrowDownTray />
+              <span>{t("Export image")}</span>
+            </OrgEditorToolbarButton>
+          )}
         </div>
 
         <div
@@ -6702,32 +6827,34 @@ export const OrgStructureEditorTab = observer(() => {
                 {canvasToolError}
               </p>
             )}
-            <OrgEditorCanvasToolbar
-              activeTool={activeCanvasTool}
-              editingTextDraft={editingCanvasRichTextDraft}
-              onImage={() => {
-                imageInputRef.current?.click();
-                setActiveCanvasTool("select");
-              }}
-              onPropertyInteractionStart={() => {
-                editingCanvasPropertyInteractionRef.current = true;
-              }}
-              onToolChange={(tool) => {
-                if (editingCanvasElementIdRef.current) finishCanvasTextEditing();
-                if (tool !== "select") editor.clearSelection();
-                setCanvasAnchorHoverScreenPoint(null);
-                setContextMenu(null);
-                setActiveCanvasTool(tool);
-                setCanvasToolError(null);
-              }}
-              onTextTypographyChange={updateCanvasTextTypography}
-              onUpdate={(update) =>
-                editor.updateCanvasElements(selectedCanvasElementIds, (element) =>
-                  fitCanvasTextElementHeight(update(element)),
-                )
-              }
-              selectedElements={selectedCanvasElements}
-            />
+            {canEditLayout && (
+              <OrgEditorCanvasToolbar
+                activeTool={activeCanvasTool}
+                editingTextDraft={editingCanvasRichTextDraft}
+                onImage={() => {
+                  imageInputRef.current?.click();
+                  setActiveCanvasTool("select");
+                }}
+                onPropertyInteractionStart={() => {
+                  editingCanvasPropertyInteractionRef.current = true;
+                }}
+                onToolChange={(tool) => {
+                  if (editingCanvasElementIdRef.current) finishCanvasTextEditing();
+                  if (tool !== "select") editor.clearSelection();
+                  setCanvasAnchorHoverScreenPoint(null);
+                  setContextMenu(null);
+                  setActiveCanvasTool(tool);
+                  setCanvasToolError(null);
+                }}
+                onTextTypographyChange={updateCanvasTextTypography}
+                onUpdate={(update) =>
+                  editor.updateCanvasElements(selectedCanvasElementIds, (element) =>
+                    fitCanvasTextElementHeight(update(element)),
+                  )
+                }
+                selectedElements={selectedCanvasElements}
+              />
+            )}
           </div>
         </div>
         <input
@@ -6806,6 +6933,34 @@ export const OrgStructureEditorTab = observer(() => {
       )}
       {employeeDialogState && (
         <EmployeeDialog
+          canAssignTags={
+            employeeDialogState.contextUnitId
+              ? can("tag.assign", {
+                  employeeId: employeeDialogState.employee?.id ?? null,
+                  unitId: employeeDialogState.contextUnitId,
+                })
+              : can("tag.assign", { employeeId: employeeDialogState.employee?.id ?? null })
+          }
+          canEditAssignments={
+            employeeDialogState.contextUnitId
+              ? can("employee.assignments.update", {
+                  employeeId: employeeDialogState.employee?.id ?? null,
+                  unitId: employeeDialogState.contextUnitId,
+                })
+              : can("employee.assignments.update", {
+                  employeeId: employeeDialogState.employee?.id ?? null,
+                })
+          }
+          canEditFields={
+            employeeDialogState.employee
+              ? employeeDialogState.contextUnitId
+                ? can("employee.update", {
+                    employeeId: employeeDialogState.employee.id,
+                    unitId: employeeDialogState.contextUnitId,
+                  })
+                : can("employee.update", { employeeId: employeeDialogState.employee.id })
+              : true
+          }
           employee={employeeDialogState.employee}
           initialUnitIds={employeeDialogState.initialUnitIds}
           mode="editor"

@@ -179,7 +179,8 @@ const isActiveTab = (value: unknown): value is UiActiveTab =>
   value === "employees" ||
   value === "orgEditor" ||
   value === "export" ||
-  value === "calendar";
+  value === "calendar" ||
+  value === "administration";
 const isLayoutMode = (value: unknown): value is OrgEditorLayoutMode =>
   value === "leftRight" || value === "topDown";
 

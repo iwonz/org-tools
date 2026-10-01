@@ -5,7 +5,7 @@ import { expect, type Page } from "@playwright/test";
 import {
   applyColorPickerDraft,
   expectUsedColorPalette,
-  openImportDialog,
+  replaceStateFromFile,
   syntheticStatePath,
 } from "./helpers.js";
 
@@ -967,16 +967,12 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     ...run,
     typography: { ...run.typography, fontFamily: "Inter", fontWeight: 500 },
   }));
-  const legacyDialog = await openImportDialog(page, {
+  await replaceStateFromFile(page, {
     buffer: Buffer.from(JSON.stringify(legacyState)),
     mimeType: "application/json",
     name: "legacy-editor-typography.json",
   });
-  await expect(legacyDialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
-    "4 Employees",
-  );
-  await legacyDialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(legacyDialog).toBeHidden();
+  await page.reload({ waitUntil: "domcontentloaded" });
   const resolvedLegacyElement = page.locator(`[data-canvas-element-id="${legacyElement.id}"]`);
   await expect(resolvedLegacyElement).toHaveAttribute("data-canvas-font-family", "system-ui");
   await expect(resolvedLegacyElement.locator('span[style*="font-family"]').first()).toHaveCSS(

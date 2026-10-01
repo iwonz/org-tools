@@ -5,7 +5,7 @@ import { expect } from "./browser-test.js";
 import {
   applyColorPickerDraft,
   expectUsedColorPalette,
-  openImportDialog,
+  replaceStateFromFile,
   syntheticStatePath,
 } from "./helpers.js";
 
@@ -67,13 +67,12 @@ export async function exerciseTagGrouping(page: Page) {
     unit.bossEmployeeId = unit === product ? boss.id : null;
     unit.liveFilter = null;
   }
-  const dialog = await openImportDialog(page, {
+  await replaceStateFromFile(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
     name: "synthetic-grouping.json",
   });
-  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   const card = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   const rows = card.locator("[data-org-editor-employee-id]");
@@ -239,13 +238,18 @@ export async function exerciseTagGrouping(page: Page) {
     )
     .toEqual(["Zane Example", "Alex Example", "Blair Example", "Aaron Example"]);
   await page.keyboard.press("Escape");
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  const download = await downloadPromise;
-  const path = await download.path();
-  if (!path) throw new Error("Missing state export");
-  const saved = JSON.parse(await readFile(path, "utf8")) as OrgToolsState;
-  expect(saved.organization.tags.map((tag) => tag.id)).toEqual([alpha, zulu, hidden]);
-  expect(saved.organization.views[0]?.structure.settings.groupByTag).toBe(true);
+  await expect
+    .poll(async () => {
+      const response = await page.request.get("/api/session");
+      if (!response.ok()) return null;
+      const saved = (await response.json()) as {
+        projection: OrgToolsState["organization"];
+      };
+      return {
+        groupByTag: saved.projection.views[0]?.structure.settings.groupByTag,
+        tagIds: saved.projection.tags.map((tag) => tag.id),
+      };
+    })
+    .toEqual({ groupByTag: true, tagIds: [alpha, zulu, hidden] });
   return { groupedOrder, alphabeticalOrder };
 }

@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import type { OrgToolsState } from "@org-tools/types";
+import type { OrgToolsState, SessionBootstrap } from "@org-tools/types";
 import type { Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
-import { openImportDialog, syntheticStatePath } from "./helpers.js";
+import { replaceStateFromFile, syntheticStatePath } from "./helpers.js";
 
 const required = <T>(value: T | null | undefined): T => {
   if (value == null) throw new Error("Missing synthetic value");
@@ -10,20 +10,34 @@ const required = <T>(value: T | null | undefined): T => {
 };
 
 async function importState(page: Page, state: OrgToolsState) {
-  const dialog = await openImportDialog(page, {
+  await replaceStateFromFile(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
     name: "refined-synthetic.json",
   });
-  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await page.reload({ waitUntil: "domcontentloaded" });
 }
 
 export async function exportState(page: Page): Promise<OrgToolsState> {
-  const pending = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  return JSON.parse(await readFile(await (await pending).path(), "utf8")) as OrgToolsState;
+  const response = await page.request.get("/api/session");
+  if (!response.ok()) throw new Error(JSON.stringify(await response.json()));
+  const bootstrap = (await response.json()) as SessionBootstrap;
+  return { organization: bootstrap.projection, ui: bootstrap.ui } as OrgToolsState;
 }
+
+const waitForStructure = async (
+  page: Page,
+  predicate: (structure: OrgToolsState["organization"]["views"][number]["structure"]) => boolean,
+): Promise<OrgToolsState["organization"]["views"][number]["structure"]> => {
+  let structure: OrgToolsState["organization"]["views"][number]["structure"] | null = null;
+  await expect
+    .poll(async () => {
+      structure = required((await exportState(page)).organization.views[0]).structure;
+      return predicate(structure);
+    })
+    .toBe(true);
+  return required<OrgToolsState["organization"]["views"][number]["structure"]>(structure);
+};
 
 export async function exerciseRefinedEditor(page: Page) {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
@@ -129,26 +143,34 @@ export async function exerciseRefinedEditor(page: Page) {
   const before = required((await exportState(page)).organization.views[0]).structure;
   await expect(vertical).toHaveAttribute("aria-pressed", "true");
   await vertical.click();
-  const repeatedVertical = required((await exportState(page)).organization.views[0]).structure;
+  const repeatedVertical = await waitForStructure(
+    page,
+    (structure) => JSON.stringify(structure) !== JSON.stringify(before),
+  );
   expect(repeatedVertical.layoutMode).toBe("topDown");
   expect(repeatedVertical).not.toEqual(before);
   await page.keyboard.press("Control+z");
-  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(before);
+  await waitForStructure(page, (structure) => JSON.stringify(structure) === JSON.stringify(before));
   await page.keyboard.press("Control+Shift+z");
-  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(
-    repeatedVertical,
+  await waitForStructure(
+    page,
+    (structure) => JSON.stringify(structure) === JSON.stringify(repeatedVertical),
   );
   await horizontal.click();
   await expect(horizontal).toHaveAttribute("aria-pressed", "true");
-  const changed = required((await exportState(page)).organization.views[0]).structure;
+  const changed = await waitForStructure(page, (structure) => structure.layoutMode === "leftRight");
   expect(changed.layoutMode).toBe("leftRight");
   await page.keyboard.press("Control+z");
   await expect(vertical).toHaveAttribute("aria-pressed", "true");
-  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(
-    repeatedVertical,
+  await waitForStructure(
+    page,
+    (structure) => JSON.stringify(structure) === JSON.stringify(repeatedVertical),
   );
   await page.keyboard.press("Control+Shift+z");
-  expect(required((await exportState(page)).organization.views[0]).structure).toEqual(changed);
+  await waitForStructure(
+    page,
+    (structure) => JSON.stringify(structure) === JSON.stringify(changed),
+  );
   await page.keyboard.press("Control+z");
 
   await page.evaluate(() => {
@@ -209,17 +231,14 @@ export async function exercisePointerTagSorting(page: Page) {
     await page.mouse.down();
     return bounds;
   };
-  // Observe logical writes in either runtime without exposing a production testing API.
-  await page.evaluate(() => {
-    const originalPost = BroadcastChannel.prototype.postMessage;
-    Reflect.set(window, "__tagWrites", 0);
-    BroadcastChannel.prototype.postMessage = function (value) {
-      if (value?.type === "state")
-        Reflect.set(window, "__tagWrites", Number(Reflect.get(window, "__tagWrites")) + 1);
-      originalPost.call(this, value);
-    };
-  });
-  const writes = () => page.evaluate(() => Number(Reflect.get(window, "__tagWrites")));
+  let organizationWrites = 0;
+  const observeWrite = (request: { method(): string; url(): string }) => {
+    if (request.method() === "POST" && request.url().endsWith("/api/commands")) {
+      organizationWrites += 1;
+    }
+  };
+  page.on("request", observeWrite);
+  const writes = async () => organizationWrites;
   const first = await start();
   await page.mouse.move(first.x + 14, first.y + 13);
   await expect(overlay).toHaveCount(0);
@@ -345,4 +364,5 @@ export async function exercisePointerTagSorting(page: Page) {
     original[1],
     ...original.slice(3),
   ]);
+  page.off("request", observeWrite);
 }

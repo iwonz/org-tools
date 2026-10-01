@@ -1,75 +1,47 @@
 # Contributing
 
-Thank you for improving org-tools. Contributions must preserve its browser-and-loopback privacy
-boundary, synthetic public data, English public artifacts, and accessible component conventions.
+Contributions must preserve the self-hosted privacy boundary, server-enforced access control,
+synthetic public data, English engineering artifacts, six complete product catalogs, and accessible
+UI conventions.
 
-## Prepare a change
+## Prepare
 
-1. Install Node.js 22.13 or newer and the pnpm version declared in `package.json`.
-2. Run `pnpm install --frozen-lockfile`.
-3. Fetch `origin`, switch to `main`, update it without rewriting history, and verify that the
-   worktree is clean, local `main` matches `origin/main`, and no unrelated OpenSpec change is active.
-4. Create `change/<short-kebab-name>`, then create the matching OpenSpec change with
-   `pnpm spec -- new change <short-kebab-name>`.
-5. Complete and read the proposal, design, capability deltas, and task list before implementation.
-   Keep them current as implementation decisions change.
+1. Install Docker and Git.
+2. Fetch `origin`, update clean `main`, and confirm no unrelated OpenSpec change is active.
+3. Run `./bin/org-tools env init` and `./bin/org-tools dev -d`.
+4. Create `change/<short-kebab-name>` and the matching change with
+   `./bin/org-tools run pnpm spec -- new change <short-kebab-name>`.
+5. Complete and read proposal, design, delta specs, and tasks before implementation.
 
-Generated Codex workflows are available under `.codex/skills/` for proposing, applying, syncing,
-and archiving OpenSpec changes. Run every OpenSpec command through `pnpm spec -- ...`; the wrapper
-disables the CLI's anonymous telemetry for this repository.
+Never commit `.env`, local paths, secrets, PostgreSQL data, SQLite files, dumps, backups, exported
+organization data, or real identities. New persistence changes require checked SQL migrations;
+application code may not create or alter schema. Every protected workflow needs direct API tests in
+addition to UI gates.
 
-## Implementation rules
+## Validate
 
-- Keep each change focused and update user or architecture documentation with the code.
-- Reuse shared Employee and Unit components, derived indexes, and store operations.
-- Persist organization state only through the prepared-statement singleton SQLite repository behind
-  the loopback same-origin API. Browser-only state stays in live tab memory. Keep Import, Export,
-  and tab synchronization entirely local.
-- Use synthetic fixtures with reserved domains and phone ranges. Do not submit real names, contact
-  details, local filesystem paths, access tokens, or exported organization data.
-- Avoid adding dependencies unless they materially reduce complexity. Explain new runtime
-  dependencies in the OpenSpec design.
-- Add tests for behavior changes and accessible names for user controls.
-
-## Complete the change
-
-Finish every task and run the complete validation cycle:
+Run through the toolbox:
 
 ```sh
-pnpm format
-pnpm lint
-pnpm typecheck
-pnpm test:unit
-pnpm dev:check
-pnpm build
-pnpm test:browser
-pnpm screenshots:generate
-pnpm pages:build
-pnpm pages:check
-pnpm public:check
-pnpm spec:validate
-git diff --check
+./bin/org-tools run pnpm format
+./bin/org-tools run pnpm lint
+./bin/org-tools run pnpm typecheck
+./bin/org-tools run pnpm test:unit
+./bin/org-tools run pnpm dev:check
+./bin/org-tools run pnpm build
+./bin/org-tools run pnpm test:browser
+./bin/org-tools run pnpm screenshots:generate
+./bin/org-tools run pnpm public:check
+./bin/org-tools run pnpm spec:validate
 ```
 
-Inspect every generated PNG, regenerate the gallery, and compare hashes to confirm deterministic
-output. Formatting is an explicit mutation, so review its diff. Synchronize completed delta specs,
-archive the OpenSpec change, validate strictly again, and confirm `pnpm spec -- list --json` reports
-no active changes.
+Also test migrations from empty PostgreSQL, restart, Backup/Restore, the non-root production image,
+and external bind persistence. Generate the 56 PNG gallery twice, compare SHA-256, and inspect every
+frame. Sync and archive OpenSpec before integration.
 
-## Integrate and publish
+## Publish
 
-Create meaningful commits that keep the implementation, tests, documentation, generated screenshots,
-canonical specs, and archived change together. Update `main` from `origin/main`, merge the short-lived
-branch, and push `main` without rewriting shared history. Delete the merged change branch and its
-remote counterpart if one was published.
-
-Delivery is complete only when `HEAD`, local `main`, and `origin/main` agree, the worktree is clean,
-no change-branch commit remains unique, and OpenSpec has no active changes. Do not delete unknown or
-unmerged work. If publication was explicitly forbidden or an external service blocks it, preserve
-the safest clean local state and report the exact remaining integration.
-
-The GitHub Pages site is the functional browser-only application. Its static artifact contains no
-SQLite backend or state API; organization data stays in live tab memory and explicit downloads.
-After the change is merged and pushed, an authorized maintainer may run `pnpm pages:publish` from
-clean synchronized `main`; the command configures the Actions publishing source and manually
-dispatches the least-privilege Pages workflow.
+Merge the completed branch into fresh `main` and push without rewriting history. Release Please
+creates the SemVer release PR and GitHub Release. The container workflow publishes public multi-arch
+GHCR tags with SBOM and provenance. Delivery is complete after refs are clean and equal, the branch
+is removed, OpenSpec has no active change, and release/image checks pass.

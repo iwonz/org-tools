@@ -4,10 +4,12 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "node ../../scripts/start-development.mjs",
-    "build": "next build --webpack",
-    "lint": "biome check src next.config.ts postcss.config.mjs components.json package.json tsconfig.json",
-    "start": "next start --hostname 127.0.0.1",
+    "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --webpack --hostname 0.0.0.0 --port 3000",
+    "build": "NEXT_TELEMETRY_DISABLED=1 next build --webpack",
+    "lint": "biome check src scripts migrations next.config.ts postcss.config.mjs components.json package.json tsconfig.json",
+    "migrate": "node scripts/migrate-postgres.mjs",
+    "recovery:super-admin": "node scripts/recover-super-admin.mjs",
+    "start": "next start --hostname 0.0.0.0 --port 3000",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -36,6 +38,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@tanstack/react-virtual": "^3.13.26",
+    "argon2": "^0.45.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "mdast-util-from-markdown": "^2.0.3",
@@ -46,6 +49,7 @@
     "next": "^16.2.6",
     "next-intl": "^4.13.4",
     "next-themes": "^0.4.6",
+    "pg": "^8.23.0",
     "react": "^19.2.6",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.6",
@@ -57,6 +61,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "postcss": "^8.5.15",

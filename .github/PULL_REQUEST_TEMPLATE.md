@@ -2,22 +2,19 @@
 
 Describe the user-visible result and link the OpenSpec change.
 
-## Safety and performance
+## Security, privacy, and performance
 
-- [ ] Organization data remains within the browser and loopback same-origin runtime.
-- [ ] Fixtures and screenshots are synthetic and contain no private paths or contact data.
-- [ ] Large-list and derived-index behavior remains bounded or is covered by measurements.
-- [ ] Documentation and capability specs match the implementation.
+- [ ] Server permissions, scopes, and ACL protect every affected payload and mutation.
+- [ ] Fixtures contain only synthetic data; no `.env`, credential, database, dump, backup, or local path is tracked.
+- [ ] PostgreSQL migrations, projection caching, and large-collection behavior remain bounded.
+- [ ] Documentation, locales, capability specs, DOM, and PNG behavior agree.
 
 ## Validation
 
-- [ ] `pnpm lint`
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test:unit`
-- [ ] `pnpm dev:check`
-- [ ] `pnpm build`
-- [ ] `pnpm pages:build && pnpm pages:check`
-- [ ] `pnpm spec:validate`
-- [ ] `pnpm public:check`
-- [ ] `pnpm test:browser`
-- [ ] PNGs regenerated and inspected when the UI changed
+- [ ] `pnpm format && pnpm lint`
+- [ ] `pnpm typecheck && pnpm test:unit`
+- [ ] `pnpm dev:check && pnpm build && pnpm test:browser`
+- [ ] PostgreSQL migration/restart and Backup/Restore checks
+- [ ] production image, bind storage, and `pnpm public:check`
+- [ ] `pnpm spec:validate && git diff --check`
+- [ ] 56 PNGs generated twice, hashes compared, every frame inspected

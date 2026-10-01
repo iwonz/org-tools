@@ -3,4 +3,5 @@ export * from "./ids.js";
 export * from "./org-editor.js";
 export * from "./org-tools-state.js";
 export * from "./organization.js";
+export * from "./security.js";
 export * from "./ui-org-structure.js";

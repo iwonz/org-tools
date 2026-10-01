@@ -16,7 +16,13 @@ import type { EmployeeCustomFieldFilter, OrganizationEmployee } from "./organiza
 
 export type AppLocale = "ar" | "en" | "es" | "fr" | "ru" | "zh";
 export type UiTheme = "light" | "dark" | "system";
-export type UiActiveTab = "units" | "employees" | "orgEditor" | "export" | "calendar";
+export type UiActiveTab =
+  | "units"
+  | "employees"
+  | "orgEditor"
+  | "export"
+  | "calendar"
+  | "administration";
 
 export type EmployeeDisplayFormats = {
   editor: string;

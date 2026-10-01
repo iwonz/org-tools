@@ -15,23 +15,6 @@ validation, and archived capability specifications.
 - **WHEN** a contributor runs OpenSpec through `pnpm spec -- ...`
 - **THEN** the repository wrapper applies the CLI's documented telemetry opt-out variables
 
-### Requirement: Package-manager startup is reproducible
-The repository SHALL declare exact pnpm 11.24.0 selection through `packageManager`, SHALL keep local
-and CI commands aligned with that declaration, and SHALL allow a Corepack-selected matching pnpm to
-run `pnpm dev` without a package-manager version-policy failure.
-
-#### Scenario: Corepack development startup
-- **WHEN** Corepack invokes pnpm 11.24.0 from the repository root and a contributor runs `pnpm dev`
-- **THEN** package-manager validation succeeds and the documented development launcher starts
-
-#### Scenario: Frozen dependency graph
-- **WHEN** pnpm 11.24.0 validates or installs the repository with the frozen lockfile
-- **THEN** it accepts the committed dependency graph without an unrelated resolution rewrite
-
-#### Scenario: CI package-manager selection
-- **WHEN** GitHub automation installs the package manager declared by the repository
-- **THEN** it selects pnpm 11.24.0 before dependency installation and repository commands
-
 ### Requirement: Repository changes complete one closed delivery lifecycle
 Every repository change MUST begin from a clean current default branch, proceed through one isolated
 OpenSpec change, and finish integrated, published when allowed, archived, validated, and free of
@@ -68,175 +51,6 @@ dangling work.
   push
 - **THEN** the contributor preserves the safest clean local state and reports the exact incomplete
   integration instead of claiming that the delivery lifecycle is complete
-
-### Requirement: Local runtime and database artifacts are publication-safe
-The repository SHALL build and test a Node.js 22.13+ Next.js server that binds to loopback and uses a
-configurable ignored singleton SQLite file. Runtime databases, rollback journals, WAL files,
-shared-memory files, local configuration, build output, and test databases SHALL NOT enter the
-tracked or staged publication set. The public-safety scan SHALL inspect production output and reject
-tracked database artifacts, local paths, organization data, obsolete project routes, and secrets.
-
-#### Scenario: Production build and start
-- **WHEN** contributors run documented build and start commands
-- **THEN** the server renders one state at `/` and exposes only the same-origin singleton state API
-
-#### Scenario: Default database remains untracked
-- **WHEN** the application creates its default database or transient journal
-- **THEN** Git status and staged publication remain unchanged
-
-#### Scenario: Tracked database scan
-- **WHEN** publication checks encounter a database, journal, WAL, shared-memory file, or local
-  database configuration in tracked files
-- **THEN** validation fails before publication
-
-### Requirement: Documentation and automation are publication-ready
-The repository SHALL document stable UUID Employee identity, normalized duplicate detection,
-State/Employees transfer, the system and isolated custom Editor Views, local runtimes, privacy, and
-scale behavior. It SHALL include an
-English README with exactly nine deterministic featured screenshot previews, a comprehensive grouped
-screenshot catalog, contributor and security guidance, license, tests, specifications, detailed
-documentation, CI, and generated PNGs. Non-English product copy SHALL live only in its corresponding
-locale catalog; source, comments, fixtures, tests, specifications, and documentation SHALL remain
-English. The public state contract SHALL be unversioned, current-only,
-complete, and validated without discriminators, partial scopes, legacy migration, project metadata,
-or compatibility readers. Employee mapping is supported only by the explicit Employee transfer mode.
-
-#### Scenario: README visual showcase
-- **WHEN** a visitor opens README
-- **THEN** exactly one full-size Import, Export, theme, language, Teams, Employees, Editor, Calendar, and Download preview is linked locally
-
-#### Scenario: Complete visual capability catalog
-- **WHEN** a visitor opens the detailed screenshot guide
-- **THEN** the 56-frame gallery contains nine featured workflows and only currently visible supporting
-  behavior, without project, file, Save, autosave, or obsolete conflict frames
-
-#### Scenario: Continuous validation
-- **WHEN** CI runs on a clean checkout
-- **THEN** locale completeness, singleton repository/API, tab synchronization, automatic writes,
-  frame-coalesced Editor interaction, complete state transfer, both builds, browser suites,
-  screenshots, OpenSpec, and public-safety checks pass against isolated synthetic state
-
-#### Scenario: Current-schema policy
-- **WHEN** the state and Employee transfer contracts change
-- **THEN** old View shapes, digest Employee IDs, inline Tags, obsolete custom/output state, fixtures,
-  docs, and tests are removed together
-
-#### Scenario: Large transfer validation
-- **WHEN** performance coverage maps and reviews 20,000 Employees
-- **THEN** it verifies linear derivation, sparse overrides, virtualized rows, and one atomic Apply
-
-#### Scenario: Screenshot generation
-- **WHEN** screenshot generation runs against both production runtimes
-- **THEN** it deterministically replaces exactly 56 declared PNGs, including nine featured frames
-
-#### Scenario: Screenshot manifest consistency
-- **WHEN** generation or publication checks inspect the gallery
-- **THEN** identifiers and filenames are unique, featured and guide links match the manifest, and
-  removed persistence images are absent
-
-#### Scenario: Publication language scan
-- **WHEN** public-safety checks scan tracked source and production output
-- **THEN** non-English product copy outside its corresponding locale catalog fails validation
-
-#### Scenario: Large Editor interaction validation
-- **WHEN** automated performance coverage prepares 20,000 Employees and 4,000 Units
-- **THEN** pan and Unit drag preview produce no durable writes before completion, one final logical
-  write after completion, and no per-event full Unit visibility scan
-
-### Requirement: Development startup has a bounded functional probe
-The repository SHALL provide a development smoke command that starts the loopback Next.js entry
-point with an isolated singleton SQLite database, excludes runtime and diagnostic directories from
-watching, verifies `/`, `GET /api/state`, the rendered shell, and Editor canvas, and always terminates
-owned browser and server processes.
-
-#### Scenario: Healthy development server
-- **WHEN** `pnpm dev:check` runs with a free loopback port and Chromium
-- **THEN** root remains `/`, the singleton API returns valid state, the Editor is interactive, and
-  temporary runtime state is removed
-
-#### Scenario: Runtime database write
-- **WHEN** automatic persistence writes below `.org-tools`
-- **THEN** the development compiler does not rebuild application modules for that runtime-only change
-
-#### Scenario: Browser diagnostic write
-- **WHEN** a smoke tool writes below `.playwright-cli`
-- **THEN** the development compiler does not rebuild application modules for that diagnostic-only
-  change
-
-#### Scenario: Interactive cold start
-- **WHEN** `pnpm dev` starts against an empty or existing singleton database
-- **THEN** it reports ready only after root and state API compilation and initialization complete
-
-#### Scenario: Development startup failure
-- **WHEN** startup, SQLite, compilation, API, or browser rendering misses its deadline
-- **THEN** owned processes and temporary state are cleaned and the command exits unsuccessfully with
-  bounded diagnostics
-
-### Requirement: Repository validation includes the static browser application
-The repository SHALL provide development, static build, inspection, browser-test, and guarded
-publication commands for the ignored GitHub Pages artifact.
-
-#### Scenario: Build Pages application
-- **WHEN** `pnpm pages:build` runs
-- **THEN** it replaces `pages-out` with the static `/org-tools/` application and `.nojekyll`
-
-#### Scenario: Validate Pages application
-- **WHEN** Pages and publication checks inspect the artifact
-- **THEN** they reject server modules, singleton API references, project routes, secrets, local paths,
-  organization fixtures, file persistence code, missing assets, and an incorrect base path
-
-#### Scenario: Continuous browser validation
-- **WHEN** CI runs on a clean checkout
-- **THEN** it builds and tests the SQLite and memory-only static runtimes before publication
-
-### Requirement: Development launcher observes the complete child lifecycle
-The development launcher SHALL observe Next.js completion from spawn onward and reuse that result
-through warmup, normal running, and shutdown. It SHALL cancel pending probes and delays on child
-completion, startup deadline, or interruption, and SHALL NOT report a terminated child as ready or
-wait for an already-emitted event. Diagnostics SHALL remain bounded and local.
-
-#### Scenario: Child exits during warmup
-- **WHEN** Next.js exits before readiness, including after responding to the state API during the settling delay
-- **THEN** the launcher reports startup failure with the child exit detail, exits unsuccessfully, and emits neither readiness nor an unsettled top-level await warning
-
-#### Scenario: Child exits after readiness
-- **WHEN** a running Next.js process exits
-- **THEN** the launcher completes promptly with its numeric exit code or an unsuccessful signal result, without an unsettled top-level await warning
-
-#### Scenario: Child fails to spawn
-- **WHEN** the child process emits a spawn error
-- **THEN** the launcher reveals bounded diagnostics and terminates unsuccessfully without an unhandled error or unresolved completion waiter
-
-#### Scenario: Contributor interrupts the launcher
-- **WHEN** the launcher receives SIGINT or SIGTERM during probing or normal operation
-- **THEN** it cancels startup work, stops its owned child with bounded escalation, and terminates cleanly
-
-### Requirement: Development instances can be stopped by checkout
-The repository SHALL provide `pnpm dev-stop` on macOS and Linux to stop running server and Pages
-development instances of the current checkout, including instances started before the command was
-added and instances using different ports. Ownership SHALL require matching checkout paths and a
-development command, then follow the owned descendant process tree. Production servers, other
-checkouts, unrelated Node processes, and arbitrary port listeners MUST remain running.
-
-#### Scenario: Stop multiple development instances
-- **WHEN** a contributor runs `pnpm dev-stop` while this checkout has server and Pages development instances
-- **THEN** all discovered development trees receive graceful shutdown and the command waits for completion
-
-#### Scenario: Repeat a stop
-- **WHEN** no matching development instances remain
-- **THEN** `pnpm dev-stop` reports that nothing is running and exits successfully
-
-#### Scenario: A child survives graceful shutdown
-- **WHEN** an owned development worker remains after its parent stops or ignores termination
-- **THEN** the command revalidates its observed process identity, applies bounded escalation, and verifies termination
-
-#### Scenario: An unrelated process shares a name or port
-- **WHEN** another checkout, a production server, or an unrelated process resembles a development instance
-- **THEN** it receives no signal and its files are unchanged
-
-#### Scenario: Discovery or termination fails
-- **WHEN** the platform is unsupported, process inspection fails, permissions deny a signal, or verified processes remain
-- **THEN** the command exits unsuccessfully with bounded local diagnostics and never broadens its ownership rules
 
 ### Requirement: Browser validation fails on unexpected runtime diagnostics
 Development and production browser validation SHALL monitor every owned page for console errors and
@@ -541,28 +355,6 @@ previews, image validation, both production runtimes, and full/scoped PNG output
 - **WHEN** pointer preview or anchor snapping runs in a large Editor with canvas elements
 - **THEN** it examines bounded nearby spatial candidates, updates only the affected dependency closure, and performs no persistent write until one final commit
 
-### Requirement: Strict State changes prepare the configured local database before publication
-A repository change that replaces the exact State shape SHALL inspect the configured owned SQLite
-snapshot before integration. If that snapshot uses the immediately previous valid shape, delivery
-SHALL stop owned processes, retain an ignored timestamped database-family backup, run a guarded
-offline conversion, validate the candidate and committed state with the production parser, and prove
-normal startup. The converter and all database artifacts MUST remain outside Git. If no conversion is
-applicable, the change SHALL record that the database is absent or already current.
-
-#### Scenario: Deliver an additive required field
-- **WHEN** a release makes a new field mandatory in every current View or record
-- **THEN** its validation checklist includes the configured database readiness result and the local server starts on that database before merge and push
-
-#### Scenario: Keep compatibility out of runtime
-- **WHEN** the prior owned snapshot needs conversion
-- **THEN** the one-time operation runs offline without weakening current State Import, SQLite startup, or live-peer validation
-
-#### Scenario: Refuse an unsafe conversion
-- **WHEN** the snapshot does not match the converter's exact expected source shape or preservation checks fail
-- **THEN** delivery stops without publishing a claimed-successful change or mutating the authoritative state
-
-
-
 ### Requirement: Browser and gallery checks cover organization color reuse and refined tool glyphs
 
 Automated Server and Pages checks SHALL verify Used colors across every remaining shared picker consumer, including inactive-View sources, alpha variants, atomic Apply/Cancel behavior, keyboard operation, narrow width, and RTL. The maintained deterministic gallery SHALL show the Used colors section and refined Arrow and Image icons without increasing its 56 scenarios.
@@ -681,3 +473,31 @@ Repository validation SHALL cover one-line and two-line Unit summaries, Employee
 #### Scenario: Regenerate maintained screenshots
 - **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
 - **THEN** every PNG passes visual review and both SHA-256 manifests are identical
+
+### Requirement: Container tooling is reproducible
+The development and CI toolbox SHALL pin Node, pnpm, PostgreSQL, browser, and OpenSpec versions through
+tracked image and lock inputs. Every documented format, lint, typecheck, unit, integration, browser,
+screenshot, build, migration, specification, and publication command SHALL run through Compose on a
+host with Docker and Git only.
+
+#### Scenario: Validate a clean checkout
+- **WHEN** a contributor initializes `.env` and runs the documented Compose validation entry point
+- **THEN** the pinned toolbox executes the complete repository checks without host Node or pnpm
+
+### Requirement: Server and image validation replace Pages validation
+CI SHALL start ephemeral PostgreSQL, run checked migrations, exercise Setup/Login and representative
+roles, build the hardened server image, run both unit and browser suites, generate exactly 56 server
+PNGs twice, compare hashes, and scan tracked files, build context, image layers, and runtime resources.
+
+#### Scenario: Continuous validation
+- **WHEN** CI runs for a pull request
+- **THEN** all server, authorization, PostgreSQL, image, locale, gallery, performance, OpenSpec, and publication-safety checks pass without publishing an image
+
+### Requirement: Release automation is part of the closed lifecycle
+The delivery lifecycle SHALL include Release Please configuration, a passing release PR, public GHCR
+multi-platform publication, SBOM and provenance verification, and an anonymous pull check for a
+stable release. Publication failure SHALL be reported without claiming the lifecycle is complete.
+
+#### Scenario: Deliver the first stable release
+- **WHEN** the archived implementation reaches synchronized `main`
+- **THEN** the generated `v1.0.0` release PR is verified and merged and its GitHub Release and public image tags are confirmed

@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+image=${1:-org-tools:ci}
+temporary_container="org-tools-image-check-$$"
+temporary_root=$(mktemp -d)
+cleanup() {
+  docker rm -f "$temporary_container" >/dev/null 2>&1 || true
+  rm -rf "$temporary_root"
+}
+trap cleanup EXIT INT TERM
+
+[ "$(docker image inspect "$image" --format '{{.Config.User}}')" = "10001:10001" ]
+docker image inspect "$image" --format '{{json .Config.Env}}' >"$temporary_root/environment.json"
+docker history --no-trunc "$image" >"$temporary_root/history.txt"
+if grep -E 'ORG_TOOLS_SETUP_TOKEN=|POSTGRES_PASSWORD=|ORG_TOOLS_DB_PASSWORD=' \
+  "$temporary_root/environment.json" "$temporary_root/history.txt"; then
+  echo "Production image metadata contains a deployment credential." >&2
+  exit 1
+fi
+
+docker create --name "$temporary_container" "$image" >/dev/null
+docker export "$temporary_container" >"$temporary_root/rootfs.tar"
+if tar -tf "$temporary_root/rootfs.tar" | grep -E '(^|/)(\.env|\.git|test-results|playwright-report|[^/]*\.(sqlite3?|dump|org-tools-backup))($|/)' >/dev/null; then
+  echo "Production image filesystem contains local configuration, VCS, test, or database data." >&2
+  exit 1
+fi
+
+echo "Production image metadata and filesystem are clean."

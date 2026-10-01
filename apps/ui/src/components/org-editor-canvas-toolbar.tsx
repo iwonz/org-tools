@@ -214,10 +214,8 @@ export function OrgEditorCanvasToolbar({
           {textElement && (
             <>
               <Select
-                {...(selectedTextTypography?.fontFamily
-                  ? { value: selectedTextTypography.fontFamily }
-                  : {})}
                 onValueChange={(fontFamily) => updateTextTypography({ fontFamily })}
+                value={selectedTextTypography?.fontFamily ?? ""}
               >
                 <SelectTrigger
                   aria-label={t("Font")}

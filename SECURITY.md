@@ -2,24 +2,25 @@
 
 ## Reporting a vulnerability
 
-Please use GitHub private vulnerability reporting for the `iwonz/org-tools` repository. Do not put
-personal information, organization state files, screenshots of real organizations, or exploit
-details in a public issue.
-
-Include the affected revision, a minimal synthetic reproduction, expected impact, and any known
-mitigation. Maintainers will acknowledge a complete report as soon as practical and coordinate a
-fix and disclosure timeline with the reporter.
+Use GitHub private vulnerability reporting for `iwonz/org-tools`. Do not publish personal data,
+organization exports, credentials, database material, backup files, screenshots of real
+organizations, or exploit details in an issue. Include the affected version, a synthetic minimal
+reproduction, impact, and known mitigation.
 
 ## Security boundary
 
-org-tools is a local Next.js application with SQLite persistence. Its runtime binds only to
-`127.0.0.1`, exposes only a same-origin project API, and has no authentication, telemetry, remote
-synchronization, or remote organization-data API. The principal risks are unsafe local file
-parsing, cross-origin local mutations, executable or oversized embedded values, accidental external
-requests, formula-like spreadsheet output, and publication of a local database or non-synthetic
-fixtures.
+Org Tools is a self-hosted multi-account application. PostgreSQL is private to the deployment and
+all browser access passes through the same-origin server. Authentication uses Argon2id passwords,
+hashed opaque sessions, bounded expiry and rate limiting. Mutations require CSRF, exact Origin,
+Fetch Metadata, and JSON. Authorization combines permissions/scopes with resource ACL and filters
+responses before serialization. UI hiding is never treated as enforcement.
 
-Security fixes must preserve strict state validation, bounded file and avatar handling, explicit
-external navigation, prepared SQL, loopback Host and Origin checks, output escaping, and
-same-origin-only background traffic. See
-[Privacy](docs/privacy.md) for the maintained data-flow boundary.
+Production deployments must use HTTPS through a reverse proxy, protect `.env` and external storage
+paths, keep PostgreSQL off public networks, and retain tested encrypted backups. The application
+does not provide MFA, SSO, SCIM, or email password reset in v1; use the local interactive Super
+Administrator recovery command when necessary.
+
+Security changes must preserve generic login and inaccessible-resource responses, strict bounded
+parsers, prepared SQL, migration checksums, audit secret redaction, session revocation, filtered
+Download/PNG output, local assets, and publication scans. See [Privacy](docs/privacy.md) and
+[Architecture](docs/architecture.md).

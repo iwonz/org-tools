@@ -28,28 +28,6 @@ format tokens remain English.
 - **WHEN** sentence-style typed UI IDs contain period characters
 - **THEN** provider initialization and runtime lookup succeed in every locale without a console error
 
-### Requirement: Locale is detected and persisted locally
-The application SHALL use a valid saved six-locale bootstrap preference, otherwise select the first
-supported browser language and fall back to English. Browser detection SHALL initialize only a new
-state; an existing SQLite state, imported state, live-peer state, or explicit saved choice SHALL be
-authoritative. Only that bounded locale metadata MAY persist outside organization state.
-
-#### Scenario: First supported browser load
-- **WHEN** no valid state or preference exists and browser languages contain a supported language
-- **THEN** the blank state starts in the first supported language and stores the bounded preference
-
-#### Scenario: Unsupported browser locale
-- **WHEN** no valid preference exists and browser languages contain no supported language
-- **THEN** the blank state starts in English
-
-#### Scenario: Loaded state locale
-- **WHEN** SQLite, Import, or a live peer supplies a valid state locale
-- **THEN** that locale overrides bootstrap metadata and updates the rendered interface
-
-#### Scenario: Unavailable local storage
-- **WHEN** reading or writing the locale preference throws
-- **THEN** the active in-memory state locale and application remain usable
-
 ### Requirement: Users can switch locale without routing
 The application SHALL provide a language sidebar action immediately before theme that opens a
 compact modal with all six choices. Each row SHALL show a localized language name and its autonym
@@ -80,15 +58,6 @@ user-authored data. Runtime error codes SHALL map to catalog entries and raw mes
 - **WHEN** browser tests select each locale and open representative menus, dialogs, empty states,
   errors, and accessibility surfaces
 - **THEN** no untranslated key, raw internal error, or unexpected fallback product copy is visible
-
-### Requirement: Employee transfer is completely localized
-All six bundled locales SHALL provide matching non-empty messages for Import tabs, source mapping,
-Team options, counts, duplicate policies, per-row actions, validation, progress, confirmation, and
-accessibility names. User data and source field paths SHALL remain verbatim.
-
-#### Scenario: Russian Employee Import
-- **WHEN** Russian is active and the user opens every Employee Import step
-- **THEN** all owned visible and accessibility copy is Russian except allowed technical terms and user data
 
 ### Requirement: Structured export is completely localized
 All six bundled locales SHALL provide matching non-empty messages for JSON and Template tabs, Unit and
@@ -292,3 +261,26 @@ placeholders and no obsolete keys.
 #### Scenario: Open Display in every locale
 - **WHEN** the user opens Employee model, selects Display, edits Markdown, changes a gap, or resets a format in any supported locale
 - **THEN** every visible label, validation message, tooltip, and accessible name uses that locale catalog
+
+### Requirement: Locale is available before and after authentication
+Setup and Login SHALL use a valid browser preference or supported browser language and fall back to
+English without persisting credentials or organization data in browser storage. After authentication,
+the selected locale SHALL persist in per-account UI state and update the current session without a
+route or reload.
+
+#### Scenario: Open Login in Arabic
+- **WHEN** an unauthenticated browser prefers Arabic
+- **THEN** Login renders in Arabic RTL without reading organization data or writing an organization snapshot
+
+#### Scenario: Restore an account locale
+- **WHEN** an authenticated account has a saved supported locale
+- **THEN** that locale overrides browser detection and renders its authorized application projection
+
+### Requirement: Security and deployment workflows are completely localized
+All six catalogs SHALL include complete Setup, Login, forced-password, account-menu, Users, Roles,
+Access, Audit, Backup, Restore, permission, policy, session, PostgreSQL readiness, and validation copy.
+Raw security, parser, filesystem, database, and crypto errors MUST NOT render.
+
+#### Scenario: Exercise Administration in every locale
+- **WHEN** browser coverage opens representative authentication and Administration workflows in each supported locale
+- **THEN** every visible label, status, error, accessibility name, plural, date, and destructive warning is localized

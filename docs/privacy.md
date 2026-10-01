@@ -1,132 +1,50 @@
 # Privacy and data safety
 
-Org Tools is local-only. It has no accounts, telemetry, analytics SDK, remote logging, remote
-synchronization, remote database, or background network request.
+## Data boundary
 
-## Data boundaries
+Org Tools is self-hosted. Browsers communicate only with the configured same-origin server;
+PostgreSQL and the backup directory are deployment-owned. The runtime has no telemetry, analytics
+SDK, remote logging, remote sync, remote fonts, or remote image fetches. Reverse proxies must keep
+PostgreSQL private and expose only the application over HTTPS.
 
-The static Pages application keeps organization data only in JavaScript memory. Live tabs on the
-same origin may exchange validated state through `BroadcastChannel`; no snapshot enters local
-storage, session storage, IndexedDB, Cache Storage, cookies, or a service worker. After the final tab
-closes, the state is gone. Locale and theme are the only allowed browser metadata.
+The browser does not persist organization snapshots in cookies, local storage, IndexedDB, Cache
+Storage, service workers, or browser files. A session cookie contains only an opaque random token.
+Theme and locale are the only non-sensitive browser preferences outside PostgreSQL.
 
-The local server exchanges data only between the browser and the loopback same-origin runtime.
-SQLite stores one singleton state in the configured local file. The API rejects non-loopback Hosts,
-cross-origin mutations, non-JSON mutations, malformed scopes, and invalid state. It does not enable
-CORS. A failed or corrupt database is reported by a stable code and is never replaced silently.
-Only an explicit confirmed Create new action may replace it: the runtime first closes SQLite and
-retains the database plus any existing sidecars under timestamped backup names. A partial recovery
-restores the original file family.
+## Access boundary
 
-If repository delivery changes the exact State shape, preparation of the configured owned snapshot
-is an offline local operation: owned processes stop, an ignored timestamped database-family backup
-is retained, a detached candidate and committed row pass the production parser, and preservation
-hashes are compared before normal startup is accepted. No organization payload, backup, converter,
-or diagnostic fingerprint leaves the machine or enters Git, and runtime validation remains strict.
+Authorization is enforced before serialization and again before mutation. UI visibility is a
+convenience, not a security control. Unavailable fields and resources are omitted rather than
+replaced with `null`; guessed inaccessible IDs receive the same response as unknown IDs. Search,
+filters, counts, Calendar, labels, Download, and image export consume the same filtered projection.
+Server-side Template evaluation can use hidden inputs without returning them.
 
-Import reads one explicitly selected JSON file into a bounded transient candidate. It may validate a
-complete state (including every View) or map an Employee array with optional nested Team assignments
-into the system View; the source, bounded
-richest-record preview, virtualized source-to-target mapping, pending custom fields, and duplicate choices are discarded when the modal closes. Birthday
-validation is local and accepts only `DD.MM.YYYY`; year `1900` records an unknown year without
-inferring one. Employee UUID creation, duplicate-key normalization, custom Template evaluation, and
-optional MD5 or SHA-256 output all run locally. Employee and Unit-context token scopes, `isBoss`
-condition evaluation, authored format blocks, text wrapping, per-destination outer block gaps, and
-native semantic collection gaps are also computed locally. Multi-option catalogs, user-created choices,
-Composite schemas and records, their validation, and their derived Calendar events remain inside
-the same in-memory or loopback boundary. New custom options remain transient dialog data until the
-complete Employee save succeeds. Employee display formats, line gaps, and their previews resolve
-only the current local catalog and View context. Valid Display edits immediately enter the local
-organization State and its loopback SQLite or live-tab channel; invalid numeric input remains only
-in the mounted control. Image-dialog overrides remain transient until dismissal. Their inline Markdown parser never executes HTML,
-loads images, or interprets Markdown from resolved Employee values. Plain fields, including
-profile, email, position, Unit, and custom values, never create navigation. Only explicit `http`,
-`https`, `mailto`, and `tel` Markdown links can navigate from interactive list cards after a user
-action. The Unit-name portion of `{positions}` can perform local navigation only in Employees and
-Units cards. Fallback cards, Editor, and image links remain inert. Rendering or previewing a format creates no remote lookup. Export
-validates and downloads the complete state only after an explicit user action. Structured JSON field
-ordering, bounded previews, image painting, copying, and downloads all remain in browser memory;
-shared text, Markdown, Tag, assignment, and suffix layout runs locally from the current width,
-locale, direction, and selected local font without font, measurement, or rendering requests;
-the full Tag color palette, independent opacity control, and exact HTML Keyword, HEX, RGB, or RGBA
-parser run locally and persist only semantic names or canonical lowercase six- or eight-digit HEX
-without contacting a palette, color, or asset service. Color and opacity stay in Popover memory until
-Apply; Cancel, Escape, outside dismissal, invalid input, and unchanged Apply discard the draft without
-changing state. Used colors are derived locally from current global Tags and all current View
-documents only while needed; they are not a persisted history and never include clipboard or
-Image-export draft data. Zero-percent color remains a configured eight-digit value distinct from No color.
-Bundled language flags never create network requests. Dragging a field never transmits or
-persists organization data. Custom Views contain references to the same global Employee catalog and
-never duplicate profile or avatar payloads. Organization records are never
-copied to browser storage. Employee avatars must be bounded embedded PNG, JPEG, or WebP data URLs;
-remote avatars are never fetched. Crop encoding prefers WebP and falls back only to the browser's
-local PNG canvas encoder; neither path uploads the source or result. Profile navigation and
-explicit email links require direct user actions and referrer protection.
+Audit records actor, action, result, targets, time, and correlation ID. Passwords, setup/session/
+CSRF tokens, backup passphrases, and hidden values never enter audit or application logs.
 
-Staffing Slots remain inside their owning View and Unit. Their optional names and global Tag
-references use the same complete State, loopback SQLite, and in-memory BroadcastChannel boundaries
-as the rest of the Editor document. Slot rendering performs no remote lookup. Slots are deliberately
-excluded from the global Units projection and every Employee-oriented search, count, filter,
-Calendar, transfer, and data export, so they introduce no new storage or network path.
-Their fixed Slot-first order and translucent Rose surface are derived locally for DOM and Canvas and
-add no persistent color, telemetry, or external asset.
-The empty Unit body height and the eight-pixel header-to-content interval are likewise derived locally
-from shared layout constants. The compact spacing adds no stored setting. Its Edit Unit action or
-Live no-match message never enters State, PNG pixels, clipboard content, or a network request; PNG
-uses only the resulting outer card geometry.
+## Local files
 
-Editor canvas Images are accepted only from an explicit local file choice or an image clipboard
-paste. PNG, JPEG, and WebP headers, bytes, and intrinsic dimensions are validated before commit;
-each source is limited to 25 MiB and 40 megapixels, and the complete resulting State must still fit
-the 25 MiB transfer bound. Original bytes remain an embedded data URL without upload, remote URL,
-object-URL persistence, or quality-reducing re-encoding. Decode failure produces the same inert
-local placeholder in the Editor and PNG. Full-View and scoped preview/copy/save rasterization loads
-only validated embedded data URLs with bounded concurrency and never creates a network request.
-Editor structural Copy keeps Units, Employees, Tags, canvas elements, and View data only in the
-current tab. The system clipboard receives a fixed format identifier and a random ownership token;
-the token is useless without the matching in-memory clipboard and is never persisted, broadcast,
-logged, exported, placed in a URL, or sent over the network.
-Canvas selection, tool activation, contextual target outlines and anchors, perimeter
-resize/rotation previews, context menus, Format token suggestions, Format help, and the Keep only
-unique values and Remove empty lines choices remain transient browser UI. PNG preview Fit/manual
-mode, zoom, pan, pointer capture,
-keyboard position, normalized focal point, and local object URL also remain in dialog memory only.
-Rich Text and Sticker drafts, DOM ranges, pending caret typography, and composition state remain
-transient and store plain text plus normalized style ranges only when editing completes. Only a
-completed element command updates the active View;
-Template line filtering derives local output without writing State. None of these interactions adds
-storage, logging, telemetry, or network access.
+Employee avatars remain bounded embedded PNG, JPEG, or WebP data URLs. Markdown does not execute
+HTML or load images. Safe explicit links require user action and use referrer protections.
 
-Unit notes are bounded local Markdown embedded only in complete state transfer and the configured
-SQLite state. Preview never executes raw HTML and replaces Markdown images with inert local text,
-so opening a note cannot fetch an asset. Supported external links navigate only after a direct
-click and always use `noopener`, `noreferrer`, and a no-referrer policy. Editor Image and structured
-Employee outputs omit note content.
-Distribution mode derives direct membership, tonal status, and selected-placement paths solely from
-the active in-memory View. Its bounded View UI setting may use the existing local persistence or
-live-tab channel. Editor PNG locally paints persistent status row tones from that View while
-excluding selection and placement overlays; JSON, Template, and Employee outputs remain
-distribution-neutral. No path creates a request or additional browser storage.
+PostgreSQL data and encrypted recovery backups live at absolute external paths configured by
+`ORG_TOOLS_POSTGRES_DATA_PATH` and `ORG_TOOLS_BACKUP_PATH`. `.env`, database data, dumps, and backups
+are ignored and rejected by publication checks. CI uses disposable paths and never uploads them.
 
-## Local files and publication
+## Outputs and backups
 
-The default `.org-tools/` runtime directory is ignored by Git. Stop the local server before copying
-the SQLite file so rollback-journal transactions are settled. A custom path may be outside the
-repository, but invalid configuration is a blocking error.
+Data Download and Editor PNG export are explicit actions and contain only the caller's authorized
+projection. Spreadsheet-like text is escaped where the output format requires it.
 
-The macOS/Linux `pnpm dev-stop` command reads local process identities, commands, parent links, and
-working directories only to identify this checkout's development processes. It does not read
-process environments or organization state, persist a process registry, log command lines, access
-the network, or remove runtime files. Graceful shutdown precedes any verified forceful termination.
+Complete Backup is available only with the corresponding permission and current-password
+reauthentication. It includes password hashes, roles, grants, ACL, UI states, and audit so recovery
+is complete, but excludes live sessions, CSRF, setup token, and rate-limit buckets. AES-256-GCM
+detects tampering; the passphrase is never stored. Restore creates a timestamped encrypted recovery
+copy before its atomic replacement and then revokes all sessions.
 
-The Pages artifact contains HTML, CSS, JavaScript, and locally bundled UI families. Editor
-annotations resolve System and Georgia fallbacks or bundled Bebas Neue, Lobster, and Montserrat
-files; Image export uses the system UI font for structure text and retains stored annotation
-typography. Historical imported family names resolve to System. Language, theme, and Editor element
-font selectors never download catalogs or fonts. It
-contains no SQLite code, state endpoint, organization fixture, secret, remote asset, or external
-request. `pnpm pages:check` and `pnpm public:check` scan these boundaries.
+## Publication
 
-Tests and screenshots use fictional names, `example.test`, reserved `555-01xx` phone numbers, and
-embedded or initial avatars. Never commit a real organization state, contact list, screenshot,
-filesystem path, credential, database, build output, or browser report.
+The Docker build context, image filesystem, and history are scanned for `.env`, credentials,
+database files, dumps, backups, and real organization data. Public fixtures use fictional names,
+`example.test`, reserved phone numbers, and embedded assets. GHCR images contain only production
+code and local assets.

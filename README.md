@@ -1,81 +1,91 @@
-# org-tools
+# Org Tools
 
-`org-tools` is a private organization editor for Units, Employees, visual structure, Calendar, and
-local data downloads.
+Org Tools is a self-hosted organization editor for Employees, Units, staffing slots, visual
+structure, Calendar, and authorized data/image output. One installation serves one organization.
+Accounts use email and password; PostgreSQL stores organization, access, UI, session, and audit
+data. The application sends no telemetry and loads no remote runtime assets.
 
-[Open Org Tools on GitHub Pages](https://iwonz.github.io/org-tools/) — the complete browser-only
-application. Its organization state exists only in memory, can synchronize between currently open
-tabs, and enters through complete-state or mapped Employee Import and leaves through direct
-complete-state Export. It has no backend, accounts, telemetry, remote logging, or background
-requests.
+## Run with Docker Compose
 
-## Screenshots
-
-| Import | State Export | Theme |
-| :---: | :---: | :---: |
-| [![State import confirmation](docs/screenshots/demo-import.png)](docs/screenshots/demo-import.png) | [![Direct state export](docs/screenshots/demo-export.png)](docs/screenshots/demo-export.png) | [![Dark theme dialog](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) |
-| Language | Teams | Employees |
-| [![Six-language selector](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) | [![Populated Teams](docs/screenshots/demo-teams.png)](docs/screenshots/demo-teams.png) | [![Searchable Employee catalog](docs/screenshots/demo-employees.png)](docs/screenshots/demo-employees.png) |
-| Editor | Calendar | Data Download |
-| [![Visual organization Editor](docs/screenshots/demo-editor.png)](docs/screenshots/demo-editor.png) | [![Employee Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Configured data Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
-
-The [complete visual capability catalog](docs/screenshots.md) documents all 56 maintained scenarios.
-
-Employee birthdays use complete `DD.MM.YYYY` values. Year `1900` explicitly means that only the
-recurring day and month are known.
-
-Employees have stable UUIDs, a configurable model of typed or derived custom fields, and a shared
-Tag catalog with padding-free inert rows, dedicated rename and Employee-list dialogs, quick row-level color actions,
-named presets, a full palette, and exact HTML Keyword, HEX, RGB, or RGBA entry rendered as filled surfaces without decorative marker dots. Custom colors
-are normalized to canonical HEX, including retained alpha. Custom fields participate in forms, filters, Employee Import,
-structured JSON, Template output, and colored PNG chips. The Calendar uses locale-aware weeks, soft rose weekend tones, a
-compact dated-Tag rail, direct Today navigation when browsing another month, and day details only for dates containing events.
-Tag-heavy Employee filters add locale-aware search and search-scoped bulk selection, while catalog
-usage counts remain inline beside each Tag.
-
-The complete interface is bundled in English, Simplified Chinese, Russian, Spanish, French, and
-Modern Standard Arabic. The language dialog uses bundled local flags. New in-memory states follow the first supported browser language, Arabic
-mirrors the application shell through RTL, and language plus theme are selected in compact modal
-dialogs. No font or translation asset is loaded from the network.
-
-Data Download and Editor JSON export use one drag-sortable field list: scalar Employee fields,
-Units, and Tags appear in their exact output order. Editor Image export keeps a compact inline
-preview with localized boss text, direct-Employee Tag summaries, and no secondary image viewer.
-The Editor exposes the protected system **Units** View plus isolated blank or copied planning Views;
-Employees and Tags remain global while each View keeps its own Units, assignments, rules, layout,
-history, selection, and viewport. Data Download can use any View as its source.
-Each Unit can carry a View-local Markdown note. Notes open in a safe Preview, edit as an isolated
-draft, participate in View clone and cross-View Copy/Paste, and stay out of PNG and Employee data
-outputs. A View-local distribution mode can update one or many selected Units, highlights direct
-members already placed elsewhere, and traces one selected Employee to every other placement without
-changing or exporting the structure. Multi-Unit Employees expose a separate read-only relationship
-map with pan, zoom, and exact navigation back to their occurrence on the Editor canvas.
-Template formats in Data Download, Editor export, and the Employee model place a help affordance
-beside Format and accept `@` to insert documented `{token}` values at the caret. If a local SQLite database cannot open, explicit recovery preserves its file family as
-a timestamped backup before creating a blank current-schema database.
-
-## Run locally
-
-The durable runtime requires Node.js 22.13 or newer and pnpm 11.24.0.
+Docker and Git are the only host prerequisites.
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm dev
+git clone https://github.com/iwonz/org-tools.git
+cd org-tools
+./bin/org-tools env init
+./bin/org-tools up
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Every organization or durable interface
-change is written automatically to the singleton SQLite state; there is no Save action. The default
-database is `.org-tools/org-tools.sqlite3`. Override it with `ORG_TOOLS_DB_PATH`, or copy
-`.org-tools/config.example.json` to `.org-tools/config.json` and set `databasePath`. Stop the server
-before copying the SQLite file.
+Open `http://localhost:3000`, enter the setup token from the generated `.env`, and create the first
+Super Administrator. The generated secrets are mode `0600`. PostgreSQL and encrypted recovery
+backups use absolute bind paths under `~/.org-tools`; no database volume or data file is created in
+the checkout.
 
-Run `pnpm dev-stop` from another terminal to stop this checkout's development instances on macOS
-or Linux, including Pages and custom ports. It leaves production servers and other checkouts running.
+For a non-local deployment, set `ORG_TOOLS_PUBLIC_ORIGIN` to the exact HTTPS origin and terminate
+TLS at a reverse proxy. The application port remains bound to `127.0.0.1` by default.
 
-Use `pnpm pages:dev` for the in-memory static runtime. `pnpm pages:build` exports it to ignored
-`pages-out`, and `pnpm pages:check` verifies the `/org-tools` base path and absence of API or SQLite
-code. Publishing remains an explicit maintainer action through `pnpm pages:publish`.
+Useful operations:
 
-More: [Usage](docs/usage.md) · [Architecture](docs/architecture.md) ·
-[Privacy](docs/privacy.md) · [Performance](docs/performance.md) ·
-[Contributing](CONTRIBUTING.md) · [License](LICENSE)
+```sh
+./bin/org-tools logs
+./bin/org-tools down
+./bin/org-tools up
+./bin/org-tools reset-super-admin-password
+```
+
+Run `./bin/org-tools docker-run` for the supported raw Docker equivalent. It reads only the
+allowlisted variables in `.env`, creates a private network, runs PostgreSQL and migrations, and
+starts the same non-root application image with the same external bind paths.
+
+## Development
+
+```sh
+./bin/org-tools env init
+./bin/org-tools dev -d
+./bin/org-tools run pnpm lint
+./bin/org-tools run pnpm typecheck
+./bin/org-tools run pnpm test:unit
+```
+
+`compose.dev.yaml` supplies hot reload and a toolbox container. Schema migrations run separately
+under the database owner; the web process has only the restricted application role and refuses to
+start when migrations are pending or unknown.
+
+## Accounts and access
+
+The first account is a Super Administrator. Additional accounts are created in **Administration**
+and, except Super Administrators, are linked one-to-one to an Employee with the same email. Roles
+are reusable permission sets; direct grants can add permissions to one account. Manager scopes are
+derived from boss assignments in the system View and never arise automatically from the Employee
+role. Resource policies can restrict fields, Tags, Units, staffing slots, and custom Views. The
+server removes inaccessible values before sending a response; Download and PNG export use the same
+authorized projection.
+
+## Backup and upgrades
+
+**Administration → Backup and Restore** creates a gzip compressed AES-256-GCM backup protected by
+an Argon2id-derived key. Restore validates the complete detached candidate, creates an encrypted
+recovery backup in `ORG_TOOLS_BACKUP_PATH`, replaces data atomically, and revokes every session.
+
+Before a PostgreSQL major upgrade, create an encrypted application Backup and a PostgreSQL-native
+backup appropriate for the deployment, stop the stack, and follow PostgreSQL's supported major
+upgrade procedure. Never copy a live data directory between major versions.
+
+Images are published as `ghcr.io/iwonz/org-tools`: `edge` and `sha-*` track `main`; stable releases
+publish `X.Y.Z`, `X.Y`, `X`, and `latest` for `linux/amd64` and `linux/arm64`. Release Please owns
+SemVer release PRs, `CHANGELOG.md`, GitHub Releases, and generated release notes.
+
+## Screenshots and documentation
+
+| Sign in | Administration | Theme |
+| :---: | :---: | :---: |
+| [![Account sign in](docs/screenshots/demo-authentication.png)](docs/screenshots/demo-authentication.png) | [![Administration users](docs/screenshots/demo-administration.png)](docs/screenshots/demo-administration.png) | [![Theme selector](docs/screenshots/demo-theme.png)](docs/screenshots/demo-theme.png) |
+| Language | Units | Employees |
+| [![Language selector](docs/screenshots/demo-language.png)](docs/screenshots/demo-language.png) | [![Unit hierarchy](docs/screenshots/demo-teams.png)](docs/screenshots/demo-teams.png) | [![Employee catalog](docs/screenshots/demo-employees.png)](docs/screenshots/demo-employees.png) |
+| Editor | Calendar | Data Download |
+| [![Visual Editor](docs/screenshots/demo-editor.png)](docs/screenshots/demo-editor.png) | [![Calendar](docs/screenshots/demo-calendar.png)](docs/screenshots/demo-calendar.png) | [![Authorized Download](docs/screenshots/demo-download.png)](docs/screenshots/demo-download.png) |
+
+The [56-frame gallery](docs/screenshots.md) documents maintained workflows. More:
+[Usage](docs/usage.md) · [Architecture](docs/architecture.md) · [Privacy](docs/privacy.md) ·
+[Performance](docs/performance.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) ·
+[License](LICENSE)

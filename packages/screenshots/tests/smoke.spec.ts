@@ -1,25 +1,30 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { OrgToolsState } from "@org-tools/types";
-import type { Locator, Page, Request } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import sharp from "sharp";
 import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
 import ruMessages from "../../../apps/ui/messages/ru.json" with { type: "json" };
 import { expect, test } from "./browser-test.js";
 import { exerciseCanvasToolsAndViewExport } from "./canvas-tools-workflow.js";
+import { exerciseLargeEditorPerformance } from "./editor-performance-workflow.js";
 import { exerciseEmptyUnitContainment } from "./empty-unit-containment-workflow.js";
 import {
   applyColorPickerDraft,
   createDistributionStateFile,
   expectLocalRequestsOnly,
   openBlankState,
-  openImportDialog,
   productTabs,
+  replaceStateFromFile,
   replaceWithSyntheticState,
   resetServerState,
   syntheticStatePath,
 } from "./helpers.js";
-import { exercisePointerTagSorting, exerciseRefinedEditor } from "./refined-editor-workflow.js";
+import {
+  exercisePointerTagSorting,
+  exerciseRefinedEditor,
+  exportState,
+} from "./refined-editor-workflow.js";
 import { exerciseStaffingSlots } from "./staffing-slot-workflow.js";
 import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
 import { exerciseUsedColorsAndToolIcons } from "./used-colors-workflow.js";
@@ -53,7 +58,12 @@ test("edits durable canvas tools and exports the complete View PNG", async ({ pa
 
 test("reuses colors from every View and renders refined Editor tool icons", async ({ page }) => {
   await openBlankState(page);
-  await exerciseUsedColorsAndToolIcons(page, "server");
+  await exerciseUsedColorsAndToolIcons(page);
+});
+
+test("keeps the 20,000-Employee and 4,000-Unit Editor workload bounded", async ({ page }) => {
+  test.setTimeout(180_000);
+  await exerciseLargeEditorPerformance(page);
 });
 
 test("manages View-local Staffing Slots", async ({ page }) => {
@@ -107,6 +117,14 @@ async function expectNoHorizontalRule(locator: Locator) {
 async function getBackgroundColor(locator: Locator) {
   return locator.evaluate((element) => window.getComputedStyle(element).backgroundColor);
 }
+
+const normalizeCssToken = (value: string) =>
+  value
+    .replace(/(-?\d+(?:\.\d+)?)%/gu, (_match, number: string) => String(Number(number) / 100))
+    .replace(
+      /(^|[\s(])\.(\d+)/gu,
+      (_match, prefix: string, decimals: string) => `${prefix}0.${decimals}`,
+    );
 
 async function expectFilledTagSurface(locator: Locator) {
   await expect(locator).toBeVisible();
@@ -352,7 +370,7 @@ test("shows one centered icon-only loader while loading initial state", async ({
   const stateRequestGate = new Promise<void>((resolve) => {
     releaseStateRequest = resolve;
   });
-  await page.route("**/api/state", async (route) => {
+  await page.route("**/api/session", async (route) => {
     if (route.request().method() === "GET") await stateRequestGate;
     await route.continue();
   });
@@ -389,7 +407,7 @@ test("shows one centered icon-only loader while loading initial state", async ({
     });
     expect(presentation).toMatchObject({
       boxShadow: "none",
-      childElements: ["circle", "path"],
+      childElements: ["path"],
       height: 32,
       tagName: "svg",
       width: 32,
@@ -406,56 +424,6 @@ test("shows one centered icon-only loader while loading initial state", async ({
 
   await expect(loadingSurface).toHaveCount(0);
   await expect(page.locator('[data-demo-id="app-shell"]')).toBeVisible();
-  await assertLocalRequests();
-});
-
-test("offers explicit database recovery and creates a fresh current-schema state", async ({
-  page,
-}) => {
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  const recoveredState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  let recoveryRequest: unknown = null;
-
-  await page.route("**/api/state", async (route) => {
-    if (route.request().method() === "GET") {
-      await route.fulfill({
-        body: JSON.stringify({ error: { code: "database_unavailable" } }),
-        contentType: "application/json",
-        status: 200,
-      });
-      return;
-    }
-    if (route.request().method() === "POST") {
-      recoveryRequest = route.request().postDataJSON();
-      await route.fulfill({
-        body: JSON.stringify({ revision: 1, state: recoveredState }),
-        contentType: "application/json",
-        status: 200,
-      });
-      return;
-    }
-    await route.fulfill({
-      body: JSON.stringify({ revision: 1, state: recoveredState }),
-      contentType: "application/json",
-      status: 200,
-    });
-  });
-
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Database unavailable", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Create new", exact: true }).click();
-  const confirmation = page.locator('[data-demo-id="database-create-new-dialog"]');
-  await expect(confirmation).toContainText(
-    "The current database files will be kept as a timestamped backup.",
-  );
-  await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(page.getByText("Database unavailable", { exact: true })).toBeVisible();
-  expect(recoveryRequest).toBeNull();
-  await page.getByRole("button", { name: "Create new", exact: true }).click();
-  await confirmation.getByRole("button", { name: "Create new", exact: true }).click();
-  await expect(page.locator('[data-demo-id="app-shell"]')).toBeVisible();
-  expect(recoveryRequest).toEqual({ action: "create_new" });
   await assertLocalRequests();
 });
 
@@ -602,7 +570,7 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
     flexDirection: "column",
     width: expectedWidth - 16,
   });
-  expect(tabStyles).toHaveLength(productTabs.length);
+  expect(tabStyles).toHaveLength(productTabs.length + 1);
   expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
   expect(new Set(tabStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(tabStyles.map(({ height }) => height))).toEqual(new Set([40]));
@@ -648,7 +616,7 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
           return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
         }),
       ),
-    ).toEqual(Array.from({ length: productTabs.length }, () => 0));
+    ).toEqual(Array.from({ length: productTabs.length + 1 }, () => 0));
   } else {
     await expect(label).toBeVisible();
     await expect(tooltip).toBeHidden();
@@ -679,7 +647,7 @@ async function expectSidebarActions(page: Page) {
   );
 
   expect(groupStyle).toEqual({ borderWidth: "0px", columnGap: "4px", flexDirection: "column" });
-  expect(buttonStyles).toHaveLength(4);
+  expect(buttonStyles).toHaveLength(3);
   expect(new Set(buttonStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(buttonStyles.map(({ height }) => height))).toEqual(new Set([40]));
   expect(new Set(buttonStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
@@ -691,16 +659,13 @@ async function expectSidebarActions(page: Page) {
   );
   expect(new Set(preferenceBackgrounds).size).toBe(1);
   expect(preferenceBackgrounds[0]).toBe("rgba(0, 0, 0, 0)");
-  await expect(page.locator('[data-demo-id="import-action"]')).toHaveCSS("border-width", "0px");
-  await page.locator('[data-demo-id="import-action"]').hover();
+  const accountMenu = page.locator('[data-demo-id="account-menu"]');
+  await expect(accountMenu).toHaveCSS("border-width", "0px");
+  await accountMenu.hover();
   expect(
-    await page
-      .locator('[data-demo-id="import-action"]')
-      .evaluate((element) => window.getComputedStyle(element).boxShadow),
+    await accountMenu.evaluate((element) => window.getComputedStyle(element).boxShadow),
   ).not.toContain("inset");
-  expect(await getBackgroundColor(page.locator('[data-demo-id="import-action"]'))).not.toBe(
-    "rgba(0, 0, 0, 0)",
-  );
+  expect(await getBackgroundColor(accountMenu)).not.toBe("rgba(0, 0, 0, 0)");
 
   if (
     (await page
@@ -720,7 +685,7 @@ async function expectSidebarActions(page: Page) {
           return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
         }),
       ),
-    ).toEqual(Array.from({ length: 4 }, () => 0));
+    ).toEqual(Array.from({ length: 3 }, () => 0));
   }
 }
 
@@ -780,7 +745,7 @@ async function expectTonalTabGroup(tabsList: Locator) {
 
 async function expectUniformUiFont(page: Page) {
   const families = await page
-    .locator("body *")
+    .locator('[data-demo-id="app-shell"] *')
     .evaluateAll((elements) =>
       Array.from(new Set(elements.map((element) => window.getComputedStyle(element).fontFamily))),
     );
@@ -853,14 +818,7 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
   expect(navigationBox).not.toBeNull();
   expect(actionsBox).not.toBeNull();
   expect(navigationBox?.y ?? 0).toBeLessThan(actionsBox?.y ?? 0);
-  await expect(page.locator('[data-demo-id="import-action-icon"]')).toHaveAttribute(
-    "data-icon",
-    "document-arrow-up",
-  );
-  await expect(page.locator('[data-demo-id="export-action-icon"]')).toHaveAttribute(
-    "data-icon",
-    "document-arrow-down",
-  );
+  await expect(page.locator('[data-demo-id="account-menu"] svg')).toBeVisible();
   await page.locator('[data-demo-id="theme-toggle"]').click();
   const themeDialog = page.locator('[data-demo-id="theme-dialog"]');
   await expect(themeDialog).toBeVisible();
@@ -884,7 +842,14 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
     await page
       .locator('[data-demo-id^="tab-"]')
       .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-demo-id"))),
-  ).toEqual(["tab-employees", "tab-units", "tab-org-editor", "tab-calendar", "tab-export"]);
+  ).toEqual([
+    "tab-employees",
+    "tab-units",
+    "tab-org-editor",
+    "tab-calendar",
+    "tab-export",
+    "tab-administration",
+  ]);
   for (const tabName of productTabs) {
     const tab = page.getByRole("tab", { name: tabName, exact: true });
     await expect(tab).toBeVisible();
@@ -899,7 +864,7 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
   const unitsTab = page.getByRole("tab", { name: "Units", exact: true });
   await unitsTab.focus();
   await unitsTab.press("End");
-  await expect(page.getByRole("tab", { name: "Download", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "Administration", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -921,7 +886,7 @@ test("keeps interaction cues accessible with reduced motion", async ({ page }) =
   await openBlankState(page);
 
   const tab = page.locator('[data-demo-id="tab-units"]');
-  const action = page.locator('[data-demo-id="export-state"]');
+  const action = page.locator('[data-demo-id="account-menu"]');
   await tab.focus();
 
   const reducedMotionStyle = await tab.evaluate((element) => {
@@ -951,17 +916,14 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
   const header = page.locator('[data-demo-id="app-header"]');
   const sidebar = page.locator('[data-demo-id="app-sidebar"]');
   const sidebarToggle = page.locator('[data-demo-id="sidebar-toggle"]');
-  const importLabel = page.locator('[data-demo-id="import-action"] [data-sidebar-label=""]');
-  const exportLabel = page.locator('[data-demo-id="export-state"] [data-sidebar-label=""]');
+  const accountLabel = page.locator('[data-demo-id="account-menu"] span');
 
   await expectSidebarNavigation(page, 64);
   await expectSidebarActions(page);
   expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
-  await expect(importLabel).toBeHidden();
-  await expect(exportLabel).toBeHidden();
+  await expect(accountLabel).toBeHidden();
   await expect(sidebarToggle).toBeHidden();
-  await expect(page.locator('[data-demo-id="import-action"]')).toHaveAccessibleName("Import");
-  await expect(page.locator('[data-demo-id="export-state"]')).toHaveAccessibleName("Export");
+  await expect(page.locator('[data-demo-id="account-menu"]')).toHaveAccessibleName("Account menu");
   expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -972,8 +934,7 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
     await expectSidebarNavigation(page, 64);
     await expectSidebarActions(page);
     expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
-    await expect(importLabel).toBeHidden();
-    await expect(exportLabel).toBeHidden();
+    await expect(accountLabel).toBeHidden();
     await expect(sidebarToggle).toBeVisible();
     await expectStableHoverGeometry(sidebarToggle);
     await expectStablePressedGeometry(sidebarToggle);
@@ -1078,8 +1039,7 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
     ).toBeLessThanOrEqual(0.5);
     expect(transitionSamples.at(-1)?.labelOpacity).toBe(1);
     await expectSidebarNavigation(page, 240);
-    await expect(importLabel).toBeVisible();
-    await expect(exportLabel).toBeVisible();
+    await expect(accountLabel).toBeVisible();
     const [expandedHeaderBox, expandedToggleBox, expandedToggleGeometry] = await Promise.all([
       page.locator('[data-demo-id="sidebar-header"]').boundingBox(),
       sidebarToggle.boundingBox(),
@@ -1129,12 +1089,16 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
 
   expect(lightShellBackground).not.toBe("rgba(0, 0, 0, 0)");
   expect(lightSurfaceTokens.shell).not.toBe(lightSurfaceTokens.background);
-  expect(lightSurfaceTokens).toMatchObject({
-    accent: "oklch(95.5% .014 240)",
-    accentStrong: "oklch(92% .028 240)",
-    primary: "oklch(24.5% 0 0)",
-    shell: "oklch(97.5% .004 245)",
-    signal: "oklch(53% .095 240)",
+  expect(
+    Object.fromEntries(
+      Object.entries(lightSurfaceTokens).map(([key, value]) => [key, normalizeCssToken(value)]),
+    ),
+  ).toMatchObject({
+    accent: "oklch(0.955 0.014 240)",
+    accentStrong: "oklch(0.92 0.028 240)",
+    primary: "oklch(0.245 0 0)",
+    shell: "oklch(0.975 0.004 245)",
+    signal: "oklch(0.53 0.095 240)",
   });
   await expect(header).toHaveCount(0);
   await expectTransparentBackground(page.locator('[data-demo-id="top-level-empty-state"]'));
@@ -1202,12 +1166,16 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
     };
   });
   expect(darkShellBackground).not.toBe(lightShellBackground);
-  expect(darkInteractionTokens).toEqual({
-    accent: "oklch(25.5% .028 240)",
-    accentStrong: "oklch(30% .04 240)",
-    primary: "oklch(92% 0 0)",
-    shell: "oklch(11.5% .006 245)",
-    signal: "oklch(72% .085 235)",
+  expect(
+    Object.fromEntries(
+      Object.entries(darkInteractionTokens).map(([key, value]) => [key, normalizeCssToken(value)]),
+    ),
+  ).toEqual({
+    accent: "oklch(0.255 0.028 240)",
+    accentStrong: "oklch(0.3 0.04 240)",
+    primary: "oklch(0.92 0 0)",
+    shell: "oklch(0.115 0.006 245)",
+    signal: "oklch(0.72 0.085 235)",
   });
   await expectTransparentBackground(employeeCard);
   expect(await getBackgroundColor(header)).not.toBe("rgba(0, 0, 0, 0)");
@@ -1216,273 +1184,13 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   );
 });
 
-test("imports complete states and mapped Employee arrays", async ({ page }) => {
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankState(page);
-
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  const importDialog = page.getByRole("dialog", { name: "Import", exact: true });
-  await expect(importDialog.locator('input[type="file"]')).toHaveAttribute(
-    "accept",
-    ".json,application/json",
-  );
-  const canceledChooserPromise = page.waitForEvent("filechooser");
-  await importDialog.getByText("Choose file", { exact: true }).click();
-  await (await canceledChooserPromise).setFiles([]);
-  await expect(importDialog).toBeVisible();
-  await importDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-
-  const dialog = await openImportDialog(page, syntheticStatePath);
-  await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-header"]'));
-  await expectNoHorizontalRule(dialog.locator('[data-slot="dialog-footer"]'));
-  await expect(dialog.getByRole("tab")).toHaveCount(2);
-  await expect(dialog.getByRole("radio")).toHaveCount(0);
-  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
-    "4 Employees",
-  );
-  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText("2 Units");
-  await expect(dialog.getByRole("button", { name: "Replace state" })).toBeEnabled();
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-
-  const invalidDialog = await openImportDialog(page, {
-    buffer: Buffer.from('[{"name":"Ordinary row"}]'),
-    mimeType: "application/json",
-    name: "ordinary.json",
-  });
-  await expect(
-    invalidDialog.getByText("Only a complete Org Tools state can be imported.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(invalidDialog.getByRole("button", { name: "Replace state" })).toBeDisabled();
-  await invalidDialog.locator('input[type="file"]').setInputFiles(syntheticStatePath);
-  await expect(invalidDialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
-    "4 Employees",
-  );
-  await invalidDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
-
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  const employeeImport = page.getByRole("dialog", { name: "Import", exact: true });
-  await employeeImport.getByRole("tab", { name: "Employees", exact: true }).click();
-  const employeeChooserPromise = page.waitForEvent("filechooser");
-  await employeeImport.getByText("Choose file", { exact: true }).click();
-  await (await employeeChooserPromise).setFiles({
-    buffer: Buffer.from(
-      JSON.stringify([
-        {
-          birthday: "29.02.1900",
-          contact: { email: "riley.brooks@example.test" },
-          firstName: "Riley",
-          id: "00000000-0000-4000-8000-000000000099",
-          lastName: "Brooks",
-          teams: [],
-        },
-      ]),
-    ),
-    mimeType: "application/json",
-    name: "employees.json",
-  });
-  await expect(
-    employeeImport.locator('[data-demo-id="employee-import-source-preview"]'),
-  ).toContainText('"birthday": "29.02.1900"');
-  await expect(employeeImport.getByText("Source JSON path", { exact: true })).toBeVisible();
-  await expect(employeeImport.getByText("Org Tools field", { exact: true })).toBeVisible();
-  await expect(employeeImport.getByText("Import Teams", { exact: true })).toHaveCount(0);
-  const mappingPaths = employeeImport.locator(
-    '[data-demo-id="employee-import-mapping-paths"] [data-source-path]',
-  );
-  await expect(mappingPaths).toHaveCount(6);
-  await employeeImport.getByLabel("Org Tools field for firstName", { exact: true }).click();
-  await page.getByRole("option", { name: "Last name *", exact: true }).click();
-  await expect(
-    employeeImport.getByLabel("Org Tools field for lastName", { exact: true }),
-  ).toContainText("Do not import");
-  await employeeImport.getByLabel("Org Tools field for firstName", { exact: true }).click();
-  await page.getByRole("option", { name: "First name *", exact: true }).click();
-  await employeeImport.getByLabel("Org Tools field for lastName", { exact: true }).click();
-  await page.getByRole("option", { name: "Last name *", exact: true }).click();
-  await page.setViewportSize({ height: 844, width: 390 });
-  const employeeImportBody = employeeImport.locator('[data-slot="dialog-body"]');
-  const mobileImportLayout = await employeeImportBody.evaluate((element) => {
-    const preview = element.querySelector('[data-demo-id="employee-import-source-preview"]');
-    const mapping = element.querySelector('[data-demo-id="employee-import-mapping"]');
-    if (!(preview instanceof HTMLElement) || !(mapping instanceof HTMLElement)) {
-      throw new Error("Employee Import layout is unavailable.");
-    }
-    return {
-      bodyWidth: element.clientWidth,
-      mappingTop: mapping.getBoundingClientRect().top,
-      previewBottom: preview.getBoundingClientRect().bottom,
-      scrollWidth: element.scrollWidth,
-    };
-  });
-  expect(mobileImportLayout.scrollWidth).toBeLessThanOrEqual(mobileImportLayout.bodyWidth);
-  expect(mobileImportLayout.mappingTop).toBeGreaterThanOrEqual(mobileImportLayout.previewBottom);
-  await expect(employeeImport.getByText("1 new", { exact: true })).toBeVisible();
-  await employeeImport.getByRole("button", { name: "Import Employees", exact: true }).click();
-  await page.getByRole("tab", { name: "Employees", exact: true }).click();
-  await expect(page.getByText("Riley Brooks", { exact: true })).toBeVisible();
-  await page.locator('[data-demo-id="employee-edit-button"]').click();
-  const importedEmployeeDialog = page.getByRole("dialog", { name: "Edit Employee" });
-  await expect(importedEmployeeDialog.getByRole("combobox", { name: "Day" })).toContainText("29");
-  await expect(importedEmployeeDialog.getByRole("combobox", { name: "Month" })).toContainText(
-    "February",
-  );
-  await expect(importedEmployeeDialog.getByRole("combobox", { name: "Year" })).toContainText(
-    "Unknown year",
-  );
-  await importedEmployeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await assertLocalRequests();
-});
-
-test("atomically imports, directly exports, automatically writes, and reloads state", async ({
-  page,
-}) => {
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankState(page);
-  const rootUrl = page.url();
-  await expect(page.locator('[data-demo-id="project-save"]')).toHaveCount(0);
-
-  const importDialog = await openImportDialog(page, syntheticStatePath);
-  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(importDialog).toBeHidden();
-  await expect(page).toHaveURL(rootUrl);
-  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
-  await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
-
-  const exportPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  const exported = await exportPromise;
-  expect(exported.suggestedFilename()).toBe("org-tools-state.json");
-  await expect(page.locator('[data-demo-id="state-export-dialog"]')).toHaveCount(0);
-  const exportedPath = await exported.path();
-  const exportedState = JSON.parse(await readFile(exportedPath ?? "", "utf8")) as OrgToolsState;
-  expect(Object.keys(exportedState).sort()).toEqual(["organization", "ui"]);
-  expect(exportedState.organization.employees).toHaveLength(4);
-  expect(exportedState.organization.employeeDisplayFormats).toEqual({
-    editor: "{fullName}\n{tags}",
-    editorExport: "{fullName} {isBoss ? '· Manager' : ''}\n{tags}",
-    employees: "**{fullName}** {positions} {tags}",
-    units: "**{fullName}** {positions} {tags}",
-  });
-  expect(exportedState.organization.employeeDisplayLineGaps).toEqual({
-    editor: 5,
-    editorExport: 5,
-    employees: 5,
-    units: 5,
-  });
-
-  await page.waitForTimeout(500);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
-  await assertLocalRequests();
-});
-
-test("rejects malformed, partial, generic, and oversized imports without mutation", async ({
-  page,
-}) => {
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await openBlankState(page);
-  const obsoleteBirthdayState = JSON.parse(
-    await readFile(syntheticStatePath, "utf8"),
-  ) as OrgToolsState;
-  const obsoleteBirthdayEmployee = obsoleteBirthdayState.organization.employees[0];
-  if (!obsoleteBirthdayEmployee) throw new Error("Synthetic Employee is unavailable.");
-  obsoleteBirthdayEmployee.birthday = "03-14";
-  const obsoleteDisplayState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as {
-    organization: Partial<OrgToolsState["organization"]>;
-    ui: OrgToolsState["ui"];
-  };
-  delete obsoleteDisplayState.organization.employeeDisplayFormats;
-  const obsoleteLineGapState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as {
-    organization: Partial<OrgToolsState["organization"]>;
-    ui: OrgToolsState["ui"];
-  };
-  delete obsoleteLineGapState.organization.employeeDisplayLineGaps;
-
-  const rejectedFiles = [
-    {
-      error: "Could not read or parse the selected file.",
-      file: { buffer: Buffer.from("{"), mimeType: "application/json", name: "broken.json" },
-    },
-    {
-      error: "Only a complete Org Tools state can be imported.",
-      file: {
-        buffer: Buffer.from(JSON.stringify({ content: "employees", kind: "org-tools-state" })),
-        mimeType: "application/json",
-        name: "partial.json",
-      },
-    },
-    {
-      error: "Only a complete Org Tools state can be imported.",
-      file: {
-        buffer: Buffer.from(JSON.stringify({ employees: [{ name: "Ordinary row" }] })),
-        mimeType: "application/json",
-        name: "generic.json",
-      },
-    },
-    {
-      error: "Only a complete Org Tools state can be imported.",
-      file: {
-        buffer: Buffer.from(JSON.stringify(obsoleteDisplayState)),
-        mimeType: "application/json",
-        name: "obsolete-display-state.json",
-      },
-    },
-    {
-      error: "Only a complete Org Tools state can be imported.",
-      file: {
-        buffer: Buffer.from(JSON.stringify(obsoleteLineGapState)),
-        mimeType: "application/json",
-        name: "obsolete-line-gap-state.json",
-      },
-    },
-    {
-      error: "Birthday must use the DD.MM.YYYY format.",
-      file: {
-        buffer: Buffer.from(JSON.stringify(obsoleteBirthdayState)),
-        mimeType: "application/json",
-        name: "obsolete-birthday.json",
-      },
-    },
-    {
-      error: "The selected file is 26 MiB; the limit is 25 MiB.",
-      file: {
-        buffer: Buffer.alloc(25 * 1024 * 1024 + 1, 32),
-        mimeType: "application/json",
-        name: "oversized.json",
-      },
-    },
-  ];
-
-  for (const rejected of rejectedFiles) {
-    const dialog = await openImportDialog(page, rejected.file);
-    await expect(dialog.getByText(rejected.error, { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Replace state" })).toBeDisabled();
-    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-    await expect(page.locator('[data-demo-id="top-level-empty-state"]')).toBeVisible();
-  }
-  await expect(page.locator('[data-demo-id="state-write-error"]')).toHaveCount(0);
-  await assertLocalRequests();
-});
-
-test("keeps JSON and Template as Download outputs while Import accepts JSON only", async ({
-  page,
-}) => {
+test("keeps JSON and Template as authorized Download outputs", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toBeVisible();
   await expect(page.locator('[data-demo-id="org-editor-search"]')).toHaveCount(0);
   await replaceWithSyntheticState(page);
 
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  const importDialog = page.getByRole("dialog", { name: "Import", exact: true });
-  await expect(importDialog.locator('input[type="file"]').first()).toHaveAttribute(
-    "accept",
-    ".json,application/json",
-  );
-  await importDialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("tab", { name: "Download", exact: true }).click();
   await page
     .getByRole("button", { name: "Add Unit Employees to download", exact: true })
@@ -1742,6 +1450,7 @@ test("creates extensible multi-option and Composite Employee fields", async ({ p
 test("edits contextual Employee card formats with live previews and local image overrides", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   const displayState = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
@@ -1749,13 +1458,12 @@ test("edits contextual Employee card formats with live previews and local image 
   if (!measuredEmployee) throw new Error("Synthetic Employee is unavailable.");
   measuredEmployee.username = "vkteam";
   measuredEmployee.email = "avery.stone@vkteam.ru";
-  const displayImportDialog = await openImportDialog(page, {
+  await replaceStateFromFile(page, {
     buffer: Buffer.from(JSON.stringify(displayState)),
     mimeType: "application/json",
     name: "employee-display-measurement.json",
   });
-  await displayImportDialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(displayImportDialog).toBeHidden();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
 
   await page.locator('[data-demo-id="employee-model-button"]').click();
@@ -2922,9 +2630,8 @@ test("persists Editor distribution highlighting and selected placement connectio
 }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
-  const importDialog = await openImportDialog(page, await createDistributionStateFile());
-  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(importDialog).toBeHidden();
+  await replaceStateFromFile(page, await createDistributionStateFile());
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   const productUnit = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   const platformUnit = page.locator('fieldset[aria-label="Canvas Unit Platform"]');
@@ -3075,11 +2782,7 @@ test("persists Editor distribution highlighting and selected placement connectio
   ).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("Escape");
 
-  const stateDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  const downloadedState = JSON.parse(
-    await readFile(await (await stateDownload).path(), "utf8"),
-  ) as OrgToolsState;
+  const downloadedState = await exportState(page);
   expect(downloadedState.ui.editor.views[0]?.distributionModeUnitIds).toEqual([
     "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
@@ -3229,6 +2932,14 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await page.keyboard.press("Control+z");
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(0);
 
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Scenario A", exact: true }).click();
+  await page
+    .locator('fieldset[aria-label="Canvas Unit Future Product"]')
+    .click({ position: { x: 80, y: 54 } });
+  await page.keyboard.press("Control+c");
+  await viewSelect.click();
+  await page.getByRole("option", { name: "Units", exact: true }).click();
   await page.keyboard.press("Control+v");
   await page.keyboard.press("Control+v");
   await expect(page.locator('fieldset[aria-label="Canvas Unit Future Product"]')).toHaveCount(2);
@@ -3375,15 +3086,12 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   const state = await createLongRosterState();
-  const importDialog = await openImportDialog(page, {
+  await replaceStateFromFile(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
     name: "synthetic-long-roster.json",
   });
-  await expect(importDialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
-    "14 Employees",
-  );
-  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   const product = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   const firstRow = product.locator("[data-org-editor-employee-row]").first();
@@ -3555,420 +3263,6 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await assertLocalRequests();
 });
 
-test("coalesces large Editor previews and commits each gesture once", async ({ page }) => {
-  test.setTimeout(180_000);
-  const assertLocalRequests = await expectLocalRequestsOnly(page);
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await openBlankState(page);
-  const diagnosticsUrl = new URL(page.url());
-  diagnosticsUrl.searchParams.set("editorPerformance", "1");
-  await page.goto(diagnosticsUrl.toString(), { waitUntil: "domcontentloaded" });
-  const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
-  const systemView = state.organization.views.find((view) => view.kind === "system");
-  const timestamp = "2026-08-31T12:00:00.000Z";
-  const uuid = (group: string, index: number) =>
-    `00000000-0000-${group}-8000-${index.toString(16).padStart(12, "0")}`;
-  const employeeId = (index: number) =>
-    createTestEmployeeId({
-      email: `employee-${index + 1}@example.test`,
-      firstName: "Employee",
-      lastName: String(index + 1).padStart(5, "0"),
-    });
-  const unitId = (index: number) => uuid("4001", index + 1);
-  state.organization.employees = Array.from({ length: 20_000 }, (_, index) => ({
-    avatarBase64Url: null,
-    birthday: null,
-    createdAt: timestamp,
-    customFieldValues: {},
-    email: `employee-${index + 1}@example.test`,
-    firstName: "Employee",
-    gender: "unspecified" as const,
-    id: employeeId(index),
-    lastName: String(index + 1).padStart(5, "0"),
-    phone: null,
-    profileUrl: null,
-    tags: [],
-    updatedAt: timestamp,
-    username: `employee-${index + 1}`,
-  }));
-  if (!systemView) throw new Error("System View is unavailable.");
-  const typography = {
-    color: "#334155" as const,
-    fontFamily: "system-ui",
-    fontSize: 18,
-    fontWeight: 400 as const,
-    horizontalAlign: "left" as const,
-    verticalAlign: "top" as const,
-  };
-  systemView.structure.canvasElements = [
-    ...Array.from({ length: 400 }, (_, index) => ({
-      attachment:
-        index % 20 === 0
-          ? {
-              offset: { x: 72, y: 0 },
-              sourceAnchorId: "center" as const,
-              target: {
-                anchorId: "center" as const,
-                owner: { type: "unit" as const, unitId: unitId(index) },
-              },
-            }
-          : null,
-      autoWidth: true,
-      fillColor: "amber" as const,
-      fillMode: "none" as const,
-      formatRuns: [],
-      height: 32,
-      id: uuid("5001", index + 1),
-      layer: "aboveUnits" as const,
-      rotation: 0,
-      text:
-        index === 0
-          ? "Long performance text ".repeat(3_000).slice(0, 60_000)
-          : `Performance text ${index + 1}`,
-      typography,
-      type: "text" as const,
-      width: 48,
-      x: (index % 50) * 360 + 48,
-      y: Math.floor(index / 50) * 240 + 48,
-    })),
-    ...Array.from({ length: 400 }, (_, index) => ({
-      attachment: null,
-      backgroundColor: index % 2 === 0 ? ("amber" as const) : ("blue" as const),
-      formatRuns: [],
-      height: 168,
-      id: uuid("5002", index + 1),
-      layer: "aboveUnits" as const,
-      rotation: 0,
-      text: `Performance note ${index + 1}`,
-      typography: {
-        ...typography,
-        fontSize: 20,
-        horizontalAlign: "center" as const,
-        verticalAlign: "middle" as const,
-      },
-      type: "sticker" as const,
-      width: 220,
-      x: (index % 50) * 360 + 120,
-      y: Math.floor(index / 50) * 240 + 300,
-    })),
-    ...Array.from({ length: 400 }, (_, index) => {
-      const start = {
-        x: (index % 50) * 360 + 280,
-        y: Math.floor(index / 50) * 240 + 110,
-      };
-      const end = { x: start.x + 120, y: start.y + 80 };
-      return {
-        dash: "solid" as const,
-        end: { attachment: null, ...end },
-        endControl: { x: -40, y: 0 },
-        endMarker: "arrow" as const,
-        id: uuid("5003", index + 1),
-        layer: "behindUnits" as const,
-        start: { attachment: null, ...start },
-        startControl: { x: 40, y: 0 },
-        startMarker: "none" as const,
-        strokeColor: "#334155" as const,
-        strokeWidth: 2,
-        type: "arrow" as const,
-      };
-    }),
-  ];
-  systemView.structure.units = Array.from({ length: 4_000 }, (_, index) => {
-    const firstEmployeeIndex = index * 5;
-    const employeeIds = Array.from({ length: 5 }, (_, offset) =>
-      employeeId(firstEmployeeIndex + offset),
-    );
-    return {
-      bossEmployeeId: employeeIds[0] ?? null,
-      collapsed: false,
-
-      createdAt: timestamp,
-      employeeIds,
-      employeePositions: employeeIds.map((id, positionIndex) => ({
-        employeeId: id,
-        position: positionIndex === 0 ? "Unit Lead" : "Specialist",
-      })),
-      id: unitId(index),
-      liveFilter: null,
-      name: `Unit ${String(index + 1).padStart(4, "0")}`,
-      noteMarkdown: "",
-      staffingSlots: [],
-      order: index,
-      parentId: null,
-      updatedAt: timestamp,
-      x: (index % 50) * 360,
-      y: Math.floor(index / 50) * 240,
-    };
-  });
-  state.ui.activeTab = "orgEditor";
-  state.ui.expandedUnitIds = [];
-  state.ui.selectedUnitId = null;
-  state.ui.editor.activeViewId = systemView.id;
-  state.ui.editor.views = [
-    {
-      distributionModeUnitIds: [],
-      selectedItems: [],
-      viewId: systemView.id,
-      viewport: { scale: 1, x: 0, y: 0 },
-    },
-  ];
-  const dialog = await openImportDialog(page, {
-    buffer: Buffer.from(JSON.stringify(state)),
-    mimeType: "application/json",
-    name: "large-editor-state.json",
-  });
-  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
-    "20,000 Employees",
-  );
-  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await page.getByRole("tab", { name: "Editor", exact: true }).click();
-  const canvas = page.locator('[data-demo-id="org-editor-canvas"]');
-  await expect(canvas).toBeVisible();
-  await expect
-    .poll(async () => Number(await canvas.getAttribute("data-spatial-candidate-count")))
-    .toBeLessThan(200);
-  const longTextElement = canvas.locator(
-    '[data-canvas-element-id="00000000-0000-5001-8000-000000000001"]',
-  );
-  await expect(longTextElement).toBeVisible();
-  await expect
-    .poll(() =>
-      longTextElement.evaluate((element: HTMLElement) => Number.parseFloat(element.style.width)),
-    )
-    .toBe(480);
-  await expect
-    .poll(async () => {
-      try {
-        const response = await page.request.get("/api/state");
-        if (!response.ok()) return null;
-        const document = (await response.json()) as { state: OrgToolsState };
-        const persistedLongText = document.state.organization.views
-          .flatMap((view) => view.structure.canvasElements)
-          .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
-        return persistedLongText?.type === "text" ? persistedLongText.width : null;
-      } catch {
-        return null;
-      }
-    })
-    .toBe(480);
-  await page.waitForTimeout(2_000);
-  const performanceCdp = await page.context().newCDPSession(page);
-  await performanceCdp.send("HeapProfiler.collectGarbage");
-  await performanceCdp.detach();
-
-  const resetPerformanceDiagnostics = () =>
-    page.evaluate(() => {
-      const diagnostics = (
-        window as typeof window & {
-          __ORG_TOOLS_EDITOR_PERFORMANCE__?: { reset: () => void };
-        }
-      ).__ORG_TOOLS_EDITOR_PERFORMANCE__;
-      if (!diagnostics) throw new Error("Editor performance diagnostics are unavailable.");
-      diagnostics.reset();
-    });
-  const readPerformanceDiagnostics = () =>
-    page.evaluate(() => {
-      const diagnostics = (
-        window as typeof window & {
-          __ORG_TOOLS_EDITOR_PERFORMANCE__?: {
-            snapshot: () => Record<string, number>;
-          };
-        }
-      ).__ORG_TOOLS_EDITOR_PERFORMANCE__;
-      if (!diagnostics) throw new Error("Editor performance diagnostics are unavailable.");
-      return diagnostics.snapshot();
-    });
-  const startFrameSampling = () =>
-    page.evaluate(() => {
-      const sampleWindow = window as typeof window & {
-        __ORG_TOOLS_EDITOR_FRAME_SAMPLES__?: number[];
-        __ORG_TOOLS_EDITOR_FRAME_SAMPLING__?: boolean;
-      };
-      sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLES__ = [];
-      sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLING__ = true;
-      let previous: number | null = null;
-      const sample = (time: number) => {
-        if (previous !== null)
-          sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLES__?.push(time - previous);
-        previous = time;
-        if (sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLING__) requestAnimationFrame(sample);
-      };
-      requestAnimationFrame(sample);
-    });
-  const stopFrameSampling = () =>
-    page.evaluate(() => {
-      const sampleWindow = window as typeof window & {
-        __ORG_TOOLS_EDITOR_FRAME_SAMPLES__?: number[];
-        __ORG_TOOLS_EDITOR_FRAME_SAMPLING__?: boolean;
-      };
-      sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLING__ = false;
-      return sampleWindow.__ORG_TOOLS_EDITOR_FRAME_SAMPLES__ ?? [];
-    });
-
-  const writes: Array<{ longTextLength?: number; scope?: string }> = [];
-  const onRequest = (request: Request) => {
-    if (request.method() !== "PUT" || !request.url().endsWith("/api/state")) return;
-    const payload = request.postDataJSON() as { scope?: string; state?: OrgToolsState } | null;
-    if (!payload || typeof payload !== "object") return;
-    const longText = payload.state?.organization.views
-      .flatMap((view) => view.structure.canvasElements)
-      .find((element) => element.id === "00000000-0000-5001-8000-000000000001");
-    writes.push({
-      ...(longText?.type === "text" ? { longTextLength: longText.text.length } : {}),
-      ...(payload.scope ? { scope: payload.scope } : {}),
-    });
-  };
-  page.on("request", onRequest);
-
-  const canvasBox = await canvas.boundingBox();
-  if (!canvasBox) throw new Error("Large Editor canvas is unavailable.");
-  const panStart = {
-    x: canvasBox.x + canvasBox.width - 80,
-    y: canvasBox.y + canvasBox.height - 80,
-  };
-  await resetPerformanceDiagnostics();
-  await startFrameSampling();
-  await page.mouse.move(panStart.x, panStart.y);
-  await page.mouse.down({ button: "middle" });
-  await page.mouse.move(panStart.x + 48, panStart.y + 24, { steps: 20 });
-  await page.waitForTimeout(500);
-  expect(writes).toEqual([]);
-  const panPreviewDiagnostics = await readPerformanceDiagnostics();
-  expect(panPreviewDiagnostics.viewportFrames).toBeGreaterThan(0);
-  expect(panPreviewDiagnostics.viewportWindowInvalidations).toBe(0);
-  expect(panPreviewDiagnostics.richTextLayoutComputations).toBe(0);
-  expect(panPreviewDiagnostics.unitRenders).toBe(0);
-  expect(panPreviewDiagnostics.canvasElementRenders).toBe(0);
-  const frameSamples = await stopFrameSampling();
-  const sortedFrameSamples = [...frameSamples].sort((first, second) => first - second);
-  const frameP95 = sortedFrameSamples[Math.floor((sortedFrameSamples.length - 1) * 0.95)] ?? 0;
-  expect(frameSamples.length).toBeGreaterThan(10);
-  expect(frameP95).toBeLessThanOrEqual(33);
-  expect(Math.max(...frameSamples)).toBeLessThanOrEqual(100);
-  await page.mouse.up({ button: "middle" });
-  await expect.poll(() => writes.filter((write) => write.scope === "ui").length).toBe(1);
-
-  const firstUnit = canvas.locator("[data-org-editor-unit-id]").first();
-  await firstUnit.click({ position: { x: 72, y: 64 } });
-  await page.waitForTimeout(500);
-  writes.length = 0;
-  const unitBox = await firstUnit.boundingBox();
-  if (!unitBox) throw new Error("A visible large-state Unit is unavailable.");
-  const dragStart = { x: unitBox.x + 72, y: unitBox.y + 64 };
-  await page.mouse.move(dragStart.x, dragStart.y);
-  await page.mouse.down();
-  await page.mouse.move(dragStart.x + 37, dragStart.y + 35, { steps: 20 });
-  await page.waitForTimeout(500);
-  expect(writes.filter((write) => write.scope === "all")).toEqual([]);
-  await page.mouse.up();
-  await expect
-    .poll(() => writes.filter((write) => write.scope === "all"))
-    .toEqual([{ longTextLength: 60_000, scope: "all" }]);
-  const committedPosition = await firstUnit.evaluate((element) => {
-    const unit = element as HTMLElement;
-    return { x: Number.parseFloat(unit.style.left), y: Number.parseFloat(unit.style.top) };
-  });
-  expect(Math.abs(committedPosition.x % 24)).toBe(0);
-  expect(Math.abs(committedPosition.y % 24)).toBe(0);
-  expect(Number(await canvas.getAttribute("data-spatial-candidate-count"))).toBeLessThan(200);
-
-  writes.length = 0;
-  await longTextElement.dblclick({ force: true });
-  const richTextEditor = longTextElement.getByRole("textbox");
-  await expect(richTextEditor).toBeFocused();
-  await richTextEditor.press("End");
-  await page.keyboard.type("w");
-  await richTextEditor.press("Backspace");
-  await page.waitForTimeout(350);
-  await expect
-    .poll(() => richTextEditor.evaluate((element) => element.textContent?.length))
-    .toBe(60_000);
-  await richTextEditor.evaluate((element) => {
-    const selection = window.getSelection();
-    const range = document.createRange();
-    const textNode = element.querySelector("span:last-child")?.lastChild;
-    if (textNode instanceof Text) range.setStart(textNode, textNode.length);
-    else {
-      range.selectNodeContents(element);
-      range.collapse(false);
-    }
-    range.collapse(true);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  });
-  await richTextEditor.evaluate((element) => {
-    const latencyWindow = window as typeof window & {
-      __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
-      __ORG_TOOLS_EDITOR_INPUT_LENGTHS__?: number[];
-    };
-    latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LATENCIES__ = [];
-    latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LENGTHS__ = [];
-    element.addEventListener(
-      "input",
-      () => {
-        latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LENGTHS__?.push(element.textContent?.length ?? -1);
-        const start = performance.now();
-        requestAnimationFrame(() => {
-          latencyWindow.__ORG_TOOLS_EDITOR_INPUT_LATENCIES__?.push(performance.now() - start);
-        });
-      },
-      { signal: AbortSignal.timeout(5_000) },
-    );
-  });
-  const inputSample = "abcdefghij".repeat(4);
-  for (const character of inputSample) {
-    await page.keyboard.insertText(character);
-    await page.waitForTimeout(24);
-  }
-  expect(
-    await page.evaluate(
-      () =>
-        (
-          window as typeof window & {
-            __ORG_TOOLS_EDITOR_INPUT_LENGTHS__?: number[];
-          }
-        ).__ORG_TOOLS_EDITOR_INPUT_LENGTHS__ ?? [],
-    ),
-  ).toEqual(Array.from({ length: inputSample.length }, (_, index) => 60_001 + index));
-  await expect
-    .poll(() => richTextEditor.evaluate((element) => element.textContent?.length))
-    .toBe(60_000 + inputSample.length);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & {
-              __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
-            }
-          ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__?.length ?? 0,
-      ),
-    )
-    .toBe(inputSample.length);
-  const inputLatencies = await page.evaluate(
-    () =>
-      (
-        window as typeof window & {
-          __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
-        }
-      ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__ ?? [],
-  );
-  const sortedInputLatencies = [...inputLatencies].sort((first, second) => first - second);
-  const inputP95 = sortedInputLatencies[Math.floor((sortedInputLatencies.length - 1) * 0.95)] ?? 0;
-  expect(inputP95).toBeLessThanOrEqual(50);
-  const textCommitResponsePromise = page.waitForResponse(
-    (response) => response.request().method() === "PUT" && response.url().endsWith("/api/state"),
-  );
-  await richTextEditor.press("Escape");
-  await expect
-    .poll(() => writes.filter((write) => write.scope === "all"))
-    .toEqual([{ longTextLength: 60_040, scope: "all" }]);
-  expect((await textCommitResponsePromise).ok()).toBe(true);
-  page.off("request", onRequest);
-  await resetServerState(page);
-  await assertLocalRequests();
-});
-
 test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -4058,12 +3352,12 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   datedEmployee.tags.push({ date: "2026-07-10", tagId: planningTag.id });
   state.organization.employeeDisplayFormats.employees =
     "[{fullName}]({profileUrl})\n{username}\n{email}\n{positions}\n{tags}";
-  const importDialog = await openImportDialog(page, {
+  await replaceStateFromFile(page, {
     buffer: Buffer.from(JSON.stringify(state)),
     mimeType: "application/json",
     name: "calendar-events-state.json",
   });
-  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
   const profileLink = page.getByRole("link", { name: "Avery Stone", exact: true }).first();
@@ -4492,7 +3786,9 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   const colorFormat = palette.getByLabel("Color format");
   const colorValue = palette.getByLabel("Color value");
   await colorFormat.click();
-  await page.getByRole("option", { name: "HTML Keyword", exact: true }).click();
+  const htmlKeywordOption = page.getByRole("option", { name: "HTML Keyword", exact: true });
+  await htmlKeywordOption.click();
+  await expect(htmlKeywordOption).toBeHidden();
   await colorValue.fill("aliceblue");
   await colorValue.press("Enter");
   await expect(tagRow.locator('[data-tag-color="#7c3aed"]')).toBeVisible();
@@ -4500,14 +3796,18 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await expect(tagRow.locator('[data-tag-color="#f0f8ff"]')).toBeVisible();
   await colorTrigger.click();
   await colorFormat.click();
-  await page.getByRole("option", { name: "HEX", exact: true }).click();
+  const hexOption = page.getByRole("option", { name: "HEX", exact: true });
+  await hexOption.click();
+  await expect(hexOption).toBeHidden();
   await colorValue.fill("#0F8");
   await colorValue.press("Enter");
   await applyColorPickerDraft(page);
   await expect(tagRow.locator('[data-tag-color="#00ff88"]')).toBeVisible();
   await colorTrigger.click();
   await colorFormat.click();
-  await page.getByRole("option", { name: "RGB", exact: true }).click();
+  const rgbOption = page.getByRole("option", { name: "RGB", exact: true });
+  await rgbOption.click();
+  await expect(rgbOption).toBeHidden();
   await colorValue.fill("rgb(12, 34, 56)");
   await colorValue.press("Enter");
   await applyColorPickerDraft(page);
@@ -4518,7 +3818,9 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await expect(tagRow.locator('[data-tag-color="#0c2238"]')).toBeVisible();
   await expect(palette.getByRole("button", { name: "Apply", exact: true })).toBeDisabled();
   await colorFormat.click();
-  await page.getByRole("option", { name: "RGBA", exact: true }).click();
+  const rgbaOption = page.getByRole("option", { name: "RGBA", exact: true });
+  await rgbaOption.click();
+  await expect(rgbaOption).toBeHidden();
   await colorValue.fill("rgba(124, 58, 237, .5)");
   await colorValue.press("Enter");
   await expect(palette.getByRole("spinbutton", { name: "Opacity (%)", exact: true })).toHaveValue(

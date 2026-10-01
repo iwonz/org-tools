@@ -1,0 +1,153 @@
+#!/bin/sh
+set -eu
+
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+environment_file="$repository_root/.env"
+
+random_secret() {
+  od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
+}
+
+init_environment() {
+  if [ -e "$environment_file" ]; then
+    echo ".env already exists; it was not changed." >&2
+    return 0
+  fi
+  umask 077
+  storage_root="${HOME:?HOME is required}/.org-tools"
+  mkdir -p "$storage_root/postgres" "$storage_root/backups"
+  chmod 700 "$storage_root" "$storage_root/postgres" "$storage_root/backups"
+  cat >"$environment_file" <<EOF
+ORG_TOOLS_IMAGE=ghcr.io/iwonz/org-tools:latest
+ORG_TOOLS_PORT=3000
+ORG_TOOLS_PUBLIC_ORIGIN=http://localhost:3000
+ORG_TOOLS_SETUP_TOKEN=$(random_secret)
+POSTGRES_DB=org_tools
+POSTGRES_USER=org_tools_owner
+POSTGRES_PASSWORD=$(random_secret)
+ORG_TOOLS_DB_USER=org_tools_app
+ORG_TOOLS_DB_PASSWORD=$(random_secret)
+ORG_TOOLS_DB_HOST=db
+ORG_TOOLS_DB_PORT=5432
+ORG_TOOLS_DB_SSLMODE=disable
+ORG_TOOLS_POSTGRES_DATA_PATH=$storage_root/postgres
+ORG_TOOLS_BACKUP_PATH=$storage_root/backups
+EOF
+  chmod 600 "$environment_file"
+  echo "Created $environment_file and external storage under $storage_root."
+}
+
+invalid_environment() {
+  echo "Invalid .env: $1" >&2
+  exit 1
+}
+
+load_and_validate_environment() {
+  seen=""
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ""|'#'*) continue ;; esac
+    key=${line%%=*}
+    value=${line#*=}
+    [ "$key" != "$line" ] || invalid_environment "every non-comment line must use KEY=VALUE."
+    case " $seen " in *" $key "*) invalid_environment "duplicate key $key." ;; esac
+    seen="$seen $key"
+    case "$key" in
+      ORG_TOOLS_IMAGE) ORG_TOOLS_IMAGE=$value ;;
+      ORG_TOOLS_PORT) ORG_TOOLS_PORT=$value ;;
+      ORG_TOOLS_PUBLIC_ORIGIN) ORG_TOOLS_PUBLIC_ORIGIN=$value ;;
+      ORG_TOOLS_SETUP_TOKEN) ORG_TOOLS_SETUP_TOKEN=$value ;;
+      POSTGRES_DB) POSTGRES_DB=$value ;;
+      POSTGRES_USER) POSTGRES_USER=$value ;;
+      POSTGRES_PASSWORD) POSTGRES_PASSWORD=$value ;;
+      ORG_TOOLS_DB_USER) ORG_TOOLS_DB_USER=$value ;;
+      ORG_TOOLS_DB_PASSWORD) ORG_TOOLS_DB_PASSWORD=$value ;;
+      ORG_TOOLS_DB_HOST) ORG_TOOLS_DB_HOST=$value ;;
+      ORG_TOOLS_DB_PORT) ORG_TOOLS_DB_PORT=$value ;;
+      ORG_TOOLS_DB_SSLMODE) ORG_TOOLS_DB_SSLMODE=$value ;;
+      ORG_TOOLS_POSTGRES_DATA_PATH) ORG_TOOLS_POSTGRES_DATA_PATH=$value ;;
+      ORG_TOOLS_BACKUP_PATH) ORG_TOOLS_BACKUP_PATH=$value ;;
+      *) invalid_environment "unsupported key $key." ;;
+    esac
+  done <"$environment_file"
+
+  for key in ORG_TOOLS_IMAGE ORG_TOOLS_PORT ORG_TOOLS_PUBLIC_ORIGIN ORG_TOOLS_SETUP_TOKEN POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD ORG_TOOLS_DB_USER ORG_TOOLS_DB_PASSWORD ORG_TOOLS_DB_HOST ORG_TOOLS_DB_PORT ORG_TOOLS_DB_SSLMODE ORG_TOOLS_POSTGRES_DATA_PATH ORG_TOOLS_BACKUP_PATH; do
+    case " $seen " in *" $key "*) ;; *) invalid_environment "missing key $key." ;; esac
+  done
+  for secret_value in "$ORG_TOOLS_SETUP_TOKEN" "$POSTGRES_PASSWORD" "$ORG_TOOLS_DB_PASSWORD"; do
+    [ "${#secret_value}" -ge 32 ] || invalid_environment "secrets must contain at least 32 characters."
+    case "$secret_value" in *GENERATE*|*CHANGE*|*REPLACE*|*example*|*placeholder*) invalid_environment "replace placeholder secrets with generated values." ;; esac
+  done
+  case "$ORG_TOOLS_PORT:$ORG_TOOLS_DB_PORT" in *[!0-9:]*|:*|*:) invalid_environment "ports must be numeric." ;; esac
+  case "$ORG_TOOLS_DB_SSLMODE" in disable|require|verify-ca|verify-full) ;; *) invalid_environment "unsupported ORG_TOOLS_DB_SSLMODE." ;; esac
+  case "$ORG_TOOLS_PUBLIC_ORIGIN" in https://*|http://localhost:*|http://127.0.0.1:*) ;; *) invalid_environment "public origin must use HTTPS or localhost HTTP." ;; esac
+
+  for storage_path in "$ORG_TOOLS_POSTGRES_DATA_PATH" "$ORG_TOOLS_BACKUP_PATH"; do
+    case "$storage_path" in /*) ;; *) invalid_environment "storage paths must be absolute." ;; esac
+    [ -d "$storage_path" ] || invalid_environment "storage directories must exist; use env init or create them first."
+    canonical_path=$(CDPATH= cd -- "$storage_path" && pwd -P)
+    case "$canonical_path/" in "$repository_root/"*) invalid_environment "storage paths must be outside the checkout." ;; esac
+  done
+}
+
+require_environment() {
+  if [ ! -f "$environment_file" ]; then
+    echo "Missing .env. Run ./bin/org-tools env init first." >&2
+    exit 1
+  fi
+  load_and_validate_environment
+}
+
+compose() {
+  require_environment
+  docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" "$@"
+}
+
+case "${1:-}" in
+  env)
+    case "${2:-}" in
+      init) init_environment ;;
+      validate) require_environment; echo ".env is valid." ;;
+      *) echo "Usage: ./bin/org-tools env {init|validate}" >&2; exit 2 ;;
+    esac
+    ;;
+  up)
+    shift
+    compose up -d "$@"
+    ;;
+  down)
+    shift
+    require_environment
+    docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" down "$@"
+    ;;
+  logs)
+    shift
+    compose logs -f "$@"
+    ;;
+  dev)
+    shift
+    require_environment
+    docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" up --build "$@"
+    ;;
+  run)
+    shift
+    require_environment
+    docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm toolbox "$@"
+    ;;
+  migrate)
+    shift
+    compose run --rm migrate "$@"
+    ;;
+  reset-super-admin-password)
+    shift
+    require_environment
+    docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm -it toolbox pnpm --filter @org-tools/ui recovery:super-admin "$@"
+    ;;
+  docker-run)
+    shift
+    exec "$repository_root/bin/org-tools-docker-run" "$@"
+    ;;
+  *)
+    echo "Usage: ./bin/org-tools {env {init|validate}|up|down|logs|dev|run|migrate|docker-run|reset-super-admin-password}" >&2
+    exit 2
+    ;;
+esac

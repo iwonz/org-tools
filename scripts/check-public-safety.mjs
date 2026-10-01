@@ -5,8 +5,6 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { pagesOutput, validatePagesOutput } from "./pages.mjs";
-
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const productionBuild = join(repositoryRoot, "apps", "ui", ".next");
 const productionOutputs = [join(productionBuild, "static"), join(productionBuild, "server", "app")];
@@ -14,8 +12,8 @@ const scannerPath = "scripts/check-public-safety.mjs";
 const screenshotManifestPath = join(repositoryRoot, "docs", "screenshot-demo.json");
 const screenshotsDirectory = join(repositoryRoot, "docs", "screenshots");
 const primaryScreenshotModules = [
-  "import",
-  "export",
+  "authentication",
+  "administration",
   "theme",
   "language",
   "teams",
@@ -24,7 +22,7 @@ const primaryScreenshotModules = [
   "calendar",
   "download",
 ];
-const supportingScreenshotModules = ["recovery"];
+const supportingScreenshotModules = ["access"];
 
 const blockedPathSegments = new Set([
   ".cache",
@@ -75,6 +73,11 @@ const contentRules = [
     name: "absolute user home path",
     pattern: new RegExp(joined("(?:/", "Users|/home)/[^/\\s]+/|", "[A-Z]:\\\\Users\\\\"), "u"),
     skipProductionServerScripts: true,
+  },
+  {
+    name: "embedded deployment secret",
+    pattern:
+      /(?:ORG_TOOLS_SETUP_TOKEN|ORG_TOOLS_DB_PASSWORD|POSTGRES_PASSWORD)=[A-Fa-f0-9_-]{32,}/u,
   },
   {
     allowedPaths: new Set(["apps/ui/messages/ru.json"]),
@@ -133,7 +136,11 @@ function repositoryFiles() {
   );
 
   if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || "Unable to enumerate the repository worktree.");
+    throw new Error(
+      result.error?.message ||
+        result.stderr?.trim() ||
+        "Unable to enumerate the repository worktree.",
+    );
   }
 
   return result.stdout.split("\0").filter(Boolean);
@@ -306,11 +313,6 @@ async function main() {
     .catch(() => false);
 
   await validateScreenshotDemo(violations);
-  const pageViolations = await validatePagesOutput().catch((error) => [
-    error instanceof Error ? error.message : String(error),
-  ]);
-  for (const rule of pageViolations) violations.push({ path: "pages-out", rule });
-
   if (!outputExists) {
     violations.push({
       path: "apps/ui/.next/BUILD_ID",
@@ -336,20 +338,11 @@ async function main() {
       }
     }
   }
-  const pagesOutputExists = await stat(pagesOutput)
-    .then((entry) => entry.isDirectory())
-    .catch(() => false);
-  if (pagesOutputExists) {
-    for (const path of await walk(pagesOutput)) absolutePaths.add(resolve(path));
-  }
-
   for (const absolutePath of [...absolutePaths].sort()) {
     const path = normalizedRelativePath(absolutePath);
     const pathSegments = path.split("/");
     const isProductionFile =
-      path.startsWith("apps/ui/.next/static/") ||
-      path.startsWith("apps/ui/.next/server/app/") ||
-      path.startsWith("pages-out/");
+      path.startsWith("apps/ui/.next/static/") || path.startsWith("apps/ui/.next/server/app/");
 
     if (!isProductionFile) {
       const blockedSegment = pathSegments.find((segment) => blockedPathSegments.has(segment));
@@ -362,11 +355,15 @@ async function main() {
     }
 
     const extension = extname(path).toLowerCase();
-    if (!isProductionFile && [".db", ".sqlite", ".sqlite3"].includes(extension)) {
+    if (
+      !isProductionFile &&
+      ([".backup", ".db", ".dump", ".sqlite", ".sqlite3"].includes(extension) ||
+        path.endsWith(".org-tools-backup"))
+    ) {
       violations.push({ path, rule: "local database files must never be published" });
       continue;
     }
-    if (path === ".org-tools/config.json") {
+    if (path === ".org-tools/config.json" || (path.startsWith(".env") && path !== ".env.example")) {
       violations.push({ path, rule: "local runtime config must never be published" });
       continue;
     }
@@ -376,7 +373,7 @@ async function main() {
     if (extension === ".tsbuildinfo") {
       violations.push({ path, rule: "generated TypeScript build cache must not be published" });
     }
-    if (path.endsWith("apps/ui/next-env.d.ts") || path.endsWith("apps/pages/next-env.d.ts")) {
+    if (path.endsWith("apps/ui/next-env.d.ts")) {
       violations.push({ path, rule: "generated Next.js type declaration must not be published" });
     }
     if (binaryExtensions.has(extension) || path === scannerPath) continue;

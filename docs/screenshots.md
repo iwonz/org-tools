@@ -5,46 +5,47 @@ The screenshot catalog is generated from the production applications and declare
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
 
-The local server suite resets the singleton SQLite state before each workflow. The Pages suite verifies that the same scenarios can be prepared in memory without API or file-persistence controls. Every owned page is monitored for unexpected console warnings and errors, uncaught page errors, failed application requests, and failing same-origin resources. A diagnostic fails with its runtime, scenario, category, source, and bounded message; React, Next.js, MobX, localization, hydration, and application diagnostics are never suppressed. Run `pnpm screenshots:generate`, inspect both themes and all six languages including Arabic RTL, then run it again and compare hashes.
+The production server suite authenticates a synthetic Super Administrator and resets PostgreSQL
+through protected organization/UI endpoints before each workflow. Every page is monitored for
+unexpected console warnings and errors, uncaught page errors, failed application requests, and
+failing same-origin resources. Run `pnpm screenshots:generate`, inspect both themes and all six
+languages including Arabic RTL, then run it again and compare hashes.
 
-## Import
+## Authentication
 
-### State import confirmation
+### Account sign in
 
-[![State import confirmation](screenshots/demo-import.png)](screenshots/demo-import.png)
+[![Account sign in](screenshots/demo-authentication.png)](screenshots/demo-authentication.png)
 
-Review the selected filename, size, Employee, and Unit counts before atomically replacing the current state.
+Sign in to the local organization with an email address and password.
 
-Capabilities: Strict state validation, Summary counts, Atomic replacement.
+Capabilities: Email and password, Server session, Local authentication.
 
-### Invalid state recovery
+## Administration
 
-[![Invalid state recovery](screenshots/feature-import-invalid-state.png)](screenshots/feature-import-invalid-state.png)
+### Users
 
-Reject partial, arbitrary, or malformed JSON without changing data and offer an immediate file re-selection action.
+[![Administration users](screenshots/demo-administration.png)](screenshots/demo-administration.png)
 
-Capabilities: Strict rejection, No mutation, Choose another file.
+Create linked accounts, assign roles and direct grants, and revoke or deactivate access.
 
-## Export
+Capabilities: User lifecycle, Employee identity, Roles, Direct grants.
 
-### Direct state Export
+### Roles
 
-[![Direct state Export](screenshots/demo-export.png)](screenshots/demo-export.png)
+[![Role permission sets](screenshots/feature-access-roles.png)](screenshots/feature-access-roles.png)
 
-Download the complete validated application state directly from the sidebar without an intermediate dialog.
+Build reusable roles from explicit permissions and valid scopes.
 
-Capabilities: Complete state, Direct download, Unsaved live snapshot.
+Capabilities: Role editor, Permission registry, Valid scopes, Effective access.
 
-## Recovery
+### Audit
 
-### Database recovery confirmation
+[![Security audit](screenshots/feature-administration-audit.png)](screenshots/feature-administration-audit.png)
 
-[![Database recovery confirmation](screenshots/feature-database-create-new.png)](screenshots/feature-database-create-new.png)
+Review bounded events with action, result, time, actor, targets, and correlation identifier.
 
-Recover from an unavailable or corrupt local database by confirming a timestamped backup and a
-clean current-schema replacement.
-
-Capabilities: Explicit recovery, Timestamped backup, Current schema, No silent reset.
+Capabilities: Audit log, Search, Pagination, Correlation IDs.
 
 ## Theme
 
@@ -252,25 +253,23 @@ WebP is preferred and the browser's PNG encoder is the compatibility fallback.
 
 Capabilities: Local file, Clipboard image, Crop and zoom, WebP with PNG fallback.
 
-## Employee transfer
+## Access and recovery
 
-### Employee field mapping
+### Resource access policies
 
-[![Employee field mapping](screenshots/feature-employee-import-mapping.png)](screenshots/feature-employee-import-mapping.png)
+[![Resource access policies](screenshots/feature-access-policies.png)](screenshots/feature-access-policies.png)
 
-Inspect the first richest bounded JSON record and map every discovered flat or nested source path
-left-to-right through a real Org Tools target Select. Occupied targets transfer between rows.
+Restrict fields, Tags, Units, Staffing Slots, and Views by role, account, or managed relationship.
 
-Capabilities: Field mapping, Nested paths, Team assignments, Import preview.
+Capabilities: Read ACL, Write ACL, Inherited boundaries, Restrictive Tags.
 
-### Employee duplicate resolution
+### Encrypted Backup and Restore
 
-[![Employee duplicate resolution](screenshots/feature-employee-import-duplicates.png)](screenshots/feature-employee-import-duplicates.png)
+[![Encrypted Backup and Restore](screenshots/feature-administration-backup.png)](screenshots/feature-administration-backup.png)
 
-Review UUID-preserving additions, normalized identity duplicates, and skipped Employees with one bulk
-policy plus sparse per-Employee overrides before atomic import.
+Create and restore complete encrypted backups after re-entering the administrator password.
 
-Capabilities: UUID validation, Identity matching, Three review columns, Atomic import.
+Capabilities: AES-256-GCM, Argon2id, Reauthentication, Atomic Restore.
 
 ## Editor
 
@@ -551,8 +550,6 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
 
 ## Review checklist
 
-- Confirm Import exposes All state and Employees with mapped fields and normalized identity duplicate
-  choices; Export must download only the complete state directly with no dialog.
 - Review light and dark themes, all six locale dialogs, Arabic RTL, compact and expanded sidebar
   geometry, and every product module.
 - Confirm startup uses one centered icon-only loader with no visible technical status copy.
@@ -672,15 +669,17 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   unassigned fallback. Their transient checkboxes remove whitespace-only lines and keep the first
   exact unique line in that order; bounded preview, Copy/Save or Copy/Download, and preview totals
   all describe the same processed text while JSON remains unchanged.
-- Confirm Employee Import shows a bounded richest-record preview beside virtualized fixed-source →
-  target-Select rows, transfers occupied targets, imports Teams only through mapping, and keeps
-  duplicate review virtualized.
-- Confirm an unavailable or corrupt database offers Retry and confirmed Create new without silently
-  replacing the existing database family.
+- Confirm Setup/Login, forced password change, account menu, Super-Administrator-only navigation,
+  Users, Roles, Access, Audit, and encrypted Backup/Restore are accessible and localized. Direct
+  protected API calls must still reject a role whose matching UI action is hidden.
+- Confirm filtered accounts never render or receive hidden fields, Tags, Employees, Units, Slots,
+  Views, counts, Download values, Calendar values, accessible labels, or PNG content.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
   browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
-- Confirm both runtimes expose the same sidebar actions and compact/expanded geometry.
-- Require a clean browser diagnostic report for every server and Pages scenario; investigate new warnings instead of broadening an allowlist.
+- Confirm the production server exposes the expected role-specific sidebar actions and
+  compact/expanded geometry.
+- Require a clean browser diagnostic report for every scenario; investigate new warnings instead
+  of broadening an allowlist.
 - Reject real data, local filesystem paths, browser notifications, external images, nondeterministic timestamps, clipping, or unintended overlays.
 - Regenerate immediately; all 56 PNGs must retain identical hashes. Material differences require
   review and a deliberate update.

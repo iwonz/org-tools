@@ -7,6 +7,10 @@
     ".": {
       "types": "./index.ts",
       "default": "./index.ts"
+    },
+    "./security": {
+      "types": "./security.ts",
+      "default": "./security.ts"
     }
   }
 }

@@ -254,10 +254,18 @@ export async function exerciseStaffingSlots(page: Page) {
   dialog = page.getByRole("dialog");
   await dialog.getByRole("tab", { name: "Live", exact: true }).click();
   await dialog.getByRole("searchbox", { name: "Live Employee filter", exact: true }).fill("Jordan");
+  await expect(dialog.getByText("Matches: 1", { exact: true }).first()).toBeVisible();
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   const confirmation = page.locator('[data-demo-id="unit-mode-confirmation"]');
-  await confirmation.getByRole("button", { name: "Change mode", exact: true }).click();
-  await expect(platformUnit).toContainText("Live");
+  const changeModeButton = confirmation.getByRole("button", {
+    name: "Change mode",
+    exact: true,
+  });
+  await expect(confirmation).toBeVisible();
+  await changeModeButton.click();
+  await expect(confirmation).not.toBeVisible();
+  await expect(platformUnit.locator('[data-demo-id="unit-status-badge"]')).toContainText("Live");
+  await expect(platformUnit.locator("[data-org-editor-unit-header]")).toContainText("1 Employee");
 
   await platformUnit.click({ button: "right", position: { x: 80, y: 24 } });
   await page.getByRole("menuitem", { name: "Add staffing slot", exact: true }).click();

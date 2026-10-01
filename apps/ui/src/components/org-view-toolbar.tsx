@@ -39,6 +39,10 @@ const displayViewName = (view: Omit<OrgToolsViewDocument, "structure">, systemNa
 
 export function OrgViewToolbar({
   activeViewId,
+  canCreate = true,
+  canDelete = true,
+  canRename = true,
+  canUpdateSettings = true,
   settings,
   onSettingsChange,
   onCreate,
@@ -48,6 +52,10 @@ export function OrgViewToolbar({
   views,
 }: {
   activeViewId: ViewId;
+  canCreate?: boolean;
+  canDelete?: boolean;
+  canRename?: boolean;
+  canUpdateSettings?: boolean;
   settings: OrgEditorViewSettings;
   onSettingsChange: (patch: Partial<OrgEditorViewSettings>) => void;
   onCreate: (name: string, source: NewOrgViewSource) => void;
@@ -116,31 +124,43 @@ export function OrgViewToolbar({
             ))}
           </SelectContent>
         </Select>
-        <ViewSettingsDialog key={activeViewId} settings={settings} onChange={onSettingsChange} />
-        <ActionIconButton
-          dataDemoId="org-editor-create-view"
-          disabled={false}
-          icon={<HiOutlinePlus />}
-          label={t("Create View")}
-          onClick={() => openDialog("create")}
-          showTooltip={false}
-        />
-        <ActionIconButton
-          dataDemoId="org-editor-rename-view"
-          disabled={activeView?.kind !== "custom"}
-          icon={<HiOutlinePencilSquare />}
-          label={t("Rename View")}
-          onClick={() => openDialog("rename")}
-          showTooltip={false}
-        />
-        <ActionIconButton
-          dataDemoId="org-editor-delete-view"
-          disabled={activeView?.kind !== "custom"}
-          icon={<HiOutlineTrash />}
-          label={t("Delete View")}
-          onClick={() => openDialog("delete")}
-          showTooltip={false}
-        />
+        {canUpdateSettings && (
+          <ViewSettingsDialog
+            key={`${activeViewId}:${views.map((view) => view.id).join(",")}`}
+            settings={settings}
+            onChange={onSettingsChange}
+          />
+        )}
+        {canCreate && (
+          <ActionIconButton
+            dataDemoId="org-editor-create-view"
+            disabled={false}
+            icon={<HiOutlinePlus />}
+            label={t("Create View")}
+            onClick={() => openDialog("create")}
+            showTooltip={false}
+          />
+        )}
+        {canRename && (
+          <ActionIconButton
+            dataDemoId="org-editor-rename-view"
+            disabled={activeView?.kind !== "custom"}
+            icon={<HiOutlinePencilSquare />}
+            label={t("Rename View")}
+            onClick={() => openDialog("rename")}
+            showTooltip={false}
+          />
+        )}
+        {canDelete && (
+          <ActionIconButton
+            dataDemoId="org-editor-delete-view"
+            disabled={activeView?.kind !== "custom"}
+            icon={<HiOutlineTrash />}
+            label={t("Delete View")}
+            onClick={() => openDialog("delete")}
+            showTooltip={false}
+          />
+        )}
       </div>
 
       <Dialog onOpenChange={(open) => !open && setDialog(null)} open={dialog !== null}>

@@ -1,15 +1,7 @@
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { defineConfig, devices } from "@playwright/test";
 
-const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
-const port = Number(process.env.ORG_TOOLS_PORT ?? "4273");
-const configuredBaseUrl = process.env.ORG_TOOLS_BASE_URL;
-const baseURL = configuredBaseUrl ?? `http://127.0.0.1:${port}`;
-const databasePath =
-  process.env.ORG_TOOLS_DB_PATH ?? join(tmpdir(), `org-tools-playwright-${process.pid}.sqlite3`);
+const baseURL =
+  process.env.ORG_TOOLS_BASE_URL ?? process.env.ORG_TOOLS_PUBLIC_ORIGIN ?? "http://127.0.0.1:3000";
 
 export default defineConfig({
   metadata: { runtime: "server-production" },
@@ -42,15 +34,4 @@ export default defineConfig({
       use: { browserName: "chromium" },
     },
   ],
-  ...(configuredBaseUrl
-    ? {}
-    : {
-        webServer: {
-          command: `ORG_TOOLS_DB_PATH=${JSON.stringify(databasePath)} node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port ${port}`,
-          cwd: `${repositoryRoot}/apps/ui`,
-          url: baseURL,
-          reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
-        },
-      }),
 });

@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+compose() {
+  docker compose --env-file "$repository_root/.env" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" "$@"
+}
+started=0
+if [ "$(compose ps --status running --services app 2>/dev/null || true)" != "app" ]; then
+  started=1
+  "$repository_root/bin/org-tools" dev -d
+fi
+cleanup() {
+  if [ "$started" -eq 1 ]; then "$repository_root/bin/org-tools" down >/dev/null 2>&1 || true; fi
+}
+trap cleanup EXIT INT TERM
+attempt=0
+until compose exec -T app node -e "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 60 ] || { echo "Development application did not become ready." >&2; exit 1; }
+  sleep 1
+done
+compose run --rm -e ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 toolbox \
+  node packages/screenshots/scripts/dev-check.mjs
+echo "Development Compose stack is ready."

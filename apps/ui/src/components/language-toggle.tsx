@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { HiMiniCheck, HiOutlineLanguage } from "react-icons/hi2";
 
+import { useAuth } from "@/components/auth-context";
 import { useAppLocale } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import {
 import { APP_LOCALE_CONFIG, type AppLocale } from "@/i18n/locale";
 import { type UiTextKey, useUiText } from "@/i18n/use-ui-text";
 import { cn } from "@/lib/utils";
+import { useOrgStore } from "@/stores/org-store-context";
 
 const LANGUAGE_OPTIONS: Array<{ labelKey: UiTextKey; value: AppLocale }> = [
   { labelKey: "English", value: "en" },
@@ -103,8 +105,11 @@ export function LanguageToggle({
   triggerClassName?: string;
 }) {
   const { locale, setLocale } = useAppLocale();
+  const auth = useAuth();
+  const store = useOrgStore();
   const t = useUiText();
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const activeOption = LANGUAGE_OPTIONS.find((option) => option.value === locale);
   const activeLabel = t(activeOption?.labelKey ?? "English");
 
@@ -149,10 +154,31 @@ export function LanguageToggle({
                 <input
                   checked={selected}
                   className="sr-only"
+                  disabled={saving}
                   name="org-tools-language"
-                  onChange={() => {
-                    setLocale(option.value);
-                    setOpen(false);
+                  onChange={async () => {
+                    const csrfToken = auth.bootstrap?.csrfToken;
+                    if (!csrfToken || saving) return;
+                    const previousLocale = store.locale;
+                    store.setLocale(option.value);
+                    setSaving(true);
+                    try {
+                      const response = await fetch("/api/ui", {
+                        body: JSON.stringify(store.createDurableUiState()),
+                        headers: {
+                          "Content-Type": "application/json",
+                          "X-Org-Tools-CSRF": csrfToken,
+                        },
+                        method: "PUT",
+                      });
+                      if (!response.ok) throw new Error("ui_write_failed");
+                      setLocale(option.value);
+                      setOpen(false);
+                    } catch {
+                      store.setLocale(previousLocale);
+                    } finally {
+                      setSaving(false);
+                    }
                   }}
                   type="radio"
                   value={option.value}

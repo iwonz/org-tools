@@ -1,21 +1,13 @@
 import { expect, type Page } from "@playwright/test";
-import { createUsedColorsStateFile, expectUsedColorPalette, openImportDialog } from "./helpers.js";
+import {
+  createUsedColorsStateFile,
+  expectUsedColorPalette,
+  replaceStateFromFile,
+} from "./helpers.js";
 
-export async function exerciseUsedColorsAndToolIcons(page: Page, runtime: "pages" | "server") {
-  const importDialog = await openImportDialog(page, await createUsedColorsStateFile());
-  const importWrite =
-    runtime === "server"
-      ? page.waitForResponse(
-          (response) =>
-            response.request().method() === "PUT" &&
-            response.url().endsWith("/api/state") &&
-            response.request().postData()?.includes("70000000-0000-4000-8000-000000000001") ===
-              true,
-        )
-      : null;
-  await importDialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(importDialog).toBeHidden();
-  if (importWrite) await importWrite;
+export async function exerciseUsedColorsAndToolIcons(page: Page) {
+  await replaceStateFromFile(page, await createUsedColorsStateFile());
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   const tools = page.locator('[data-demo-id="org-editor-canvas-tool-actions"]');
@@ -35,17 +27,11 @@ export async function exerciseUsedColorsAndToolIcons(page: Page, runtime: "pages
   ).toBeVisible();
 
   await page.setViewportSize({ height: 844, width: 390 });
-  const employeeTabWrite =
-    runtime === "server"
-      ? page.waitForResponse(
-          (response) =>
-            response.request().method() === "PUT" &&
-            response.url().endsWith("/api/state") &&
-            response.request().postData()?.includes('"activeTab":"employees"') === true,
-        )
-      : null;
+  const employeeTabWrite = page.waitForResponse(
+    (response) => response.request().method() === "PUT" && response.url().endsWith("/api/ui"),
+  );
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
-  if (employeeTabWrite) await employeeTabWrite;
+  await employeeTabWrite;
   await page.locator('[data-demo-id="employee-tags-button"]').click();
   const catalog = page.getByRole("dialog", { name: "Tags", exact: true });
   const row = catalog.locator('[data-demo-id="tag-catalog-row"]').first();
@@ -56,29 +42,10 @@ export async function exerciseUsedColorsAndToolIcons(page: Page, runtime: "pages
     .getAttribute("data-tag-color");
   let requestWrites = 0;
   const onRequest = (request: { method(): string; url(): string }) => {
-    if (request.method() === "PUT" && request.url().endsWith("/api/state")) requestWrites += 1;
+    if (request.method() === "POST" && request.url().endsWith("/api/commands")) requestWrites += 1;
   };
-  if (runtime === "server") page.on("request", onRequest);
-  if (runtime === "pages") {
-    await page.evaluate(() => {
-      const originalPost = BroadcastChannel.prototype.postMessage;
-      Reflect.set(window, "__usedColorWrites", 0);
-      BroadcastChannel.prototype.postMessage = function (value) {
-        if (value?.type === "state") {
-          Reflect.set(
-            window,
-            "__usedColorWrites",
-            Number(Reflect.get(window, "__usedColorWrites")) + 1,
-          );
-        }
-        originalPost.call(this, value);
-      };
-    });
-  }
-  const writes = async () =>
-    runtime === "server"
-      ? requestWrites
-      : page.evaluate(() => Number(Reflect.get(window, "__usedColorWrites")));
+  page.on("request", onRequest);
+  const writes = async () => requestWrites;
 
   await trigger.click();
   const picker = page.locator('[data-demo-id="tag-color-dropdown"]');
@@ -105,7 +72,7 @@ export async function exerciseUsedColorsAndToolIcons(page: Page, runtime: "pages
   await expect(row.locator('[data-tag-color="#12345600"]')).toBeVisible();
   await expect.poll(writes).toBe(1);
 
-  if (runtime === "server") page.off("request", onRequest);
+  page.off("request", onRequest);
   await catalog.getByRole("button", { name: "Close", exact: true }).first().click();
   await page.setViewportSize({ height: 1000, width: 1440 });
 }

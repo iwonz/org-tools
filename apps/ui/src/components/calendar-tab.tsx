@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAccess } from "@/components/use-access";
 import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
 import { buildCalendarDayDialogRows } from "@/lib/calendar-day-dialog";
 import { getCalendarBirthdayEmployees } from "@/lib/calendar-events";
@@ -317,6 +318,7 @@ export const CalendarTab = observer(() => {
   const t = useUiText();
   const format = useAppFormatter();
   const { locale } = useAppLocale();
+  const { can } = useAccess();
   const employeesByBirthday =
     store.units?.indexes.birthdayEmployeesByKey ?? EMPTY_BIRTHDAY_EMPLOYEES_BY_KEY;
   const datedEventsByDate = store.units?.indexes.datedTagEventsByDate ?? EMPTY_DATED_EVENTS_BY_DATE;
@@ -327,6 +329,18 @@ export const CalendarTab = observer(() => {
   const [dialogTagKey, setDialogTagKey] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const canForEmployee = (
+    employee: Employee,
+    permission: "employee.assignments.update" | "employee.update" | "tag.assign",
+  ) => {
+    const contexts = store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
+    return (
+      can(permission, { employeeId: employee.id }) ||
+      contexts.some((context) =>
+        can(permission, { employeeId: employee.id, unitId: context.unitId }),
+      )
+    );
+  };
   const todayDate = useMemo(getTodayDate, []);
   const todayIso = todayDate;
   const monthDays = useMemo(
@@ -524,6 +538,12 @@ export const CalendarTab = observer(() => {
               <CalendarDayDialogList
                 actions={(employee) => (
                   <EmployeeCardActions
+                    canAssignTags={canForEmployee(employee, "tag.assign")}
+                    canDelete={can("employee.delete")}
+                    canEdit={
+                      canForEmployee(employee, "employee.update") ||
+                      canForEmployee(employee, "employee.assignments.update")
+                    }
                     employee={employee}
                     onApplyTags={store.updateEmployeeTags}
                     onDelete={setDeletingEmployee}
@@ -544,28 +564,35 @@ export const CalendarTab = observer(() => {
         </DialogContent>
       </Dialog>
 
-      {editingEmployee && store.units && (
-        <EmployeeDialog
-          employee={editingEmployee}
-          mode="global"
-          onOpenChange={(open) => !open && setEditingEmployee(null)}
-          onSave={(fields, memberships, customOptionDrafts) =>
-            store.updateEmployee(
-              editingEmployee.id,
-              fields,
-              memberships,
-              store.systemOrgViewId,
-              customOptionDrafts,
-            )
-          }
-          open={Boolean(editingEmployee)}
-          tagOptions={store.units.indexes.tagOptions}
-          units={store.units}
-        />
-      )}
+      {editingEmployee &&
+        store.units &&
+        (canForEmployee(editingEmployee, "employee.update") ||
+          canForEmployee(editingEmployee, "employee.assignments.update") ||
+          canForEmployee(editingEmployee, "tag.assign")) && (
+          <EmployeeDialog
+            canAssignTags={canForEmployee(editingEmployee, "tag.assign")}
+            canEditAssignments={canForEmployee(editingEmployee, "employee.assignments.update")}
+            canEditFields={canForEmployee(editingEmployee, "employee.update")}
+            employee={editingEmployee}
+            mode="global"
+            onOpenChange={(open) => !open && setEditingEmployee(null)}
+            onSave={(fields, memberships, customOptionDrafts) =>
+              store.updateEmployee(
+                editingEmployee.id,
+                fields,
+                memberships,
+                store.systemOrgViewId,
+                customOptionDrafts,
+              )
+            }
+            open={Boolean(editingEmployee)}
+            tagOptions={store.units.indexes.tagOptions}
+            units={store.units}
+          />
+        )}
       <AlertDialog
         onOpenChange={(open) => !open && setDeletingEmployee(null)}
-        open={Boolean(deletingEmployee)}
+        open={Boolean(deletingEmployee) && can("employee.delete")}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -611,6 +638,12 @@ export const CalendarTab = observer(() => {
                 <TagEventSection
                   actions={(employee) => (
                     <EmployeeCardActions
+                      canAssignTags={canForEmployee(employee, "tag.assign")}
+                      canDelete={can("employee.delete")}
+                      canEdit={
+                        canForEmployee(employee, "employee.update") ||
+                        canForEmployee(employee, "employee.assignments.update")
+                      }
                       employee={employee}
                       onApplyTags={store.updateEmployeeTags}
                       onDelete={setDeletingEmployee}
@@ -634,6 +667,12 @@ export const CalendarTab = observer(() => {
                 <TagEventSection
                   actions={(employee) => (
                     <EmployeeCardActions
+                      canAssignTags={canForEmployee(employee, "tag.assign")}
+                      canDelete={can("employee.delete")}
+                      canEdit={
+                        canForEmployee(employee, "employee.update") ||
+                        canForEmployee(employee, "employee.assignments.update")
+                      }
                       employee={employee}
                       onApplyTags={store.updateEmployeeTags}
                       onDelete={setDeletingEmployee}

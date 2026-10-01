@@ -1,21 +1,20 @@
 "use client";
 
-import type { OrgToolsState } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
-import { useTheme } from "next-themes";
 import type { ComponentType, ReactNode } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   HiOutlineBuildingOffice2,
   HiOutlineCalendarDays,
   HiOutlineChevronLeft,
-  HiOutlineDocumentArrowDown,
-  HiOutlineDocumentArrowUp,
+  HiOutlineCog6Tooth,
   HiOutlineFolder,
   HiOutlineShare,
   HiOutlineUsers,
 } from "react-icons/hi2";
-
+import { AccountMenu } from "@/components/account-menu";
+import { AdministrationTab } from "@/components/administration-tab";
+import { useAuth } from "@/components/auth-context";
 import { CalendarTab } from "@/components/calendar-tab";
 import {
   type ContextHeaderAction,
@@ -23,7 +22,6 @@ import {
 } from "@/components/context-header-action";
 import { EmployeesTab } from "@/components/employees-tab";
 import { ExportTab } from "@/components/export-tab";
-import { ImportDialog } from "@/components/import-dialog";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useAppLocale } from "@/components/locale-provider";
 import { OrgStructureEditorTab } from "@/components/org-structure-editor-tab";
@@ -32,13 +30,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UnitsTab } from "@/components/units-tab";
-import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
-import { type UiTextKey, useMessageText, useUiText } from "@/i18n/use-ui-text";
-import { downloadState } from "@/lib/state-transfer";
+import { type UiTextKey, useUiText } from "@/i18n/use-ui-text";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
 
-type ProductTabValue = "calendar" | "employees" | "export" | "orgEditor" | "units";
+type ProductTabValue =
+  | "administration"
+  | "calendar"
+  | "employees"
+  | "export"
+  | "orgEditor"
+  | "units";
 
 const PRODUCT_NAVIGATION_ITEMS: Array<{
   icon: ComponentType<{ className?: string }>;
@@ -50,6 +52,7 @@ const PRODUCT_NAVIGATION_ITEMS: Array<{
   { icon: HiOutlineBuildingOffice2, label: "Editor", value: "orgEditor" },
   { icon: HiOutlineCalendarDays, label: "Calendar", value: "calendar" },
   { icon: HiOutlineShare, label: "Data Download", value: "export" },
+  { icon: HiOutlineCog6Tooth, label: "Administration", value: "administration" },
 ];
 
 const SIDEBAR_CONTROL_CLASS_NAME =
@@ -72,15 +75,36 @@ function SidebarTooltip({ children, collapsed }: { children: ReactNode; collapse
 export const OrgToolsShell = observer(function OrgToolsShell() {
   const store = useOrgStore();
   const t = useUiText();
-  const messageText = useMessageText();
   const runtime = useStateRuntime();
-  const { locale, setLocale } = useAppLocale();
-  const { setTheme } = useTheme();
-  const [importOpen, setImportOpen] = useState(false);
-  const [importState, setImportState] = useState<OrgToolsState | null>(null);
-  const [error, setError] = useState<UiMessageDescriptor | null>(null);
+  const auth = useAuth();
+  const { locale } = useAppLocale();
   const [contextHeaderActions, setContextHeaderActions] = useState<ContextHeaderAction[]>([]);
   const sidebarCollapsed = store.sidebarCollapsed;
+  const can = useCallback(
+    (permission: string) =>
+      Boolean(
+        auth.bootstrap?.access.isSuperAdmin ||
+          auth.bootstrap?.access.grants.some((grant) => grant.permission === permission),
+      ),
+    [auth.bootstrap],
+  );
+  const navigationItems = PRODUCT_NAVIGATION_ITEMS.filter((item) => {
+    if (item.value === "administration")
+      return auth.bootstrap?.account.roleSystemKey === "superAdmin";
+    if (item.value === "employees") return can("employee.read");
+    if (item.value === "units") return can("unit.read");
+    if (item.value === "orgEditor") return can("editor.system.read") || can("view.read");
+    if (item.value === "calendar") return can("calendar.read");
+    return can("dataDownload.create");
+  });
+  const effectiveActiveTab =
+    navigationItems.find((item) => item.value === store.activeTab)?.value ??
+    navigationItems[0]?.value;
+  useEffect(() => {
+    if (effectiveActiveTab && store.activeTab !== effectiveActiveTab) {
+      store.setActiveTab(effectiveActiveTab);
+    }
+  }, [effectiveActiveTab, store]);
   const registerContextHeaderAction = useCallback((action: ContextHeaderAction) => {
     setContextHeaderActions((currentActions) => [
       ...currentActions.filter((currentAction) => currentAction.id !== action.id),
@@ -95,7 +119,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
   }, []);
 
   const activeNavigationItem =
-    PRODUCT_NAVIGATION_ITEMS.find((item) => item.value === store.activeTab) ??
+    navigationItems.find((item) => item.value === effectiveActiveTab) ??
     ({
       icon: HiOutlineBuildingOffice2,
       label: "Editor",
@@ -112,6 +136,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
       <main
         className="flex h-dvh w-dvw overflow-hidden bg-shell text-foreground"
         data-demo-id="app-shell"
+        data-state-pending={runtime.pending ? "true" : "false"}
       >
         <Tabs
           className="min-h-0 min-w-0 flex-1 flex-row"
@@ -122,13 +147,14 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
               value === "employees" ||
               value === "orgEditor" ||
               value === "export" ||
-              value === "calendar"
+              value === "calendar" ||
+              value === "administration"
             ) {
               store.setActiveTab(value);
             }
           }}
           orientation="vertical"
-          value={store.activeTab}
+          value={effectiveActiveTab ?? ""}
         >
           <aside
             className={cn(
@@ -168,7 +194,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                 className="flex h-auto w-full flex-col items-stretch justify-start gap-1"
                 data-demo-id="product-tabs-list"
               >
-                {PRODUCT_NAVIGATION_ITEMS.map((item) => {
+                {navigationItems.map((item) => {
                   const Icon = item.icon;
                   const label = t(item.label);
 
@@ -192,54 +218,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
               </TabsList>
             </nav>
             <div className="flex shrink-0 flex-col gap-1 p-2 pb-3" data-demo-id="sidebar-actions">
-              <Button
-                aria-label={t("Import")}
-                className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
-                data-demo-id="import-action"
-                onClick={() => {
-                  setImportState(store.createOrgToolsState());
-                  setImportOpen(true);
-                }}
-                title={t("Import")}
-                type="button"
-                variant="ghost"
-              >
-                <HiOutlineDocumentArrowUp
-                  className="!size-5 shrink-0"
-                  data-demo-id="import-action-icon"
-                  data-icon="document-arrow-up"
-                />
-                <span className={sidebarLabelClassName} data-sidebar-label="">
-                  {t("Import")}
-                </span>
-                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Import")}</SidebarTooltip>
-              </Button>
-              <Button
-                aria-label={t("Export")}
-                className={cn("group relative", SIDEBAR_CONTROL_CLASS_NAME)}
-                data-demo-id="export-state"
-                onClick={() => {
-                  try {
-                    downloadState(store.createOrgToolsState());
-                    setError(null);
-                  } catch (exportError) {
-                    setError(describeError(exportError));
-                  }
-                }}
-                title={t("Export")}
-                type="button"
-                variant="ghost"
-              >
-                <HiOutlineDocumentArrowDown
-                  className="!size-5 shrink-0"
-                  data-demo-id="export-action-icon"
-                  data-icon="document-arrow-down"
-                />
-                <span className={sidebarLabelClassName} data-sidebar-label="">
-                  {t("Export")}
-                </span>
-                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Export")}</SidebarTooltip>
-              </Button>
               <div className="group relative">
                 <LanguageToggle
                   labelClassName={sidebarLabelClassName}
@@ -247,6 +225,11 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                 />
                 <SidebarTooltip collapsed={sidebarCollapsed}>{t("Language")}</SidebarTooltip>
               </div>
+              <AccountMenu
+                collapsed={sidebarCollapsed}
+                labelClassName={sidebarLabelClassName}
+                triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
+              />
               <div className="group relative">
                 <ThemeToggle
                   labelClassName={sidebarLabelClassName}
@@ -257,7 +240,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
             </div>
           </aside>
           <section className="flex min-w-0 flex-1 flex-col bg-background" data-demo-id="content">
-            {store.activeTab !== "orgEditor" && (
+            {effectiveActiveTab !== "orgEditor" && (
               <header
                 className="relative z-20 flex h-16 shrink-0 items-center gap-3 bg-background/96 px-5 backdrop-blur-sm"
                 data-demo-id="app-header"
@@ -303,15 +286,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                 </div>
               </header>
             )}
-            {error && (
-              <div
-                className="shrink-0 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive"
-                data-demo-id="app-error"
-                role="alert"
-              >
-                {messageText(error)}
-              </div>
-            )}
             <TabsContent
               className="flex min-h-0 flex-1"
               data-demo-id="units-tab-content"
@@ -347,6 +321,13 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
             >
               <ExportTab />
             </TabsContent>
+            <TabsContent
+              className="flex min-h-0 flex-1"
+              data-demo-id="administration-tab-content"
+              value="administration"
+            >
+              <AdministrationTab />
+            </TabsContent>
           </section>
         </Tabs>
       </main>
@@ -361,22 +342,6 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
             {t("Retry")}
           </Button>
         </div>
-      )}
-      {importState && (
-        <ImportDialog
-          currentState={importState}
-          onCommit={(state, fileName, fileSizeBytes) => {
-            store.loadOrgToolsState(state, fileName, fileSizeBytes);
-            setTheme(state.ui.theme);
-            setLocale(state.ui.locale);
-            setError(null);
-          }}
-          onOpenChange={(open) => {
-            setImportOpen(open);
-            if (!open) setImportState(null);
-          }}
-          open={importOpen}
-        />
       )}
     </ContextHeaderActionContext.Provider>
   );

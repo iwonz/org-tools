@@ -15,7 +15,7 @@ import type {
   UnitId,
 } from "@org-tools/types";
 import { useLocale } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HiOutlineArrowsPointingOut,
   HiOutlineArrowUpTray,
@@ -81,6 +81,9 @@ export type EditorEmployeeAssignment = {
 };
 
 type CommonProps = {
+  canAssignTags?: boolean;
+  canEditAssignments?: boolean;
+  canEditFields?: boolean;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   tagOptions: string[];
@@ -162,6 +165,9 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
   const format = useAppFormatter();
   const locale = useLocale();
   const { employee = null, mode, onOpenChange, open } = props;
+  const canAssignTags = props.canAssignTags ?? true;
+  const canEditAssignments = props.canEditAssignments ?? true;
+  const canEditFields = props.canEditFields ?? true;
   const [fields, setFields] = useState<EditableEmployeeFields>(() => getInitialFields(employee));
   const [birthdayDay, setBirthdayDay] = useState("none");
   const [birthdayMonth, setBirthdayMonth] = useState("none");
@@ -177,6 +183,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
   const [avatarError, setAvatarError] = useState<UiMessageDescriptor | null>(null);
   const [avatarSource, setAvatarSource] = useState<PreparedAvatarSource | null>(null);
   const [isPreparingAvatar, setIsPreparingAvatar] = useState(false);
+  const initializedDialogKeyRef = useRef<string | null>(null);
   const messageText = useMessageText();
   const globalUnits = mode === "global" ? props.units : null;
   const editorUnits = mode === "editor" ? props.units : EMPTY_EDITOR_UNITS;
@@ -230,7 +237,13 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedDialogKeyRef.current = null;
+      return;
+    }
+    const dialogKey = `${mode}:${employee?.id ?? "new"}:${initialEditorUnitIds.join(",")}`;
+    if (initializedDialogKeyRef.current === dialogKey) return;
+    initializedDialogKeyRef.current = dialogKey;
 
     setFields(getInitialFields(employee));
     setCompositeRecordKeys(createCompositeRecordKeys(employee, store.employeeFieldDefinitions));
@@ -444,7 +457,8 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
       setFormError(describeError(error));
     }
   };
-  const editorTargetMissing = mode === "editor" && selectedUnitIds.length === 0;
+  const editorTargetMissing =
+    canEditAssignments && mode === "editor" && selectedUnitIds.length === 0;
   const title = employee ? t("Edit Employee") : t("Create Employee");
 
   return (
@@ -460,6 +474,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
           <form
             className="flex min-h-0 flex-1 flex-col"
             onPaste={(event) => {
+              if (!canEditFields) return;
               const imageFile = Array.from(event.clipboardData.files).find((file) =>
                 file.type.startsWith("image/"),
               );
@@ -470,569 +485,604 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
             onSubmit={submit}
           >
             <DialogBody className="flex-1 space-y-6 overflow-y-auto">
-              <section className="grid gap-4 sm:grid-cols-2">
-                <Field htmlFor="employee-first-name" label={t("First name")}>
-                  <Input
-                    autoFocus
-                    id="employee-first-name"
-                    onChange={(event) => updateTextField("firstName", event.currentTarget.value)}
-                    value={fields.firstName}
-                  />
-                </Field>
-                <Field htmlFor="employee-last-name" label={t("Last name")}>
-                  <Input
-                    id="employee-last-name"
-                    onChange={(event) => updateTextField("lastName", event.currentTarget.value)}
-                    value={fields.lastName}
-                  />
-                </Field>
-                <Field htmlFor="employee-username" label={t("Username")}>
-                  <Input
-                    id="employee-username"
-                    onChange={(event) => updateTextField("username", event.currentTarget.value)}
-                    value={fields.username ?? ""}
-                  />
-                </Field>
-                <Field htmlFor="employee-email" label={t("Email")}>
-                  <Input
-                    id="employee-email"
-                    onChange={(event) => updateTextField("email", event.currentTarget.value)}
-                    type="email"
-                    value={fields.email ?? ""}
-                  />
-                </Field>
-                <Field htmlFor="employee-phone" label={t("Phone")}>
-                  <Input
-                    id="employee-phone"
-                    onChange={(event) => updateTextField("phone", event.currentTarget.value)}
-                    type="tel"
-                    value={fields.phone ?? ""}
-                  />
-                </Field>
-                <Field htmlFor="employee-profile-url" label={t("Profile URL")}>
-                  <Input
-                    id="employee-profile-url"
-                    onChange={(event) => updateTextField("profileUrl", event.currentTarget.value)}
-                    placeholder="https://example.test/profile"
-                    type="url"
-                    value={fields.profileUrl ?? ""}
-                  />
-                </Field>
-                <Field label={t("Birthday")}>
-                  <div className="grid grid-cols-3 overflow-hidden rounded-md border border-input bg-background focus-within:border-signal/55 focus-within:ring-2 focus-within:ring-ring/20">
-                    <Select onValueChange={setBirthdayDay} value={birthdayDay}>
-                      <SelectTrigger
-                        aria-label={t("Day")}
-                        className="rounded-none border-0 bg-transparent shadow-none focus-visible:border-0 focus-visible:ring-0"
-                        data-demo-id="employee-birthday-day"
-                      >
-                        <SelectValue placeholder={t("Day")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">{t("Day")}</SelectItem>
-                        {Array.from(
-                          {
-                            length:
-                              birthdayMonth === "none"
-                                ? 31
-                                : getBirthdayDaysInMonth(
-                                    Number(birthdayMonth),
-                                    birthdayYear === "none"
-                                      ? UNKNOWN_BIRTH_YEAR
-                                      : Number(birthdayYear),
-                                  ),
-                          },
-                          (_, index) => index + 1,
-                        ).map((day) => (
-                          <SelectItem key={day} value={String(day)}>
-                            {String(day).padStart(2, "0")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={updateBirthdayMonth} value={birthdayMonth}>
-                      <SelectTrigger
-                        aria-label={t("Month")}
-                        className="rounded-none border-0 border-l border-input bg-transparent shadow-none focus-visible:border-l focus-visible:ring-0"
-                        data-demo-id="employee-birthday-month"
-                      >
-                        <SelectValue placeholder={t("Month")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">{t("Month")}</SelectItem>
-                        {Array.from({ length: 12 }, (_, index) => index).map((monthIndex) => (
-                          <SelectItem key={monthIndex} value={String(monthIndex + 1)}>
-                            {format.dateTime(new Date(Date.UTC(2000, monthIndex, 1)), {
-                              month: "long",
-                              timeZone: "UTC",
-                            })}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={updateBirthdayYear} value={birthdayYear}>
-                      <SelectTrigger
-                        aria-label={t("Year")}
-                        className="rounded-none border-0 border-l border-input bg-transparent shadow-none focus-visible:border-l focus-visible:ring-0"
-                        data-demo-id="employee-birthday-year"
-                      >
-                        <SelectValue placeholder={t("Year")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">{t("Year")}</SelectItem>
-                        <SelectItem value={String(UNKNOWN_BIRTH_YEAR)}>
-                          {t("Unknown year")}
-                        </SelectItem>
-                        {birthdayYearOptions.map((year) => (
-                          <SelectItem key={year} value={String(year)}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </Field>
-                <Field label={t("Gender")}>
-                  <fieldset
-                    aria-label={t("Gender")}
-                    className="grid grid-cols-3 overflow-hidden rounded-md border border-input bg-background focus-within:border-signal/55 focus-within:ring-2 focus-within:ring-ring/20"
-                    data-demo-id="employee-gender"
-                  >
-                    {(
-                      [
-                        ["male", t("Male")],
-                        ["female", t("Female")],
-                        ["unspecified", t("Not specified")],
-                      ] as const
-                    ).map(([gender, label], index) => (
-                      <label
-                        className={cn(
-                          "cursor-pointer px-2 py-2.5 text-center text-sm transition-colors",
-                          index > 0 && "border-l border-input",
-                          fields.gender === gender
-                            ? "bg-accent text-accent-foreground"
-                            : "hover:bg-accent/45",
-                        )}
-                        key={gender}
-                      >
-                        <input
-                          checked={fields.gender === gender}
-                          className="sr-only"
-                          name="employee-gender"
-                          onChange={() =>
-                            setFields((currentFields) => ({ ...currentFields, gender }))
-                          }
-                          type="radio"
-                          value={gender}
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </fieldset>
-                </Field>
-              </section>
-
-              {store.employeeFieldDefinitions.some(
-                (definition) => definition.kind !== "template",
-              ) && (
-                <section
-                  className="grid gap-4 sm:grid-cols-2"
-                  data-demo-id="employee-custom-fields"
-                >
-                  {store.employeeFieldDefinitions.flatMap((definition) => {
-                    if (definition.kind === "template") return [];
-                    const value = fields.customFieldValues?.[definition.id];
-                    const label = `${definition.name}${definition.required ? " *" : ""}`;
-                    if (definition.kind === "composite") {
-                      const records: CustomEmployeeCompositeRecord[] = Array.isArray(value)
-                        ? value.filter(
-                            (record): record is CustomEmployeeCompositeRecord =>
-                              typeof record === "object" &&
-                              record !== null &&
-                              !Array.isArray(record),
-                          )
-                        : [];
-                      const setRecordCell = (
-                        recordIndex: number,
-                        fieldId: string,
-                        cellValue: boolean | number | string | null | undefined,
-                      ) => {
-                        const nextRecords = records.map((record, index) => {
-                          if (index !== recordIndex) return record;
-                          const nextRecord = { ...record };
-                          if (cellValue === undefined || cellValue === null || cellValue === "") {
-                            delete nextRecord[fieldId];
-                          } else {
-                            nextRecord[fieldId] = cellValue;
-                          }
-                          return nextRecord;
-                        });
-                        updateCustomField(definition.id, nextRecords);
-                      };
-                      return [
-                        <div className="grid gap-3 sm:col-span-2" key={definition.id}>
-                          <Label>{label}</Label>
-                          {records.map((record, recordIndex) => (
-                            <div
-                              className="grid gap-3 rounded-md bg-muted/30 p-3"
-                              data-demo-id="employee-composite-record"
-                              key={compositeRecordKeys[definition.id]?.[recordIndex]}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-sm font-medium">
-                                  {t("Record {number}", { number: recordIndex + 1 })}
-                                </span>
-                                <Button
-                                  aria-label={t("Delete record")}
-                                  onClick={() => {
-                                    updateCustomField(
-                                      definition.id,
-                                      records.filter((_, index) => index !== recordIndex),
-                                    );
-                                    setCompositeRecordKeys((current) => ({
-                                      ...current,
-                                      [definition.id]: (current[definition.id] ?? []).filter(
-                                        (_, index) => index !== recordIndex,
-                                      ),
-                                    }));
-                                  }}
-                                  size="icon"
-                                  type="button"
-                                  variant="ghost"
-                                >
-                                  <HiOutlineTrash />
-                                </Button>
-                              </div>
-                              <div className="grid gap-3 sm:grid-cols-2">
-                                {definition.fields.map((field) => {
-                                  const cell = record[field.id];
-                                  const cellLabel = `${field.name}${field.required ? " *" : ""}`;
-                                  if (field.valueType === "boolean") {
-                                    return (
-                                      <div
-                                        className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm"
-                                        key={field.id}
-                                      >
-                                        <span>{cellLabel}</span>
-                                        <Checkbox
-                                          aria-label={cellLabel}
-                                          checked={cell === true}
-                                          onCheckedChange={(checked) =>
-                                            setRecordCell(recordIndex, field.id, checked === true)
-                                          }
-                                        />
-                                      </div>
-                                    );
-                                  }
-                                  if (field.valueType === "option") {
-                                    return (
-                                      <Field key={field.id} label={cellLabel}>
-                                        <Select
-                                          onValueChange={(next) =>
-                                            setRecordCell(
-                                              recordIndex,
-                                              field.id,
-                                              next === "__none__" ? undefined : next,
-                                            )
-                                          }
-                                          value={typeof cell === "string" ? cell : "__none__"}
-                                        >
-                                          <SelectTrigger aria-label={cellLabel}>
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="__none__">
-                                              {t("Not specified")}
-                                            </SelectItem>
-                                            {field.options.map((option) => (
-                                              <SelectItem key={option.id} value={option.id}>
-                                                {option.label}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </Field>
-                                    );
-                                  }
-                                  return (
-                                    <Field key={field.id} label={cellLabel}>
-                                      <Input
-                                        aria-label={cellLabel}
-                                        inputMode={
-                                          field.valueType === "number" ? "decimal" : undefined
-                                        }
-                                        onChange={(event) =>
-                                          setRecordCell(
-                                            recordIndex,
-                                            field.id,
-                                            field.valueType === "number"
-                                              ? event.currentTarget.value === ""
-                                                ? undefined
-                                                : Number(event.currentTarget.value)
-                                              : event.currentTarget.value,
-                                          )
-                                        }
-                                        placeholder={
-                                          field.valueType === "date" ? "DD.MM.YYYY" : undefined
-                                        }
-                                        type={field.valueType === "number" ? "number" : "text"}
-                                        value={
-                                          cell === undefined || cell === null ? "" : String(cell)
-                                        }
-                                      />
-                                    </Field>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                          <Button
-                            data-demo-id="employee-add-composite-record"
-                            onClick={() => {
-                              updateCustomField(definition.id, [...records, {}]);
-                              setCompositeRecordKeys((current) => ({
-                                ...current,
-                                [definition.id]: [...(current[definition.id] ?? []), createUuid()],
-                              }));
-                            }}
-                            size="sm"
-                            type="button"
-                            variant="secondary"
+              {canEditFields && (
+                <>
+                  <section className="grid gap-4 sm:grid-cols-2">
+                    <Field htmlFor="employee-first-name" label={t("First name")}>
+                      <Input
+                        autoFocus
+                        id="employee-first-name"
+                        onChange={(event) =>
+                          updateTextField("firstName", event.currentTarget.value)
+                        }
+                        value={fields.firstName}
+                      />
+                    </Field>
+                    <Field htmlFor="employee-last-name" label={t("Last name")}>
+                      <Input
+                        id="employee-last-name"
+                        onChange={(event) => updateTextField("lastName", event.currentTarget.value)}
+                        value={fields.lastName}
+                      />
+                    </Field>
+                    <Field htmlFor="employee-username" label={t("Username")}>
+                      <Input
+                        id="employee-username"
+                        onChange={(event) => updateTextField("username", event.currentTarget.value)}
+                        value={fields.username ?? ""}
+                      />
+                    </Field>
+                    <Field htmlFor="employee-email" label={t("Email")}>
+                      <Input
+                        id="employee-email"
+                        onChange={(event) => updateTextField("email", event.currentTarget.value)}
+                        type="email"
+                        value={fields.email ?? ""}
+                      />
+                    </Field>
+                    <Field htmlFor="employee-phone" label={t("Phone")}>
+                      <Input
+                        id="employee-phone"
+                        onChange={(event) => updateTextField("phone", event.currentTarget.value)}
+                        type="tel"
+                        value={fields.phone ?? ""}
+                      />
+                    </Field>
+                    <Field htmlFor="employee-profile-url" label={t("Profile URL")}>
+                      <Input
+                        id="employee-profile-url"
+                        onChange={(event) =>
+                          updateTextField("profileUrl", event.currentTarget.value)
+                        }
+                        placeholder="https://example.test/profile"
+                        type="url"
+                        value={fields.profileUrl ?? ""}
+                      />
+                    </Field>
+                    <Field label={t("Birthday")}>
+                      <div className="grid grid-cols-3 overflow-hidden rounded-md border border-input bg-background focus-within:border-signal/55 focus-within:ring-2 focus-within:ring-ring/20">
+                        <Select onValueChange={setBirthdayDay} value={birthdayDay}>
+                          <SelectTrigger
+                            aria-label={t("Day")}
+                            className="rounded-none border-0 bg-transparent shadow-none focus-visible:border-0 focus-visible:ring-0"
+                            data-demo-id="employee-birthday-day"
                           >
-                            {t("Add record")}
-                          </Button>
-                        </div>,
-                      ];
-                    }
-                    if (definition.valueType === "boolean") {
-                      return [
-                        <div
-                          className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2 text-sm"
-                          key={definition.id}
-                        >
-                          <span>{label}</span>
-                          <Checkbox
-                            aria-label={label}
-                            checked={value === true}
-                            onCheckedChange={(checked) =>
-                              updateCustomField(definition.id, checked === true)
-                            }
-                          />
-                        </div>,
-                      ];
-                    }
-                    if (definition.valueType === "option") {
-                      if (definition.multiple) {
-                        const draftOptions = customOptionDrafts
-                          .filter((draft) => draft.fieldId === definition.id)
-                          .map((draft) => draft.option);
-                        const selectedIds = Array.isArray(value)
-                          ? value.filter(
-                              (optionId): optionId is string => typeof optionId === "string",
-                            )
-                          : [];
+                            <SelectValue placeholder={t("Day")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t("Day")}</SelectItem>
+                            {Array.from(
+                              {
+                                length:
+                                  birthdayMonth === "none"
+                                    ? 31
+                                    : getBirthdayDaysInMonth(
+                                        Number(birthdayMonth),
+                                        birthdayYear === "none"
+                                          ? UNKNOWN_BIRTH_YEAR
+                                          : Number(birthdayYear),
+                                      ),
+                              },
+                              (_, index) => index + 1,
+                            ).map((day) => (
+                              <SelectItem key={day} value={String(day)}>
+                                {String(day).padStart(2, "0")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select onValueChange={updateBirthdayMonth} value={birthdayMonth}>
+                          <SelectTrigger
+                            aria-label={t("Month")}
+                            className="rounded-none border-0 border-l border-input bg-transparent shadow-none focus-visible:border-l focus-visible:ring-0"
+                            data-demo-id="employee-birthday-month"
+                          >
+                            <SelectValue placeholder={t("Month")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t("Month")}</SelectItem>
+                            {Array.from({ length: 12 }, (_, index) => index).map((monthIndex) => (
+                              <SelectItem key={monthIndex} value={String(monthIndex + 1)}>
+                                {format.dateTime(new Date(Date.UTC(2000, monthIndex, 1)), {
+                                  month: "long",
+                                  timeZone: "UTC",
+                                })}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select onValueChange={updateBirthdayYear} value={birthdayYear}>
+                          <SelectTrigger
+                            aria-label={t("Year")}
+                            className="rounded-none border-0 border-l border-input bg-transparent shadow-none focus-visible:border-l focus-visible:ring-0"
+                            data-demo-id="employee-birthday-year"
+                          >
+                            <SelectValue placeholder={t("Year")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t("Year")}</SelectItem>
+                            <SelectItem value={String(UNKNOWN_BIRTH_YEAR)}>
+                              {t("Unknown year")}
+                            </SelectItem>
+                            {birthdayYearOptions.map((year) => (
+                              <SelectItem key={year} value={String(year)}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </Field>
+                    <Field label={t("Gender")}>
+                      <fieldset
+                        aria-label={t("Gender")}
+                        className="grid grid-cols-3 overflow-hidden rounded-md border border-input bg-background focus-within:border-signal/55 focus-within:ring-2 focus-within:ring-ring/20"
+                        data-demo-id="employee-gender"
+                      >
+                        {(
+                          [
+                            ["male", t("Male")],
+                            ["female", t("Female")],
+                            ["unspecified", t("Not specified")],
+                          ] as const
+                        ).map(([gender, label], index) => (
+                          <label
+                            className={cn(
+                              "cursor-pointer px-2 py-2.5 text-center text-sm transition-colors",
+                              index > 0 && "border-l border-input",
+                              fields.gender === gender
+                                ? "bg-accent text-accent-foreground"
+                                : "hover:bg-accent/45",
+                            )}
+                            key={gender}
+                          >
+                            <input
+                              checked={fields.gender === gender}
+                              className="sr-only"
+                              name="employee-gender"
+                              onChange={() =>
+                                setFields((currentFields) => ({ ...currentFields, gender }))
+                              }
+                              type="radio"
+                              value={gender}
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </fieldset>
+                    </Field>
+                  </section>
+
+                  {store.employeeFieldDefinitions.some(
+                    (definition) => definition.kind !== "template",
+                  ) && (
+                    <section
+                      className="grid gap-4 sm:grid-cols-2"
+                      data-demo-id="employee-custom-fields"
+                    >
+                      {store.employeeFieldDefinitions.flatMap((definition) => {
+                        if (definition.kind === "template") return [];
+                        const value = fields.customFieldValues?.[definition.id];
+                        const label = `${definition.name}${definition.required ? " *" : ""}`;
+                        if (definition.kind === "composite") {
+                          const records: CustomEmployeeCompositeRecord[] = Array.isArray(value)
+                            ? value.filter(
+                                (record): record is CustomEmployeeCompositeRecord =>
+                                  typeof record === "object" &&
+                                  record !== null &&
+                                  !Array.isArray(record),
+                              )
+                            : [];
+                          const setRecordCell = (
+                            recordIndex: number,
+                            fieldId: string,
+                            cellValue: boolean | number | string | null | undefined,
+                          ) => {
+                            const nextRecords = records.map((record, index) => {
+                              if (index !== recordIndex) return record;
+                              const nextRecord = { ...record };
+                              if (
+                                cellValue === undefined ||
+                                cellValue === null ||
+                                cellValue === ""
+                              ) {
+                                delete nextRecord[fieldId];
+                              } else {
+                                nextRecord[fieldId] = cellValue;
+                              }
+                              return nextRecord;
+                            });
+                            updateCustomField(definition.id, nextRecords);
+                          };
+                          return [
+                            <div className="grid gap-3 sm:col-span-2" key={definition.id}>
+                              <Label>{label}</Label>
+                              {records.map((record, recordIndex) => (
+                                <div
+                                  className="grid gap-3 rounded-md bg-muted/30 p-3"
+                                  data-demo-id="employee-composite-record"
+                                  key={compositeRecordKeys[definition.id]?.[recordIndex]}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-sm font-medium">
+                                      {t("Record {number}", { number: recordIndex + 1 })}
+                                    </span>
+                                    <Button
+                                      aria-label={t("Delete record")}
+                                      onClick={() => {
+                                        updateCustomField(
+                                          definition.id,
+                                          records.filter((_, index) => index !== recordIndex),
+                                        );
+                                        setCompositeRecordKeys((current) => ({
+                                          ...current,
+                                          [definition.id]: (current[definition.id] ?? []).filter(
+                                            (_, index) => index !== recordIndex,
+                                          ),
+                                        }));
+                                      }}
+                                      size="icon"
+                                      type="button"
+                                      variant="ghost"
+                                    >
+                                      <HiOutlineTrash />
+                                    </Button>
+                                  </div>
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    {definition.fields.map((field) => {
+                                      const cell = record[field.id];
+                                      const cellLabel = `${field.name}${field.required ? " *" : ""}`;
+                                      if (field.valueType === "boolean") {
+                                        return (
+                                          <div
+                                            className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm"
+                                            key={field.id}
+                                          >
+                                            <span>{cellLabel}</span>
+                                            <Checkbox
+                                              aria-label={cellLabel}
+                                              checked={cell === true}
+                                              onCheckedChange={(checked) =>
+                                                setRecordCell(
+                                                  recordIndex,
+                                                  field.id,
+                                                  checked === true,
+                                                )
+                                              }
+                                            />
+                                          </div>
+                                        );
+                                      }
+                                      if (field.valueType === "option") {
+                                        return (
+                                          <Field key={field.id} label={cellLabel}>
+                                            <Select
+                                              onValueChange={(next) =>
+                                                setRecordCell(
+                                                  recordIndex,
+                                                  field.id,
+                                                  next === "__none__" ? undefined : next,
+                                                )
+                                              }
+                                              value={typeof cell === "string" ? cell : "__none__"}
+                                            >
+                                              <SelectTrigger aria-label={cellLabel}>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="__none__">
+                                                  {t("Not specified")}
+                                                </SelectItem>
+                                                {field.options.map((option) => (
+                                                  <SelectItem key={option.id} value={option.id}>
+                                                    {option.label}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </Field>
+                                        );
+                                      }
+                                      return (
+                                        <Field key={field.id} label={cellLabel}>
+                                          <Input
+                                            aria-label={cellLabel}
+                                            inputMode={
+                                              field.valueType === "number" ? "decimal" : undefined
+                                            }
+                                            onChange={(event) =>
+                                              setRecordCell(
+                                                recordIndex,
+                                                field.id,
+                                                field.valueType === "number"
+                                                  ? event.currentTarget.value === ""
+                                                    ? undefined
+                                                    : Number(event.currentTarget.value)
+                                                  : event.currentTarget.value,
+                                              )
+                                            }
+                                            placeholder={
+                                              field.valueType === "date" ? "DD.MM.YYYY" : undefined
+                                            }
+                                            type={field.valueType === "number" ? "number" : "text"}
+                                            value={
+                                              cell === undefined || cell === null
+                                                ? ""
+                                                : String(cell)
+                                            }
+                                          />
+                                        </Field>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                              <Button
+                                data-demo-id="employee-add-composite-record"
+                                onClick={() => {
+                                  updateCustomField(definition.id, [...records, {}]);
+                                  setCompositeRecordKeys((current) => ({
+                                    ...current,
+                                    [definition.id]: [
+                                      ...(current[definition.id] ?? []),
+                                      createUuid(),
+                                    ],
+                                  }));
+                                }}
+                                size="sm"
+                                type="button"
+                                variant="secondary"
+                              >
+                                {t("Add record")}
+                              </Button>
+                            </div>,
+                          ];
+                        }
+                        if (definition.valueType === "boolean") {
+                          return [
+                            <div
+                              className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2 text-sm"
+                              key={definition.id}
+                            >
+                              <span>{label}</span>
+                              <Checkbox
+                                aria-label={label}
+                                checked={value === true}
+                                onCheckedChange={(checked) =>
+                                  updateCustomField(definition.id, checked === true)
+                                }
+                              />
+                            </div>,
+                          ];
+                        }
+                        if (definition.valueType === "option") {
+                          if (definition.multiple) {
+                            const draftOptions = customOptionDrafts
+                              .filter((draft) => draft.fieldId === definition.id)
+                              .map((draft) => draft.option);
+                            const selectedIds = Array.isArray(value)
+                              ? value.filter(
+                                  (optionId): optionId is string => typeof optionId === "string",
+                                )
+                              : [];
+                            return [
+                              <Field key={definition.id} label={label}>
+                                <MultiTagSelect
+                                  ariaLabel={label}
+                                  createOptionLabel={(name) =>
+                                    t("Create option “{name}”", { name })
+                                  }
+                                  onChange={(next) => updateCustomField(definition.id, next)}
+                                  {...(definition.allowCustomOptions
+                                    ? {
+                                        onCreateOption: (optionLabel: string) => {
+                                          const option = { id: createUuid(), label: optionLabel };
+                                          setCustomOptionDrafts((drafts) => [
+                                            ...drafts,
+                                            { fieldId: definition.id, option },
+                                          ]);
+                                          updateCustomField(definition.id, [
+                                            ...selectedIds,
+                                            option.id,
+                                          ]);
+                                        },
+                                      }
+                                    : {})}
+                                  options={[...definition.options, ...draftOptions]}
+                                  placeholder={t("Select options")}
+                                  selectedIds={selectedIds}
+                                />
+                              </Field>,
+                            ];
+                          }
+                          return [
+                            <Field key={definition.id} label={label}>
+                              <Select
+                                onValueChange={(next) =>
+                                  updateCustomField(
+                                    definition.id,
+                                    next === "__none__" ? undefined : next,
+                                  )
+                                }
+                                value={typeof value === "string" ? value : "__none__"}
+                              >
+                                <SelectTrigger aria-label={label}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">{t("Not specified")}</SelectItem>
+                                  {definition.options.map((option) => (
+                                    <SelectItem key={option.id} value={option.id}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </Field>,
+                          ];
+                        }
                         return [
                           <Field key={definition.id} label={label}>
-                            <MultiTagSelect
-                              ariaLabel={label}
-                              createOptionLabel={(name) => t("Create option “{name}”", { name })}
-                              onChange={(next) => updateCustomField(definition.id, next)}
-                              {...(definition.allowCustomOptions
-                                ? {
-                                    onCreateOption: (optionLabel: string) => {
-                                      const option = { id: createUuid(), label: optionLabel };
-                                      setCustomOptionDrafts((drafts) => [
-                                        ...drafts,
-                                        { fieldId: definition.id, option },
-                                      ]);
-                                      updateCustomField(definition.id, [...selectedIds, option.id]);
-                                    },
-                                  }
-                                : {})}
-                              options={[...definition.options, ...draftOptions]}
-                              placeholder={t("Select options")}
-                              selectedIds={selectedIds}
+                            <Input
+                              aria-label={label}
+                              inputMode={definition.valueType === "number" ? "decimal" : undefined}
+                              onChange={(event) =>
+                                updateCustomField(
+                                  definition.id,
+                                  definition.valueType === "number"
+                                    ? event.currentTarget.value === ""
+                                      ? undefined
+                                      : Number(event.currentTarget.value)
+                                    : event.currentTarget.value,
+                                )
+                              }
+                              placeholder={
+                                definition.valueType === "date" ? "DD.MM.YYYY" : undefined
+                              }
+                              type={definition.valueType === "number" ? "number" : "text"}
+                              value={value === undefined || value === null ? "" : String(value)}
                             />
                           </Field>,
                         ];
-                      }
-                      return [
-                        <Field key={definition.id} label={label}>
-                          <Select
-                            onValueChange={(next) =>
-                              updateCustomField(
-                                definition.id,
-                                next === "__none__" ? undefined : next,
-                              )
-                            }
-                            value={typeof value === "string" ? value : "__none__"}
-                          >
-                            <SelectTrigger aria-label={label}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">{t("Not specified")}</SelectItem>
-                              {definition.options.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </Field>,
-                      ];
-                    }
-                    return [
-                      <Field key={definition.id} label={label}>
-                        <Input
-                          aria-label={label}
-                          inputMode={definition.valueType === "number" ? "decimal" : undefined}
-                          onChange={(event) =>
-                            updateCustomField(
-                              definition.id,
-                              definition.valueType === "number"
-                                ? event.currentTarget.value === ""
-                                  ? undefined
-                                  : Number(event.currentTarget.value)
-                                : event.currentTarget.value,
-                            )
-                          }
-                          placeholder={definition.valueType === "date" ? "DD.MM.YYYY" : undefined}
-                          type={definition.valueType === "number" ? "number" : "text"}
-                          value={value === undefined || value === null ? "" : String(value)}
-                        />
-                      </Field>,
-                    ];
-                  })}
-                </section>
-              )}
+                      })}
+                    </section>
+                  )}
 
-              <section className="grid gap-3">
-                <Label>{t("Avatar")}</Label>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-muted-foreground">
-                    {fields.avatarBase64Url ? (
-                      // biome-ignore lint/performance/noImgElement: The preview is an embedded local draft and must not use the Next image pipeline.
-                      <img
-                        alt=""
-                        className="size-full object-cover"
-                        data-demo-id="employee-avatar-preview"
-                        src={fields.avatarBase64Url}
-                      />
-                    ) : (
-                      <HiOutlineUserCircle className="size-12" />
-                    )}
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-                    <Label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md bg-secondary/70 px-4 text-sm font-medium transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/45">
-                      <HiOutlineArrowUpTray className="size-4" />
-                      {t("Choose file")}
-                      <Input
-                        accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
-                        className="sr-only"
-                        data-demo-id="employee-avatar-file"
-                        disabled={isPreparingAvatar}
-                        onChange={(event) => {
-                          const file = event.currentTarget.files?.[0];
-                          event.currentTarget.value = "";
-                          if (file) void beginAvatarCrop(file);
-                        }}
-                        type="file"
-                      />
-                    </Label>
-                    <Button
-                      disabled={isPreparingAvatar}
-                      onClick={() => void pasteAvatar()}
-                      type="button"
-                      variant="outline"
-                    >
-                      <HiOutlineClipboard />
-                      {t("Paste image")}
-                    </Button>
-                    {fields.avatarBase64Url && (
-                      <>
+                  <section className="grid gap-3">
+                    <Label>{t("Avatar")}</Label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-muted-foreground">
+                        {fields.avatarBase64Url ? (
+                          // biome-ignore lint/performance/noImgElement: The preview is an embedded local draft and must not use the Next image pipeline.
+                          <img
+                            alt=""
+                            className="size-full object-cover"
+                            data-demo-id="employee-avatar-preview"
+                            src={fields.avatarBase64Url}
+                          />
+                        ) : (
+                          <HiOutlineUserCircle className="size-12" />
+                        )}
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+                        <Label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md bg-secondary/70 px-4 text-sm font-medium transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/45">
+                          <HiOutlineArrowUpTray className="size-4" />
+                          {t("Choose file")}
+                          <Input
+                            accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                            className="sr-only"
+                            data-demo-id="employee-avatar-file"
+                            disabled={isPreparingAvatar}
+                            onChange={(event) => {
+                              const file = event.currentTarget.files?.[0];
+                              event.currentTarget.value = "";
+                              if (file) void beginAvatarCrop(file);
+                            }}
+                            type="file"
+                          />
+                        </Label>
                         <Button
                           disabled={isPreparingAvatar}
-                          onClick={() =>
-                            void beginAvatarCrop(avatarDataUrlToBlob(fields.avatarBase64Url ?? ""))
-                          }
+                          onClick={() => void pasteAvatar()}
                           type="button"
                           variant="outline"
                         >
-                          <HiOutlineArrowsPointingOut />
-                          {t("Adjust crop")}
+                          <HiOutlineClipboard />
+                          {t("Paste image")}
                         </Button>
-                        <Button
-                          onClick={() =>
-                            setFields((currentFields) => ({
-                              ...currentFields,
-                              avatarBase64Url: null,
-                            }))
-                          }
-                          type="button"
-                          variant="ghost"
-                        >
-                          <HiOutlineTrash />
-                          {t("Remove avatar")}
-                        </Button>
-                      </>
+                        {fields.avatarBase64Url && (
+                          <>
+                            <Button
+                              disabled={isPreparingAvatar}
+                              onClick={() =>
+                                void beginAvatarCrop(
+                                  avatarDataUrlToBlob(fields.avatarBase64Url ?? ""),
+                                )
+                              }
+                              type="button"
+                              variant="outline"
+                            >
+                              <HiOutlineArrowsPointingOut />
+                              {t("Adjust crop")}
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                setFields((currentFields) => ({
+                                  ...currentFields,
+                                  avatarBase64Url: null,
+                                }))
+                              }
+                              type="button"
+                              variant="ghost"
+                            >
+                              <HiOutlineTrash />
+                              {t("Remove avatar")}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {isPreparingAvatar && (
+                      <p className="text-sm text-muted-foreground">{t("Preparing image…")}</p>
                     )}
+                    {avatarError && (
+                      <p className="text-sm text-destructive" role="alert">
+                        {messageText(avatarError)}
+                      </p>
+                    )}
+                  </section>
+                </>
+              )}
+
+              {canAssignTags && (
+                <section className="grid gap-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <HiOutlineTag className="size-4" />
+                    {t("Tags")}
                   </div>
-                </div>
-                {isPreparingAvatar && (
-                  <p className="text-sm text-muted-foreground">{t("Preparing image…")}</p>
-                )}
-                {avatarError && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {messageText(avatarError)}
-                  </p>
-                )}
-              </section>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        aria-label={t("Select Employee tags")}
+                        className="flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-start text-sm outline-none transition-colors hover:bg-accent/20 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
+                        data-demo-id="employee-draft-tag-picker-trigger"
+                        type="button"
+                      >
+                        {fields.tags.length === 0 ? (
+                          <span className="min-w-0 flex-1 text-muted-foreground">
+                            {t("Select or create tags")}
+                          </span>
+                        ) : (
+                          orderedDraftTags.map((tag) => (
+                            <TagSurface
+                              color={tag.color}
+                              key={tag.label.toLocaleLowerCase("en-US")}
+                            >
+                              <EmployeeTagDateText date={tag.date} label={tag.label} />
+                            </TagSurface>
+                          ))
+                        )}
+                        <HiOutlineChevronDown className="ms-auto size-4 shrink-0 text-muted-foreground" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="p-0" sideOffset={6}>
+                      <EmployeeTagPickerPanel
+                        dataDemoId="employee-draft-tag-picker"
+                        employees={[{ id: "draft-employee" as EmployeeId, tags: fields.tags }]}
+                        footer={false}
+                        onApply={(updates) => {
+                          const update = updates[0];
+                          if (!update) return;
+                          setFields((currentFields) => ({ ...currentFields, tags: update.tags }));
+                        }}
+                        tagOptions={employeeTagOptions}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </section>
+              )}
 
-              <section className="grid gap-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <HiOutlineTag className="size-4" />
-                  {t("Tags")}
-                </div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      aria-label={t("Select Employee tags")}
-                      className="flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-start text-sm outline-none transition-colors hover:bg-accent/20 focus-visible:border-signal/55 focus-visible:ring-2 focus-visible:ring-ring/20"
-                      data-demo-id="employee-draft-tag-picker-trigger"
-                      type="button"
-                    >
-                      {fields.tags.length === 0 ? (
-                        <span className="min-w-0 flex-1 text-muted-foreground">
-                          {t("Select or create tags")}
-                        </span>
-                      ) : (
-                        orderedDraftTags.map((tag) => (
-                          <TagSurface color={tag.color} key={tag.label.toLocaleLowerCase("en-US")}>
-                            <EmployeeTagDateText date={tag.date} label={tag.label} />
-                          </TagSurface>
-                        ))
-                      )}
-                      <HiOutlineChevronDown className="ms-auto size-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="p-0" sideOffset={6}>
-                    <EmployeeTagPickerPanel
-                      dataDemoId="employee-draft-tag-picker"
-                      employees={[{ id: "draft-employee" as EmployeeId, tags: fields.tags }]}
-                      footer={false}
-                      onApply={(updates) => {
-                        const update = updates[0];
-                        if (!update) return;
-                        setFields((currentFields) => ({ ...currentFields, tags: update.tags }));
-                      }}
-                      tagOptions={employeeTagOptions}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </section>
-
-              {(mode === "editor" || unitOptions.length > 0) && (
+              {canEditAssignments && (mode === "editor" || unitOptions.length > 0) && (
                 <section className="grid gap-3">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <HiOutlineBuildingOffice2 className="size-4" />
@@ -1116,15 +1166,17 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
           </form>
         </DialogContent>
       </Dialog>
-      <AvatarCropDialog
-        onApply={(avatarBase64Url) =>
-          setFields((currentFields) => ({ ...currentFields, avatarBase64Url }))
-        }
-        onOpenChange={(cropOpen) => {
-          if (!cropOpen) setAvatarSource(null);
-        }}
-        source={avatarSource}
-      />
+      {canEditFields && (
+        <AvatarCropDialog
+          onApply={(avatarBase64Url) =>
+            setFields((currentFields) => ({ ...currentFields, avatarBase64Url }))
+          }
+          onOpenChange={(cropOpen) => {
+            if (!cropOpen) setAvatarSource(null);
+          }}
+          source={avatarSource}
+        />
+      )}
     </>
   );
 }

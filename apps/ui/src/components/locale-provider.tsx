@@ -53,26 +53,19 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     const syncDocumentMetadata = () => {
       document.documentElement.lang = locale;
       document.documentElement.dir = APP_LOCALE_CONFIG[locale].direction;
-
-      const titles = [...document.head.querySelectorAll("title")];
-      const title = titles[0] ?? document.createElement("title");
-      if (!title.isConnected) document.head.append(title);
-      if (title.textContent !== messages.Metadata.title)
-        title.textContent = messages.Metadata.title;
-      for (const duplicateTitle of titles.slice(1)) duplicateTitle.remove();
-
-      const descriptions = [
-        ...document.head.querySelectorAll<HTMLMetaElement>('meta[name="description"]'),
-      ];
-      const description = descriptions[0] ?? document.createElement("meta");
-      if (!description.isConnected) {
+      if (document.title !== messages.Metadata.title) document.title = messages.Metadata.title;
+      let description = document.head.querySelector<HTMLMetaElement>(
+        'meta[name="description"][data-org-tools-locale]',
+      );
+      if (!description) {
+        description = document.createElement("meta");
         description.name = "description";
+        description.dataset.orgToolsLocale = "true";
         document.head.append(description);
       }
       if (description.content !== messages.Metadata.description) {
         description.content = messages.Metadata.description;
       }
-      for (const duplicateDescription of descriptions.slice(1)) duplicateDescription.remove();
     };
 
     syncDocumentMetadata();
@@ -93,7 +86,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale }}>
-      <NextIntlClientProvider locale={locale} messages={messagesByLocale[locale]}>
+      <NextIntlClientProvider locale={locale} messages={messagesByLocale[locale]} timeZone="UTC">
         {children}
       </NextIntlClientProvider>
     </LocaleContext.Provider>

@@ -16,6 +16,22 @@ import { renderTemplateFormat } from "@/lib/template-format";
 export const CUSTOM_EMPLOYEE_FIELD_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
 export const EMPLOYEE_DISPLAY_POSITIONS_KEY = "positions";
 
+const authorizedTemplateValues = new Map<string, Partial<Record<EmployeeFieldId, string>>>();
+
+export const installAuthorizedTemplateValues = (
+  employees: readonly {
+    id: string;
+    resolvedTemplateValues?: Partial<Record<EmployeeFieldId, string>>;
+  }[],
+): void => {
+  authorizedTemplateValues.clear();
+  for (const employee of employees) {
+    if (employee.resolvedTemplateValues) {
+      authorizedTemplateValues.set(employee.id, employee.resolvedTemplateValues);
+    }
+  }
+};
+
 export const EMPLOYEE_TEMPLATE_FIELD_KEYS = [
   "id",
   "firstName",
@@ -509,6 +525,13 @@ export const evaluateCustomEmployeeFields = (
     } else if (definition.kind === "composite") {
       value = getCompositeFieldOutput(definition, employee.customFieldValues[definition.id]);
     } else {
+      const resolved = authorizedTemplateValues.get(employee.id)?.[definition.id];
+      if (resolved !== undefined) {
+        value = resolved;
+        evaluating.delete(definition.id);
+        result.set(definition.id, value);
+        return value;
+      }
       const rendered = renderTemplateFormat({
         resolveField: (key) => {
           const customDefinition = definitionByKey.get(normalizeCustomEmployeeFieldKey(key));

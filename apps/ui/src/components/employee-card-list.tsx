@@ -184,7 +184,10 @@ function EmployeeAvatarWithBossMarker({
 }) {
   const t = useUiText();
   return (
-    <span className="group/boss relative inline-flex shrink-0">
+    <span
+      className="group/boss relative inline-flex shrink-0"
+      data-screenshot-raster-noise={bossPosition ? "boss-marker" : undefined}
+    >
       <EmployeeAvatar
         className={cn(
           avatarClassName,
@@ -196,7 +199,7 @@ function EmployeeAvatarWithBossMarker({
         <>
           <button
             aria-label={t("Boss of the selected Unit")}
-            className="absolute left-1/2 top-full inline-flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-help items-center justify-center rounded-full bg-signal text-signal-foreground outline-none ring-2 ring-background transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute left-1/2 top-full z-10 inline-flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-help items-center justify-center rounded-full bg-signal text-signal-foreground outline-none ring-2 ring-background hover:opacity-85 focus-visible:ring-2 focus-visible:ring-ring"
             onClick={(event) => event.stopPropagation()}
             type="button"
           >

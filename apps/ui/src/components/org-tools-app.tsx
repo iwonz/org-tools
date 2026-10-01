@@ -1,21 +1,27 @@
 "use client";
 
+import { AuthProvider } from "@/components/auth-context";
+import { AuthGate } from "@/components/auth-gate";
+import { AuthenticatedStateController } from "@/components/authenticated-state-controller";
 import { OrgToolsShell } from "@/components/org-tools-shell";
-import { SqliteStateController } from "@/components/sqlite-state-controller";
 import { OrgStoreProvider } from "@/stores/org-store-context";
 
 function StateApp() {
   return (
-    <SqliteStateController>
+    <AuthenticatedStateController>
       <OrgToolsShell />
-    </SqliteStateController>
+    </AuthenticatedStateController>
   );
 }
 
 export function OrgToolsApp() {
   return (
     <OrgStoreProvider>
-      <StateApp />
+      <AuthProvider>
+        <AuthGate>
+          <StateApp />
+        </AuthGate>
+      </AuthProvider>
     </OrgStoreProvider>
   );
 }

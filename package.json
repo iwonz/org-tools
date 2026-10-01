@@ -1,7 +1,7 @@
 {
   "name": "org-tools",
   "version": "0.1.0",
-  "description": "A private-by-design organization editor with synchronized in-memory and SQLite state.",
+  "description": "A private organization editor with PostgreSQL persistence and role-based access control.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -10,34 +10,28 @@
     "type": "git",
     "url": "git+https://github.com/iwonz/org-tools.git"
   },
-  "homepage": "https://iwonz.github.io/org-tools/",
   "bugs": {
     "url": "https://github.com/iwonz/org-tools/issues"
   },
   "scripts": {
     "build": "pnpm --filter @org-tools/ui build",
     "build:ui": "pnpm --filter @org-tools/ui build",
-    "dev": "pnpm --filter @org-tools/ui dev",
-    "dev-stop": "node scripts/stop-development.mjs",
-    "dev:check": "node scripts/check-dev-server.mjs",
-    "dev:ui": "pnpm --filter @org-tools/ui dev",
+    "dev": "./bin/org-tools dev",
+    "dev-stop": "./bin/org-tools down",
+    "dev:check": "ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 node packages/screenshots/scripts/dev-check.mjs",
+    "dev:ui": "./bin/org-tools dev",
     "format": "biome format --write .",
     "fixture:performance": "node scripts/generate-performance-fixture.mjs",
     "lint": "biome check .",
-    "pages:build": "node scripts/build-pages.mjs",
-    "pages:check": "node scripts/check-pages.mjs",
-    "pages:dev": "pnpm --filter @org-tools/pages dev",
-    "pages:publish": "node scripts/publish-pages.mjs",
-    "pages:start": "node scripts/serve-pages.mjs",
     "public:check": "node scripts/check-public-safety.mjs",
-    "screenshots:generate": "pnpm pages:build && pnpm --filter @org-tools/screenshots generate:pages && pnpm build && pnpm --filter @org-tools/screenshots generate",
+    "screenshots:generate": "pnpm --filter @org-tools/screenshots generate",
     "spec": "node scripts/run-openspec.mjs",
     "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
-    "start": "pnpm --filter @org-tools/ui start",
+    "start": "./bin/org-tools up",
     "test": "pnpm test:unit",
-    "test:browser": "pnpm build && pnpm pages:build && pnpm --filter @org-tools/screenshots smoke && pnpm --filter @org-tools/screenshots pages:smoke",
+    "test:browser": "pnpm --filter @org-tools/screenshots smoke",
     "test:unit": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/pages typecheck && pnpm --filter @org-tools/screenshots typecheck"
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/screenshots typecheck"
   },
   "engines": {
     "node": ">=22.13"

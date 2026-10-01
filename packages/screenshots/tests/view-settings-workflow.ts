@@ -4,14 +4,13 @@ import {
   applyColorPickerDraft,
   createDistributionStateFile,
   expectUsedColorPalette,
-  openImportDialog,
+  replaceStateFromFile,
 } from "./helpers.js";
 import { exportState } from "./refined-editor-workflow.js";
 
 export async function exerciseViewSettings(page: Page) {
-  const imported = await openImportDialog(page, await createDistributionStateFile());
-  await imported.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(imported).toBeHidden();
+  await replaceStateFromFile(page, await createDistributionStateFile());
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   const card = page.locator('fieldset[aria-label="Canvas Unit Product"]');
   const footer = card.locator("[data-org-editor-unit-tag-footer]");
@@ -52,20 +51,14 @@ export async function exerciseViewSettings(page: Page) {
   await expect.poll(rowColor).toBe("rgb(215, 245, 226)");
   const originalColor = await rowColor();
 
-  await page.evaluate(() => {
-    const originalPost = BroadcastChannel.prototype.postMessage;
-    Reflect.set(window, "__settingsWrites", 0);
-    BroadcastChannel.prototype.postMessage = function (value) {
-      if (value?.type === "state")
-        Reflect.set(
-          window,
-          "__settingsWrites",
-          Number(Reflect.get(window, "__settingsWrites")) + 1,
-        );
-      originalPost.call(this, value);
-    };
-  });
-  const writes = () => page.evaluate(() => Number(Reflect.get(window, "__settingsWrites")));
+  let organizationWrites = 0;
+  const observeWrite = (request: { method(): string; url(): string }) => {
+    if (request.method() === "POST" && request.url().endsWith("/api/commands")) {
+      organizationWrites += 1;
+    }
+  };
+  page.on("request", observeWrite);
+  const writes = async () => organizationWrites;
   const distributed = dialog.getByRole("button", { name: "Distributed", exact: true });
   await distributed.click();
   const picker = page.locator('[data-demo-id="tag-color-dropdown"]');
@@ -270,13 +263,6 @@ export async function exerciseViewSettings(page: Page) {
   });
 
   const peer = await page.context().newPage();
-  // Delay SQLite hydration so a newer live-peer snapshot arrives first.
-  await peer.route("**/api/state", async (route) => {
-    if (route.request().method() !== "GET") return route.continue();
-    const response = await route.fetch();
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    await route.fulfill({ response });
-  });
   await peer.goto(page.url(), { waitUntil: "domcontentloaded" });
   await peer.getByRole("tab", { name: "Editor", exact: true }).click();
   await peer.getByRole("button", { name: "View settings", exact: true }).click();
@@ -305,6 +291,9 @@ export async function exerciseViewSettings(page: Page) {
   await peer.getByRole("button", { name: "Create View", exact: true }).click();
   await peer.getByRole("textbox", { name: "View name" }).fill("Empty settings test");
   await peer.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(page.locator('[data-demo-id="org-editor-view-select"]')).toContainText(
+    "Empty settings test",
+  );
   await expect(dialog).toBeHidden();
   await gear.click();
   await expect(dialog.getByRole("switch", { name: "Show Tag cloud" })).toHaveAttribute(
@@ -314,8 +303,10 @@ export async function exerciseViewSettings(page: Page) {
   await expect(dialog.getByRole("button", { name: "Distributed", exact: true })).toContainText(
     "Green",
   );
+  page.off("request", observeWrite);
   await peer.getByRole("button", { name: "Delete View", exact: true }).click();
   await peer.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(page.locator('[data-demo-id="org-editor-view-select"]')).toContainText("Units");
   await expect(dialog).toBeHidden();
   await expect(card).toBeVisible();
   await peer.close();

@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ProductSurface } from "@/components/ui/product-surface";
+import { useAccess } from "@/components/use-access";
 import { useCountText, useUiText } from "@/i18n/use-ui-text";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -43,6 +44,7 @@ export const EmployeesTab = observer(() => {
   const store = useOrgStore();
   const t = useUiText();
   const countText = useCountText();
+  const { can } = useAccess();
   const units = store.units;
   const { filters, query } = store.employeesUi;
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -50,30 +52,54 @@ export const EmployeesTab = observer(() => {
   const [isTagsOpen, setIsTagsOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
-  useContextHeaderAction({
-    dataDemoId: "employee-model-button",
-    icon: HiOutlineAdjustmentsHorizontal,
-    id: "employee-model",
-    label: t("Employee model"),
-    onClick: () => setIsModelOpen(true),
-  });
-  useContextHeaderAction({
-    dataDemoId: "employee-tags-button",
-    icon: HiOutlineTag,
-    id: "employee-tags",
-    label: t("Tags"),
-    onClick: () => setIsTagsOpen(true),
-  });
-  useContextHeaderAction({
-    dataDemoId: "employee-create-button",
-    icon: HiOutlineUserPlus,
-    id: "add-employee",
-    label: t("Add Employee"),
-    onClick: () => setIsCreateOpen(true),
-  });
+  useContextHeaderAction(
+    can("employee.model.update")
+      ? {
+          dataDemoId: "employee-model-button",
+          icon: HiOutlineAdjustmentsHorizontal,
+          id: "employee-model",
+          label: t("Employee model"),
+          onClick: () => setIsModelOpen(true),
+        }
+      : null,
+  );
+  useContextHeaderAction(
+    can("tag.create") || can("tag.update") || can("tag.delete")
+      ? {
+          dataDemoId: "employee-tags-button",
+          icon: HiOutlineTag,
+          id: "employee-tags",
+          label: t("Tags"),
+          onClick: () => setIsTagsOpen(true),
+        }
+      : null,
+  );
+  useContextHeaderAction(
+    can("employee.create")
+      ? {
+          dataDemoId: "employee-create-button",
+          icon: HiOutlineUserPlus,
+          id: "add-employee",
+          label: t("Add Employee"),
+          onClick: () => setIsCreateOpen(true),
+        }
+      : null,
+  );
   const deferredQuery = useDeferredValue(query);
   const queryTokens = useMemo(() => getSearchTokens(deferredQuery), [deferredQuery]);
   const sortedEmployees = units?.indexes.employeesByName ?? [];
+  const canForEmployee = (
+    employee: Employee,
+    permission: "employee.assignments.update" | "employee.update" | "tag.assign",
+  ) => {
+    const contexts = store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
+    return (
+      can(permission, { employeeId: employee.id }) ||
+      contexts.some((context) =>
+        can(permission, { employeeId: employee.id, unitId: context.unitId }),
+      )
+    );
+  };
   const hasSearch = queryTokens.length > 0 || hasActiveEmployeeSearchFilters(filters);
   const visibleEmployees = useMemo(() => {
     if (!units) return [];
@@ -140,6 +166,12 @@ export const EmployeesTab = observer(() => {
             actions={(employee) => {
               return (
                 <EmployeeCardActions
+                  canAssignTags={canForEmployee(employee, "tag.assign")}
+                  canDelete={can("employee.delete")}
+                  canEdit={
+                    canForEmployee(employee, "employee.update") ||
+                    canForEmployee(employee, "employee.assignments.update")
+                  }
                   employee={employee}
                   onApplyTags={store.updateEmployeeTags}
                   onDelete={setDeletingEmployee}
@@ -169,8 +201,11 @@ export const EmployeesTab = observer(() => {
           />
         </ProductSurface>
       )}
-      {isCreateOpen && (
+      {can("employee.create") && isCreateOpen && (
         <EmployeeDialog
+          canAssignTags={can("tag.assign")}
+          canEditAssignments={can("employee.assignments.update")}
+          canEditFields
           mode="global"
           onOpenChange={setIsCreateOpen}
           onSave={(fields, memberships, customOptionDrafts) =>
@@ -181,25 +216,31 @@ export const EmployeesTab = observer(() => {
           units={units}
         />
       )}
-      {editingEmployee && (
-        <EmployeeDialog
-          employee={editingEmployee}
-          mode="global"
-          onOpenChange={(open) => !open && setEditingEmployee(null)}
-          onSave={(fields, memberships, customOptionDrafts) =>
-            store.updateEmployee(
-              editingEmployee.id,
-              fields,
-              memberships,
-              store.systemOrgViewId,
-              customOptionDrafts,
-            )
-          }
-          open={Boolean(editingEmployee)}
-          tagOptions={units.indexes.tagOptions}
-          units={units}
-        />
-      )}
+      {editingEmployee &&
+        (canForEmployee(editingEmployee, "employee.update") ||
+          canForEmployee(editingEmployee, "employee.assignments.update") ||
+          canForEmployee(editingEmployee, "tag.assign")) && (
+          <EmployeeDialog
+            canAssignTags={canForEmployee(editingEmployee, "tag.assign")}
+            canEditAssignments={canForEmployee(editingEmployee, "employee.assignments.update")}
+            canEditFields={canForEmployee(editingEmployee, "employee.update")}
+            employee={editingEmployee}
+            mode="global"
+            onOpenChange={(open) => !open && setEditingEmployee(null)}
+            onSave={(fields, memberships, customOptionDrafts) =>
+              store.updateEmployee(
+                editingEmployee.id,
+                fields,
+                memberships,
+                store.systemOrgViewId,
+                customOptionDrafts,
+              )
+            }
+            open={Boolean(editingEmployee)}
+            tagOptions={units.indexes.tagOptions}
+            units={units}
+          />
+        )}
       <AlertDialog
         onOpenChange={(open) => !open && setDeletingEmployee(null)}
         open={Boolean(deletingEmployee)}
@@ -232,8 +273,12 @@ export const EmployeesTab = observer(() => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <EmployeeModelDialog onOpenChange={setIsModelOpen} open={isModelOpen} />
-      <TagCatalogDialog onOpenChange={setIsTagsOpen} open={isTagsOpen} />
+      {can("employee.model.update") && (
+        <EmployeeModelDialog onOpenChange={setIsModelOpen} open={isModelOpen} />
+      )}
+      {(can("tag.create") || can("tag.update") || can("tag.delete")) && (
+        <TagCatalogDialog onOpenChange={setIsTagsOpen} open={isTagsOpen} />
+      )}
     </section>
   );
 });

@@ -15,7 +15,13 @@ export function EmployeeCardActions({
   onEdit,
   tagOptions,
   tagPickerDataDemoId,
+  canAssignTags = true,
+  canDelete = true,
+  canEdit = true,
 }: {
+  canAssignTags?: boolean;
+  canDelete?: boolean;
+  canEdit?: boolean;
   employee: Employee;
   onApplyTags: (updates: EmployeeTagUpdate[]) => void;
   onDelete: (employee: Employee) => void;
@@ -27,33 +33,39 @@ export function EmployeeCardActions({
 
   return (
     <>
-      <EmployeeTagPopover
-        {...(tagPickerDataDemoId ? { dataDemoId: tagPickerDataDemoId } : {})}
-        employee={employee}
-        onApply={onApplyTags}
-        tagOptions={tagOptions}
-      />
-      <Button
-        aria-label={t("Edit")}
-        data-demo-id="employee-edit-button"
-        onClick={() => onEdit(employee)}
-        size="icon"
-        title={t("Edit")}
-        type="button"
-        variant="ghost"
-      >
-        <HiOutlinePencilSquare />
-      </Button>
-      <Button
-        aria-label={t("Delete")}
-        onClick={() => onDelete(employee)}
-        size="icon"
-        title={t("Delete")}
-        type="button"
-        variant="ghost"
-      >
-        <HiOutlineTrash />
-      </Button>
+      {canAssignTags && (
+        <EmployeeTagPopover
+          {...(tagPickerDataDemoId ? { dataDemoId: tagPickerDataDemoId } : {})}
+          employee={employee}
+          onApply={onApplyTags}
+          tagOptions={tagOptions}
+        />
+      )}
+      {canEdit && (
+        <Button
+          aria-label={t("Edit")}
+          data-demo-id="employee-edit-button"
+          onClick={() => onEdit(employee)}
+          size="icon"
+          title={t("Edit")}
+          type="button"
+          variant="ghost"
+        >
+          <HiOutlinePencilSquare />
+        </Button>
+      )}
+      {canDelete && (
+        <Button
+          aria-label={t("Delete")}
+          onClick={() => onDelete(employee)}
+          size="icon"
+          title={t("Delete")}
+          type="button"
+          variant="ghost"
+        >
+          <HiOutlineTrash />
+        </Button>
+      )}
     </>
   );
 }

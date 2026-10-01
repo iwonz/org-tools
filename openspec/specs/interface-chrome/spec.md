@@ -3,7 +3,6 @@
 ## Purpose
 Define the restrained layered shell, interaction states, workflow grouping, and overlay hierarchy.
 ## Requirements
-
 ### Requirement: Application chrome uses a restrained layered visual system
 The application SHALL use a dark collapsible navigation sidebar, a compact workflow header outside
 Editor, a low-contrast shell, full-bleed workflows, and restrained tonal grouping in light and dark
@@ -46,83 +45,6 @@ for an image-export artifact MAY differ only inside that artifact or preview.
 - **WHEN** the application renders focus, selection, active, or hover feedback in either theme
 - **THEN** small signal details use restrained steel-blue and larger tonal surfaces use low-chroma
   blue-gray without a violet or lavender cast
-
-### Requirement: Initial state loading is quiet and centered
-While either runtime resolves its initial state, the application SHALL show one icon-only loading
-indicator centered in the viewport on the normal shell background. The indicator SHALL have a
-localized accessible status name, SHALL expose no visible loading copy, and SHALL use bundled CSS
-and inline SVG with semantic theme tokens without decorative containers, shadows, or remote assets.
-
-#### Scenario: Load initial state
-- **WHEN** the SQLite or Pages runtime is waiting for its initial state
-- **THEN** one compact circular indicator is centered on both viewport axes without visible text,
-  cards, or product branding
-- **AND** assistive technology receives the localized loading status
-
-#### Scenario: Prefer reduced motion
-- **WHEN** the operating environment requests reduced motion during initial state loading
-- **THEN** the indicator remains visually identifiable and centered without requiring rotation
-
-#### Scenario: Finish initial state loading
-- **WHEN** the runtime installs a valid initial state or surfaces an explicit startup error
-- **THEN** the transient loading indicator is removed without changing state, persistence, or error
-  behavior
-
-### Requirement: Navigation states are explicit and responsive
-Product destinations SHALL retain accessible vertical tabs and the current order. The sidebar SHALL
-initialize compact and own Import, Export, Language, and Theme actions. Language and Theme SHALL be
-buttons opening separate modal dialogs rather than Select popovers. Compact actions SHALL show only
-icons with localized names and direction-aware tooltips. Sidebar controls SHALL keep their existing
-48 px width, 40 px height, padding, icon size, and borderless tonal interaction. The shell SHALL
-render no decorative product glyph, visible product title, Save control, Autosave control, or
-persistence status. Sidebar collapse and all other durable navigation context SHALL be represented
-in the current state.
-The 64 px context header SHALL reserve one right-aligned workflow action for populated or empty
-Teams and Employees and for populated Download. The action SHALL keep its localized accessible name
-and thematic icon at ordinary widths and SHALL become icon-only without overflow at narrow widths.
-The icon SHALL lead by default; Download Continue SHALL explicitly place its arrow after the label.
-Workflows SHALL NOT repeat that action inside their content or empty state.
-
-#### Scenario: Initial blank sidebar
-- **WHEN** a new blank state renders at desktop width
-- **THEN** the sidebar starts as a 64 px compact icon rail and that durable mode can round-trip with the state
-
-#### Scenario: Expanded and compact sidebar
-- **WHEN** a desktop user toggles the sidebar mode
-- **THEN** the right edge moves continuously between 240 and 64 px, icons keep one coordinate, and current product data remains unchanged
-
-#### Scenario: Runtime sidebar actions
-- **WHEN** either the SQLite or Pages runtime renders the sidebar
-- **THEN** it exposes Import, Export, language, and theme in the same order without an agent, project, file, Save, or Autosave control
-
-#### Scenario: Stable menu content
-- **WHEN** theme, language, or another menu item is hovered, focused, selected, or pressed
-- **THEN** its content position and geometry remain unchanged without a pointer-state border
-
-#### Scenario: Open settings modal
-- **WHEN** Language or Theme is activated
-- **THEN** its independent modal opens above workflow controls without a dropdown surface
-
-#### Scenario: Compact tooltip over Editor
-- **WHEN** a compact navigation action is hovered while Editor is active
-- **THEN** its tooltip is fully visible above canvas toolbars and below any open modal
-
-#### Scenario: Responsive and RTL shell
-- **WHEN** the shell renders at maintained widths or in Arabic RTL
-- **THEN** actions remain reachable, logical placement mirrors, and controls do not overflow
-
-#### Scenario: Responsive shell containment
-- **WHEN** either runtime renders at 390, 1024, or 1280 px wide
-- **THEN** global actions remain reachable, narrow layouts retain an icon rail, and the context action remains contained without consuming workflow width
-
-#### Scenario: Workflow context actions
-- **WHEN** Teams, Employees, or populated Download is active
-- **THEN** the context header exposes exactly one localized primary action, with a leading icon for Add actions and a trailing arrow for Download Continue
-- **AND** the workflow body and empty state contain no duplicate of that action
-
-#### Scenario: Narrow workflow context action
-- **WHEN** a header action renders at a narrow supported width
-- **THEN** its visible label is hidden, its icon remains centered, and its accessible name and tooltip remain available
 
 ### Requirement: Product workflows use purposeful grouping
 Teams, Employees, Calendar, and Download SHALL render their primary task content full-bleed without
@@ -222,37 +144,6 @@ visibility, and bounded scrolling SHALL remain unchanged.
 - **THEN** all tags remain visible, the virtualizer remeasures the content, and adjacent rows do not
   overlap
 
-### Requirement: Dialogs and overlays preserve task context
-Dialog and alert-dialog surfaces SHALL remain distinct through overlay, radius, focus management,
-and at most one restrained shadow. Language and Theme SHALL use compact modal radio lists. Non-modal
-Popover, Select, Tag/search, and Editor menus SHALL retain one neutral hairline and borderless items.
-Overlay levels SHALL place canvas tools below sidebar tooltips, sidebar content below dialogs,
-Popovers above their owning dialog, nested Select portals above Popovers, and runtime errors above
-all ordinary interaction layers. Headers, scrollable bodies, and footers SHALL use consistent
-spacing and restrained tonal separation when it keeps actions or context visible.
-
-#### Scenario: Modal setting selector
-- **WHEN** Language or Theme opens over any workflow
-- **THEN** the modal traps focus, shows stable radio rows, and remains above sidebar and canvas UI
-
-#### Scenario: State Import dialog
-- **WHEN** a valid or invalid state file is selected at a 390 px viewport
-- **THEN** its compact summary or owned error and actions remain readable without horizontal overflow
-
-#### Scenario: Destructive alert
-- **WHEN** a destructive confirmation opens
-- **THEN** overlay, warning copy, destructive action, and cancellation remain explicit in both
-  themes
-
-#### Scenario: Dropdown separation
-- **WHEN** any non-modal floating menu opens over a same-tone page in either theme
-- **THEN** one stable neutral outline distinguishes the container without an item border, geometry
-  shift, or additional elevation
-
-#### Scenario: Select inside a Popover
-- **WHEN** the exact Tag color type Select opens inside the color Popover
-- **THEN** every option renders above the Popover and remains pointer and keyboard accessible
-
 ### Requirement: Global transfer actions use focused modal workflows
 Import SHALL open one responsive modal with State and Employees tabs, thematic icons before labels,
 stable control geometry, and no navigation or shell movement. It SHALL expose file selection,
@@ -346,3 +237,47 @@ or change fragment geometry.
 #### Scenario: Inspect a suffix inset
 - **WHEN** a Tag surface ends with a date or count
 - **THEN** measured content ends exactly 8 pixels before the surface's logical end edge in either writing direction
+
+### Requirement: Authenticated startup is quiet and centered
+While the server resolves session and projection state, the application SHALL show the established
+centered icon-only accessible loading indicator. A logged-out installation SHALL transition to Setup
+or Login, and a readiness failure SHALL transition to a localized blocking error without briefly
+rendering organization data.
+
+#### Scenario: Resolve an authenticated session
+- **WHEN** the application waits for session bootstrap
+- **THEN** one centered local indicator renders until the authorized shell or a logged-out state replaces it
+
+### Requirement: Navigation reflects account access
+The responsive sidebar SHALL preserve its compact and expanded geometry and current workflow order,
+remove State Import/Export, and add an account menu. Administration SHALL appear only for a Super
+Administrator. Workflow actions SHALL render only when their command is permitted. Editor SHALL
+retain its full-height canvas behavior.
+
+#### Scenario: Render an Employee account
+- **WHEN** an authenticated Employee opens the shell
+- **THEN** only readable destinations and permitted actions appear and Administration is absent
+
+#### Scenario: Render a Super Administrator
+- **WHEN** a Super Administrator opens the shell
+- **THEN** Administration exposes Users, Roles, Access, and Audit with localized thematic icons
+
+### Requirement: Logged-out and forced-password states are isolated
+Setup, Login, and forced-password screens SHALL contain no organization navigation or values. They
+SHALL retain responsive, RTL, keyboard, focus, error, and reduced-motion behavior and SHALL use only
+bundled assets.
+
+#### Scenario: Require password replacement
+- **WHEN** a temporary-password session is established
+- **THEN** only the localized password-change surface and Logout are reachable until success
+
+### Requirement: Current dialogs preserve task context
+The application SHALL preserve task context in authentication, account, Administration, Backup,
+Restore, language, theme, product, and Editor dialogs. These dialogs use the established modal
+focus, portal, overlay, spacing, and z-index hierarchy.
+Nested popovers and selects SHALL remain above their owning dialog, and runtime blocking errors SHALL
+remain above ordinary interaction layers.
+
+#### Scenario: Open Restore confirmation
+- **WHEN** a Super Administrator reviews a valid detached Backup candidate
+- **THEN** the destructive confirmation traps focus, keeps its bounded summary visible, and remains above shell and canvas controls

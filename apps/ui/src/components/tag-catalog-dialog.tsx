@@ -9,6 +9,7 @@ import {
   HiOutlineEye,
   HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
+  HiOutlinePlus,
   HiOutlineSwatch,
   HiOutlineTag,
   HiOutlineTrash,
@@ -41,9 +42,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAccess } from "@/components/use-access";
 import { useTagCatalogDrag } from "@/components/use-tag-catalog-drag";
 import { describeError, type UiMessageDescriptor } from "@/i18n/messages";
 import { useCountText, useMessageText, useUiText } from "@/i18n/use-ui-text";
+import { createUuid } from "@/lib/employee-data";
 import { normalizeTagSearchValue } from "@/lib/tag-order";
 import { cn } from "@/lib/utils";
 import { useOrgStore } from "@/stores/org-store-context";
@@ -59,6 +62,10 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   const t = useUiText();
   const countText = useCountText();
   const messageText = useMessageText();
+  const { can } = useAccess();
+  const canUpdateTags = can("tag.update");
+  const canCreateTags = can("tag.create");
+  const canDeleteTags = can("tag.delete");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<EmployeeTagDefinition | null>(null);
   const [deleteId, setDeleteId] = useState<TagId | null>(null);
@@ -68,7 +75,20 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   const units = store.units;
   const [editError, setEditError] = useState<UiMessageDescriptor | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const canForEmployee = (
+    employee: Employee,
+    permission: "employee.assignments.update" | "employee.update" | "tag.assign",
+  ) => {
+    const contexts = store.employeeUnitContextsByEmployeeId.get(employee.id) ?? [];
+    return (
+      can(permission, { employeeId: employee.id }) ||
+      contexts.some((context) =>
+        can(permission, { employeeId: employee.id, unitId: context.unitId }),
+      )
+    );
+  };
   const moveTag = (sourceId: TagId, targetId: TagId, placement: "before" | "after") => {
+    if (!canUpdateTags) return;
     store.moveTag(sourceId, targetId, placement);
     const index = store.tagDefinitions.findIndex((tag) => tag.id === sourceId);
     const tag = store.tagDefinitions[index];
@@ -103,6 +123,9 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
     return result;
   }, [store.organizationEmployees]);
   const viewingTag = store.tagDefinitions.find((tag) => tag.id === viewingTagId) ?? null;
+  const editingExistingTag = Boolean(
+    editing && store.tagDefinitions.some((tag) => tag.id === editing.id),
+  );
   const taggedEmployees = useMemo(
     () =>
       viewingTagId
@@ -137,29 +160,31 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
         aria-label={tag.label}
         key={tag.id}
       >
-        <button
-          aria-label={t("Drag {name} to reorder", { name: tag.label })}
-          className="grid touch-none size-8 shrink-0 cursor-grab place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
-          data-demo-id="tag-catalog-drag-handle"
-          onPointerDown={overlay ? undefined : (event) => drag.onPointerDown(event, tag.id)}
-          onPointerMove={overlay ? undefined : drag.onPointerMove}
-          onPointerUp={overlay ? undefined : drag.onPointerUp}
-          onPointerCancel={overlay ? undefined : drag.onPointerCancel}
-          onLostPointerCapture={overlay ? undefined : drag.onLostPointerCapture}
-          tabIndex={overlay ? -1 : undefined}
-          onKeyDown={(event) => {
-            if (overlay) return;
-            drag.cancel();
-            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
-            event.preventDefault();
-            const target = visible[visibleIndex + (event.key === "ArrowUp" ? -1 : 1)];
-            if (target) moveTag(tag.id, target.id, event.key === "ArrowUp" ? "before" : "after");
-          }}
-          title={t("Drag to reorder or use the arrow keys")}
-          type="button"
-        >
-          <HiOutlineBars3 className="size-4" />
-        </button>
+        {canUpdateTags && (
+          <button
+            aria-label={t("Drag {name} to reorder", { name: tag.label })}
+            className="grid touch-none size-8 shrink-0 cursor-grab place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+            data-demo-id="tag-catalog-drag-handle"
+            onPointerDown={overlay ? undefined : (event) => drag.onPointerDown(event, tag.id)}
+            onPointerMove={overlay ? undefined : drag.onPointerMove}
+            onPointerUp={overlay ? undefined : drag.onPointerUp}
+            onPointerCancel={overlay ? undefined : drag.onPointerCancel}
+            onLostPointerCapture={overlay ? undefined : drag.onLostPointerCapture}
+            tabIndex={overlay ? -1 : undefined}
+            onKeyDown={(event) => {
+              if (overlay) return;
+              drag.cancel();
+              if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+              event.preventDefault();
+              const target = visible[visibleIndex + (event.key === "ArrowUp" ? -1 : 1)];
+              if (target) moveTag(tag.id, target.id, event.key === "ArrowUp" ? "before" : "after");
+            }}
+            title={t("Drag to reorder or use the arrow keys")}
+            type="button"
+          >
+            <HiOutlineBars3 className="size-4" />
+          </button>
+        )}
         <div
           className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
           data-demo-id="tag-catalog-identity"
@@ -195,44 +220,49 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
         >
           <HiOutlineEye />
         </Button>
-        {overlay ? (
-          <span className={buttonVariants({ size: "icon", variant: "ghost" })}>
-            <HiOutlineSwatch />
-          </span>
-        ) : (
-          <TagColorPicker
-            onChange={(color) => store.saveTagDefinition({ ...tag, color })}
-            value={tag.color}
-            variant="icon"
-          />
+        {canUpdateTags &&
+          (overlay ? (
+            <span className={buttonVariants({ size: "icon", variant: "ghost" })}>
+              <HiOutlineSwatch />
+            </span>
+          ) : (
+            <TagColorPicker
+              onChange={(color) => store.saveTagDefinition({ ...tag, color })}
+              value={tag.color}
+              variant="icon"
+            />
+          ))}
+        {canUpdateTags && (
+          <Button
+            aria-label={t("Edit tag")}
+            onClick={
+              overlay
+                ? undefined
+                : () => {
+                    setEditing({ ...tag });
+                    setEditError(null);
+                  }
+            }
+            size="icon"
+            title={t("Edit tag")}
+            type="button"
+            variant="ghost"
+          >
+            <HiOutlinePencilSquare />
+          </Button>
         )}
-        <Button
-          aria-label={t("Edit tag")}
-          onClick={
-            overlay
-              ? undefined
-              : () => {
-                  setEditing({ ...tag });
-                  setEditError(null);
-                }
-          }
-          size="icon"
-          title={t("Edit tag")}
-          type="button"
-          variant="ghost"
-        >
-          <HiOutlinePencilSquare />
-        </Button>
-        <Button
-          aria-label={t("Delete tag")}
-          onClick={overlay ? undefined : () => setDeleteId(tag.id)}
-          size="icon"
-          title={t("Delete tag")}
-          type="button"
-          variant="ghost"
-        >
-          <HiOutlineTrash />
-        </Button>
+        {canDeleteTags && (
+          <Button
+            aria-label={t("Delete tag")}
+            onClick={overlay ? undefined : () => setDeleteId(tag.id)}
+            size="icon"
+            title={t("Delete tag")}
+            type="button"
+            variant="ghost"
+          >
+            <HiOutlineTrash />
+          </Button>
+        )}
       </fieldset>
     );
   };
@@ -293,6 +323,18 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
             </div>
           </DialogBody>
           <DialogFooter>
+            {canCreateTags && (
+              <Button
+                onClick={() => {
+                  setEditing({ color: null, id: createUuid(), label: "" });
+                  setEditError(null);
+                }}
+                type="button"
+              >
+                <HiOutlinePlus />
+                {t("Create")}
+              </Button>
+            )}
             <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
               {t("Close")}
             </Button>
@@ -329,7 +371,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
       >
         <DialogContent className="max-w-md" data-demo-id="tag-catalog-editor">
           <DialogHeader>
-            <DialogTitle>{t("Edit tag")}</DialogTitle>
+            <DialogTitle>{editingExistingTag ? t("Edit tag") : t("Create")}</DialogTitle>
           </DialogHeader>
           {editing && (
             <>
@@ -374,7 +416,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                   type="button"
                 >
                   <HiOutlineTag />
-                  {t("Save")}
+                  {editingExistingTag ? t("Save") : t("Create")}
                 </Button>
               </DialogFooter>
             </>
@@ -401,6 +443,12 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
               <EmployeeCardList
                 actions={(employee) => (
                   <EmployeeCardActions
+                    canAssignTags={canForEmployee(employee, "tag.assign")}
+                    canDelete={can("employee.delete")}
+                    canEdit={
+                      canForEmployee(employee, "employee.update") ||
+                      canForEmployee(employee, "employee.assignments.update")
+                    }
                     employee={employee}
                     onApplyTags={store.updateEmployeeTags}
                     onDelete={setDeletingEmployee}
@@ -429,28 +477,35 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {editingEmployee && units && (
-        <EmployeeDialog
-          employee={editingEmployee}
-          mode="global"
-          onOpenChange={(nextOpen) => !nextOpen && setEditingEmployee(null)}
-          onSave={(fields, memberships, customOptionDrafts) =>
-            store.updateEmployee(
-              editingEmployee.id,
-              fields,
-              memberships,
-              store.systemOrgViewId,
-              customOptionDrafts,
-            )
-          }
-          open={Boolean(editingEmployee)}
-          tagOptions={units.indexes.tagOptions}
-          units={units}
-        />
-      )}
+      {editingEmployee &&
+        units &&
+        (canForEmployee(editingEmployee, "employee.update") ||
+          canForEmployee(editingEmployee, "employee.assignments.update") ||
+          canForEmployee(editingEmployee, "tag.assign")) && (
+          <EmployeeDialog
+            canAssignTags={canForEmployee(editingEmployee, "tag.assign")}
+            canEditAssignments={canForEmployee(editingEmployee, "employee.assignments.update")}
+            canEditFields={canForEmployee(editingEmployee, "employee.update")}
+            employee={editingEmployee}
+            mode="global"
+            onOpenChange={(nextOpen) => !nextOpen && setEditingEmployee(null)}
+            onSave={(fields, memberships, customOptionDrafts) =>
+              store.updateEmployee(
+                editingEmployee.id,
+                fields,
+                memberships,
+                store.systemOrgViewId,
+                customOptionDrafts,
+              )
+            }
+            open={Boolean(editingEmployee)}
+            tagOptions={units.indexes.tagOptions}
+            units={units}
+          />
+        )}
       <AlertDialog
         onOpenChange={(nextOpen) => !nextOpen && setDeletingEmployee(null)}
-        open={Boolean(deletingEmployee)}
+        open={Boolean(deletingEmployee) && can("employee.delete")}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

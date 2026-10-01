@@ -1,0 +1,96 @@
+services:
+  migrate:
+    build:
+      context: .
+      target: development
+    image: org-tools-dev
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+      - type: volume
+        source: dev_node_modules
+        target: /workspace/node_modules
+      - type: volume
+        source: dev_ui_node_modules
+        target: /workspace/apps/ui/node_modules
+      - type: volume
+        source: dev_types_node_modules
+        target: /workspace/packages/types/node_modules
+  app:
+    build:
+      context: .
+      target: development
+    command: ["pnpm", "--filter", "@org-tools/ui", "exec", "next", "dev", "--webpack", "--hostname", "0.0.0.0", "--port", "3000"]
+    image: org-tools-dev
+    environment:
+      NODE_ENV: development
+    read_only: false
+    user: "0:0"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+      - type: volume
+        source: dev_node_modules
+        target: /workspace/node_modules
+      - type: volume
+        source: dev_ui_node_modules
+        target: /workspace/apps/ui/node_modules
+      - type: volume
+        source: dev_types_node_modules
+        target: /workspace/packages/types/node_modules
+  toolbox:
+    image: org-tools-dev
+    build:
+      context: .
+      target: development
+    command: ["sleep", "infinity"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      CI: "true"
+      NODE_ENV: test
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      ORG_TOOLS_TEST_UPSTREAM_ORIGIN: http://app:3000
+      ORG_TOOLS_BACKUP_PATH: /backups
+      ORG_TOOLS_DB_HOST: ${ORG_TOOLS_DB_HOST}
+      ORG_TOOLS_DB_PASSWORD: ${ORG_TOOLS_DB_PASSWORD}
+      ORG_TOOLS_DB_PORT: ${ORG_TOOLS_DB_PORT}
+      ORG_TOOLS_DB_SSLMODE: ${ORG_TOOLS_DB_SSLMODE}
+      ORG_TOOLS_DB_USER: ${ORG_TOOLS_DB_USER}
+      ORG_TOOLS_PORT: ${ORG_TOOLS_PORT}
+      ORG_TOOLS_PUBLIC_ORIGIN: ${ORG_TOOLS_PUBLIC_ORIGIN}
+      ORG_TOOLS_SETUP_TOKEN: ${ORG_TOOLS_SETUP_TOKEN}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+      - type: volume
+        source: dev_node_modules
+        target: /workspace/node_modules
+      - type: volume
+        source: dev_ui_node_modules
+        target: /workspace/apps/ui/node_modules
+      - type: volume
+        source: dev_screenshots_node_modules
+        target: /workspace/packages/screenshots/node_modules
+      - type: volume
+        source: dev_types_node_modules
+        target: /workspace/packages/types/node_modules
+      - type: volume
+        source: dev_playwright
+        target: /ms-playwright
+
+volumes:
+  dev_node_modules:
+  dev_playwright:
+  dev_screenshots_node_modules:
+  dev_types_node_modules:
+  dev_ui_node_modules:

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { AppLocale, OrgToolsState } from "@org-tools/types";
 import { expect, type Page } from "@playwright/test";
 
-export type ImportFilePayload = {
+export type StateFilePayload = {
   buffer: Buffer;
   mimeType: string;
   name: string;
@@ -34,7 +34,7 @@ export async function applyColorPickerDraft(
 
 export async function createDistributionStateFile(
   targetCollapsed = true,
-): Promise<ImportFilePayload> {
+): Promise<StateFilePayload> {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
   const systemView = state.organization.views.find((view) => view.kind === "system");
   const sourceUnit = systemView?.structure.units.find((unit) => unit.name === "Product");
@@ -53,7 +53,7 @@ export async function createDistributionStateFile(
   };
 }
 
-export async function createUsedColorsStateFile(): Promise<ImportFilePayload> {
+export async function createUsedColorsStateFile(): Promise<StateFilePayload> {
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
   const systemView = state.organization.views.find((view) => view.kind === "system");
   if (!systemView) throw new Error("System View is unavailable.");
@@ -195,15 +195,97 @@ const emptyDownloadState = (sourceViewId: string): OrgToolsState["ui"]["download
   sourceViewId,
 });
 
-export async function resetServerState(page: Page, locale: AppLocale = "en"): Promise<string> {
-  const port = process.env.ORG_TOOLS_PORT ?? "4273";
-  const origin = process.env.ORG_TOOLS_BASE_URL ?? `http://127.0.0.1:${port}`;
-  const response = await page.request.get("/api/state", {
-    headers: { Host: new URL(origin).host },
+export const testAdministrator = {
+  email: process.env.ORG_TOOLS_TEST_ADMIN_EMAIL ?? "administrator@example.test",
+  password:
+    process.env.ORG_TOOLS_TEST_ADMIN_PASSWORD ?? "Org Tools test administrator password 2026",
+};
+
+export const configuredOrigin = () =>
+  process.env.ORG_TOOLS_PUBLIC_ORIGIN ??
+  process.env.ORG_TOOLS_BASE_URL ??
+  `http://127.0.0.1:${process.env.ORG_TOOLS_PORT ?? "3000"}`;
+
+export const mutationHeaders = (csrfToken?: string): Record<string, string> => ({
+  "Content-Type": "application/json",
+  Origin: configuredOrigin(),
+  "Sec-Fetch-Site": "same-origin",
+  ...(csrfToken ? { "X-Org-Tools-CSRF": csrfToken } : {}),
+});
+
+type Bootstrap = {
+  csrfToken: string;
+  organizationRevision: number;
+  securityRevision: number;
+};
+
+export async function authenticateSuperAdministrator(page: Page): Promise<Bootstrap> {
+  let session = await page.request.get("/api/session");
+  if (!session.ok()) {
+    const status = await page.request.get("/api/auth/status");
+    if (!status.ok()) throw new Error(JSON.stringify(await status.json()));
+    const mode = (await status.json()) as { kind: "login" | "setup" };
+    const endpoint = mode.kind === "setup" ? "/api/auth/setup" : "/api/auth/login";
+    const body =
+      mode.kind === "setup"
+        ? {
+            ...testAdministrator,
+            setupToken: process.env.ORG_TOOLS_SETUP_TOKEN ?? "",
+          }
+        : testAdministrator;
+    const authenticated = await page.request.post(endpoint, {
+      data: body,
+      headers: mutationHeaders(),
+    });
+    if (!authenticated.ok()) throw new Error(JSON.stringify(await authenticated.json()));
+    session = await page.request.get("/api/session");
+  }
+  if (!session.ok()) throw new Error(JSON.stringify(await session.json()));
+  return (await session.json()) as Bootstrap;
+}
+
+const readStateFile = async (file: StateFilePayload | string): Promise<OrgToolsState> => {
+  const source = typeof file === "string" ? await readFile(file) : file.buffer;
+  return JSON.parse(source.toString("utf8")) as OrgToolsState;
+};
+
+export async function replaceStateFromFile(
+  page: Page,
+  file: StateFilePayload | string,
+): Promise<void> {
+  const state = await readStateFile(file);
+  const returnUrl = page.url();
+  await authenticateSuperAdministrator(page);
+  if (returnUrl.startsWith("http://") || returnUrl.startsWith("https://")) {
+    await page.goto("/api/health/live", { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(500);
+  }
+  const bootstrap = await authenticateSuperAdministrator(page);
+  const write = await page.request.post("/api/commands", {
+    data: {
+      expectedOrganizationRevision: bootstrap.organizationRevision,
+      expectedSecurityRevision: bootstrap.securityRevision,
+      organization: state.organization,
+      type: "organization.replace",
+    },
+    headers: mutationHeaders(bootstrap.csrfToken),
   });
-  if (!response.ok()) throw new Error(JSON.stringify(await response.json()));
-  const document = (await response.json()) as { revision: number; state: OrgToolsState };
-  const state = document.state;
+  if (!write.ok()) throw new Error(JSON.stringify(await write.json()));
+  const uiWrite = await page.request.put("/api/ui", {
+    data: state.ui,
+    headers: mutationHeaders(bootstrap.csrfToken),
+  });
+  if (!uiWrite.ok()) throw new Error(JSON.stringify(await uiWrite.json()));
+  if (
+    (returnUrl.startsWith("http://") || returnUrl.startsWith("https://")) &&
+    !returnUrl.endsWith("/api/health/live")
+  ) {
+    await page.goto(returnUrl, { waitUntil: "domcontentloaded" });
+  }
+}
+
+export async function resetServerState(page: Page, locale: AppLocale = "en"): Promise<string> {
+  const state = await readStateFile(syntheticStatePath);
   const systemView = state.organization.views.find((view) => view.kind === "system");
   if (!systemView) throw new Error("System View is unavailable.");
   systemView.structure.canvasElements = [];
@@ -239,11 +321,11 @@ export async function resetServerState(page: Page, locale: AppLocale = "en"): Pr
     unitQuery: "",
   };
   state.ui.download = emptyDownloadState(systemView.id);
-  const write = await page.request.put("/api/state", {
-    data: { scope: "all", state },
-    headers: { Origin: origin },
+  await replaceStateFromFile(page, {
+    buffer: Buffer.from(JSON.stringify(state)),
+    mimeType: "application/json",
+    name: "blank-state.json",
   });
-  if (!write.ok()) throw new Error(JSON.stringify(await write.json()));
   return "/";
 }
 
@@ -285,35 +367,23 @@ export async function openBlankState(page: Page): Promise<void> {
 }
 
 export async function replaceWithSyntheticState(page: Page): Promise<void> {
-  const dialog = await openImportDialog(page, syntheticStatePath);
-  await expect(dialog.locator('[data-demo-id="state-import-summary"]')).toContainText(
-    "4 Employees",
-  );
-  await dialog.getByRole("button", { name: "Replace state", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await replaceStateFromFile(page, syntheticStatePath);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
 }
 
-export async function openImportDialog(page: Page, file: ImportFilePayload | string) {
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Import", exact: true });
-  await expect(dialog).toBeVisible();
-  const fileChooserPromise = page.waitForEvent("filechooser");
-  await dialog.getByText("Choose file", { exact: true }).click();
-  const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(file);
-  return dialog;
-}
-
 export async function stabilizeForScreenshot(page: Page): Promise<void> {
-  await page.mouse.move(1400, 30);
+  const appShell = page.locator('[data-demo-id="app-shell"]');
+  if ((await appShell.count()) > 0) {
+    await expect(appShell).toHaveAttribute("data-state-pending", "false");
+  }
+  await page.mouse.move(1, 1);
   await page.evaluate(() => {
     const activeElement = document.activeElement;
     if (activeElement instanceof HTMLElement && !activeElement.closest('[role="listbox"]')) {
       activeElement.blur();
     }
   });
-  await page.waitForTimeout(500);
   await page.addStyleTag({
     content: `
       *, *::before, *::after {
@@ -329,4 +399,5 @@ export async function stabilizeForScreenshot(page: Page): Promise<void> {
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
+  await page.waitForTimeout(1_500);
 }

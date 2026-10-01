@@ -7,3 +7,7 @@ export type OrgEditorStaffingSlotId = string;
 export type TagId = string;
 export type UnitId = string;
 export type ViewId = string;
+export type AccountId = string;
+export type AuditEventId = string;
+export type RoleId = string;
+export type SessionId = string;

@@ -15,73 +15,45 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-
+    timeout-minutes: 45
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 11.24.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22.13.1
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Chromium
-        run: pnpm --filter @org-tools/screenshots exec playwright install --with-deps chromium
-
-      - name: Check development startup
-        run: pnpm dev:check
-
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
+        run: |
+          ./bin/org-tools env init
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci/backups|' .env
+          mkdir -p /tmp/org-tools-ci/postgres /tmp/org-tools-ci/backups
+      - name: Build toolbox and start PostgreSQL
+        run: ./bin/org-tools dev -d
+      - name: Probe development runtime in Chromium
+        run: ./bin/org-tools-dev-check
       - name: Lint
-        run: pnpm lint
-
+        run: ./bin/org-tools run pnpm lint
       - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Unit tests
-        run: pnpm test:unit
-
+        run: ./bin/org-tools run pnpm typecheck
+      - name: Unit and integration tests
+        run: ./bin/org-tools run pnpm test:unit
       - name: Validate OpenSpec
-        run: pnpm spec:validate
-
+        run: ./bin/org-tools run pnpm spec:validate
       - name: Build production application
-        run: pnpm build
-
-      - name: Build GitHub Pages application
-        run: pnpm pages:build
-
-      - name: SQLite browser smoke tests
-        run: pnpm --filter @org-tools/screenshots smoke
-
-      - name: Pages browser smoke tests
-        run: pnpm --filter @org-tools/screenshots pages:smoke
-
-      - name: Generate Pages screenshots
-        run: pnpm --filter @org-tools/screenshots generate:pages
-
-      - name: Generate SQLite screenshots
-        run: pnpm --filter @org-tools/screenshots generate
-
-      - name: Validate GitHub Pages application
-        run: pnpm pages:check
-
-      - name: Check publication safety
-        run: pnpm public:check
-
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v7
+        run: ./bin/org-tools run pnpm build
+      - name: Browser tests
+        run: ./bin/org-tools run env ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 pnpm --filter @org-tools/screenshots smoke
+      - name: Generate screenshots
+        run: ./bin/org-tools run env ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 pnpm --filter @org-tools/screenshots generate
+      - name: Publication safety
+        run: ./bin/org-tools run pnpm public:check
+      - name: Build production image
+        run: docker build --tag org-tools:ci .
+      - name: Inspect production image
+        run: |
+          ./bin/org-tools-image-check org-tools:ci
+      - uses: actions/upload-artifact@v7
         with:
           name: org-tools-screenshots
           path: docs/screenshots/*.png
           if-no-files-found: error
           retention-days: 14
+      - if: always()
+        run: ./bin/org-tools down --volumes

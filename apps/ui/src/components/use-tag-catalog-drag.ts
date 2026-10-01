@@ -50,6 +50,9 @@ export function useTagCatalogDrag({
   const gestureRef = useRef<Gesture | null>(null);
   const frameRef = useRef<number | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const catalogLayoutKey = tags
+    .map((tag) => `${tag.id}\u0000${tag.label}\u0000${tag.color ?? ""}`)
+    .join("\u0001");
 
   const cancel = (restoreFocus = true) => {
     const gesture = gestureRef.current;
@@ -66,12 +69,12 @@ export function useTagCatalogDrag({
   cancelRef.current = cancel;
   useLayoutEffect(() => {
     // A replacement catalog or query invalidates the measured full-catalog insertion.
-    void tags;
+    void catalogLayoutKey;
     void query;
     void open;
     cancelRef.current(false);
     return () => cancelRef.current(false);
-  }, [tags, query, open]);
+  }, [catalogLayoutKey, query, open]);
   useLayoutEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || !gestureRef.current) return;
@@ -213,6 +216,9 @@ export function useTagCatalogDrag({
     if (gesture.active && inside && source && target && source !== target)
       onMove(source.id, target.id, destination < gesture.sourceIndex ? "before" : "after");
   };
+  const cancelPointer = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (gestureRef.current?.pointerId === event.pointerId) cancel();
+  };
   return {
     listRef,
     preview,
@@ -220,8 +226,8 @@ export function useTagCatalogDrag({
     onPointerDown,
     onPointerMove,
     onPointerUp,
-    onPointerCancel: () => cancel(),
-    onLostPointerCapture: () => cancel(),
+    onPointerCancel: cancelPointer,
+    onLostPointerCapture: cancelPointer,
     onScroll: () => {
       if (gestureRef.current?.active) schedule();
     },
