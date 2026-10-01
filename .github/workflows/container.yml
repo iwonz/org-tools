@@ -44,7 +44,9 @@ jobs:
       - id: build
         uses: docker/build-push-action@v7
         with:
-          cache-from: type=gha,scope=published-runtime
+          cache-from: |
+            type=gha,scope=published-runtime
+            type=gha,scope=ci-runtime
           cache-to: type=gha,mode=max,scope=published-runtime
           context: .
           file: Dockerfile

@@ -110,7 +110,9 @@ jobs:
       - name: Build cached production image
         uses: docker/build-push-action@v7
         with:
-          cache-from: type=gha,scope=ci-runtime
+          cache-from: |
+            type=gha,scope=ci-runtime
+            type=gha,scope=published-runtime
           cache-to: type=gha,mode=max,scope=ci-runtime
           context: .
           file: Dockerfile

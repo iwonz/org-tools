@@ -106,5 +106,7 @@ paths. It is not an authorization or delivery boundary.
 Authoritative CI separates static/runtime, browser, gallery, and production-image evidence into
 concurrent jobs. Browser tests are partitioned over four independent Compose and PostgreSQL
 instances and stay serial inside each shard. A final stable `validate` job requires all evidence;
-therefore parallel execution changes wall time without reducing coverage. See
-`docs/validation.md` for commands and timing methodology.
+therefore parallel execution changes wall time without reducing coverage. CI and Container builds
+write separate bounded BuildKit caches and may read the other's cache, so verified immutable layers
+are reusable without concurrent workflows overwriting one cache. See `docs/validation.md` for
+commands and timing methodology.
