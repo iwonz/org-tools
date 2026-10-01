@@ -5,7 +5,8 @@ The repository SHALL provide a changed-file validation stage that compares the m
 staged, unstaged, and untracked paths, runs every cheap static and unit gate, and selects relevant
 runtime, browser, visual, and publication feedback. The stage MUST print the selected gates and
 reasons. An unavailable base, an unknown path, or validation-infrastructure change MUST select the
-complete expensive local plan.
+complete expensive local plan. Its root Compose command MUST start and prewarm the development
+runtime when selected feedback requires it and MUST restore the previous stack state.
 
 #### Scenario: Validate a documentation-only change
 - **WHEN** only known documentation and OpenSpec paths changed

@@ -16,19 +16,21 @@ only the complete CI matrix is delivery evidence.
    publication scan:
 
    ```sh
-   ./bin/org-tools run pnpm validate:fast
+   ./bin/org-tools validate fast
    ```
 
 3. **Changed** runs Fast, then adds the development probe, production build, owned browser specs,
    gallery feedback, and publication scan selected by the conservative path plan:
 
    ```sh
-   ./bin/org-tools run pnpm validate:changed --base origin/main
+   ./bin/org-tools validate changed --base origin/main
    ```
 
    An unavailable comparison base, an unknown path, or a validation-infrastructure change selects
    the complete expensive local plan. Unit tests are deliberately not selected by import graph: the
-   whole suite is cheap and catches cross-module contracts.
+   whole suite is cheap and catches cross-module contracts. The wrapper starts and prewarms the
+   development runtime when an affected browser check needs it, then restores the previous Compose
+   state.
 
 4. **Complete delivery** is always run by GitHub Actions for pull requests and `main`. Independent
    jobs cover static/runtime checks, four isolated browser shards, two full gallery passes, and the

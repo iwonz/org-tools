@@ -82,7 +82,7 @@ if (succeeded && mode === "changed") {
 
   if (plan.runtime || plan.build) {
     const runtimeCommands = [];
-    if (plan.runtime) {
+    if (plan.runtime && process.env.ORG_TOOLS_SKIP_DEV_PROBE !== "1") {
       runtimeCommands.push({ args: ["dev:check"], command: "pnpm", name: "development probe" });
     }
     if (plan.build) {

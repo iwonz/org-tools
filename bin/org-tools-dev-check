@@ -10,7 +10,9 @@ if [ "$(compose ps --status running --services app 2>/dev/null || true)" != "app
   "$repository_root/bin/org-tools" dev -d
 fi
 cleanup() {
-  if [ "$started" -eq 1 ]; then "$repository_root/bin/org-tools" down >/dev/null 2>&1 || true; fi
+  if [ "$started" -eq 1 ] && [ "${ORG_TOOLS_KEEP_DEV_STACK:-0}" != "1" ]; then
+    "$repository_root/bin/org-tools" down >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT INT TERM
 attempt=0

@@ -133,6 +133,41 @@ case "${1:-}" in
     require_environment
     docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm toolbox "$@"
     ;;
+  validate)
+    shift
+    validation_stage=${1:-}
+    if [ -z "$validation_stage" ]; then
+      echo "Usage: ./bin/org-tools validate {fast|changed} [validation arguments]" >&2
+      exit 2
+    fi
+    shift
+    require_environment
+    case "$validation_stage" in
+      fast)
+        docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm toolbox pnpm validate:fast "$@"
+        ;;
+      changed)
+        validation_started_app=0
+        cleanup_validation() {
+          if [ "$validation_started_app" -eq 1 ]; then
+            docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" down >/dev/null 2>&1 || true
+          fi
+        }
+        trap cleanup_validation EXIT INT TERM
+        if docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm toolbox node scripts/validation-runtime-required.mjs "$@"; then
+          if [ "$(docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" ps --status running --services app 2>/dev/null || true)" != "app" ]; then
+            validation_started_app=1
+          fi
+          ORG_TOOLS_KEEP_DEV_STACK=1 "$repository_root/bin/org-tools-dev-check"
+        fi
+        docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm -e ORG_TOOLS_SKIP_DEV_PROBE=1 toolbox pnpm validate:changed "$@"
+        ;;
+      *)
+        echo "Usage: ./bin/org-tools validate {fast|changed} [validation arguments]" >&2
+        exit 2
+        ;;
+    esac
+    ;;
   migrate)
     shift
     compose run --rm migrate "$@"
@@ -147,7 +182,7 @@ case "${1:-}" in
     exec "$repository_root/bin/org-tools-docker-run" "$@"
     ;;
   *)
-    echo "Usage: ./bin/org-tools {env {init|validate}|up|down|logs|dev|run|migrate|docker-run|reset-super-admin-password}" >&2
+    echo "Usage: ./bin/org-tools {env {init|validate}|up|down|logs|dev|run|validate {fast|changed}|migrate|docker-run|reset-super-admin-password}" >&2
     exit 2
     ;;
 esac

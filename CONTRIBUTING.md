@@ -23,11 +23,13 @@ addition to UI gates.
 Run through the toolbox:
 
 ```sh
+./bin/org-tools validate fast
+./bin/org-tools validate changed --base origin/main
 ./bin/org-tools run pnpm format
 ./bin/org-tools run pnpm lint
 ./bin/org-tools run pnpm typecheck
 ./bin/org-tools run pnpm test:unit
-./bin/org-tools run pnpm dev:check
+./bin/org-tools-dev-check
 ./bin/org-tools run pnpm build
 ./bin/org-tools run pnpm test:browser
 ./bin/org-tools run pnpm screenshots:generate

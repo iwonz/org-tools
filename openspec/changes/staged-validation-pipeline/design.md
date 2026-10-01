@@ -46,6 +46,11 @@ computes a conservative plan from the merge-base diff plus staged, unstaged, and
 runs the fast stage, and adds only relevant runtime/browser/visual feedback. It prints paths,
 reasons, commands, durations, and skipped expensive gates.
 
+The root Compose wrapper performs the plan preflight, starts and prewarms the development runtime
+only when the selected feedback requires it, and restores the previous stack state after the
+changed stage. This keeps the documented command self-contained on a host that has only Docker and
+Git.
+
 The changed stage is not a delivery certificate. GitHub Actions remains authoritative and always
 runs all browser scenarios, the performance case, two deterministic gallery passes, production
 build/publication checks, and production image inspection. This avoids converting a path map into a
