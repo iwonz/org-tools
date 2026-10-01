@@ -57,7 +57,8 @@ jobs:
           subject-name: ghcr.io/iwonz/org-tools
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
-      - name: Make package public
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api --method PATCH /user/packages/container/org-tools -f visibility=public
+      - name: Verify anonymous pull
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p "${RUNNER_TEMP}/org-tools-anonymous-docker"
+          docker --config "${RUNNER_TEMP}/org-tools-anonymous-docker" pull "ghcr.io/iwonz/org-tools:${{ steps.meta.outputs.version }}"
