@@ -116,17 +116,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         data-demo-id={auth.mode === "setup" ? "setup-form" : "login-form"}
         onSubmit={submit}
       >
-        <HiOutlineLockClosed className="mb-5 size-9 text-signal" />
-        <h1 className="text-xl font-semibold">
-          {t(auth.mode === "setup" ? "Set up Org Tools" : "Sign in")}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t(
-            auth.mode === "setup"
-              ? "Create the first Super Administrator account."
-              : "Use your organization account to continue.",
-          )}
-        </p>
+        <div className="flex flex-col items-center text-center" data-demo-id="auth-heading">
+          <HiOutlineLockClosed className="mb-5 size-9 text-signal" />
+          <h1 className="text-xl font-semibold">
+            {t(auth.mode === "setup" ? "Set up Org Tools" : "Sign in")}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t(
+              auth.mode === "setup"
+                ? "Create the first Super Administrator account."
+                : "Use your organization account to continue.",
+            )}
+          </p>
+        </div>
         <div className="mt-6 grid gap-4">
           {auth.mode === "setup" && (
             <div className="grid gap-2">

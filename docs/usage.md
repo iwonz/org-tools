@@ -9,13 +9,14 @@ creates the first Super Administrator. Later visits show email/password sign in.
 
 Sessions expire after eight idle hours or 24 absolute hours. A temporary password always opens a
 mandatory password-change form before organization data becomes available. The account menu changes
-the current password or signs out.
+the current password or signs out. For a Super Administrator it also opens Administration.
 
 ## Navigation and access
 
-The sidebar contains only destinations allowed to the current account: Employees, Units, Editor,
-Calendar, Data Download, and, for Super Administrators, Administration. An unavailable action is
-also rejected by the server if called directly.
+The sidebar contains only product destinations allowed to the current account: Employees, Units,
+Editor, Calendar, and Data Download. Its footer keeps the account, theme, and language controls in
+that order. Administration is available only from a Super Administrator's account menu. An
+unavailable action is also rejected by the server if called directly.
 
 The system roles are:
 
@@ -45,9 +46,10 @@ email change atomically and other sessions for that account are revoked.
 
 ### Roles
 
-Roles group permissions and valid scopes. System Super Administrator is immutable. A custom role
-can be deleted only after accounts, direct references, and ACL references are removed. The effective
-preview combines the selected role and direct grants.
+Roles group permissions and valid scopes. Administration presents localized task names for every
+permission and scope while the server retains stable identifiers. System Super Administrator is
+immutable. A custom role can be deleted only after accounts, direct references, and ACL references
+are removed. The effective preview combines the selected role and direct grants.
 
 ### Access
 

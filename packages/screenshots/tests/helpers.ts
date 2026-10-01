@@ -366,6 +366,15 @@ export async function openBlankState(page: Page): Promise<void> {
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 }
 
+export async function openAdministration(page: Page): Promise<void> {
+  await page.locator('[data-demo-id="account-menu"]').click();
+  const administrationAction = page.locator('[data-demo-id="account-administration"]');
+  await expect(administrationAction).toBeVisible();
+  await administrationAction.click();
+  await expect(administrationAction).toHaveCount(0);
+  await expect(page.locator('[data-demo-id="administration-tab"]')).toBeVisible();
+}
+
 export async function replaceWithSyntheticState(page: Page): Promise<void> {
   await replaceStateFromFile(page, syntheticStatePath);
   await page.goto("/", { waitUntil: "domcontentloaded" });

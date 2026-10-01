@@ -10,11 +10,16 @@ import type {
 import { PERMISSION_SCOPES, PERMISSIONS } from "@org-tools/types/security";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  HiOutlineArchiveBoxArrowDown,
   HiOutlineArrowPath,
+  HiOutlineClipboardDocumentList,
+  HiOutlineIdentification,
   HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
   HiOutlinePlus,
+  HiOutlineShieldCheck,
   HiOutlineTrash,
+  HiOutlineUsers,
   HiOutlineXMark,
 } from "react-icons/hi2";
 import { useAuth } from "@/components/auth-context";
@@ -31,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PERMISSION_LABEL_KEYS, PERMISSION_SCOPE_LABEL_KEYS } from "@/i18n/security-labels";
 import { useAppFormatter, useUiText } from "@/i18n/use-ui-text";
 
 type AdminAccount = {
@@ -143,7 +149,7 @@ function GrantEditor({
                   key={permission}
                   value={permission}
                 >
-                  {permission}
+                  {t(PERMISSION_LABEL_KEYS[permission])}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -163,7 +169,7 @@ function GrantEditor({
             <SelectContent>
               {PERMISSION_SCOPES[grant.permission].map((scope) => (
                 <SelectItem key={scope} value={scope}>
-                  {scope}
+                  {t(PERMISSION_SCOPE_LABEL_KEYS[scope])}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -391,12 +397,13 @@ function RoleEditor({
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {role.grants.map((grant) => (
-            <code
+            <span
               className="rounded bg-muted px-2 py-1 text-xs"
               key={`${grant.permission}:${grant.scope}`}
             >
-              {grant.permission} · {grant.scope}
-            </code>
+              {t(PERMISSION_LABEL_KEYS[grant.permission])} ·{" "}
+              {t(PERMISSION_SCOPE_LABEL_KEYS[grant.scope])}
+            </span>
           ))}
         </div>
       </article>
@@ -505,7 +512,7 @@ function AudienceEditor({
                 onChange({ ...audience, relations: toggle(audience.relations, relation) })
               }
             />
-            {relation}
+            {t(PERMISSION_SCOPE_LABEL_KEYS[relation])}
           </label>
         ))}
         {roles
@@ -764,12 +771,30 @@ export function AdministrationTab() {
         </div>
       )}
       <Tabs defaultValue="users">
-        <TabsList className="max-w-full overflow-x-auto">
-          <TabsTrigger value="users">{t("Users")}</TabsTrigger>
-          <TabsTrigger value="roles">{t("Roles")}</TabsTrigger>
-          <TabsTrigger value="access">{t("Access")}</TabsTrigger>
-          <TabsTrigger value="audit">{t("Audit")}</TabsTrigger>
-          <TabsTrigger value="backup">{t("Backup and Restore")}</TabsTrigger>
+        <TabsList
+          className="max-w-full self-start justify-start overflow-x-auto rtl:self-end"
+          data-demo-id="administration-tabs-list"
+        >
+          <TabsTrigger value="users">
+            <HiOutlineUsers aria-hidden="true" className="size-4 shrink-0" />
+            {t("Users")}
+          </TabsTrigger>
+          <TabsTrigger value="roles">
+            <HiOutlineIdentification aria-hidden="true" className="size-4 shrink-0" />
+            {t("Roles")}
+          </TabsTrigger>
+          <TabsTrigger value="access">
+            <HiOutlineShieldCheck aria-hidden="true" className="size-4 shrink-0" />
+            {t("Access")}
+          </TabsTrigger>
+          <TabsTrigger value="audit">
+            <HiOutlineClipboardDocumentList aria-hidden="true" className="size-4 shrink-0" />
+            {t("Audit")}
+          </TabsTrigger>
+          <TabsTrigger value="backup">
+            <HiOutlineArchiveBoxArrowDown aria-hidden="true" className="size-4 shrink-0" />
+            {t("Backup and Restore")}
+          </TabsTrigger>
         </TabsList>
         <TabsContent className="mt-5 grid gap-5" value="users">
           <section className="grid gap-4 rounded-lg border border-border p-4">

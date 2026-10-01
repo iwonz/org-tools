@@ -17,7 +17,8 @@ languages including Arabic RTL, then run it again and compare hashes.
 
 [![Account sign in](screenshots/demo-authentication.png)](screenshots/demo-authentication.png)
 
-Sign in to the local organization with an email address and password.
+Sign in to the local organization with an email address and password. The centered heading keeps
+the field labels and values aligned to logical start.
 
 Capabilities: Email and password, Server session, Local authentication.
 
@@ -27,7 +28,8 @@ Capabilities: Email and password, Server session, Local authentication.
 
 [![Administration users](screenshots/demo-administration.png)](screenshots/demo-administration.png)
 
-Create linked accounts, assign roles and direct grants, and revoke or deactivate access.
+Open Administration from the Super Administrator profile menu, then create linked accounts, assign
+roles and direct grants, and revoke or deactivate access. Icon-bearing tabs align to logical start.
 
 Capabilities: User lifecycle, Employee identity, Roles, Direct grants.
 
@@ -35,7 +37,8 @@ Capabilities: User lifecycle, Employee identity, Roles, Direct grants.
 
 [![Role permission sets](screenshots/feature-access-roles.png)](screenshots/feature-access-roles.png)
 
-Build reusable roles from explicit permissions and valid scopes.
+Build reusable roles from localized permission and scope names while stable authorization
+identifiers remain internal.
 
 Capabilities: Role editor, Permission registry, Valid scopes, Effective access.
 
@@ -53,7 +56,8 @@ Capabilities: Audit log, Search, Pagination, Correlation IDs.
 
 [![Dark theme dialog](screenshots/demo-theme.png)](screenshots/demo-theme.png)
 
-Use the expanded sidebar theme dialog to choose Light, Dark, or System appearance.
+Use the expanded sidebar theme dialog to choose Light, Dark, or System appearance. Footer actions
+remain ordered as profile, theme, and language.
 
 Capabilities: Dark theme, Light option, System option, Expanded sidebar.
 
@@ -61,7 +65,8 @@ Capabilities: Dark theme, Light option, System option, Expanded sidebar.
 
 [![Light shell and expanded navigation](screenshots/feature-theme-light-shell.png)](screenshots/feature-theme-light-shell.png)
 
-Inspect the light interface with expanded module labels and locally accessible actions.
+Inspect the light interface with expanded module labels, product-only navigation, and locally
+accessible profile actions.
 
 Capabilities: Light theme, Expanded sidebar, Module labels, Local actions.
 

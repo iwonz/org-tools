@@ -1,11 +1,17 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { HiOutlineArrowRightOnRectangle, HiOutlineKey, HiOutlineUserCircle } from "react-icons/hi2";
+import {
+  HiOutlineArrowRightOnRectangle,
+  HiOutlineCog6Tooth,
+  HiOutlineKey,
+  HiOutlineUserCircle,
+} from "react-icons/hi2";
 import { useAuth } from "@/components/auth-context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -20,10 +26,12 @@ import { cn } from "@/lib/utils";
 export function AccountMenu({
   collapsed,
   labelClassName,
+  onOpenAdministration,
   triggerClassName,
 }: {
   collapsed: boolean;
   labelClassName: string;
+  onOpenAdministration?: (() => void) | undefined;
   triggerClassName: string;
 }) {
   const auth = useAuth();
@@ -69,6 +77,20 @@ export function AccountMenu({
         </PopoverTrigger>
         <PopoverContent align={collapsed ? "start" : "end"} className="w-64 p-2" side="right">
           <p className="truncate px-2 py-2 text-sm font-medium">{email}</p>
+          {onOpenAdministration && (
+            <Button
+              className="w-full justify-start"
+              data-demo-id="account-administration"
+              onClick={() => {
+                setOpen(false);
+                onOpenAdministration();
+              }}
+              variant="ghost"
+            >
+              <HiOutlineCog6Tooth />
+              {t("Administration")}
+            </Button>
+          )}
           <Button
             className="w-full justify-start"
             onClick={() => {
@@ -96,7 +118,7 @@ export function AccountMenu({
             <DialogHeader>
               <DialogTitle>{t("Change password")}</DialogTitle>
             </DialogHeader>
-            <div className="my-5 grid gap-4">
+            <DialogBody className="grid gap-4" data-demo-id="change-password-body">
               <div className="grid gap-2">
                 <Label htmlFor="current-password">{t("Current password")}</Label>
                 <Input
@@ -124,7 +146,7 @@ export function AccountMenu({
                   {t("The current password is incorrect.")}
                 </p>
               )}
-            </div>
+            </DialogBody>
             <DialogFooter>
               <Button disabled={pending} type="submit">
                 {t("Change password")}

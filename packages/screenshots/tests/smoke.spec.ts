@@ -13,6 +13,7 @@ import {
   applyColorPickerDraft,
   createDistributionStateFile,
   expectLocalRequestsOnly,
+  openAdministration,
   openBlankState,
   productTabs,
   replaceStateFromFile,
@@ -570,7 +571,7 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
     flexDirection: "column",
     width: expectedWidth - 16,
   });
-  expect(tabStyles).toHaveLength(productTabs.length + 1);
+  expect(tabStyles).toHaveLength(productTabs.length);
   expect(new Set(tabStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
   expect(new Set(tabStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(tabStyles.map(({ height }) => height))).toEqual(new Set([40]));
@@ -616,7 +617,7 @@ async function expectSidebarNavigation(page: Page, expectedWidth: 64 | 240) {
           return Math.abs(iconBox.left + iconBox.width / 2 - (rowBox.left + rowBox.width / 2));
         }),
       ),
-    ).toEqual(Array.from({ length: productTabs.length + 1 }, () => 0));
+    ).toEqual(Array.from({ length: productTabs.length }, () => 0));
   } else {
     await expect(label).toBeVisible();
     await expect(tooltip).toBeHidden();
@@ -648,6 +649,11 @@ async function expectSidebarActions(page: Page) {
 
   expect(groupStyle).toEqual({ borderWidth: "0px", columnGap: "4px", flexDirection: "column" });
   expect(buttonStyles).toHaveLength(3);
+  expect(
+    await buttons.evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("data-demo-id")),
+    ),
+  ).toEqual(["account-menu", "theme-toggle", "language-toggle"]);
   expect(new Set(buttonStyles.map(({ height }) => height)).size).toBe(1);
   expect(new Set(buttonStyles.map(({ height }) => height))).toEqual(new Set([40]));
   expect(new Set(buttonStyles.map(({ borderWidth }) => borderWidth))).toEqual(new Set(["0px"]));
@@ -842,14 +848,7 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
     await page
       .locator('[data-demo-id^="tab-"]')
       .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-demo-id"))),
-  ).toEqual([
-    "tab-employees",
-    "tab-units",
-    "tab-org-editor",
-    "tab-calendar",
-    "tab-export",
-    "tab-administration",
-  ]);
+  ).toEqual(["tab-employees", "tab-units", "tab-org-editor", "tab-calendar", "tab-export"]);
   for (const tabName of productTabs) {
     const tab = page.getByRole("tab", { name: tabName, exact: true });
     await expect(tab).toBeVisible();
@@ -864,10 +863,23 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
   const unitsTab = page.getByRole("tab", { name: "Units", exact: true });
   await unitsTab.focus();
   await unitsTab.press("End");
-  await expect(page.getByRole("tab", { name: "Administration", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "Download", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
   );
+  await expect(page.getByRole("tab", { name: "Administration", exact: true })).toHaveCount(0);
+  await openAdministration(page);
+  await expect(page.locator('[data-demo-id="app-title"]')).toHaveText("Administration");
+  const administrationTabs = page.locator('[data-demo-id="administration-tabs-list"]');
+  await expect(administrationTabs.getByRole("tab")).toHaveCount(5);
+  await expect(administrationTabs.locator("svg")).toHaveCount(5);
+  await expect(administrationTabs).toHaveCSS("justify-content", "flex-start");
+  await page.locator('[data-demo-id="account-menu"]').click();
+  await page.getByRole("button", { name: "Change password", exact: true }).click();
+  const passwordBody = page.locator('[data-demo-id="change-password-body"]');
+  await expect(passwordBody).toHaveCSS("padding-left", "20px");
+  await expect(passwordBody).toHaveCSS("padding-right", "20px");
+  await page.keyboard.press("Escape");
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(page.locator('[data-demo-id="org-view-toolbar"]')).toHaveCount(0);
   await expect(page.locator('[data-demo-id="org-editor-actions"]')).toBeVisible();
@@ -924,6 +936,17 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
   await expect(accountLabel).toBeHidden();
   await expect(sidebarToggle).toBeHidden();
   await expect(page.locator('[data-demo-id="account-menu"]')).toHaveAccessibleName("Account menu");
+  await page.locator('[data-demo-id="account-menu"]').click();
+  await page.getByRole("button", { name: "Change password", exact: true }).click();
+  await expect(page.locator('[data-demo-id="change-password-body"]')).toHaveCSS(
+    "padding-left",
+    "20px",
+  );
+  await expect(page.locator('[data-demo-id="change-password-body"]')).toHaveCSS(
+    "padding-right",
+    "20px",
+  );
+  await page.keyboard.press("Escape");
   expect(await header.evaluate((element) => element.getBoundingClientRect().height)).toBe(64);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,

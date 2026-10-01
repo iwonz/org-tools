@@ -9,6 +9,7 @@ import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" }
 import { expect, test } from "./browser-test.js";
 import {
   createDistributionStateFile,
+  openAdministration,
   openBlankState,
   replaceStateFromFile,
   replaceWithSyntheticState,
@@ -252,7 +253,7 @@ test("captures sign-in and Administration", async ({ page }) => {
       contentType: "application/json",
     });
   });
-  await page.getByRole("tab", { name: "Administration", exact: true }).click();
+  await openAdministration(page);
   const administration = page.locator('[data-demo-id="administration-tab"]');
   await expect(administration).toBeVisible();
   await capture(page, "administration-users");

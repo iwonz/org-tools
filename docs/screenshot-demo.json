@@ -5,8 +5,8 @@
     "featured": true,
     "title": "Account sign in",
     "file": "demo-authentication.png",
-    "description": "Sign in with a local organization account using an email address and password.",
-    "capabilities": ["Email and password", "Server session", "Local authentication"]
+    "description": "Sign in with a local organization account using a centered heading and logically aligned email and password fields.",
+    "capabilities": ["Email and password", "Centered heading", "Local authentication"]
   },
   {
     "id": "administration-users",
@@ -14,8 +14,8 @@
     "featured": true,
     "title": "Administration users",
     "file": "demo-administration.png",
-    "description": "Create linked accounts, assign roles and direct grants, and revoke or deactivate access.",
-    "capabilities": ["User lifecycle", "Employee identity", "Roles", "Direct grants"]
+    "description": "Open Administration from the profile menu and manage linked accounts through start-aligned icon tabs.",
+    "capabilities": ["Profile navigation", "User lifecycle", "Icon tabs", "Direct grants"]
   },
   {
     "id": "administration-roles",
@@ -23,8 +23,8 @@
     "featured": false,
     "title": "Role permission sets",
     "file": "feature-access-roles.png",
-    "description": "Build reusable roles from explicit permissions and their valid organization or management scopes.",
-    "capabilities": ["Role editor", "Permission registry", "Valid scopes", "Effective access"]
+    "description": "Build reusable roles from localized permission and scope names backed by stable authorization identifiers.",
+    "capabilities": ["Role editor", "Localized permissions", "Valid scopes", "Effective access"]
   },
   {
     "id": "administration-audit",
@@ -50,8 +50,8 @@
     "featured": true,
     "title": "Dark theme dialog",
     "file": "demo-theme.png",
-    "description": "Use the expanded sidebar theme dialog to choose Light, Dark, or System appearance.",
-    "capabilities": ["Dark theme", "Light option", "System option", "Expanded sidebar"]
+    "description": "Use the expanded sidebar footer, ordered as profile, theme, and language, to choose Light, Dark, or System appearance.",
+    "capabilities": ["Dark theme", "Footer order", "System option", "Expanded sidebar"]
   },
   {
     "id": "theme-light-shell",
@@ -59,8 +59,8 @@
     "featured": false,
     "title": "Light shell and expanded navigation",
     "file": "feature-theme-light-shell.png",
-    "description": "Inspect the light interface with expanded module labels and locally accessible actions.",
-    "capabilities": ["Light theme", "Expanded sidebar", "Module labels", "Local actions"]
+    "description": "Inspect the light interface with product-only module navigation and Administration in the profile menu.",
+    "capabilities": ["Light theme", "Expanded sidebar", "Product navigation", "Profile actions"]
   },
   {
     "id": "language",

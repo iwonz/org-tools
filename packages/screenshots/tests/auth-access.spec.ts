@@ -1,4 +1,8 @@
-import type { AuthorizedOrganizationProjection, OrganizationDocument } from "@org-tools/types";
+import type {
+  AccountUiState,
+  AuthorizedOrganizationProjection,
+  OrganizationDocument,
+} from "@org-tools/types";
 import type { BrowserContext, Page } from "@playwright/test";
 
 import { expect, test } from "./browser-test.js";
@@ -28,6 +32,7 @@ type Bootstrap = {
   organizationRevision: number;
   projection: AuthorizedOrganizationProjection;
   securityRevision: number;
+  ui: AccountUiState;
 };
 
 const organizationFromProjection = (
@@ -107,6 +112,7 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
   browser,
   page,
 }) => {
+  test.setTimeout(180_000);
   await replaceWithSyntheticState(page);
   const adminSession = await authenticateSuperAdministrator(page);
   const backupResponse = await page.request.post("/api/backup", {
@@ -241,6 +247,11 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
 
     for (const restrictedPage of [managerPage, employeePage, customPage]) {
       await expect(restrictedPage.getByRole("tab", { name: "Administration" })).toHaveCount(0);
+      await restrictedPage.locator('[data-demo-id="account-menu"]').click();
+      await expect(restrictedPage.locator('[data-demo-id="account-administration"]')).toHaveCount(
+        0,
+      );
+      await restrictedPage.keyboard.press("Escape");
       const denied = await restrictedPage.request.get("/api/admin");
       expect(denied.status()).toBe(404);
       expect(await denied.json()).toEqual({ error: { code: "resource_unavailable" } });
@@ -252,6 +263,20 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
         bootstrap.projection.employees.some((employee) => employee.firstName === "Riley"),
       ).toBe(false);
     }
+
+    const employeeBootstrapResponse = await employeePage.request.get("/api/session");
+    const employeeBootstrap = (await employeeBootstrapResponse.json()) as Bootstrap;
+    const staleAdministrationUi = structuredClone(employeeBootstrap.ui);
+    staleAdministrationUi.activeTab = "administration";
+    const correctedUiResponse = await employeePage.request.put("/api/ui", {
+      data: staleAdministrationUi,
+      headers: mutationHeaders(employeeBootstrap.csrfToken),
+    });
+    expect(correctedUiResponse.ok(), await correctedUiResponse.text()).toBe(true);
+    const correctedUi = (await correctedUiResponse.json()) as { ui: AccountUiState };
+    expect(correctedUi.ui.activeTab).not.toBe("administration");
+    await employeePage.reload({ waitUntil: "domcontentloaded" });
+    await expect(employeePage.locator('[data-demo-id="administration-tab"]')).toHaveCount(0);
 
     await expect(employeePage.getByRole("tab", { name: "Data Download" })).toHaveCount(0);
     await expect(customPage.getByRole("tab", { name: "Calendar" })).toHaveCount(0);

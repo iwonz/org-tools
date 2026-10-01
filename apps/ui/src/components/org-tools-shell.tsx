@@ -52,8 +52,17 @@ const PRODUCT_NAVIGATION_ITEMS: Array<{
   { icon: HiOutlineBuildingOffice2, label: "Editor", value: "orgEditor" },
   { icon: HiOutlineCalendarDays, label: "Calendar", value: "calendar" },
   { icon: HiOutlineShare, label: "Data Download", value: "export" },
-  { icon: HiOutlineCog6Tooth, label: "Administration", value: "administration" },
 ];
+
+const ADMINISTRATION_NAVIGATION_ITEM = {
+  icon: HiOutlineCog6Tooth,
+  label: "Administration",
+  value: "administration",
+} satisfies {
+  icon: ComponentType<{ className?: string }>;
+  label: UiTextKey;
+  value: ProductTabValue;
+};
 
 const SIDEBAR_CONTROL_CLASS_NAME =
   "h-10 w-full justify-start gap-3 rounded-md bg-transparent px-3.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-active focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal/70 focus-visible:ring-offset-0 data-[state=open]:bg-sidebar-active data-[state=open]:text-sidebar-foreground";
@@ -89,17 +98,19 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
     [auth.bootstrap],
   );
   const navigationItems = PRODUCT_NAVIGATION_ITEMS.filter((item) => {
-    if (item.value === "administration")
-      return auth.bootstrap?.account.roleSystemKey === "superAdmin";
     if (item.value === "employees") return can("employee.read");
     if (item.value === "units") return can("unit.read");
     if (item.value === "orgEditor") return can("editor.system.read") || can("view.read");
     if (item.value === "calendar") return can("calendar.read");
     return can("dataDownload.create");
   });
+  const isSuperAdmin = auth.bootstrap?.account.roleSystemKey === "superAdmin";
+  const availableItems = isSuperAdmin
+    ? [...navigationItems, ADMINISTRATION_NAVIGATION_ITEM]
+    : navigationItems;
   const effectiveActiveTab =
-    navigationItems.find((item) => item.value === store.activeTab)?.value ??
-    navigationItems[0]?.value;
+    availableItems.find((item) => item.value === store.activeTab)?.value ??
+    availableItems[0]?.value;
   useEffect(() => {
     if (effectiveActiveTab && store.activeTab !== effectiveActiveTab) {
       store.setActiveTab(effectiveActiveTab);
@@ -119,7 +130,7 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
   }, []);
 
   const activeNavigationItem =
-    navigationItems.find((item) => item.value === effectiveActiveTab) ??
+    availableItems.find((item) => item.value === effectiveActiveTab) ??
     ({
       icon: HiOutlineBuildingOffice2,
       label: "Editor",
@@ -218,16 +229,12 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
               </TabsList>
             </nav>
             <div className="flex shrink-0 flex-col gap-1 p-2 pb-3" data-demo-id="sidebar-actions">
-              <div className="group relative">
-                <LanguageToggle
-                  labelClassName={sidebarLabelClassName}
-                  triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
-                />
-                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Language")}</SidebarTooltip>
-              </div>
               <AccountMenu
                 collapsed={sidebarCollapsed}
                 labelClassName={sidebarLabelClassName}
+                onOpenAdministration={
+                  isSuperAdmin ? () => store.setActiveTab("administration") : undefined
+                }
                 triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
               />
               <div className="group relative">
@@ -236,6 +243,13 @@ export const OrgToolsShell = observer(function OrgToolsShell() {
                   triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
                 />
                 <SidebarTooltip collapsed={sidebarCollapsed}>{t("Theme")}</SidebarTooltip>
+              </div>
+              <div className="group relative">
+                <LanguageToggle
+                  labelClassName={sidebarLabelClassName}
+                  triggerClassName={SIDEBAR_CONTROL_CLASS_NAME}
+                />
+                <SidebarTooltip collapsed={sidebarCollapsed}>{t("Language")}</SidebarTooltip>
               </div>
             </div>
           </aside>
