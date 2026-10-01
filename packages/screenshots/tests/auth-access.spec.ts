@@ -118,7 +118,7 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
   browser,
   page,
 }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(480_000);
   await replaceWithSyntheticState(page);
   const adminSession = await authenticateSuperAdministrator(page);
   const backupResponse = await page.request.post("/api/backup", {

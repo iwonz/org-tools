@@ -12,6 +12,7 @@ apps/ui/.next-dev-check-*/
 apps/ui/out/
 coverage/
 playwright-report/
+playwright-report-shard-*/
 test-results/
 .playwright-cli/
 

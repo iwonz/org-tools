@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "generate": "node --env-file-if-exists=../../.env scripts/run-playwright.mjs test tests/screenshots.spec.ts --project=chromium",
-    "smoke": "node --env-file-if-exists=../../.env scripts/run-playwright.mjs test tests/smoke.spec.ts tests/localization.spec.ts tests/auth-access.spec.ts --project=chromium",
+    "smoke": "node --env-file-if-exists=../../.env scripts/run-playwright.mjs test tests/smoke.spec.ts tests/localization.spec.ts tests/auth-access.spec.ts tests/state.spec.ts --project=chromium",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

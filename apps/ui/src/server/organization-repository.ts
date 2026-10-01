@@ -10,6 +10,10 @@ import type {
 import type { Pool, PoolClient } from "pg";
 
 import { createBlankOrgToolsState, parseOrgToolsState, parseOrgToolsUiState } from "@/lib/org-file";
+import {
+  organizationBusinessHash,
+  organizationWithoutUpdateTimestamps,
+} from "@/lib/organization-equality";
 import { assertActiveSession, getDatabasePool, withDatabaseTransaction } from "@/server/database";
 
 type DocumentRow = {
@@ -33,7 +37,21 @@ export const isIdempotentOrganizationRetry = (input: {
 }): boolean =>
   input.expectedRevision < input.current.revision &&
   input.expectedSecurityRevision === input.current.securityRevision &&
-  isDeepStrictEqual(input.candidate, input.current.organization);
+  isDeepStrictEqual(
+    organizationWithoutUpdateTimestamps(input.candidate),
+    organizationWithoutUpdateTimestamps(input.current.organization),
+  );
+
+export const canRebaseOrganizationRetry = async (input: {
+  current: OrganizationSnapshot;
+  expectedOrganizationHash: string | undefined;
+  expectedRevision: number;
+  expectedSecurityRevision: number;
+}): Promise<boolean> =>
+  input.expectedOrganizationHash !== undefined &&
+  input.expectedRevision < input.current.revision &&
+  input.expectedSecurityRevision === input.current.securityRevision &&
+  input.expectedOrganizationHash === (await organizationBusinessHash(input.current.organization));
 
 export class OrganizationConflictError extends Error {
   constructor(
@@ -297,6 +315,7 @@ export class OrganizationRepository {
   async replaceOrganization(input: {
     actorAccountId: AccountId;
     correlationId: string;
+    expectedOrganizationHash?: string;
     expectedRevision: number;
     expectedSecurityRevision: number;
     organization: unknown;
@@ -321,7 +340,15 @@ export class OrganizationRepository {
         ) {
           return current;
         }
-        throw new OrganizationConflictError(current.revision, current.securityRevision);
+        const canRebase = await canRebaseOrganizationRetry({
+          current,
+          expectedOrganizationHash: input.expectedOrganizationHash,
+          expectedRevision: input.expectedRevision,
+          expectedSecurityRevision: input.expectedSecurityRevision,
+        });
+        if (!canRebase) {
+          throw new OrganizationConflictError(current.revision, current.securityRevision);
+        }
       }
       await syncEmployeeIdentities(client, candidate);
       const currentViewIds = new Set(current.organization.views.map((view) => view.id));

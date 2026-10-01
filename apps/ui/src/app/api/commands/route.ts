@@ -12,6 +12,7 @@ import { readJson } from "@/server/request-security";
 export const dynamic = "force-dynamic";
 
 type ReplaceCommand = {
+  expectedOrganizationHash?: string;
   expectedOrganizationRevision: number;
   expectedSecurityRevision: number;
   organization: OrganizationDocument;
@@ -21,11 +22,21 @@ type ReplaceCommand = {
 const parse = (value: unknown): ReplaceCommand => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new SyntaxError();
   const input = value as Record<string, unknown>;
+  const requiredKeys = [
+    "expectedOrganizationRevision",
+    "expectedSecurityRevision",
+    "organization",
+    "type",
+  ];
+  const keys = Object.keys(input).sort().join("\0");
   if (
-    Object.keys(input).sort().join("\0") !==
-      ["expectedOrganizationRevision", "expectedSecurityRevision", "organization", "type"]
-        .sort()
-        .join("\0") ||
+    (keys !== requiredKeys.sort().join("\0") &&
+      keys !== [...requiredKeys, "expectedOrganizationHash"].sort().join("\0")) ||
+    !(
+      input.expectedOrganizationHash === undefined ||
+      (typeof input.expectedOrganizationHash === "string" &&
+        /^[0-9a-f]{64}$/u.test(input.expectedOrganizationHash))
+    ) ||
     (input.type !== "organization.replace" && input.type !== "organization.patch") ||
     !Number.isSafeInteger(input.expectedOrganizationRevision) ||
     !Number.isSafeInteger(input.expectedSecurityRevision) ||
@@ -81,6 +92,9 @@ export const POST = (request: Request) =>
       expectedSecurityRevision: command.expectedSecurityRevision,
       organization,
       sessionId: session.sessionId,
+      ...(access.isSuperAdmin && command.expectedOrganizationHash
+        ? { expectedOrganizationHash: command.expectedOrganizationHash }
+        : {}),
     });
     const { access: nextAccess, projection } = await new AuthorizedProjectionService().build({
       account: session.account,

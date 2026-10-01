@@ -96,3 +96,17 @@ encrypted recovery backup, replaces all data in one transaction, and revokes ses
 The production image uses Next standalone output, bundled assets, a read-only root filesystem,
 dropped Linux capabilities, and UID/GID `10001:10001`. GHCR publishes amd64 and arm64 manifests,
 OCI metadata, SBOM, and provenance. Release Please creates conventional SemVer releases.
+
+## Validation architecture
+
+Local affected validation is an explanatory optimization over repository paths. It always runs the
+complete inexpensive suite and falls back to broader checks for unknown or validation-related
+paths. It is not an authorization or delivery boundary.
+
+Authoritative CI separates static/runtime, browser, gallery, and production-image evidence into
+concurrent jobs. Browser tests are partitioned over four independent Compose and PostgreSQL
+instances and stay serial inside each shard. A final stable `validate` job requires all evidence;
+therefore parallel execution changes wall time without reducing coverage. CI and Container builds
+write separate bounded BuildKit caches and may read the other's cache, so verified immutable layers
+are reusable without concurrent workflows overwriting one cache. See `docs/validation.md` for
+commands and timing methodology.

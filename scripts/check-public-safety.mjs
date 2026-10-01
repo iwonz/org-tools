@@ -23,6 +23,7 @@ const primaryScreenshotModules = [
   "download",
 ];
 const supportingScreenshotModules = ["access"];
+const sourceOnly = process.argv.includes("--source-only");
 
 const blockedPathSegments = new Set([
   ".cache",
@@ -313,7 +314,7 @@ async function main() {
     .catch(() => false);
 
   await validateScreenshotDemo(violations);
-  if (!outputExists) {
+  if (!outputExists && !sourceOnly) {
     violations.push({
       path: "apps/ui/.next/BUILD_ID",
       rule: "production output is missing; run pnpm build before this check",
@@ -328,7 +329,7 @@ async function main() {
       .catch(() => false);
     if (exists) absolutePaths.add(absolutePath);
   }
-  if (outputExists) {
+  if (outputExists && !sourceOnly) {
     for (const output of productionOutputs) {
       const exists = await stat(output)
         .then((entry) => entry.isDirectory())
@@ -419,7 +420,9 @@ async function main() {
     return;
   }
 
-  console.log(`Public-safety check passed (${absolutePaths.size} files scanned).`);
+  console.log(
+    `Public-safety ${sourceOnly ? "source " : ""}check passed (${absolutePaths.size} files scanned).`,
+  );
 }
 
 await main();
