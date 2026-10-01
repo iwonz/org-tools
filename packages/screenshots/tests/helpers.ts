@@ -378,7 +378,14 @@ export async function openAdministration(page: Page): Promise<void> {
 export async function replaceWithSyntheticState(page: Page): Promise<void> {
   await replaceStateFromFile(page, syntheticStatePath);
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Product", { exact: true }).first()).toBeVisible();
+  await expect(page.locator('[data-demo-id="app-shell"]')).toHaveAttribute(
+    "data-state-pending",
+    "false",
+    { timeout: 30_000 },
+  );
+  await expect(page.getByRole("group", { name: "Canvas Unit Product", exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 export async function stabilizeForScreenshot(page: Page): Promise<void> {

@@ -1,22 +1,15 @@
 "use client";
 
-import type {
-  Employee,
-  EmployeeId,
-  EmployeeTagColor,
-  EmployeeTagDefinition,
-  OrgEditorCanvasElement,
-  OrgEditorLayoutMode,
-  OrgEditorUnit,
-  OrgEditorUnitId,
-  OrgEditorViewSettings,
-  TagId,
-} from "@org-tools/types";
+import type { EmployeeTagColor } from "@org-tools/types";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HiOutlineArrowDownTray, HiOutlineClipboardDocument } from "react-icons/hi2";
 
 import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
+import {
+  OrgEditorImageExportSubjectSelect,
+  useOrgEditorImageExportSubject,
+} from "@/components/org-editor-image-export-subject";
 import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
 import { TagColorPicker } from "@/components/tag-color-picker";
 import { TemplateFormatInput } from "@/components/template-format-input";
@@ -42,6 +35,7 @@ import {
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
 } from "@/lib/org-editor-export";
+import type { OrgEditorImageExportSource } from "@/lib/org-editor-image-export-source";
 import { downloadBlob } from "@/lib/org-file";
 import { useOrgStore } from "@/stores/org-store-context";
 
@@ -54,31 +48,15 @@ const sanitizeViewImageName = (name: string) =>
     .slice(0, 80) || "org-editor-view";
 
 export function OrgEditorViewImageExportDialog({
-  canvasElements,
-  distributionEnabledUnitIds,
-  distributionUnitIdsByEmployeeId,
-  employeeById,
-  layoutMode,
   onOpenChange,
   open,
-  tagOrder,
-  tagDefinitions,
-  units,
+  source: currentSource,
   viewName,
-  viewSettings,
 }: {
-  canvasElements: readonly OrgEditorCanvasElement[];
-  distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
-  distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
-  employeeById: ReadonlyMap<EmployeeId, Employee>;
-  layoutMode: OrgEditorLayoutMode;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-  tagOrder: readonly TagId[];
-  tagDefinitions: readonly EmployeeTagDefinition[];
-  units: OrgEditorUnit[];
+  source: OrgEditorImageExportSource;
   viewName: string;
-  viewSettings: OrgEditorViewSettings;
 }) {
   const t = useUiText();
   const store = useOrgStore();
@@ -86,6 +64,8 @@ export function OrgEditorViewImageExportDialog({
   const countText = useCountText();
   const positionNotSpecifiedLabel = t("Position not specified");
   const staffingSlotLabel = t("Staffing slot");
+  const subjectState = useOrgEditorImageExportSubject({ currentSource, open });
+  const source = subjectState.source;
   const [settings, setSettings] = useState(() =>
     createDefaultOrgEditorImageExportSettings(
       store.employeeDisplayFormats.editorExport,
@@ -99,8 +79,8 @@ export function OrgEditorViewImageExportDialog({
   const [previewSize, setPreviewSize] = useState({ height: 0, width: 0 });
   const [status, setStatus] = useState<"copied" | "error" | "saved" | null>(null);
   const employeeFormatTokens = useMemo(
-    () => createEmployeeDisplayFormatTokens(store.employeeFieldDefinitions, t),
-    [store.employeeFieldDefinitions, t],
+    () => createEmployeeDisplayFormatTokens(source?.customEmployeeFieldDefinitions ?? [], t),
+    [source?.customEmployeeFieldDefinitions, t],
   );
 
   useEffect(() => {
@@ -123,49 +103,40 @@ export function OrgEditorViewImageExportDialog({
       }),
     [countText, t],
   );
-  const hasContent = units.length > 0 || canvasElements.length > 0;
+  const hasContent = Boolean(
+    source && (source.units.length > 0 || source.canvasElements.length > 0),
+  );
   const render = useCallback(
-    (maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS) =>
-      createOrgEditorImageExportResult({
-        canvasElements,
-        customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
-        distributionEnabledUnitIds,
-        distributionUnitIdsByEmployeeId,
-        employeeById,
+    (maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS) => {
+      if (!source) throw new Error("Image export source is unavailable.");
+      return createOrgEditorImageExportResult({
+        canvasElements: source.canvasElements,
+        customEmployeeFieldDefinitions: source.customEmployeeFieldDefinitions,
+        distributionEnabledUnitIds: source.distributionEnabledUnitIds,
+        distributionUnitIdsByEmployeeId: source.distributionUnitIdsByEmployeeId,
+        employeeById: source.employeeById,
         formatUnitSummary,
-        layoutMode,
+        layoutMode: source.layoutMode,
         locale,
         maxCanvasPixels,
         positionNotSpecifiedLabel,
+        ...(source.resolvedTemplateValuesByEmployeeId
+          ? { resolvedTemplateValuesByEmployeeId: source.resolvedTemplateValuesByEmployeeId }
+          : {}),
         staffingSlotLabel,
         rootUnit: null,
         scope: "view",
         settings,
-        tagOrder,
-        tagDefinitions,
-        units,
-        viewSettings,
+        tagOrder: source.tagOrder,
+        tagDefinitions: source.tagDefinitions,
+        units: source.units,
+        viewSettings: source.viewSettings,
         ...(maxCanvasPixels === ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS
           ? { avatarLoadLimit: ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT }
           : {}),
-      }),
-    [
-      canvasElements,
-      store.employeeFieldDefinitions,
-      distributionEnabledUnitIds,
-      distributionUnitIdsByEmployeeId,
-      employeeById,
-      formatUnitSummary,
-      layoutMode,
-      locale,
-      positionNotSpecifiedLabel,
-      staffingSlotLabel,
-      settings,
-      tagOrder,
-      tagDefinitions,
-      units,
-      viewSettings,
-    ],
+      });
+    },
+    [formatUnitSummary, locale, positionNotSpecifiedLabel, staffingSlotLabel, settings, source],
   );
 
   useEffect(() => {
@@ -256,14 +227,21 @@ export function OrgEditorViewImageExportDialog({
             {...(hasContent
               ? {}
               : { emptyLabel: t("The View has no content to export as an image.") })}
-            errorLabel={previewError ? t("Could not prepare the preview.") : null}
+            errorLabel={
+              subjectState.error === "unavailable"
+                ? t("The selected user does not have access to this View or Unit.")
+                : subjectState.error === "failed" || previewError
+                  ? t("Could not prepare the preview.")
+                  : null
+            }
             height={previewSize.height}
-            loading={previewLoading}
+            loading={subjectState.loading || previewLoading}
             loadingLabel={t("Preparing preview...")}
             src={previewError ? null : previewUrl}
             width={previewSize.width}
           />
           <section className="grid gap-4 py-2" data-demo-id="org-editor-view-image-settings">
+            <OrgEditorImageExportSubjectSelect state={subjectState} />
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>{t("Padding")}</Label>
@@ -364,7 +342,9 @@ export function OrgEditorViewImageExportDialog({
           </p>
           <div className="flex gap-2">
             <Button
-              disabled={!hasContent || previewLoading}
+              disabled={
+                !hasContent || previewLoading || subjectState.loading || subjectState.error !== null
+              }
               onClick={() => void copy()}
               type="button"
               variant="outline"
@@ -373,7 +353,9 @@ export function OrgEditorViewImageExportDialog({
               {t("Copy")}
             </Button>
             <Button
-              disabled={!hasContent || previewLoading}
+              disabled={
+                !hasContent || previewLoading || subjectState.loading || subjectState.error !== null
+              }
               onClick={() => void save()}
               type="button"
             >

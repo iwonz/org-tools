@@ -1,17 +1,6 @@
 "use client";
 
-import type {
-  Employee,
-  EmployeeId,
-  EmployeeTagColor,
-  EmployeeTagDefinition,
-  OrgEditorCanvasElement,
-  OrgEditorLayoutMode,
-  OrgEditorUnit,
-  OrgEditorUnitId,
-  OrgEditorViewSettings,
-  TagId,
-} from "@org-tools/types";
+import type { Employee, EmployeeId, EmployeeTagColor, OrgEditorUnit } from "@org-tools/types";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -25,6 +14,10 @@ import {
 } from "react-icons/hi2";
 import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
+import {
+  OrgEditorImageExportSubjectSelect,
+  useOrgEditorImageExportSubject,
+} from "@/components/org-editor-image-export-subject";
 import { OrgEditorImagePreview } from "@/components/org-editor-image-preview";
 import {
   StructuredJsonSettings,
@@ -75,6 +68,7 @@ import {
   ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
   ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
 } from "@/lib/org-editor-export";
+import type { OrgEditorImageExportSource } from "@/lib/org-editor-image-export-source";
 import { copyTextToClipboard, downloadBlob, downloadText } from "@/lib/org-file";
 import { normalizeSearchValue } from "@/lib/search-index";
 import { cn } from "@/lib/utils";
@@ -88,17 +82,11 @@ import {
 import { useOrgStore } from "@/stores/org-store-context";
 
 type OrgEditorExportDialogProps = {
-  canvasElements: readonly OrgEditorCanvasElement[];
-  distributionEnabledUnitIds: ReadonlySet<OrgEditorUnitId>;
-  distributionUnitIdsByEmployeeId: ReadonlyMap<EmployeeId, readonly OrgEditorUnitId[]>;
-  viewSettings: OrgEditorViewSettings;
   employeeById: ReadonlyMap<EmployeeId, Employee>;
-  layoutMode: OrgEditorLayoutMode;
+  imageSource: OrgEditorImageExportSource;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   sourceIndex: OrgEditorSourceIndex;
-  tagOrder: readonly TagId[];
-  tagDefinitions: readonly EmployeeTagDefinition[];
   unit: OrgEditorUnit | null;
   units: OrgEditorUnit[];
 };
@@ -132,17 +120,11 @@ const getBackgroundButtonClassName = (isActive: boolean) =>
   );
 
 export function OrgEditorExportDialog({
-  canvasElements,
-  distributionEnabledUnitIds,
-  distributionUnitIdsByEmployeeId,
-  viewSettings,
   employeeById,
-  layoutMode,
+  imageSource,
   onOpenChange,
   open,
   sourceIndex,
-  tagOrder,
-  tagDefinitions,
   unit,
   units,
 }: OrgEditorExportDialogProps) {
@@ -152,6 +134,15 @@ export function OrgEditorExportDialog({
   const countText = useCountText();
   const positionNotSpecifiedLabel = t("Position not specified");
   const staffingSlotLabel = t("Staffing slot");
+  const subjectState = useOrgEditorImageExportSubject({
+    currentSource: imageSource,
+    open,
+    ...(unit ? { rootUnitId: unit.id } : {}),
+  });
+  const selectedImageSource = subjectState.source;
+  const selectedImageUnit = unit
+    ? (selectedImageSource?.units.find((candidate) => candidate.id === unit.id) ?? null)
+    : null;
   const [scope, setScope] = useState<OrgEditorExportScope>("subtree");
   const [activeTab, setActiveTab] = useState<OrgEditorExportTab>("image");
   const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() =>
@@ -211,8 +202,12 @@ export function OrgEditorExportDialog({
     [hasAvatarBase64UrlField],
   );
   const imageEmployeeFormatTokens = useMemo(
-    () => createEmployeeDisplayFormatTokens(store.employeeFieldDefinitions, t),
-    [store.employeeFieldDefinitions, t],
+    () =>
+      createEmployeeDisplayFormatTokens(
+        selectedImageSource?.customEmployeeFieldDefinitions ?? [],
+        t,
+      ),
+    [selectedImageSource?.customEmployeeFieldDefinitions, t],
   );
 
   useEffect(() => {
@@ -285,35 +280,53 @@ export function OrgEditorExportDialog({
     ],
   );
   const canExportText = exportRows.length > 0 && (activeTab !== "json" || jsonValidation.isValid);
-  const canExportImage = Boolean(unit);
+  const canExportImage = Boolean(
+    selectedImageSource && selectedImageUnit && !subjectState.loading && !subjectState.error,
+  );
 
   useEffect(() => {
-    if (!open || !unit || activeTab !== "image") return;
+    if (!open || activeTab !== "image") return;
+    if (!selectedImageSource || !selectedImageUnit) {
+      setIsPreviewLoading(false);
+      setPreviewError(null);
+      setPreviewSize({ height: 0, width: 0 });
+      setPreviewUrl((currentUrl) => {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        return null;
+      });
+      return;
+    }
 
     let isCancelled = false;
 
     setIsPreviewLoading(true);
     setPreviewError(null);
     createOrgEditorImageExportResult({
-      canvasElements,
-      customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
-      distributionEnabledUnitIds,
-      distributionUnitIdsByEmployeeId,
-      viewSettings,
+      canvasElements: selectedImageSource.canvasElements,
+      customEmployeeFieldDefinitions: selectedImageSource.customEmployeeFieldDefinitions,
+      distributionEnabledUnitIds: selectedImageSource.distributionEnabledUnitIds,
+      distributionUnitIdsByEmployeeId: selectedImageSource.distributionUnitIdsByEmployeeId,
       avatarLoadLimit: ORG_EDITOR_EXPORT_PREVIEW_AVATAR_LOAD_LIMIT,
-      employeeById,
+      employeeById: selectedImageSource.employeeById,
       formatUnitSummary,
-      layoutMode,
+      layoutMode: selectedImageSource.layoutMode,
       locale,
       maxCanvasPixels: ORG_EDITOR_EXPORT_PREVIEW_MAX_CANVAS_PIXELS,
       positionNotSpecifiedLabel,
+      ...(selectedImageSource.resolvedTemplateValuesByEmployeeId
+        ? {
+            resolvedTemplateValuesByEmployeeId:
+              selectedImageSource.resolvedTemplateValuesByEmployeeId,
+          }
+        : {}),
       staffingSlotLabel,
-      rootUnit: unit,
+      rootUnit: selectedImageUnit,
       scope,
       settings: imageSettings,
-      tagOrder,
-      tagDefinitions,
-      units,
+      tagOrder: selectedImageSource.tagOrder,
+      tagDefinitions: selectedImageSource.tagDefinitions,
+      units: selectedImageSource.units,
+      viewSettings: selectedImageSource.viewSettings,
     })
       .then(({ blob, plan }) => {
         if (isCancelled) return;
@@ -339,24 +352,15 @@ export function OrgEditorExportDialog({
     };
   }, [
     activeTab,
-    canvasElements,
-    distributionEnabledUnitIds,
-    distributionUnitIdsByEmployeeId,
-    employeeById,
     formatUnitSummary,
     imageSettings,
-    layoutMode,
     locale,
     open,
     positionNotSpecifiedLabel,
     staffingSlotLabel,
     scope,
-    store.employeeFieldDefinitions,
-    tagOrder,
-    tagDefinitions,
-    viewSettings,
-    unit,
-    units,
+    selectedImageSource,
+    selectedImageUnit,
   ]);
 
   useEffect(() => {
@@ -380,26 +384,34 @@ export function OrgEditorExportDialog({
   };
 
   const createImageBlob = () => {
-    if (!unit) throw new Error("No Unit is selected for export.");
+    if (!selectedImageSource || !selectedImageUnit) {
+      throw new Error("No Unit is selected for export.");
+    }
 
     return createOrgEditorUnitImageBlob({
-      canvasElements,
-      customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
-      distributionEnabledUnitIds,
-      distributionUnitIdsByEmployeeId,
-      viewSettings,
-      employeeById,
+      canvasElements: selectedImageSource.canvasElements,
+      customEmployeeFieldDefinitions: selectedImageSource.customEmployeeFieldDefinitions,
+      distributionEnabledUnitIds: selectedImageSource.distributionEnabledUnitIds,
+      distributionUnitIdsByEmployeeId: selectedImageSource.distributionUnitIdsByEmployeeId,
+      viewSettings: selectedImageSource.viewSettings,
+      employeeById: selectedImageSource.employeeById,
       formatUnitSummary,
-      layoutMode,
+      layoutMode: selectedImageSource.layoutMode,
       locale,
-      rootUnit: unit,
+      rootUnit: selectedImageUnit,
       positionNotSpecifiedLabel,
+      ...(selectedImageSource.resolvedTemplateValuesByEmployeeId
+        ? {
+            resolvedTemplateValuesByEmployeeId:
+              selectedImageSource.resolvedTemplateValuesByEmployeeId,
+          }
+        : {}),
       staffingSlotLabel,
       scope,
       settings: imageSettings,
-      tagOrder,
-      tagDefinitions,
-      units,
+      tagOrder: selectedImageSource.tagOrder,
+      tagDefinitions: selectedImageSource.tagDefinitions,
+      units: selectedImageSource.units,
     });
   };
 
@@ -550,16 +562,25 @@ export function OrgEditorExportDialog({
                 alt={t("Unit export preview")}
                 className="h-[360px]"
                 dataDemoId="org-editor-export-image-preview"
-                errorLabel={previewError ? t(previewError) : null}
+                errorLabel={
+                  subjectState.error === "unavailable"
+                    ? t("The selected user does not have access to this View or Unit.")
+                    : subjectState.error === "failed"
+                      ? t("Could not prepare the preview.")
+                      : previewError
+                        ? t(previewError)
+                        : null
+                }
                 height={previewSize.height}
                 imageDataDemoId="org-editor-export-image"
-                loading={isPreviewLoading}
+                loading={subjectState.loading || isPreviewLoading}
                 loadingLabel={t("Preparing preview...")}
                 src={previewError ? null : previewUrl}
                 width={previewSize.width}
               />
 
               <section className="grid gap-4 py-2">
+                <OrgEditorImageExportSubjectSelect state={subjectState} />
                 <div className="grid gap-2">
                   <Label>{t("Background")}</Label>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -746,7 +767,11 @@ export function OrgEditorExportDialog({
             </div>
           )}
           <Button
-            disabled={activeTab === "image" ? !canExportImage : !canExportText}
+            disabled={
+              activeTab === "image"
+                ? !canExportImage || isPreviewLoading || subjectState.loading
+                : !canExportText
+            }
             onClick={copy}
             type="button"
             variant="outline"
@@ -755,7 +780,11 @@ export function OrgEditorExportDialog({
             {t("Copy")}
           </Button>
           <Button
-            disabled={activeTab === "image" ? !canExportImage : !canExportText}
+            disabled={
+              activeTab === "image"
+                ? !canExportImage || isPreviewLoading || subjectState.loading
+                : !canExportText
+            }
             onClick={download}
             type="button"
           >

@@ -31,6 +31,11 @@ describe("administration command parser", () => {
         name: "Unsafe",
         type: "role.create",
       },
+      {
+        grants: [{ permission: "editorImageExport.exportAs", scope: "all" }],
+        name: "Impersonator",
+        type: "role.create",
+      },
       { type: "unknown.command" },
     ]) {
       expect(() => parseAdminCommand(value)).toThrow(SyntaxError);

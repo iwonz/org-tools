@@ -65,6 +65,14 @@ absent from objects, arrays, search inputs, counts, Calendar, Data Download, and
 Template fields are resolved on the server from the complete document; hidden inputs and template
 source are not exposed unless the account may edit the model.
 
+Editor image export has a separate Super-Administrator-only access-subject boundary. Its subject
+list exposes only active account identity summaries, and its CSRF-protected projection endpoint
+builds at most one requested View with the selected account's exact role, direct grants, Employee
+relationship, Manager relationships, and ACL. The browser derives a self-contained image source
+from that projection without installing it in the session store. Preview, Copy, and Save therefore
+share one account and revision while the administrator keeps their own session and transient image
+settings. Successful alternate projections append a value-free audit event.
+
 The client hydrates a strict local store from this projection. Non-Super-Administrator writes use
 `organization.patch`: the server parses a full projected candidate, restores hidden source values,
 then applies permission and ACL checks. Super Administrator replacement follows the same parser and

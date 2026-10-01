@@ -13,6 +13,7 @@ import type {
   OrgEditorViewSettings,
   TagId,
 } from "@org-tools/types";
+import type { AuthorizedTemplateValuesByEmployeeId } from "@/lib/custom-employee-fields";
 import {
   type EditorEmployeeDistributionPresentation,
   getEditorEmployeeDistributionPresentation,
@@ -1492,6 +1493,7 @@ export const createOrgEditorImageExportResult = async ({
   locale,
   maxCanvasPixels = ORG_EDITOR_EXPORT_MAX_CANVAS_PIXELS,
   positionNotSpecifiedLabel = "Position not specified",
+  resolvedTemplateValuesByEmployeeId,
   staffingSlotLabel = "Staffing slot",
   rootUnit,
   scope,
@@ -1512,6 +1514,7 @@ export const createOrgEditorImageExportResult = async ({
   locale: string;
   maxCanvasPixels?: number;
   positionNotSpecifiedLabel?: string;
+  resolvedTemplateValuesByEmployeeId?: AuthorizedTemplateValuesByEmployeeId;
   staffingSlotLabel?: string;
   rootUnit: OrgEditorUnit | null;
   scope: OrgEditorExportScope | "view";
@@ -1570,6 +1573,7 @@ export const createOrgEditorImageExportResult = async ({
         employee,
         format: settings.employeeFormat,
         positionNotSpecifiedLabel,
+        ...(resolvedTemplateValuesByEmployeeId ? { resolvedTemplateValuesByEmployeeId } : {}),
         unitContexts: unitPosition ? [createOrgUnitContext(unitPosition)] : [],
       });
     });

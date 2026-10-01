@@ -105,6 +105,12 @@ clipboard, distribution mode, and PNG export. Staffing slots belong to one View-
 not count as Employees. DOM and PNG share geometry, card formats, Tag layout, colors, bounds, and
 anchors. Image export contains only visible resources and requires its explicit permission.
 
+In either PNG dialog, a Super Administrator can choose **Export as** and select an active account.
+Preview, Copy, and Save then use that account's role, direct grants, managed branches, and ACL while
+the administrator remains signed in. **My access** is restored whenever the dialog opens. If the
+account cannot read the current View or scoped Unit, image actions remain unavailable. The choice
+does not affect JSON or Template Data Download.
+
 ## Calendar and Data Download
 
 Calendar contains only visible Employees, birthdays, dated Tags, and composite dates. Hidden fields,

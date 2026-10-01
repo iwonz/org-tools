@@ -6,6 +6,7 @@ import {
   EMPLOYEE_TEMPLATE_FIELD_KEYS,
   evaluateCustomEmployeeFields,
   getCustomEmployeeFieldFilterValues,
+  installAuthorizedTemplateValues,
   md5Hex,
   normalizeCustomEmployeeFieldValue,
   rewriteTemplateFieldKey,
@@ -87,6 +88,29 @@ describe("custom Employee fields", () => {
     expect(evaluateCustomEmployeeFields(employee, definitions).get(uuid(2))).toBe(
       md5Hex("Alex:Platform"),
     );
+  });
+
+  test("keeps alternate authorized Template values isolated from the active session cache", () => {
+    const definition: CustomEmployeeFieldDefinition = {
+      hash: "none",
+      id: uuid(2),
+      key: "directoryKey",
+      kind: "template",
+      name: "Directory key",
+      template: "",
+    };
+    installAuthorizedTemplateValues([
+      { id: employee.id, resolvedTemplateValues: { [definition.id]: "Current session" } },
+    ]);
+    const alternate = new Map([[employee.id, { [definition.id]: "Alternate export subject" }]]);
+
+    expect(evaluateCustomEmployeeFields(employee, [definition], alternate).get(definition.id)).toBe(
+      "Alternate export subject",
+    );
+    expect(evaluateCustomEmployeeFields(employee, [definition]).get(definition.id)).toBe(
+      "Current session",
+    );
+    installAuthorizedTemplateValues([]);
   });
 
   test("rejects duplicate built-in keys, normalized names, and dependency cycles", () => {

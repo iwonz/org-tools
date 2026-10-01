@@ -6,6 +6,7 @@ import {
   allowedPermissionScopes,
   buildEffectiveAccess,
   hasPermission,
+  isValidPermissionGrant,
   MANAGER_ROLE_ID,
 } from "@/server/permissions";
 
@@ -22,12 +23,32 @@ describe("permission evaluation", () => {
     expect(allowedPermissionScopes("calendar.read")).toEqual(["all"]);
     expect(allowedPermissionScopes("dataDownload.create")).toEqual(["all"]);
     expect(allowedPermissionScopes("editorImageExport.create")).toEqual(["all"]);
+    expect(allowedPermissionScopes("editorImageExport.exportAs")).toEqual(["all"]);
     expect(allowedPermissionScopes("view.read")).toEqual(["all"]);
     expect(allowedPermissionScopes("unit.update")).toEqual([
       "managedDirect",
       "managedSubtree",
       "all",
     ]);
+  });
+
+  it("reserves export-as access for the Super Administrator bypass", () => {
+    expect(isValidPermissionGrant({ permission: "editorImageExport.exportAs", scope: "all" })).toBe(
+      false,
+    );
+    const state = createBlankOrgToolsState();
+    const access = buildEffectiveAccess({
+      directGrants: [],
+      employeeId: null,
+      organization: state.organization,
+      role: {
+        grants: [],
+        id: "00000000-0000-4000-8000-000000000001",
+        name: "Super Administrator",
+        systemKey: "superAdmin",
+      },
+    });
+    expect(hasPermission(access, "editorImageExport.exportAs")).toBe(true);
   });
 
   it("derives Manager scope only from system View leadership", () => {

@@ -18,6 +18,11 @@ export const EMPLOYEE_DISPLAY_POSITIONS_KEY = "positions";
 
 const authorizedTemplateValues = new Map<string, Partial<Record<EmployeeFieldId, string>>>();
 
+export type AuthorizedTemplateValuesByEmployeeId = ReadonlyMap<
+  string,
+  Partial<Record<EmployeeFieldId, string>>
+>;
+
 export const installAuthorizedTemplateValues = (
   employees: readonly {
     id: string;
@@ -509,6 +514,7 @@ const getBuiltInValue = (employee: Employee, key: string): unknown => {
 export const evaluateCustomEmployeeFields = (
   employee: Employee,
   definitions: readonly CustomEmployeeFieldDefinition[],
+  resolvedTemplateValuesByEmployeeId: AuthorizedTemplateValuesByEmployeeId = authorizedTemplateValues,
 ): Map<EmployeeFieldId, CustomEmployeeFieldValue> => {
   const result = new Map<EmployeeFieldId, CustomEmployeeFieldValue>();
   const definitionByKey = new Map(
@@ -525,7 +531,7 @@ export const evaluateCustomEmployeeFields = (
     } else if (definition.kind === "composite") {
       value = getCompositeFieldOutput(definition, employee.customFieldValues[definition.id]);
     } else {
-      const resolved = authorizedTemplateValues.get(employee.id)?.[definition.id];
+      const resolved = resolvedTemplateValuesByEmployeeId.get(employee.id)?.[definition.id];
       if (resolved !== undefined) {
         value = resolved;
         evaluating.delete(definition.id);

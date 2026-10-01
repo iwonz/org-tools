@@ -9,6 +9,9 @@ describe("Administration security labels", () => {
     expect(Object.keys(PERMISSION_LABEL_KEYS)).toHaveLength(PERMISSIONS.length);
     expect(PERMISSIONS).toContain("employee.update");
     expect(PERMISSION_LABEL_KEYS["employee.update"]).toBe("Edit Employee data");
+    expect(PERMISSION_LABEL_KEYS["editorImageExport.exportAs"]).toBe(
+      "Export Editor images as another user",
+    );
   });
 
   it("provides a label for every permission scope without changing scope identifiers", () => {

@@ -7,7 +7,7 @@ import type {
   PermissionScope,
   ResourcePolicyKind,
 } from "@org-tools/types";
-import { PERMISSION_SCOPES, PERMISSIONS } from "@org-tools/types/security";
+import { ASSIGNABLE_PERMISSIONS, PERMISSION_SCOPES } from "@org-tools/types/security";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   HiOutlineArchiveBoxArrowDown,
@@ -111,7 +111,7 @@ function GrantEditor({
 }) {
   const t = useUiText();
   const add = () => {
-    const permission = PERMISSIONS.find(
+    const permission = ASSIGNABLE_PERMISSIONS.find(
       (candidate) => !grants.some((grant) => grant.permission === candidate),
     );
     if (!permission) return;
@@ -140,7 +140,7 @@ function GrantEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PERMISSIONS.map((permission) => (
+              {ASSIGNABLE_PERMISSIONS.map((permission) => (
                 <SelectItem
                   disabled={grants.some(
                     (candidate, candidateIndex) =>
@@ -188,7 +188,7 @@ function GrantEditor({
       ))}
       <Button
         className="w-fit"
-        disabled={disabled || grants.length === PERMISSIONS.length}
+        disabled={disabled || grants.length === ASSIGNABLE_PERMISSIONS.length}
         onClick={add}
         size="sm"
         type="button"

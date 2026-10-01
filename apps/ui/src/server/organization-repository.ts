@@ -121,6 +121,18 @@ const readRow = async (client: PoolClient, lock = false): Promise<DocumentRow> =
   return row;
 };
 
+export const readOrganizationSnapshot = async (
+  database: Pool | PoolClient,
+): Promise<OrganizationSnapshot> => {
+  const result = await database.query<DocumentRow>(
+    `SELECT organization_json, bootstrap_ui_json, revision, security_revision
+     FROM organization_documents WHERE singleton = TRUE`,
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error("Organization document is missing.");
+  return parseDocumentRow(row);
+};
+
 const syncEmployeeIdentities = async (
   client: PoolClient,
   organization: OrganizationDocument,

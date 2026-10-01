@@ -7,7 +7,7 @@ import type {
   Role,
   UnitId,
 } from "@org-tools/types";
-import { PERMISSION_SCOPES } from "@org-tools/types/security";
+import { ASSIGNABLE_PERMISSIONS, PERMISSION_SCOPES } from "@org-tools/types/security";
 
 export const SUPER_ADMIN_ROLE_ID = "00000000-0000-4000-8000-000000000001";
 export const EMPLOYEE_ROLE_ID = "00000000-0000-4000-8000-000000000002";
@@ -17,6 +17,7 @@ export const allowedPermissionScopes = (permission: Permission): readonly Permis
   PERMISSION_SCOPES[permission];
 
 export const isValidPermissionGrant = (grant: PermissionGrant): boolean =>
+  ASSIGNABLE_PERMISSIONS.includes(grant.permission) &&
   allowedPermissionScopes(grant.permission).includes(grant.scope);
 
 const deduplicateGrants = (grants: readonly PermissionGrant[]): PermissionGrant[] => {

@@ -431,10 +431,11 @@ Preview and inspect a full-View local PNG with Fit, zoom, and pan. Unit cards, h
 Sticker, embedded Image, curved Arrow, Tags, boss marker, and assigned/source-only row tones follow
 the durable canvas presentation without printing transient editing chrome. The dialog retains
 token-aware Employee format and icon-labelled Copy and Save actions while requesting 3× output and
-applying density safety limits silently.
+applying density safety limits silently. A Super Administrator can open the searchable **Export
+as** selector and render the same View through an active account's exact authorized projection.
 
-Capabilities: Full-View PNG, Canvas elements, Distribution tones, Hierarchy, Zoom and pan, Fixed 3×,
-Local Copy and Save.
+Capabilities: Full-View PNG, Access-subject selector, Canvas elements, Distribution tones,
+Hierarchy, Zoom and pan, Fixed 3×, Local Copy and Save.
 
 ### Editor text template export
 
@@ -679,6 +680,10 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   protected API calls must still reject a role whose matching UI action is hidden.
 - Confirm filtered accounts never render or receive hidden fields, Tags, Employees, Units, Slots,
   Views, counts, Download values, Calendar values, accessible labels, or PNG content.
+- Confirm both PNG dialogs show **Export as** only to Super Administrator, reset it to **My
+  access** on reopen, and use one selected account source for preview, Copy, and Save. Verify hidden
+  fields, Tags, Employees, Units, Slots, and attached Canvas elements are absent; inaccessible roots
+  disable image actions; switching subjects never changes the signed-in session or other screens.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
   browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
 - Confirm the production server exposes the expected role-specific sidebar actions and

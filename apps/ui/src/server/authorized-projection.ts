@@ -13,7 +13,7 @@ import type {
   StoredResourcePolicy,
   UnitId,
 } from "@org-tools/types";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 
 import { evaluateCustomEmployeeFields } from "@/lib/custom-employee-fields";
 import { getDatabasePool } from "@/server/database";
@@ -433,7 +433,7 @@ const filterView = (
 };
 
 export class AuthorizedProjectionService {
-  constructor(private readonly pool: Pool = getDatabasePool()) {}
+  constructor(private readonly pool: Pool | PoolClient = getDatabasePool()) {}
 
   async readPolicies(): Promise<ResourcePolicyMap> {
     const policyRows = await this.pool.query<PolicyRow>(

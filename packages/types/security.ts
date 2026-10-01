@@ -50,12 +50,24 @@ export const PERMISSIONS = [
   "calendar.read",
   "dataDownload.create",
   "editorImageExport.create",
+  "editorImageExport.exportAs",
   "backup.create",
   "backup.restore",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
 export type PermissionScope = "self" | "managedDirect" | "managedSubtree" | "all";
+
+export const SUPER_ADMIN_ONLY_PERMISSIONS = [
+  "editorImageExport.exportAs",
+] as const satisfies readonly Permission[];
+
+export const ASSIGNABLE_PERMISSIONS = PERMISSIONS.filter(
+  (permission) =>
+    !SUPER_ADMIN_ONLY_PERMISSIONS.includes(
+      permission as (typeof SUPER_ADMIN_ONLY_PERMISSIONS)[number],
+    ),
+);
 
 export const PERMISSION_SCOPES = Object.fromEntries(
   PERMISSIONS.map((permission) => {
@@ -74,6 +86,7 @@ export const PERMISSION_SCOPES = Object.fromEntries(
       "calendar.read",
       "dataDownload.create",
       "editorImageExport.create",
+      "editorImageExport.exportAs",
       "backup.create",
       "backup.restore",
     ].includes(permission);
@@ -185,6 +198,31 @@ export type AuthorizedOrganizationProjection = {
   employees: AuthorizedEmployee[];
   tags: EmployeeTagDefinition[];
   views: OrgToolsViewDocument[];
+};
+
+export type EditorImageExportSubjectSummary = {
+  accountId: AccountId;
+  displayName: string;
+  email: string;
+  roleName: string;
+};
+
+export type EditorImageExportSubjectsResponse = {
+  subjects: EditorImageExportSubjectSummary[];
+};
+
+export type EditorImageExportProjectionRequest = {
+  accountId: AccountId;
+  rootUnitId?: UnitId;
+  viewId: ViewId;
+};
+
+export type EditorImageExportProjectionResponse = {
+  available: boolean;
+  organizationRevision: number;
+  projection: AuthorizedOrganizationProjection;
+  securityRevision: number;
+  subject: EditorImageExportSubjectSummary;
 };
 
 export type EffectiveAccess = {

@@ -136,6 +136,17 @@ const ACCOUNT_SELECT = `
                    FROM account_grants WHERE account_id = a.id), '[]'::jsonb) AS direct_grants
   FROM accounts a JOIN roles r ON r.id = a.role_id`;
 
+export const readAccountWithRole = async (
+  database: Pool | PoolClient,
+  accountId: string,
+): Promise<Pick<AuthenticatedSession, "account" | "accountSummary" | "role"> | null> => {
+  const result = await database.query<AccountRow>(`${ACCOUNT_SELECT} WHERE a.id = $1`, [accountId]);
+  const row = result.rows[0];
+  if (!row) return null;
+  const parsed = parseAccount(row);
+  return { account: parsed.account, accountSummary: parsed.summary, role: parsed.role };
+};
+
 const audit = async (
   client: PoolClient,
   input: {

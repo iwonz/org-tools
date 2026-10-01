@@ -36,6 +36,12 @@ are ignored and rejected by publication checks. CI uses disposable paths and nev
 Data Download and Editor PNG export are explicit actions and contain only the caller's authorized
 projection. Spreadsheet-like text is escaped where the output format requires it.
 
+A Super Administrator may explicitly render an Editor PNG with another active account as the
+access subject. This does not impersonate that account: the server returns only its authorized
+View projection, omits grants, policies, UI state, sessions, administration data, and every hidden
+resource or field value, and records the acting administrator plus subject and export root in
+audit. The selected subject is transient and resets to the administrator on every dialog open.
+
 Complete Backup is available only with the corresponding permission and current-password
 reauthentication. It includes password hashes, roles, grants, ACL, UI states, and audit so recovery
 is complete, but excludes live sessions, CSRF, setup token, and rate-limit buckets. AES-256-GCM

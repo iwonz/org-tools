@@ -242,6 +242,7 @@ import {
   transformOrgEditorCanvasElements,
 } from "@/lib/org-editor-canvas";
 import { loadOrgEditorCanvasImageFile } from "@/lib/org-editor-canvas-image";
+import type { OrgEditorImageExportSource } from "@/lib/org-editor-image-export-source";
 import {
   advanceEditorRenderWindow,
   createLatestFrameScheduler,
@@ -3289,6 +3290,36 @@ export const OrgStructureEditorTab = observer(() => {
       employeesById: employeeById,
     }),
     [employeeById],
+  );
+  const imageExportSource = useMemo<OrgEditorImageExportSource>(
+    () => ({
+      canvasElements: editor.canvasElements,
+      customEmployeeFieldDefinitions: store.employeeFieldDefinitions,
+      distributionEnabledUnitIds: distributionModeUnitIdSet,
+      distributionUnitIdsByEmployeeId,
+      employeeById,
+      layoutMode: editor.layoutMode,
+      sourceIndex,
+      tagDefinitions: store.tagDefinitions,
+      tagOrder,
+      units: displayUnits,
+      viewId: store.activeOrgViewId,
+      viewSettings,
+    }),
+    [
+      displayUnits,
+      distributionModeUnitIdSet,
+      distributionUnitIdsByEmployeeId,
+      editor.canvasElements,
+      editor.layoutMode,
+      employeeById,
+      sourceIndex,
+      store.activeOrgViewId,
+      store.employeeFieldDefinitions,
+      store.tagDefinitions,
+      tagOrder,
+      viewSettings,
+    ],
   );
   const exportUnit = exportUnitId ? (unitById.get(exportUnitId) ?? null) : null;
   const noteUnit = noteUnitId ? (unitById.get(noteUnitId) ?? null) : null;
@@ -6984,35 +7015,21 @@ export const OrgStructureEditorTab = observer(() => {
         />
       )}
       <OrgEditorExportDialog
-        canvasElements={editor.canvasElements}
-        distributionEnabledUnitIds={distributionModeUnitIdSet}
-        distributionUnitIdsByEmployeeId={distributionUnitIdsByEmployeeId}
-        viewSettings={viewSettings}
         employeeById={employeeById}
-        layoutMode={editor.layoutMode}
+        imageSource={imageExportSource}
         onOpenChange={(open) => {
           if (!open) setExportUnitId(null);
         }}
         open={Boolean(exportUnit)}
         sourceIndex={sourceIndex}
-        tagDefinitions={store.tagDefinitions}
-        tagOrder={tagOrder}
         unit={exportUnit}
         units={displayUnits}
       />
       <OrgEditorViewImageExportDialog
-        canvasElements={editor.canvasElements}
-        distributionEnabledUnitIds={distributionModeUnitIdSet}
-        distributionUnitIdsByEmployeeId={distributionUnitIdsByEmployeeId}
-        employeeById={employeeById}
-        layoutMode={editor.layoutMode}
         onOpenChange={setViewImageExportOpen}
         open={viewImageExportOpen}
-        tagDefinitions={store.tagDefinitions}
-        tagOrder={tagOrder}
-        units={displayUnits}
+        source={imageExportSource}
         viewName={store.activeOrgView?.name ?? "Org Tools"}
-        viewSettings={viewSettings}
       />
 
       {noteUnit && (

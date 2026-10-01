@@ -9,6 +9,7 @@ export const PERMISSION_LABEL_KEYS = {
   "editor.system.layout.update": "Edit the system Editor layout",
   "editor.system.read": "View the system Editor",
   "editorImageExport.create": "Export Editor images",
+  "editorImageExport.exportAs": "Export Editor images as another user",
   "employee.assignments.update": "Change Employee Units and positions",
   "employee.create": "Add Employees",
   "employee.delete": "Delete Employees",

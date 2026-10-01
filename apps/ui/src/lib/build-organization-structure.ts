@@ -15,6 +15,7 @@ import type {
 } from "@org-tools/types";
 
 import { createUiOrgStructure, createUnitPath } from "@/lib/build-ui-org-structure";
+import type { AuthorizedTemplateValuesByEmployeeId } from "@/lib/custom-employee-fields";
 import { buildEmployeeUnitMembershipIndex } from "@/lib/employee-unit-contexts";
 import { resolveLiveUnitMemberships } from "@/lib/live-unit-filter";
 import { getEffectiveLiveEmployeePosition } from "@/lib/live-unit-position";
@@ -92,6 +93,7 @@ export const buildOrganizationStructureWithResolution = (
   state: OrgEditorState,
   tagDefinitions: readonly EmployeeTagDefinition[] = [],
   customFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
+  resolvedTemplateValuesByEmployeeId?: AuthorizedTemplateValuesByEmployeeId,
 ): OrganizationStructureBuildResult => {
   const employeesById = new Map<EmployeeId, Employee>();
   const tagById = new Map(tagDefinitions.map((tag) => [tag.id, tag]));
@@ -200,7 +202,11 @@ export const buildOrganizationStructureWithResolution = (
 
   const allEmployees = [...employeesById.values()];
   const manualEmployeeSearchDocuments = allEmployees.map((employee) =>
-    createEmployeeSearchDocument(employee, customFieldDefinitions),
+    createEmployeeSearchDocument(
+      employee,
+      customFieldDefinitions,
+      resolvedTemplateValuesByEmployeeId,
+    ),
   );
   const manualMembershipsByEmployeeId = buildEmployeeUnitMembershipIndex(allEmployees);
   const liveResolution = resolveLiveUnitMemberships({
@@ -268,7 +274,11 @@ export const buildOrganizationStructureWithResolution = (
     .map((employeeId) => employeesById.get(employeeId))
     .filter((employee): employee is Employee => Boolean(employee));
   const employeeSearchDocuments = allEmployees.map((employee) =>
-    createEmployeeSearchDocument(employee, customFieldDefinitions),
+    createEmployeeSearchDocument(
+      employee,
+      customFieldDefinitions,
+      resolvedTemplateValuesByEmployeeId,
+    ),
   );
 
   return {

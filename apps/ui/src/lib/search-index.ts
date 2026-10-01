@@ -8,6 +8,7 @@ import type {
 
 import { createBirthdayKey, parseEmployeeBirthday } from "@/lib/birthday";
 import {
+  type AuthorizedTemplateValuesByEmployeeId,
   evaluateCustomEmployeeFields,
   getCustomEmployeeFieldFilterValues,
 } from "@/lib/custom-employee-fields";
@@ -40,10 +41,15 @@ const getEmployeeBirthdayKey = (employee: Employee) => {
 export const createEmployeeSearchDocument = (
   employee: Employee,
   customFieldDefinitions: readonly CustomEmployeeFieldDefinition[] = [],
+  resolvedTemplateValuesByEmployeeId?: AuthorizedTemplateValuesByEmployeeId,
 ): EmployeeSearchDocument => {
   const positionLabels = getEmployeePositionLabels(employee);
   const tagLabels = employee.tags.map(({ label }) => label);
-  const customValues = evaluateCustomEmployeeFields(employee, customFieldDefinitions);
+  const customValues = evaluateCustomEmployeeFields(
+    employee,
+    customFieldDefinitions,
+    resolvedTemplateValuesByEmployeeId,
+  );
 
   return {
     birthday: employee.birthday,

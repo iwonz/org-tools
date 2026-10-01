@@ -4,6 +4,7 @@ import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
 
 import {
+  type AuthorizedTemplateValuesByEmployeeId,
   evaluateCustomEmployeeFields,
   isEmployeeDisplayPositionsKey,
   normalizeCustomEmployeeFieldKey,
@@ -44,6 +45,7 @@ export type EmployeeDisplayRenderOptions = {
   employee: Employee;
   format: string;
   positionNotSpecifiedLabel?: string;
+  resolvedTemplateValuesByEmployeeId?: AuthorizedTemplateValuesByEmployeeId;
   unitContexts: readonly EmployeeUnitContext[];
 };
 
@@ -184,9 +186,14 @@ const createEmployeeDisplayFieldResolver = ({
   customEmployeeFieldDefinitions,
   employee,
   positionNotSpecifiedLabel = "Position not specified",
+  resolvedTemplateValuesByEmployeeId,
   unitContexts,
 }: Omit<EmployeeDisplayRenderOptions, "format">): TemplateFieldResolver => {
-  const customValues = evaluateCustomEmployeeFields(employee, customEmployeeFieldDefinitions);
+  const customValues = evaluateCustomEmployeeFields(
+    employee,
+    customEmployeeFieldDefinitions,
+    resolvedTemplateValuesByEmployeeId,
+  );
   const customDefinitionByKey = new Map(
     customEmployeeFieldDefinitions.map((definition) => [
       normalizeCustomEmployeeFieldKey(definition.key),

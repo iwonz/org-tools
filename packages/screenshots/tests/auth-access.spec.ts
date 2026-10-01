@@ -105,6 +105,12 @@ const loginAndChangeTemporaryPassword = async (
   });
   expect(change.ok()).toBe(true);
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-demo-id="app-shell"]')).toHaveAttribute(
+    "data-state-pending",
+    "false",
+    { timeout: 60_000 },
+  );
+  await expect(page.locator('[data-demo-id="account-menu"]')).toBeVisible({ timeout: 60_000 });
   return page;
 };
 
@@ -112,7 +118,7 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
   browser,
   page,
 }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   await replaceWithSyntheticState(page);
   const adminSession = await authenticateSuperAdministrator(page);
   const backupResponse = await page.request.post("/api/backup", {
@@ -186,6 +192,17 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
       employeeId: "10000000-0000-4000-8000-000000000003",
       roleId: customRole?.id ?? "",
     });
+    const accountsAfterCreation = await readAdmin(page);
+    const employeeAccount = accountsAfterCreation.accounts.find(
+      (account) => account.email === "jordan.reed@example.test",
+    );
+    expect(employeeAccount).toBeTruthy();
+    await adminCommand(page, {
+      accountId: employeeAccount?.id ?? "",
+      directGrants: [{ permission: "editorImageExport.create", scope: "all" }],
+      roleId: employeeRole?.id ?? "",
+      type: "user.access.update",
+    });
 
     const knownFailure = await page.request.post("/api/auth/login", {
       data: { email: "morgan.park@example.test", password: "Incorrect password value" },
@@ -216,6 +233,24 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
       },
       resourceId: "90000000-0000-4000-8000-000000000007",
       resourceKind: "tag",
+      type: "policy.update",
+      write: {
+        allAuthenticated: false,
+        relations: [],
+        roleIds: [superAdminRole?.id ?? ""],
+        userIds: [],
+      },
+    });
+    await adminCommand(page, {
+      hideEmployeesWhenUnread: false,
+      read: {
+        allAuthenticated: false,
+        relations: [],
+        roleIds: [superAdminRole?.id ?? ""],
+        userIds: [],
+      },
+      resourceId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      resourceKind: "unit",
       type: "policy.update",
       write: {
         allAuthenticated: false,
@@ -263,6 +298,192 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
         bootstrap.projection.employees.some((employee) => employee.firstName === "Riley"),
       ).toBe(false);
     }
+
+    const exportSubjects = await page.request.get("/api/editor-image-export/subjects");
+    expect(exportSubjects.ok(), await exportSubjects.text()).toBe(true);
+    const subjectPayload = (await exportSubjects.json()) as {
+      subjects: Array<{ accountId: string; email: string }>;
+    };
+    expect(subjectPayload.subjects.map((subject) => subject.email)).toEqual(
+      expect.arrayContaining([
+        testAdministrator.email,
+        "avery.stone@example.test",
+        "jordan.reed@example.test",
+        "morgan.park@example.test",
+      ]),
+    );
+    expect(subjectPayload.subjects.every((subject) => Object.keys(subject).length === 4)).toBe(
+      true,
+    );
+
+    const managerSubject = subjectPayload.subjects.find(
+      (subject) => subject.email === "avery.stone@example.test",
+    );
+    const customSubject = subjectPayload.subjects.find(
+      (subject) => subject.email === "morgan.park@example.test",
+    );
+    for (const [accountId, available] of [
+      [managerSubject?.accountId, true],
+      [customSubject?.accountId, false],
+    ] as const) {
+      const response = await page.request.post("/api/editor-image-export/projection", {
+        data: { accountId, viewId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
+        headers: mutationHeaders(adminSession.csrfToken),
+      });
+      expect(response.ok(), await response.text()).toBe(true);
+      expect((await response.json()) as { available: boolean }).toMatchObject({ available });
+    }
+
+    const employeeProjection = await page.request.post("/api/editor-image-export/projection", {
+      data: {
+        accountId: employeeAccount?.id,
+        viewId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      },
+      headers: mutationHeaders(adminSession.csrfToken),
+    });
+    expect(employeeProjection.ok(), await employeeProjection.text()).toBe(true);
+    const exportProjection = (await employeeProjection.json()) as {
+      available: boolean;
+      projection: AuthorizedOrganizationProjection;
+    };
+    expect(exportProjection.available).toBe(true);
+    expect(exportProjection.projection.tags.some((tag) => tag.label === "Content")).toBe(false);
+    expect(
+      exportProjection.projection.employees.some((employee) => employee.firstName === "Riley"),
+    ).toBe(false);
+    expect(exportProjection).not.toHaveProperty("ui");
+    expect(exportProjection).not.toHaveProperty("access");
+    const adminWithExportAudit = (await (await page.request.get("/api/admin")).json()) as {
+      audit: Array<{ action: string; actor_account_id: string; target_ids: string[] }>;
+    };
+    expect(adminWithExportAudit.audit).toContainEqual(
+      expect.objectContaining({
+        action: "editor.image_export.project_as",
+        actor_account_id: currentAdmin?.id,
+        target_ids: [employeeAccount?.id, "cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
+      }),
+    );
+
+    const forbiddenSubjects = await employeePage.request.get("/api/editor-image-export/subjects");
+    expect(forbiddenSubjects.status()).toBe(404);
+    const employeeExportBootstrapResponse = await employeePage.request.get("/api/session");
+    expect(employeeExportBootstrapResponse.ok()).toBe(true);
+    const employeeExportBootstrap = (await employeeExportBootstrapResponse.json()) as Bootstrap;
+    const forbiddenProjection = await employeePage.request.post(
+      "/api/editor-image-export/projection",
+      {
+        data: {
+          accountId: employeeAccount?.id,
+          viewId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        },
+        headers: mutationHeaders(employeeExportBootstrap.csrfToken),
+      },
+    );
+    expect(forbiddenProjection.status()).toBe(404);
+
+    await page.getByRole("tab", { name: "Editor", exact: true }).click();
+    await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
+    await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
+    let imageDialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
+    const subjectTrigger = imageDialog.locator(
+      '[data-demo-id="org-editor-image-export-subject-trigger"]',
+    );
+    const viewPreview = imageDialog.getByAltText("View export preview", { exact: true });
+    await expect(viewPreview).toHaveAttribute("src", /.+/);
+    await expect(subjectTrigger).toContainText("My access");
+    await subjectTrigger.click();
+    const fullProjectionResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/editor-image-export/projection") &&
+        response.request().method() === "POST",
+    );
+    await page
+      .locator('[data-demo-id="org-editor-image-export-subject-options"]')
+      .getByText("jordan.reed@example.test", { exact: false })
+      .click();
+    expect((await fullProjectionResponse).ok()).toBe(true);
+    await expect(subjectTrigger).toContainText("Jordan Reed");
+    await expect(viewPreview).toBeVisible();
+    await expect(imageDialog.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+    const adminAfterExport = (await (await page.request.get("/api/session")).json()) as Bootstrap;
+    expect(adminAfterExport.account.email).toBe(testAdministrator.email);
+    await page.keyboard.press("Escape");
+    await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
+    imageDialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
+    await expect(
+      imageDialog.locator('[data-demo-id="org-editor-image-export-subject-trigger"]'),
+    ).toContainText("My access");
+    await page.keyboard.press("Escape");
+
+    await page.locator('fieldset[aria-label="Canvas Unit Product"]').click({
+      button: "right",
+      position: { x: 20, y: 20 },
+    });
+    await page.locator('[data-demo-id="org-editor-export-action"]').click();
+    const unitImageDialog = page.locator('[data-demo-id="org-editor-export-dialog"]');
+    const unitSubjectTrigger = unitImageDialog.locator(
+      '[data-demo-id="org-editor-image-export-subject-trigger"]',
+    );
+    const unitPreview = unitImageDialog.getByAltText("Unit export preview", { exact: true });
+    await expect(unitPreview).toHaveAttribute("src", /.+/);
+    await expect(unitSubjectTrigger).toContainText("My access");
+    await unitSubjectTrigger.click();
+    const unitProjectionResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/editor-image-export/projection") &&
+        response.request().method() === "POST",
+    );
+    await page
+      .locator('[data-demo-id="org-editor-image-export-subject-options"]')
+      .getByText("jordan.reed@example.test", { exact: false })
+      .click();
+    expect((await unitProjectionResponse).ok()).toBe(true);
+    await expect(unitSubjectTrigger).toContainText("Jordan Reed");
+    await expect(unitPreview).toBeVisible();
+    await expect(unitImageDialog.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+    await page.keyboard.press("Escape");
+
+    await page.locator('fieldset[aria-label="Canvas Unit Platform"]').click({
+      button: "right",
+      position: { x: 20, y: 20 },
+    });
+    await page.locator('[data-demo-id="org-editor-export-action"]').click();
+    const unavailableUnitDialog = page.locator('[data-demo-id="org-editor-export-dialog"]');
+    const unavailableSubjectTrigger = unavailableUnitDialog.locator(
+      '[data-demo-id="org-editor-image-export-subject-trigger"]',
+    );
+    await unavailableSubjectTrigger.click();
+    const unavailableProjectionResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/editor-image-export/projection") &&
+        response.request().method() === "POST",
+    );
+    await page
+      .locator('[data-demo-id="org-editor-image-export-subject-options"]')
+      .getByText("jordan.reed@example.test", { exact: false })
+      .click();
+    expect((await unavailableProjectionResponse).ok()).toBe(true);
+    await expect(unavailableUnitDialog).toContainText(
+      "The selected user does not have access to this View or Unit.",
+    );
+    await expect(
+      unavailableUnitDialog.getByRole("button", { name: "Copy", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      unavailableUnitDialog.getByRole("button", { name: "Save", exact: true }),
+    ).toBeDisabled();
+    await page.keyboard.press("Escape");
+
+    await employeePage.getByRole("tab", { name: "Editor", exact: true }).click();
+    await expect(
+      employeePage.locator('[data-demo-id="org-editor-view-image-export-action"]'),
+    ).toBeVisible();
+    await employeePage.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
+    await expect(
+      employeePage.locator('[data-demo-id="org-editor-image-export-subject-trigger"]'),
+    ).toHaveCount(0);
+    await expect(employeePage.getByAltText("View export preview", { exact: true })).toBeVisible();
+    await employeePage.keyboard.press("Escape");
 
     const employeeBootstrapResponse = await employeePage.request.get("/api/session");
     const employeeBootstrap = (await employeeBootstrapResponse.json()) as Bootstrap;
@@ -355,8 +576,9 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
   } finally {
     await Promise.all(contexts.map((context) => context.close()));
     const restoreSession = await authenticateSuperAdministrator(page);
-    await page.goto("about:blank");
-    const restore = await page.request.post("/api/backup", {
+    const request = page.context().request;
+    await page.close({ runBeforeUnload: false }).catch(() => undefined);
+    const restore = await request.post("/api/backup", {
       data: {
         action: "restore",
         currentPassword: testAdministrator.password,

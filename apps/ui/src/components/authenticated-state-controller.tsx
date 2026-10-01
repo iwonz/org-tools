@@ -1,7 +1,6 @@
 "use client";
 
 import type {
-  AuthorizedEmployee,
   AuthorizedOrganizationProjection,
   OrgToolsState,
   SessionBootstrap,
@@ -14,28 +13,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useAuth } from "@/components/auth-context";
 import { useAppLocale } from "@/components/locale-provider";
 import { StateRuntimeContext } from "@/components/state-runtime-context";
+import { hydrateAuthorizedEmployee } from "@/lib/authorized-projection-client";
 import { installAuthorizedTemplateValues } from "@/lib/custom-employee-fields";
 import { createBlankOrgToolsState, parseOrgToolsState } from "@/lib/org-file";
 import { useOrgStore } from "@/stores/org-store-context";
-
-const hydrateEmployee = (
-  employee: AuthorizedEmployee,
-): OrgToolsState["organization"]["employees"][number] => ({
-  avatarBase64Url: employee.avatarBase64Url ?? null,
-  birthday: employee.birthday ?? null,
-  createdAt: employee.createdAt,
-  customFieldValues: employee.customFieldValues ?? {},
-  email: employee.email ?? null,
-  firstName: employee.firstName ?? "",
-  gender: employee.gender ?? "unspecified",
-  id: employee.id,
-  lastName: employee.lastName ?? "",
-  phone: employee.phone ?? null,
-  profileUrl: employee.profileUrl ?? null,
-  tags: employee.tags ?? [],
-  updatedAt: employee.updatedAt,
-  username: employee.username ?? null,
-});
 
 const hydrateState = (bootstrap: SessionBootstrap): OrgToolsState => {
   const blank = createBlankOrgToolsState(bootstrap.ui.theme, bootstrap.ui.locale);
@@ -47,7 +28,7 @@ const hydrateState = (bootstrap: SessionBootstrap): OrgToolsState => {
     : [...projection.views, blankSystemView];
   const organization: OrgToolsState["organization"] = {
     ...projection,
-    employees: projection.employees.map(hydrateEmployee),
+    employees: projection.employees.map(hydrateAuthorizedEmployee),
     views,
   };
   try {

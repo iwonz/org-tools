@@ -12,6 +12,9 @@ Authorized projections build normalized membership and hierarchy indexes once pe
 bounded LRU keys entries by organization revision, security revision, and account ID; security,
 role, ACL, relationship, and organization changes invalidate affected results. Filtering remains
 linear in visible Employees, Units, assignments, Tags, fields, slots, Views, and Canvas elements.
+Alternate image-export projections reuse this cache, return one View, and use a separate bounded
+browser cache keyed by account, View, optional root Unit, and both revisions. In-flight work is
+cancelled when the selected account or either revision changes.
 
 PostgreSQL indexes normalized account/Employee email, session digests and expiry, audit time/actor/
 action, and server-event order. Login rate buckets are updated atomically. Migrations use one

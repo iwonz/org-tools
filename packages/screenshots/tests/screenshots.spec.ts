@@ -637,6 +637,21 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await capture(page, "editor-distribution-connections");
 
   await replaceWithImageExportState(page);
+  await page.route("**/api/editor-image-export/subjects*", (route) =>
+    route.fulfill({
+      body: JSON.stringify({
+        subjects: [
+          {
+            accountId: "80000000-0000-4000-8000-000000000001",
+            displayName: "Jordan Reed",
+            email: "jordan.reed@example.test",
+            roleName: "Employee",
+          },
+        ],
+      }),
+      contentType: "application/json",
+    }),
+  );
   await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
   const viewImageDialog = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
   await expect(viewImageDialog).toBeVisible();
@@ -644,7 +659,12 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(
     viewImageDialog.locator('[data-demo-id="org-editor-view-image-dimensions"]'),
   ).toHaveCount(0);
+  await viewImageDialog.locator('[data-demo-id="org-editor-image-export-subject-trigger"]').click();
+  await expect(
+    page.locator('[data-demo-id="org-editor-image-export-subject-options"]'),
+  ).toContainText("Jordan Reed");
   await capture(page, "editor-image-export");
+  await page.keyboard.press("Escape");
   await viewImageDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
