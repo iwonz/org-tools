@@ -11,7 +11,9 @@ Org Tools is one Next.js standalone application backed by PostgreSQL.
   and the restricted non-root web image. `compose.dev.yaml` adds hot reload and a toolbox. The app's
   Next.js output and dependencies use disposable project-scoped volumes so its development lock and
   loaders cannot collide with toolbox installs/builds or another Compose project; toolbox production
-  output remains in the checkout for validation.
+  output remains in the checkout for validation. The development app retains the base drop-all
+  capability policy and adds back only `DAC_OVERRIDE` so Next.js can create ignored type metadata in
+  a bind-mounted checkout owned by the host user. The production service receives no added capability.
 - Browser validation reaches Compose services through a local loopback proxy. The proxy owns normal
   HTTP sockets and both ends of upgraded HMR connections, so success and failure cleanup release the
   listening handle deterministically instead of leaving CI processes alive.

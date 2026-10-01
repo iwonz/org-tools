@@ -27,6 +27,7 @@ services:
       NODE_ENV: development
     read_only: false
     user: "0:0"
+    cap_add: ["DAC_OVERRIDE"]
     volumes:
       - type: bind
         source: .
