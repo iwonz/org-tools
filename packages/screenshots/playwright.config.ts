@@ -27,9 +27,6 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     baseURL,
     colorScheme: "light",
-    extraHTTPHeaders: {
-      "Cache-Control": "no-store",
-    },
     launchOptions: {
       args: ["--disable-gpu", "--disable-lcd-text", "--font-render-hinting=none"],
     },
