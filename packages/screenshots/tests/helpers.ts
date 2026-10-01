@@ -359,6 +359,11 @@ export async function openBlankState(page: Page): Promise<void> {
     locale: "en",
   });
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-demo-id="app-shell"]')).toHaveAttribute(
+    "data-state-pending",
+    "false",
+    { timeout: 30_000 },
+  );
   await expect(page.getByRole("tab", { name: "Editor", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
