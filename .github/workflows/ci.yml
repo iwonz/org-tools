@@ -13,42 +13,84 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  static:
+    name: Static and runtime
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - name: Initialize isolated environment
         run: |
           ./bin/org-tools env init
-          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci/postgres|' .env
-          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci/backups|' .env
-          mkdir -p /tmp/org-tools-ci/postgres /tmp/org-tools-ci/backups
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-static/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-static/backups|' .env
+          mkdir -p /tmp/org-tools-ci-static/postgres /tmp/org-tools-ci-static/backups
       - name: Build toolbox and start PostgreSQL
         run: ./bin/org-tools dev -d
       - name: Probe development runtime in Chromium
         run: ./bin/org-tools-dev-check
-      - name: Lint
-        run: ./bin/org-tools run pnpm lint
-      - name: Typecheck
-        run: ./bin/org-tools run pnpm typecheck
-      - name: Unit and integration tests
-        run: ./bin/org-tools run pnpm test:unit
-      - name: Validate OpenSpec
-        run: ./bin/org-tools run pnpm spec:validate
+      - name: Fast complete checks
+        run: ./bin/org-tools run pnpm validate:fast
       - name: Build production application
         run: ./bin/org-tools run pnpm build
-      - name: Browser tests
-        run: ./bin/org-tools run env ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 pnpm --filter @org-tools/screenshots smoke
-      - name: Generate screenshots
-        run: ./bin/org-tools run env ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000 pnpm --filter @org-tools/screenshots generate
       - name: Publication safety
         run: ./bin/org-tools run pnpm public:check
-      - name: Build production image
-        run: docker build --tag org-tools:ci .
-      - name: Inspect production image
+      - if: always()
+        run: ./bin/org-tools down --volumes
+
+  browser:
+    name: Browser shard ${{ matrix.shard }} of 4
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
         run: |
-          ./bin/org-tools-image-check org-tools:ci
+          ./bin/org-tools env init
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-browser-${{ matrix.shard }}/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-browser-${{ matrix.shard }}/backups|' .env
+          mkdir -p /tmp/org-tools-ci-browser-${{ matrix.shard }}/postgres /tmp/org-tools-ci-browser-${{ matrix.shard }}/backups
+      - name: Build toolbox and start isolated PostgreSQL
+        run: ./bin/org-tools dev -d
+      - name: Run isolated browser shard
+        run: >-
+          ./bin/org-tools run env
+          ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000
+          ORG_TOOLS_E2E_ISOLATED_SHARD=1
+          ORG_TOOLS_E2E_SHARD_ID=${{ matrix.shard }}
+          pnpm --filter @org-tools/screenshots smoke --shard=${{ matrix.shard }}/4
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-shard-${{ matrix.shard }}-failure
+          path: |
+            playwright-report-shard-${{ matrix.shard }}
+            test-results/screenshots-shard-${{ matrix.shard }}
+          if-no-files-found: ignore
+          retention-days: 7
+      - if: always()
+        run: ./bin/org-tools down --volumes
+
+  gallery:
+    name: Deterministic gallery
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
+        run: |
+          ./bin/org-tools env init
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-gallery/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-gallery/backups|' .env
+          mkdir -p /tmp/org-tools-ci-gallery/postgres /tmp/org-tools-ci-gallery/backups
+      - name: Build toolbox and start isolated PostgreSQL
+        run: ./bin/org-tools dev -d
+      - name: Generate and compare both gallery passes
+        run: ./bin/org-tools run pnpm screenshots:verify
       - uses: actions/upload-artifact@v7
         with:
           name: org-tools-screenshots
@@ -57,3 +99,40 @@ jobs:
           retention-days: 14
       - if: always()
         run: ./bin/org-tools down --volumes
+
+  image:
+    name: Production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - name: Build cached production image
+        uses: docker/build-push-action@v7
+        with:
+          cache-from: type=gha,scope=ci-runtime
+          cache-to: type=gha,mode=max,scope=ci-runtime
+          context: .
+          file: Dockerfile
+          load: true
+          tags: org-tools:ci
+      - name: Inspect production image
+        run: ./bin/org-tools-image-check org-tools:ci
+
+  validate:
+    name: validate
+    if: always()
+    needs: [static, browser, gallery, image]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every complete evidence job
+        env:
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          GALLERY_RESULT: ${{ needs.gallery.result }}
+          IMAGE_RESULT: ${{ needs.image.result }}
+          STATIC_RESULT: ${{ needs.static.result }}
+        run: |
+          test "$STATIC_RESULT" = success
+          test "$BROWSER_RESULT" = success
+          test "$GALLERY_RESULT" = success
+          test "$IMAGE_RESULT" = success

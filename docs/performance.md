@@ -2,6 +2,15 @@
 
 The maintained target is 20,000 Employees and 4,000 Units.
 
+## Validation
+
+All unit tests remain mandatory because their complete runtime is only a few seconds. Expensive
+browser feedback may be selected locally by changed paths, while authoritative CI always runs the
+complete 47-test catalog. CI partitions those tests across four isolated one-worker runtimes and
+runs static/runtime, gallery, and production-image evidence concurrently. The gallery remains two
+complete deterministic passes. Each repository runner prints command and total wall time so the
+critical path and regressions can be compared without recording application data.
+
 ## Server
 
 Organization mutations lock and parse one JSONB document once, update the Employee identity index

@@ -45,6 +45,7 @@ starts the same non-root application image with the same external bind paths.
 ./bin/org-tools run pnpm lint
 ./bin/org-tools run pnpm typecheck
 ./bin/org-tools run pnpm test:unit
+./bin/org-tools run pnpm validate:changed --base origin/main
 ```
 
 `compose.dev.yaml` supplies hot reload and a toolbox container. Its application build cache and
@@ -52,6 +53,10 @@ dependency tree use disposable project-scoped volumes, while toolbox production 
 available in the checkout for validation. Schema migrations run separately under the database
 owner; the web process has only the restricted application role and refuses to start when migrations
 are pending or unknown.
+
+The changed validator explains and runs conservative affected feedback during development. Complete
+CI still runs every unit, browser, performance, gallery, publication, and image check. See
+[Validation](docs/validation.md) for the stages, isolation model, and measured baseline.
 
 ## Accounts and access
 
@@ -89,5 +94,5 @@ SemVer release PRs, `CHANGELOG.md`, GitHub Releases, and generated release notes
 
 The [56-frame gallery](docs/screenshots.md) documents maintained workflows. More:
 [Usage](docs/usage.md) · [Architecture](docs/architecture.md) · [Privacy](docs/privacy.md) ·
-[Performance](docs/performance.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) ·
+[Performance](docs/performance.md) · [Validation](docs/validation.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) ·
 [License](LICENSE)

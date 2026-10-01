@@ -44,6 +44,8 @@ jobs:
       - id: build
         uses: docker/build-push-action@v7
         with:
+          cache-from: type=gha,scope=published-runtime
+          cache-to: type=gha,mode=max,scope=published-runtime
           context: .
           file: Dockerfile
           labels: ${{ steps.meta.outputs.labels }}

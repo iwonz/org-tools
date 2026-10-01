@@ -7,6 +7,14 @@ import { readJson } from "@/server/request-security";
 
 export const dynamic = "force-dynamic";
 
+const parseUiRequest = (value: unknown) => {
+  try {
+    return parseOrgToolsUiState(value);
+  } catch {
+    throw new SyntaxError();
+  }
+};
+
 export const GET = (request: Request) =>
   withApi(async () => {
     const session = await authenticateRequest(request);
@@ -46,7 +54,7 @@ export const PUT = (request: Request) =>
       projectAccountUi({
         access,
         projection,
-        ui: parseOrgToolsUiState(await readJson(request)),
+        ui: parseUiRequest(await readJson(request)),
       }),
     );
     return json(result);

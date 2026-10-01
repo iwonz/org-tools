@@ -24,14 +24,20 @@
     "fixture:performance": "node scripts/generate-performance-fixture.mjs",
     "lint": "biome check .",
     "public:check": "node scripts/check-public-safety.mjs",
+    "public:check:source": "node scripts/check-public-safety.mjs --source-only",
     "screenshots:generate": "pnpm --filter @org-tools/screenshots generate",
+    "screenshots:verify": "node scripts/verify-screenshots.mjs",
     "spec": "node scripts/run-openspec.mjs",
     "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
     "start": "./bin/org-tools up",
     "test": "pnpm test:unit",
     "test:browser": "pnpm --filter @org-tools/screenshots smoke",
+    "test:browser:shards": "node scripts/check-browser-shards.mjs",
     "test:unit": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/screenshots typecheck"
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/screenshots typecheck",
+    "validate:changed": "node scripts/run-validation.mjs changed",
+    "validate:fast": "node scripts/run-validation.mjs fast",
+    "validation:plan": "node scripts/validation-plan.mjs"
   },
   "engines": {
     "node": ">=22.13"

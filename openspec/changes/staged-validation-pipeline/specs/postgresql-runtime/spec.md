@@ -1,0 +1,32 @@
+## MODIFIED Requirements
+
+### Requirement: Organization commands use optimistic transactional revisions
+Every organization mutation SHALL lock the singleton document row, require the expected organization
+and security revisions, validate the complete result, update the Employee identity index and related
+security records, and commit atomically. A mismatch or validation failure SHALL make no change unless
+the candidate is already the current business document or a Super Administrator request proves with
+a canonical SHA-256 business-document hash that the locked document is still its committed baseline.
+Timestamp-only differences and JSON object key order MUST NOT create a false conflict. A real
+concurrent business or security change MUST still conflict.
+
+#### Scenario: Race two mutations
+- **WHEN** two clients submit different commands using the same revision and the second client's committed business document no longer matches the locked document
+- **THEN** one may commit and the other receives the current revision without a partial mutation
+
+#### Scenario: Retry an equivalent cross-tab write
+- **WHEN** a stale command matches the current business document apart from update timestamps or proves the same canonical committed baseline
+- **THEN** the server returns or commits the validated result without overwriting a different concurrent business change
+
+### Requirement: Clients converge through authorized events
+The server SHALL publish account-specific authorized patches or refetch instructions after commits.
+Security changes SHALL increment the security revision, invalidate bounded projection caches, and
+prevent reuse of events or projections produced for another account or revision. An interrupted event
+stream SHALL cancel its timer and close at most once.
+
+#### Scenario: Revoke visibility in another tab
+- **WHEN** an administrator narrows access while an affected account has an open session
+- **THEN** the open client drops stale data through refetch or logout before another mutation can use it
+
+#### Scenario: Abort an event stream
+- **WHEN** the browser cancels an event stream while its asynchronous poll is completing
+- **THEN** the server stops polling without a duplicate close or unhandled runtime error

@@ -16,6 +16,7 @@ import { StateRuntimeContext } from "@/components/state-runtime-context";
 import { hydrateAuthorizedEmployee } from "@/lib/authorized-projection-client";
 import { installAuthorizedTemplateValues } from "@/lib/custom-employee-fields";
 import { createBlankOrgToolsState, parseOrgToolsState } from "@/lib/org-file";
+import { organizationBusinessHash, organizationBusinessJson } from "@/lib/organization-equality";
 import { useOrgStore } from "@/stores/org-store-context";
 
 const hydrateState = (bootstrap: SessionBootstrap): OrgToolsState => {
@@ -216,6 +217,7 @@ export const AuthenticatedStateController = observer(function AuthenticatedState
     }
     organizationWriteActiveRef.current = true;
     organizationWriteQueuedRef.current = true;
+    let conflictRetryCount = 0;
     setPending(true);
     try {
       while (organizationWriteQueuedRef.current) {
@@ -225,9 +227,17 @@ export const AuthenticatedStateController = observer(function AuthenticatedState
         if (!bootstrap) return;
         const organization = store.createOrgToolsState().organization;
         const organizationJson = JSON.stringify(organization);
-        if (organizationJson === committedOrganizationJsonByStore.get(store)) continue;
+        const committedOrganizationJson = committedOrganizationJsonByStore.get(store);
+        if (organizationJson === committedOrganizationJson) continue;
+        const expectedOrganizationHash =
+          bootstrap.access.isSuperAdmin && committedOrganizationJson
+            ? await organizationBusinessHash(
+                JSON.parse(committedOrganizationJson) as OrgToolsState["organization"],
+              )
+            : undefined;
         const response = await fetch("/api/commands", {
           body: JSON.stringify({
+            expectedOrganizationHash,
             expectedOrganizationRevision: revisionRef.current,
             expectedSecurityRevision: securityRevisionRef.current,
             organization,
@@ -237,6 +247,33 @@ export const AuthenticatedStateController = observer(function AuthenticatedState
           method: "POST",
         });
         if (!response.ok) {
+          if (response.status === 409 && conflictRetryCount < 2) {
+            const serverBootstrap = await readSessionBootstrap();
+            const committedOrganization = committedOrganizationJson
+              ? (JSON.parse(committedOrganizationJson) as OrgToolsState["organization"])
+              : null;
+            const serverOrganization = hydrateState(serverBootstrap).organization;
+            if (
+              committedOrganization &&
+              serverBootstrap.securityRevision === securityRevisionRef.current &&
+              organizationBusinessJson(committedOrganization) ===
+                organizationBusinessJson(serverOrganization)
+            ) {
+              conflictRetryCount += 1;
+              revisionRef.current = serverBootstrap.organizationRevision;
+              securityRevisionRef.current = serverBootstrap.securityRevision;
+              const rebasedBootstrap = {
+                ...serverBootstrap,
+                ui: store.createDurableUiState(),
+              };
+              latestBootstrapRef.current = rebasedBootstrap;
+              locallyCommittedBootstrapRef.current = rebasedBootstrap;
+              installAuthorizedTemplateValues(serverBootstrap.projection.employees);
+              updateAuthBootstrap(rebasedBootstrap);
+              organizationWriteQueuedRef.current = true;
+              continue;
+            }
+          }
           organizationWriteQueuedRef.current = false;
           await refreshOrganization();
           throw new Error("write_failed");

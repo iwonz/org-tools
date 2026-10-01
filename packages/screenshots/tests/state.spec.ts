@@ -31,7 +31,21 @@ test("writes organization and per-account UI automatically", async ({ page }) =>
   await modelDialog
     .locator("#employee-display-employees-format")
     .fill("{fullName}\nPersisted display");
+  const organizationWrite = page.waitForResponse((response) => {
+    if (
+      response.request().method() !== "POST" ||
+      new URL(response.url()).pathname !== "/api/commands" ||
+      !response.ok()
+    ) {
+      return false;
+    }
+    const payload = response.request().postDataJSON() as {
+      organization?: { employeeDisplayLineGaps?: { employees?: number } };
+    } | null;
+    return payload?.organization?.employeeDisplayLineGaps?.employees === 9;
+  });
   await modelDialog.locator('[data-demo-id="employee-display-employees-line-gap"]').fill("9");
+  await organizationWrite;
   await modelDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Persisted display");
@@ -39,7 +53,14 @@ test("writes organization and per-account UI automatically", async ({ page }) =>
     page.locator('[data-demo-id="employees-list"] [data-employee-display-content]').first(),
   ).toHaveAttribute("data-employee-display-line-gap", "9");
 
+  const uiWrite = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      new URL(response.url()).pathname === "/api/ui" &&
+      response.ok(),
+  );
   await page.getByRole("tab", { name: "Calendar", exact: true }).click();
+  await uiWrite;
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByRole("tab", { name: "Calendar", exact: true })).toHaveAttribute(
     "aria-selected",

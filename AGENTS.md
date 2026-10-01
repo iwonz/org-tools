@@ -53,6 +53,11 @@ requirements.
 - Validation commands are `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`,
   `pnpm dev:check`, `pnpm build`, `pnpm test:browser`, `pnpm screenshots:generate`,
   `pnpm public:check`, `pnpm spec:validate`, and `git diff --check` through the toolbox.
+- `pnpm validation:plan --base origin/main` explains affected validation without running it.
+- `pnpm validate:fast` runs all inexpensive checks concurrently; `pnpm validate:changed --base
+  origin/main` adds conservative affected runtime, browser, build, gallery, and publication feedback.
+  These are development feedback only. Complete CI remains the delivery authority.
+- `pnpm screenshots:verify` performs both complete 56-PNG passes and exact SHA-256 comparison.
 
 Build before `public:check`. Never commit `.env`, `apps/ui/next-env.d.ts`, `.next`, browser
 reports, generated performance fixtures, database material, or backup material.
@@ -62,8 +67,10 @@ reports, generated performance fixtures, database material, or backup material.
 1. Fetch origin, update clean `main` without rewriting history, and resolve any active change.
 2. Create `change/<openspec-name>` and one matching OpenSpec change.
 3. Implement code, tests, docs, locales, screenshots, and checked tasks together.
-4. Run the full containerized validation set, PostgreSQL migration/restart tests, production image
-   inspection, and performance checks. Generate all 56 PNGs twice, compare SHA-256, and inspect each.
+4. Use changed validation while iterating, then run the full containerized validation set,
+   PostgreSQL migration/restart tests, all isolated browser shards, production image inspection, and
+   performance checks. Generate all 56 PNGs twice, compare SHA-256, and inspect each. Selective
+   validation never substitutes for this delivery gate.
 5. Sync delta specs, archive the change, validate strictly, and confirm no active changes.
 6. Commit, integrate fresh `origin/main`, merge into `main`, and push without force.
 7. Verify Release Please, GitHub Release, public multi-arch GHCR tags/attestations, clean matching

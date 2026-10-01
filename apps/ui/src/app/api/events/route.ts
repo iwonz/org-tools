@@ -20,9 +20,17 @@ export const GET = (request: Request) =>
           );
     let cursor = Number.isSafeInteger(initialCursor) && initialCursor >= 0 ? initialCursor : 0;
     let timer: ReturnType<typeof setInterval> | undefined;
+    let closed = false;
     const stream = new ReadableStream({
       async start(controller) {
+        const close = () => {
+          if (closed) return;
+          closed = true;
+          if (timer) clearInterval(timer);
+          controller.close();
+        };
         const send = async () => {
+          if (closed) return;
           try {
             const active = await getDatabasePool().query(
               `SELECT 1 FROM sessions
@@ -33,8 +41,7 @@ export const GET = (request: Request) =>
             );
             if (active.rowCount === 0) {
               controller.enqueue(encoder.encode('event: session\ndata: {"expired":true}\n\n'));
-              if (timer) clearInterval(timer);
-              controller.close();
+              close();
               return;
             }
             const result = await getDatabasePool().query<{
@@ -59,14 +66,14 @@ export const GET = (request: Request) =>
             }
             controller.enqueue(encoder.encode(": keep-alive\n\n"));
           } catch {
-            if (timer) clearInterval(timer);
-            controller.close();
+            close();
           }
         };
         await send();
-        timer = setInterval(() => void send(), 3_000);
+        if (!closed) timer = setInterval(() => void send(), 3_000);
       },
       cancel() {
+        closed = true;
         if (timer) clearInterval(timer);
       },
     });
