@@ -128,8 +128,11 @@ The replacement waits on resources and consecutive visual equality instead of el
 same isolated development runtime, the previous complete passes took 198.62 and 168.71 seconds.
 Repeated stabilized runs took 142.68/92.66 and 116.55/94.02 seconds. Total gallery generation fell
 from 367.33 seconds to 235.34–210.57 seconds, a 36–43% reduction, while all 56 hashes still matched
-and every capture gained an explicit stability assertion. Final CI wall time is recorded after the
-change runs on GitHub's clean runners.
+and every capture gained an explicit stability assertion. On GitHub's clean runners the stabilized
+two-pass gallery completed in 9 minutes 32 seconds, down from 11 minutes 22 seconds in the first
+optimized workflow, a further 16% reduction. The complete workflow finished in 9 minutes 37
+seconds, 64% below the original 26-minute-46-second baseline. Its slowest browser shard took 7
+minutes 50 seconds and all four shards passed.
 
 The conservative local changed-path run selected no skips because validation infrastructure and a
 server query changed. It completed all 396 unit tests, 47 browser tests, the 20,000/4,000 performance
