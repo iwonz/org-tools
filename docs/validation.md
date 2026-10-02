@@ -57,10 +57,12 @@ declared PNG files exist and both SHA-256 manifests match:
 ```
 
 Each capture waits for bundled fonts and embedded images, disables transient animation, and accepts
-the frame only after two consecutive bounded pixel samples agree. The existing antialiasing budget
-applies only inside explicit raster-noise regions. A frame that never stabilizes fails with both
-final samples in `test-results/screenshot-stability`; a cross-pass mismatch retains both complete
-frame versions in `test-results/screenshot-determinism` and CI uploads the diagnostic artifact.
+the frame only after two consecutive bounded pixel samples agree. Ordinary small-delta
+antialiasing and pixels inside explicit raster-noise regions use independent bounded allowances;
+larger deltas remain restricted to the explicit regions. A frame that never stabilizes fails with
+both final samples in `test-results/screenshot-stability`; a cross-pass mismatch retains both
+complete frame versions in `test-results/screenshot-determinism` and CI uploads the diagnostic
+artifact.
 
 ## Timing baseline
 
