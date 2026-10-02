@@ -105,3 +105,7 @@ take longer than ten seconds to reach PostgreSQL; only those bounded waits were 
 weakening their assertions. The Container baseline spent 13 minutes 41 seconds of its 14 minutes 24
 seconds in the multi-architecture build. The new workflows share bounded BuildKit inputs between the
 verified production-image job and Container publication while keeping separate cache write scopes.
+
+Stateful browser scenarios keep their normal product assertion deadline. When mandatory baseline
+restoration begins, it receives a separate bounded cleanup reserve so an otherwise useful failure
+cannot leave maintenance state behind and invalidate the remainder of its shard.
