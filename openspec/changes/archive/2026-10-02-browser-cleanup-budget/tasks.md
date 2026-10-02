@@ -6,4 +6,4 @@
 ## 2. Verification and delivery
 
 - [x] 2.1 Run fast validation and the isolated RBAC browser scenario through Compose.
-- [ ] 2.2 Sync and archive the change, merge it into main, and verify CI, Container, GHCR, and repository state.
+- [x] 2.2 Sync and archive the change, merge it into main, and verify CI, Container, GHCR, and repository state.
