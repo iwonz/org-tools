@@ -35,6 +35,38 @@ describe("screenshot pixel stability", () => {
     });
   });
 
+  test("keeps ordinary and scoped raster pixel budgets independent", () => {
+    const reference = pixels(new Array(12).fill(0), { width: 4 });
+    const candidate = pixels([1, 0, 0, 1, 0, 0, 80, 0, 0, 80, 0, 0], { width: 4 });
+    const region = [{ bottom: 1, left: 2, right: 4, top: 0 }];
+    expect(compareScreenshotPixels(reference, candidate, region, { pixelBudget: 2 })).toEqual({
+      changedPixels: 4,
+      matches: true,
+      reason: "match",
+    });
+  });
+
+  test("rejects either pixel category when its own budget is exceeded", () => {
+    const reference = pixels(new Array(15).fill(0), { width: 5 });
+    const region = [{ bottom: 1, left: 3, right: 5, top: 0 }];
+    expect(
+      compareScreenshotPixels(
+        reference,
+        pixels([1, 0, 0, 1, 0, 0, 1, 0, 0, 80, 0, 0, 80, 0, 0], { width: 5 }),
+        region,
+        { pixelBudget: 2 },
+      ),
+    ).toEqual({ changedPixels: 3, matches: false, reason: "pixel-budget" });
+    expect(
+      compareScreenshotPixels(
+        reference,
+        pixels([1, 0, 0, 0, 0, 0, 80, 0, 0, 80, 0, 0, 0, 0, 0], { width: 5 }),
+        [{ bottom: 1, left: 2, right: 5, top: 0 }],
+        { pixelBudget: 1 },
+      ),
+    ).toEqual({ changedPixels: 3, matches: false, reason: "pixel-budget" });
+  });
+
   test("rejects an exceeded pixel budget and incompatible images", () => {
     expect(
       compareScreenshotPixels(

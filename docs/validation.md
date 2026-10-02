@@ -139,3 +139,11 @@ server query changed. It completed all 396 unit tests, 47 browser tests, the 20,
 scenario, production build, publication scans, and gallery feedback in 746.56 seconds. The serial
 browser suite remained the local critical path at 601.88 seconds; the single gallery feedback pass
 took 100.58 seconds.
+
+A later `main` run retained the strict gate and exposed a second `demo-teams.png` mismatch: 242
+ordinary one-channel antialiasing pixels and 24 pixels in the explicitly declared boss-marker
+raster region. Each class stayed inside the existing 256-pixel allowance, but the old comparator
+incorrectly combined them into 266. The comparator now applies the unchanged allowance to each
+trust category independently. A large delta outside an explicit raster region, or either category
+exceeding 256 pixels, still fails; accepted pass two output retains pass one's exact bytes so the
+two SHA-256 manifests remain identical.
