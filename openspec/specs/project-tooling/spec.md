@@ -66,9 +66,9 @@ be narrow, documented beside its matcher, and include no organization data.
   fails the probe with its source and message
 
 #### Scenario: Complete production workflow audit
-- **WHEN** the maintained server and Pages browser catalogs exercise Import, Export, theme,
-  language, Teams, Employees, Editor, Calendar, Data Download, menus, dialogs, and
-  representative mutations
+- **WHEN** the maintained authenticated-server browser catalog exercises Setup, Login, Backup,
+  Restore, theme, language, Teams, Employees, Editor, Calendar, Data Download, menus, dialogs, and
+  representative authorized mutations
 - **THEN** every page finishes without an unexpected console error or warning, page error, failed
   application request, or failing same-origin resource response
 
@@ -77,23 +77,38 @@ be narrow, documented beside its matcher, and include no organization data.
 - **THEN** validation reports the runtime, scenario, diagnostic category, URL when available, and
   message without transmitting the diagnostic or synthetic state outside the local test process
 
+### Requirement: Current repository excludes GitHub Pages delivery
+The current repository SHALL contain no GitHub Pages application, static-export build path,
+deployment workflow, Pages action, Pages permission, Pages environment, or browser-only test
+configuration. The authenticated server image SHALL be the only production runtime. Historical
+OpenSpec archives and Git history MAY retain completed Pages records.
+
+#### Scenario: Validate current repository source
+- **WHEN** unit and publication checks inspect current workspace configuration and workflows
+- **THEN** no executable or configured GitHub Pages delivery surface is present
+
+#### Scenario: Complete server-only delivery
+- **WHEN** the server-only change reaches `main`
+- **THEN** the repository Pages site and `github-pages` environment are absent
+- **AND** CI, Release Please, and GHCR publication remain configured
+
 ### Requirement: Public automation uses supported action runtimes
-Repository CI and Pages publication workflows SHALL use maintained official action major versions
+Repository CI, Release, and Container workflows SHALL use maintained official action major versions
 whose declared inputs are supported and whose JavaScript runtimes are accepted by GitHub-hosted
 runners without deprecation annotations.
 
 #### Scenario: CI workflow starts
 - **WHEN** GitHub runs the repository validation workflow on a clean checkout
-- **THEN** checkout, package-manager setup, Node.js setup, and screenshot artifact upload execute on
-  their maintained action runtimes without deprecated-runtime annotations
+- **THEN** checkout, Buildx, screenshot artifact upload, and other workflow actions execute on their
+  maintained runtimes without deprecated-runtime annotations
 
-#### Scenario: Pages workflow uploads the complete artifact
-- **WHEN** GitHub runs the manually dispatched Pages workflow
-- **THEN** configuration, hidden-file artifact upload, and deployment use supported action majors
-  and accepted inputs without deprecated-runtime or unexpected-input annotations
+#### Scenario: Release and container workflows start
+- **WHEN** GitHub runs Release Please or publishes a main or SemVer container image
+- **THEN** release, metadata, build, registry, SBOM, and provenance actions use supported majors and
+  accepted inputs without deprecated-runtime or unexpected-input annotations
 
 ### Requirement: Documentation and gallery cover current product surfaces
-The repository SHALL document both local-only runtimes, six bundled locales, Arabic RTL, isolated
+The repository SHALL document the authenticated server runtime, six bundled locales, Arabic RTL, isolated
 Editor Views over global Employees, View-selectable Data
 Download, wrapped direct Tag footers, modal Language and Theme settings, selected-only Editor
 arrangement, direct State Export, source-driven Employee Import, colored Editor PNG Tags, privacy,
@@ -102,7 +117,7 @@ exactly 56 PNGs and the README SHALL retain exactly nine featured Import, Export
 Units, Employees, Editor, Calendar, and Download frames.
 
 #### Scenario: Complete gallery
-- **WHEN** screenshot generation runs against the production runtimes
+- **WHEN** screenshot generation runs against the authenticated production server
 - **THEN** it deterministically replaces exactly 56 declared PNGs covering only current product workflows
 
 #### Scenario: Locale gallery
@@ -148,7 +163,7 @@ Units, Employees, Editor, Calendar, and Download frames.
 ### Requirement: Localization validation covers every supported catalog
 Automated checks SHALL validate exact keys, placeholders, non-empty translations, allowed technical
 tokens, browser detection, writing direction, and representative visible and accessibility surfaces
-for `en`, `zh`, `ru`, `es`, `fr`, and `ar` in both production runtimes.
+for `en`, `zh`, `ru`, `es`, `fr`, and `ar` in the authenticated production server.
 
 #### Scenario: Validate six catalogs
 - **WHEN** repository and browser validation runs
@@ -189,7 +204,7 @@ Template token frame SHALL show the Format help affordance and localized guidanc
 - **THEN** affected PNGs show named, arbitrary, and transparent fills, compact presets, opacity, draft actions, flat rows, rename, membership, and identical hash manifests
 
 #### Scenario: Validate exact custom color behavior
-- **WHEN** browser validation enters HTML Keyword, HEX, RGB, and RGBA colors plus opacity in both runtimes
+- **WHEN** browser validation enters HTML Keyword, HEX, RGB, and RGBA colors plus opacity in the authenticated server runtime
 - **THEN** valid drafts preview locally and Apply resolves one canonical color, invalid or canceled drafts preserve the previous value, and the type Select remains inside its parent Popover
 
 #### Scenario: Validate shared picker consumers
@@ -221,8 +236,8 @@ rebuilds, UI-triggered organization serialization, or complete-list rendering.
 ### Requirement: Gallery and browser checks cover refined cross-View interactions
 The maintained 56-frame deterministic gallery SHALL cover the current scenario set while updating the
 Editor View, clipboard, and Unit footer frames. Browser validation SHALL exercise cross-View paste,
-all four edge-pan drag modes, nested and multi-selection deletion, and tooltip absence in both server
-and Pages runtimes without console, page, resource, or external-network diagnostics.
+all four edge-pan drag modes, nested and multi-selection deletion, and tooltip absence in the
+authenticated server runtime without console, page, resource, or external-network diagnostics.
 
 #### Scenario: Regenerate affected Editor frames
 - **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
@@ -234,7 +249,7 @@ and Pages runtimes without console, page, resource, or external-network diagnost
 
 ### Requirement: Validation and gallery cover Unit Markdown notes
 Repository validation SHALL cover strict Unit note state, View-local history and copying, safe
-Markdown, both runtime persistence paths, localization, accessibility, and browser diagnostics. The
+Markdown, server persistence, localization, accessibility, and browser diagnostics. The
 deterministic gallery SHALL contain exactly 56 PNGs including Unit note Preview and Editor scenarios
 while the README retains its ten featured frames.
 
@@ -266,7 +281,7 @@ featured frames.
 ### Requirement: Validation covers Tag-filter bulk selection
 Repository validation SHALL cover complete Tag selection, complete deselection, disabled states,
 Without tags independence, shared filter consumers, six locales, RTL, large virtualized catalogs,
-both runtimes, and browser diagnostics. The maintained deterministic gallery SHALL remain exactly 56
+the authenticated server runtime, and browser diagnostics. The maintained deterministic gallery SHALL remain exactly 56
 PNGs and update its existing Employee-filter frame without adding a scenario.
 
 #### Scenario: Validate shared filter consumers
@@ -280,12 +295,12 @@ PNGs and update its existing Employee-filter frame without adding a scenario.
 ### Requirement: Validation covers bulk distribution and Tag discovery
 Repository validation SHALL cover single, all, and mixed distribution selections, one bounded UI
 update, multi-placement row actions, read-only map navigation, searchable locale-aware Tag options,
-search-scoped bulk selection, inline catalog counts, both runtimes, six locales, RTL, browser
+search-scoped bulk selection, inline catalog counts, the authenticated server runtime, six locales, RTL, browser
 diagnostics, and maintained large-model limits. The deterministic gallery SHALL contain exactly 56
 PNGs while README retains ten featured frames.
 
-#### Scenario: Validate both runtimes
-- **WHEN** browser coverage exercises the workflows in server and Pages applications
+#### Scenario: Validate the production runtime
+- **WHEN** browser coverage exercises the workflows in the authenticated server application
 - **THEN** behavior matches without console, page, resource, or unexpected network diagnostics
 
 #### Scenario: Validate the large model
@@ -297,9 +312,9 @@ PNGs while README retains ten featured frames.
 - **THEN** all 56 hashes match and supporting frames show bulk distribution plus Employee placement navigation
 
 ### Requirement: Validation covers catalog ordering and Unit grouping
-Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtered insertion and cancellation, scrollable nested color presets, conditional dated counts, strict grouping state, earliest-Tag grouping, boss placement, View-local history and copying, manual and Live membership, ordered output, both runtime persistence paths, accessibility, localization, and bounded derivation. The 56-frame deterministic gallery SHALL include View settings with default-enabled grouping and Tag cloud switches plus distribution colors and catalog rows with leading reorder handles. README SHALL retain ten featured frames.
+Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtered insertion and cancellation, scrollable nested color presets, conditional dated counts, strict grouping state, earliest-Tag grouping, boss placement, View-local history and copying, manual and Live membership, ordered output, server persistence, accessibility, localization, and bounded derivation. The 56-frame deterministic gallery SHALL include View settings with default-enabled grouping and Tag cloud switches plus distribution colors and catalog rows with leading reorder handles. README SHALL retain ten featured frames.
 
-#### Scenario: Validate ordered presentation in both runtimes
+#### Scenario: Validate ordered presentation in the production runtime
 - **WHEN** users reorder Tags and toggle View grouping in browser validation
 - **THEN** the catalog and Employee Tag surfaces retain the global sequence, each Employee appears once in the expected canvas and PNG sequence, and SQLite reload or live-tab exchange preserves the result without unexpected diagnostics
 
@@ -312,10 +327,10 @@ Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtere
 - **THEN** all 56 PNG hashes match and the new settings frame shows the View display switches and distribution color fields
 
 ### Requirement: Validation covers reference-aware placements and reliable Editor controls
-Browser and unit coverage SHALL exercise ordinary/reference placement eligibility, live mode changes, full-row pointer sorting, gaps, auto-scroll, cancellation and peer replacement, independent layout buttons, and exact unique subtree counts in both runtimes. The maintained 56-frame gallery SHALL remain deterministic and be visually reviewed. The 20,000 Employee and 4,000 Unit bounds SHALL remain covered without organization writes during drag preview or eager per-row membership scans.
+Browser and unit coverage SHALL exercise ordinary/reference placement eligibility, live mode changes, full-row pointer sorting, gaps, auto-scroll, cancellation and peer replacement, independent layout buttons, and exact unique subtree counts in the authenticated server runtime. The maintained 56-frame gallery SHALL remain deterministic and be visually reviewed. The 20,000 Employee and 4,000 Unit bounds SHALL remain covered without organization writes during drag preview or eager per-row membership scans.
 
 #### Scenario: Validate the refined interactions
-- **WHEN** the complete repository checks and both production browser suites run
+- **WHEN** the complete repository checks and the production browser suite runs
 - **THEN** placement maps, drag completion, direction history, and hierarchy counts match the requirements without unexpected diagnostics
 
 #### Scenario: Regenerate the gallery
@@ -348,7 +363,7 @@ content.
 
 ### Requirement: Canvas interaction retains large-Editor bounds
 Automated checks SHALL cover canvas-element spatial queries, dependency resolution, frame-coalesced
-previews, image validation, both production runtimes, and full/scoped PNG output while preserving the
+previews, image validation, the authenticated production runtime, and full/scoped PNG output while preserving the
 20,000-Employee and 4,000-Unit target.
 
 #### Scenario: Interact with a large annotated Editor
@@ -357,7 +372,7 @@ previews, image validation, both production runtimes, and full/scoped PNG output
 
 ### Requirement: Browser and gallery checks cover organization color reuse and refined tool glyphs
 
-Automated Server and Pages checks SHALL verify Used colors across every remaining shared picker consumer, including inactive-View sources, alpha variants, atomic Apply/Cancel behavior, keyboard operation, narrow width, and RTL. The maintained deterministic gallery SHALL show the Used colors section and refined Arrow and Image icons without increasing its 56 scenarios.
+Automated server checks SHALL verify Used colors across every remaining shared picker consumer, including inactive-View sources, alpha variants, atomic Apply/Cancel behavior, keyboard operation, narrow width, and RTL. The maintained deterministic gallery SHALL show the Used colors section and refined Arrow and Image icons without increasing its 56 scenarios.
 
 #### Scenario: Validate every shared picker consumer
 - **WHEN** browser validation opens Tag, distribution, Text, Sticker, and Arrow color controls
@@ -373,10 +388,10 @@ Automated Server and Pages checks SHALL verify Used colors across every remainin
 
 ### Requirement: Validation covers Editor Unit row spacing
 
-Unit and browser validation SHALL cover first, middle, and last Employee/Staffing Slot rows, variable Tag heights, virtualization, collapse, attachments, DOM/PNG agreement, and both production runtimes. The deterministic gallery SHALL retain its existing 56 scenarios while showing the current row rhythm.
+Unit and browser validation SHALL cover first, middle, and last Employee/Staffing Slot rows, variable Tag heights, virtualization, collapse, attachments, DOM/PNG agreement, and the authenticated production runtime. The deterministic gallery SHALL retain its existing 56 scenarios while showing the current row rhythm.
 
-#### Scenario: Validate both runtimes
-- **WHEN** Server and Pages browser checks inspect a mixed expanded Unit
+#### Scenario: Validate the production runtime
+- **WHEN** authenticated server browser checks inspect a mixed expanded Unit
 - **THEN** computed row bounds contain only interior four-pixel intervals and interaction geometry remains aligned
 
 #### Scenario: Regenerate Editor evidence
@@ -388,7 +403,7 @@ Automated checks SHALL cover exact state parsing, definition and value validatio
 
 #### Scenario: Run the publication checks
 - **WHEN** the full repository validation lifecycle runs
-- **THEN** advanced-field workflows and single-paste behavior pass in both server and browser-only runtimes without console, resource, localization, or privacy failures
+- **THEN** advanced-field workflows and single-paste behavior pass in the authenticated server runtime without console, resource, localization, or privacy failures
 
 ### Requirement: Screenshot gallery covers Employee display formats
 The deterministic gallery SHALL remain exactly 56 PNG files. The primary Employee-model frame SHALL
@@ -419,12 +434,12 @@ Calendar, and Unit Tag footers. Two unchanged gallery runs MUST produce identica
 ### Requirement: Simplified export controls retain deterministic coverage
 Browser smoke tests and the maintained 56-frame gallery SHALL cover the recognizable Arrow icon,
 all-assignment Template output, both transient line filters, fixed-density PNG output, simplified
-image settings, and the shared solid-background color dropdown in both production runtimes. Gallery
+image settings, and the shared solid-background color dropdown in the authenticated production runtime. Gallery
 generation SHALL remain deterministic and SHALL add or remove no frames.
 
 #### Scenario: Validate simplified exports
 - **WHEN** the full repository validation workflow runs
-- **THEN** both runtimes exercise the updated Template and PNG surfaces without obsolete row-mode, density, title, or output-font controls
+- **THEN** the authenticated server runtime exercises the updated Template and PNG surfaces without obsolete row-mode, density, title, or output-font controls
 
 #### Scenario: Preserve the gallery contract
 - **WHEN** screenshots are generated twice from the same commit
@@ -432,10 +447,10 @@ generation SHALL remain deterministic and SHALL add or remove no frames.
 
 ### Requirement: Staffing Slot delivery has deterministic Editor evidence
 
-Browser validation SHALL cover named and unnamed Staffing Slots in manual and Live Units, create/edit/delete, one-slot and selected-slot movement, Tags, strict State, selection, anchors, Unit/View copy, Slot-first ordering, zero-filtered summaries, Rose surfaces, collapse, virtualization, Undo/Redo, and DOM/PNG parity in both production runtimes. The maintained 56-frame gallery SHALL show the revised Editor without adding a scenario and SHALL remain deterministic across two runs.
+Browser validation SHALL cover named and unnamed Staffing Slots in manual and Live Units, create/edit/delete, one-slot and selected-slot movement, Tags, strict State, selection, anchors, Unit/View copy, Slot-first ordering, zero-filtered summaries, Rose surfaces, collapse, virtualization, Undo/Redo, and DOM/PNG parity in the authenticated production runtime. The maintained 56-frame gallery SHALL show the revised Editor without adding a scenario and SHALL remain deterministic across two runs.
 
 #### Scenario: Validate Staffing Slot workflows
-- **WHEN** Server and Pages browser checks exercise mixed Unit hierarchies with zero and nonzero summary values
+- **WHEN** authenticated server browser checks exercise mixed Unit hierarchies with zero and nonzero summary values
 - **THEN** Slot lifecycle, ordering, surface, summary visibility, and geometry pass while Units and Employee-oriented surfaces remain unchanged
 
 #### Scenario: Regenerate maintained screenshots
@@ -452,10 +467,10 @@ A release replacing the exact open-position State shape MUST record whether the 
 
 ### Requirement: Validation covers empty Unit action containment
 
-Repository validation SHALL cover expanded empty manual and Live Units, collapsed geometry, zoomed DOM containment, action accessibility, hierarchy spacing, anchors, and DOM/PNG agreement in both production runtimes. The deterministic gallery SHALL remain exactly 56 PNG files.
+Repository validation SHALL cover expanded empty manual and Live Units, collapsed geometry, zoomed DOM containment, action accessibility, hierarchy spacing, anchors, and DOM/PNG agreement in the authenticated production runtime. The deterministic gallery SHALL remain exactly 56 PNG files.
 
-#### Scenario: Validate both runtimes
-- **WHEN** Server and Pages browser checks render empty manual and Live Units at ordinary and enlarged zoom
+#### Scenario: Validate the production runtime
+- **WHEN** authenticated server browser checks render empty manual and Live Units at ordinary and enlarged zoom
 - **THEN** every empty-state child remains within its Unit border without clipping external connection or child-Unit controls
 
 #### Scenario: Regenerate maintained screenshots
@@ -464,10 +479,10 @@ Repository validation SHALL cover expanded empty manual and Live Units, collapse
 
 ### Requirement: Validation covers compact Unit content spacing
 
-Repository validation SHALL cover one-line and two-line Unit summaries, Employees, Staffing Slots, Manual and Live empty states, collapsed geometry, zoomed DOM spacing, hierarchy placement, anchors, and DOM/PNG agreement in both production runtimes. The deterministic gallery SHALL remain exactly 56 PNG files.
+Repository validation SHALL cover one-line and two-line Unit summaries, Employees, Staffing Slots, Manual and Live empty states, collapsed geometry, zoomed DOM spacing, hierarchy placement, anchors, and DOM/PNG agreement in the authenticated production runtime. The deterministic gallery SHALL remain exactly 56 PNG files.
 
-#### Scenario: Validate both runtimes
-- **WHEN** Server and Pages browser checks render Units with one or two summary lines at ordinary and enlarged zoom
+#### Scenario: Validate the production runtime
+- **WHEN** authenticated server browser checks render Units with one or two summary lines at ordinary and enlarged zoom
 - **THEN** the last summary line and following content use the same eight-pixel interval while row geometry, empty-state containment, and external controls remain correct
 
 #### Scenario: Regenerate maintained screenshots
@@ -484,7 +499,7 @@ host with Docker and Git only.
 - **WHEN** a contributor initializes `.env` and runs the documented Compose validation entry point
 - **THEN** the pinned toolbox executes the complete repository checks without host Node or pnpm
 
-### Requirement: Server and image validation replace Pages validation
+### Requirement: Server and image validation cover delivery
 CI SHALL start ephemeral PostgreSQL, run checked migrations, exercise Setup/Login and representative
 roles, build the hardened server image, run both unit and browser suites, generate exactly 56 server
 PNGs twice, compare hashes, and scan tracked files, build context, image layers, and runtime resources.

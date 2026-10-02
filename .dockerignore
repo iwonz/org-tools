@@ -6,13 +6,11 @@
 .org-tools
 apps/ui/.next
 apps/ui/.next-*
-apps/ui/out
 **/node_modules
 **/dist
 **/coverage
 **/playwright-report
 **/test-results
-pages-out
 screenshots/gallery
 *.sqlite
 *.sqlite3

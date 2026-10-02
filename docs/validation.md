@@ -49,6 +49,8 @@ The authoritative browser command contains `smoke`, localization, authorization,
 specs. Four CI shards divide all Playwright tests exactly once. Each shard owns a separate
 PostgreSQL directory, backup directory, Compose project, application, sessions, browser, and report
 directory; tests inside a shard use one worker. Ordinary local browser execution remains serial.
+There is one browser target: the authenticated production server. Static-export and hosted-site
+runtimes are outside the supported build and validation contract.
 
 Use this structural proof after changing browser discovery or sharding:
 

@@ -9,7 +9,6 @@ node_modules/
 apps/ui/.next/
 apps/ui/.next-*/
 apps/ui/.next-dev-check-*/
-apps/ui/out/
 coverage/
 playwright-report/
 playwright-report-shard-*/

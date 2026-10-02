@@ -1,13 +1,13 @@
 # single-state-runtime Specification
 
 ## Purpose
-Define the strict singleton state contract, automatic SQLite persistence, private state API, and live-tab convergence.
+Define the strict authenticated server state contract, PostgreSQL persistence, and authorized client projection.
 ## Requirements
 ### Requirement: One authenticated server owns current organization data
-Org Tools SHALL have one self-hosted server runtime backed by PostgreSQL. Organization data SHALL be
-mutated only through authenticated commands, durable UI SHALL be account-specific, and clients SHALL
-receive only authorized projections. No browser snapshot, Pages runtime, SQLite runtime,
-`BroadcastChannel`, or whole-state API SHALL remain.
+Org Tools SHALL have exactly one self-hosted application runtime backed by PostgreSQL. Organization
+data SHALL be mutated only through authenticated commands, durable UI SHALL be account-specific,
+and clients SHALL receive only authorized projections. Browser snapshots, alternate static
+runtimes, SQLite persistence, `BroadcastChannel`, and whole-state APIs MUST NOT exist.
 
 #### Scenario: Open an authenticated tab
 - **WHEN** an account with a valid session opens the application

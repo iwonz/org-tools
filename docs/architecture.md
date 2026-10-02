@@ -100,6 +100,10 @@ GitHub suppresses workflow events created by the repository token, a successful 
 release explicitly dispatches the Container workflow at the returned SemVer tag. The dispatch uses
 workflow-scoped `actions: write`; repository default token permissions remain read-only.
 
+The authenticated Next.js server image is the only production runtime. The repository has no
+static-export application or hosted-site deployment; browser validation always exercises the
+PostgreSQL-backed server through its same-origin interface.
+
 ## Validation architecture
 
 Local affected validation is an explanatory optimization over repository paths. It always runs the

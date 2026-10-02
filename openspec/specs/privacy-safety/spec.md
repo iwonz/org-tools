@@ -31,26 +31,30 @@ same-origin runtime. It SHALL NOT add remote requests, telemetry, or browser sna
 - **THEN** the clear value and digest remain within the current local runtime
 
 ### Requirement: Unit Markdown cannot create background disclosure
-Unit note rendering SHALL remain entirely local. Raw HTML MUST NOT execute, image syntax MUST NOT
-create a resource request, and no renderer plugin may fetch, embed, log, or transmit note content.
-Allowed links SHALL require explicit activation and SHALL suppress opener and referrer information.
+Unit note rendering SHALL remain inside the authenticated self-hosted application. Raw HTML MUST NOT
+execute, image syntax MUST NOT create a resource request, and no renderer plugin may fetch, embed,
+log, or transmit note content. Allowed links SHALL require explicit activation and SHALL suppress
+opener and referrer information.
 
 #### Scenario: Preview remote-looking content
 - **WHEN** a note includes remote image, iframe, script, or HTML syntax
-- **THEN** the application makes no request, executes no embedded content, and keeps the source local
+- **THEN** the application makes no request, executes no embedded content, and keeps the source
+  inside the authenticated application
 
-#### Scenario: Render a note in Pages
-- **WHEN** Pages previews a note
-- **THEN** no server module, state API, remote asset, telemetry, or browser snapshot persistence is used
+#### Scenario: Render an authorized note
+- **WHEN** the server projection includes a Unit note and the browser renders it
+- **THEN** no remote asset, telemetry, browser snapshot persistence, or background third-party
+  request is created
 
 ### Requirement: Distribution analysis remains local
-Distribution indexes, status, selection, and paths SHALL be derived only from the active in-memory
-View and MUST NOT create network requests, telemetry, remote logging, browser snapshot storage, or
-new report fields.
+Distribution indexes, status, selection, and paths SHALL be derived only from the authorized active
+View in browser memory and MUST NOT create third-party requests, telemetry, remote logging, browser
+snapshot storage, or new report fields.
 
-#### Scenario: Inspect distribution in Pages
-- **WHEN** Pages highlights and connects an Employee's placements
-- **THEN** the workflow completes in live-tab memory without an API or external request
+#### Scenario: Inspect distribution
+- **WHEN** the Editor highlights and connects an Employee's authorized placements
+- **THEN** the workflow completes from the current projection without an external request or
+  organization mutation
 
 ### Requirement: Editor clipboard ownership markers disclose no organization data
 Editor structural Copy SHALL keep complete clipboard content only in current-tab memory. The system

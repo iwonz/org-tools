@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!apps/ui/.next", "!apps/ui/out", "!node_modules", "!docs/screenshots"]
+    "includes": ["**", "!apps/ui/.next", "!node_modules", "!docs/screenshots"]
   },
   "formatter": {
     "enabled": true,

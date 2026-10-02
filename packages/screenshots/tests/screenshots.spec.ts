@@ -506,6 +506,12 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
       "# Product responsibilities\n\n- Own the product roadmap\n- Coordinate discovery and delivery\n\n| Decision | Owner |\n| --- | --- |\n| Quarterly priorities | Product lead |",
     );
   await noteDialog.getByRole("tab", { name: "Preview", exact: true }).click();
+  await expect(noteDialog.locator('[data-demo-id="unit-note-preview"]')).toContainText(
+    "Product responsibilities",
+  );
+  await expect(noteDialog.locator('[data-demo-id="unit-note-preview"]')).toContainText(
+    "Quarterly priorities",
+  );
   await capture(page, "editor-unit-note-preview");
   await noteDialog.getByRole("tab", { name: "Editor", exact: true }).click();
   await capture(page, "editor-unit-note-editor");
