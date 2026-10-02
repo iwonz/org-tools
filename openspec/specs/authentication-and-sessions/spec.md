@@ -1,7 +1,8 @@
 # authentication-and-sessions Specification
 
 ## Purpose
-TBD - created by archiving change enterprise-auth-access-control. Update Purpose after archive.
+Define first-account setup, Employee-linked account identity, password policy, bounded sessions,
+request-forgery protection, rate limiting, and local administrator recovery.
 ## Requirements
 ### Requirement: Initial setup creates the first Super Administrator once
 An installation with no accounts SHALL expose only the setup workflow. Setup SHALL require the
@@ -83,4 +84,3 @@ event. It SHALL NOT print stored hashes, session values, or database credentials
 #### Scenario: Recover a Super Administrator
 - **WHEN** an operator runs the recovery command in a TTY and identifies an active Super Administrator
 - **THEN** a new temporary password is shown once and all prior sessions become unusable
-

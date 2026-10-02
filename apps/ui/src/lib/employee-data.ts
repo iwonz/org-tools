@@ -5,24 +5,9 @@ import { parseEmployeeBirthday } from "@/lib/birthday";
 import { createEmployeeUuid } from "@/lib/employee-id";
 import { normalizeEmployeeTags } from "@/lib/employee-tags";
 
+export { createUuid, isUuid } from "@/lib/uuid";
+
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export const isUuid = (value: unknown): value is string =>
-  typeof value === "string" && UUID_PATTERN.test(value);
-
-export const createUuid = (): string => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
-    const random = Math.floor(Math.random() * 16);
-    const value = character === "x" ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
-};
 
 export const createOrganizationEmployeeId = (): EmployeeId => createEmployeeUuid();
 

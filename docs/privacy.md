@@ -22,6 +22,11 @@ Server-side Template evaluation can use hidden inputs without returning them.
 Audit records actor, action, result, targets, time, and correlation ID. Passwords, setup/session/
 CSRF tokens, backup passphrases, and hidden values never enter audit or application logs.
 
+Browser responses deny framing, suppress referrers and MIME sniffing, restrict browser capabilities,
+isolate opener/resource contexts, and allow scripts, styles, fonts, images, connections, and workers
+only from the application plus the bounded `data:`/`blob:` uses required for embedded media and
+explicit local file output.
+
 ## Local files
 
 Employee avatars remain bounded embedded PNG, JPEG, or WebP data URLs. Markdown does not execute
@@ -30,6 +35,9 @@ HTML or load images. Safe explicit links require user action and use referrer pr
 PostgreSQL data and encrypted recovery backups live at absolute external paths configured by
 `ORG_TOOLS_POSTGRES_DATA_PATH` and `ORG_TOOLS_BACKUP_PATH`. `.env`, database data, dumps, and backups
 are ignored and rejected by publication checks. CI uses disposable paths and never uploads them.
+Local changed-path validation also uses a dedicated Compose project with temporary PostgreSQL and
+Backup bind directories. Browser fixtures and authentication tests never connect to the configured
+development database, and cleanup removes the temporary data after the run.
 
 ## Outputs and backups
 
@@ -50,7 +58,8 @@ copy before its atomic replacement and then revokes all sessions.
 
 ## Publication
 
-The Docker build context, image filesystem, and history are scanned for `.env`, credentials,
-database files, dumps, backups, and real organization data. Public fixtures use fictional names,
-`example.test`, reserved phone numbers, and embedded assets. GHCR images contain only production
-code and local assets.
+The tracked worktree, Docker exclusion contract, production build, image filesystem, and history are
+scanned for `.env`, credentials, database files, dumps, backups, generated reports, and real
+organization data. The locked dependency graph is audited during validation, and dead files or
+dependencies fail the hygiene gate. Public fixtures use fictional names, `example.test`, reserved
+phone numbers, and embedded assets. GHCR images contain only production code and local assets.

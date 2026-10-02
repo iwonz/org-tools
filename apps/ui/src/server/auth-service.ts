@@ -130,9 +130,13 @@ const ACCOUNT_SELECT = `
   SELECT a.id::text, a.email, a.employee_id::text, a.role_id::text, a.password_hash,
          a.must_change_password, a.status, a.created_at, a.updated_at,
          r.name AS role_name, r.system_key,
-         COALESCE((SELECT jsonb_agg(jsonb_build_object('permission', permission, 'scope', scope))
+         COALESCE((SELECT jsonb_agg(
+                            jsonb_build_object('permission', permission, 'scope', scope)
+                            ORDER BY permission, scope)
                    FROM role_grants WHERE role_id = r.id), '[]'::jsonb) AS role_grants,
-         COALESCE((SELECT jsonb_agg(jsonb_build_object('permission', permission, 'scope', scope))
+         COALESCE((SELECT jsonb_agg(
+                            jsonb_build_object('permission', permission, 'scope', scope)
+                            ORDER BY permission, scope)
                    FROM account_grants WHERE account_id = a.id), '[]'::jsonb) AS direct_grants
   FROM accounts a JOIN roles r ON r.id = a.role_id`;
 

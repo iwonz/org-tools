@@ -29,6 +29,8 @@ Run through the toolbox:
 ./bin/org-tools run pnpm lint
 ./bin/org-tools run pnpm typecheck
 ./bin/org-tools run pnpm test:unit
+./bin/org-tools run pnpm hygiene:dead-code
+./bin/org-tools run pnpm security:audit
 ./bin/org-tools-dev-check
 ./bin/org-tools run pnpm build
 ./bin/org-tools run pnpm test:browser

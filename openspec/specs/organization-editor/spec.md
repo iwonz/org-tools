@@ -763,7 +763,7 @@ SHALL request weight 700, including local synthesis for the regular-only Bebas N
 - **THEN** System, Georgia, Bebas Neue, Lobster, and Montserrat are offered and the chosen local family drives draft, resting DOM, measurement, and PNG
 
 #### Scenario: Load preceding canvas text state
-- **WHEN** an immediately preceding exact plain Text or no-run Sticker shape is loaded from SQLite or explicit State import
+- **WHEN** an explicitly supported preceding plain Text or no-run Sticker shape exists in an authenticated organization document
 - **THEN** it loads without a corruption error and normalizes to the current Text defaults or an empty Sticker run list without adding Undo history
 
 #### Scenario: Reject invalid rich text
@@ -1404,3 +1404,17 @@ different account projections or revisions.
 #### Scenario: Preserve transient distribution presentation
 - **WHEN** the acting administrator exports with distribution presentation enabled
 - **THEN** distribution inputs are intersected with Units and Employees present in the selected projection before geometry or drawing
+
+### Requirement: Current Editor documents use the authenticated server boundary
+The Editor SHALL load strict organization and View documents only from the authenticated PostgreSQL
+runtime. Parsing MUST NOT expose SQLite, legacy State Import, Open Position, Analytics, or
+browser-only source readers. Explicitly specified value-level canvas normalization remains part of
+the current parser contract.
+
+#### Scenario: Load an authorized current View
+- **WHEN** the server returns a valid current authorized projection
+- **THEN** Editor geometry, history, DOM, and PNG use the authorized document and its specified canonical normalization
+
+#### Scenario: Submit a removed top-level Editor shape
+- **WHEN** a mutation contains a removed resource field or misses a required current field
+- **THEN** strict validation rejects the complete candidate atomically

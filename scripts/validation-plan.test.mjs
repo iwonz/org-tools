@@ -31,6 +31,8 @@ describe("validation impact planner", () => {
     const plan = createValidationPlan(["apps/ui/src/lib/tag-order.test.ts"]);
     expect(plan.browserSuites).toEqual([]);
     expect(plan.fastGates).toContain("unit");
+    expect(plan.fastGates).toContain("dead-source-and-dependencies");
+    expect(plan.fastGates).toContain("dependency-security-audit");
     expect(plan.runtime).toBe(false);
   });
 

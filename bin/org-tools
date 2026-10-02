@@ -2,7 +2,8 @@
 set -eu
 
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-environment_file="$repository_root/.env"
+environment_file=${ORG_TOOLS_ENV_FILE:-"$repository_root/.env"}
+compose_project_name=${ORG_TOOLS_COMPOSE_PROJECT_NAME:-org-tools}
 
 random_secret() {
   od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
@@ -43,6 +44,8 @@ invalid_environment() {
 }
 
 load_and_validate_environment() {
+  environment_mode=$(stat -c '%a' "$environment_file" 2>/dev/null || stat -f '%Lp' "$environment_file")
+  [ "$environment_mode" = "600" ] || invalid_environment ".env permissions must be 0600."
   seen=""
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in ""|'#'*) continue ;; esac
@@ -75,11 +78,21 @@ load_and_validate_environment() {
   done
   for secret_value in "$ORG_TOOLS_SETUP_TOKEN" "$POSTGRES_PASSWORD" "$ORG_TOOLS_DB_PASSWORD"; do
     [ "${#secret_value}" -ge 32 ] || invalid_environment "secrets must contain at least 32 characters."
-    case "$secret_value" in *GENERATE*|*CHANGE*|*REPLACE*|*example*|*placeholder*) invalid_environment "replace placeholder secrets with generated values." ;; esac
+    if printf '%s' "$secret_value" | LC_ALL=C grep -Eiq '(change|replace|example|placeholder|your[-_])'; then
+      invalid_environment "replace placeholder secrets with generated values."
+    fi
   done
-  case "$ORG_TOOLS_PORT:$ORG_TOOLS_DB_PORT" in *[!0-9:]*|:*|*:) invalid_environment "ports must be numeric." ;; esac
+  for port_value in "$ORG_TOOLS_PORT" "$ORG_TOOLS_DB_PORT"; do
+    case "$port_value" in ''|*[!0-9]*) invalid_environment "ports must be numeric." ;; esac
+    [ "${#port_value}" -le 5 ] && [ "$port_value" -ge 1 ] && [ "$port_value" -le 65535 ] || invalid_environment "ports must be between 1 and 65535."
+  done
+  for database_name_value in "$POSTGRES_DB" "$POSTGRES_USER" "$ORG_TOOLS_DB_USER"; do
+    printf '%s' "$database_name_value" | LC_ALL=C grep -Eq '^[a-z_][a-z0-9_]{0,62}$' || invalid_environment "database names and users must use lowercase PostgreSQL identifiers."
+  done
   case "$ORG_TOOLS_DB_SSLMODE" in disable|require|verify-ca|verify-full) ;; *) invalid_environment "unsupported ORG_TOOLS_DB_SSLMODE." ;; esac
-  case "$ORG_TOOLS_PUBLIC_ORIGIN" in https://*|http://localhost:*|http://127.0.0.1:*) ;; *) invalid_environment "public origin must use HTTPS or localhost HTTP." ;; esac
+  origin_authority=${ORG_TOOLS_PUBLIC_ORIGIN#*://}
+  case "$origin_authority" in ''|*/*|*'?'*|*'#'*|*@*|*[![:print:]]*) invalid_environment "public origin must be an exact origin without credentials or a path." ;; esac
+  case "$ORG_TOOLS_PUBLIC_ORIGIN" in https://*) ;; http://localhost|http://localhost:*|http://127.0.0.1|http://127.0.0.1:*|http://\[::1\]|http://\[::1\]:*) ;; *) invalid_environment "public origin must use HTTPS or localhost HTTP." ;; esac
 
   for storage_path in "$ORG_TOOLS_POSTGRES_DATA_PATH" "$ORG_TOOLS_BACKUP_PATH"; do
     case "$storage_path" in /*) ;; *) invalid_environment "storage paths must be absolute." ;; esac
@@ -99,7 +112,63 @@ require_environment() {
 
 compose() {
   require_environment
-  docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" "$@"
+  docker compose --project-name "$compose_project_name" --env-file "$environment_file" -f "$repository_root/compose.yaml" "$@"
+}
+
+compose_dev() {
+  require_environment
+  docker compose --project-name "$compose_project_name" --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" "$@"
+}
+
+create_validation_environment() {
+  require_environment
+  validation_root=$(mktemp -d "${TMPDIR:-/tmp}/org-tools-validation.XXXXXX")
+  validation_port=${ORG_TOOLS_VALIDATION_PORT:-3101}
+  case "$validation_port" in ''|*[!0-9]*) invalid_environment "ORG_TOOLS_VALIDATION_PORT must be numeric." ;; esac
+  [ "${#validation_port}" -le 5 ] && [ "$validation_port" -ge 1 ] && [ "$validation_port" -le 65535 ] || invalid_environment "ORG_TOOLS_VALIDATION_PORT must be between 1 and 65535."
+  mkdir -p "$validation_root/postgres" "$validation_root/backups"
+  validation_environment_file="$validation_root/.env"
+  awk \
+    -v backup_path="$validation_root/backups" \
+    -v database_path="$validation_root/postgres" \
+    -v origin="http://localhost:3000" \
+    -v port="$validation_port" \
+    'BEGIN { FS = OFS = "=" }
+     $1 == "ORG_TOOLS_PORT" { $2 = port }
+     $1 == "ORG_TOOLS_PUBLIC_ORIGIN" { $2 = origin }
+     $1 == "ORG_TOOLS_POSTGRES_DATA_PATH" { $2 = database_path }
+     $1 == "ORG_TOOLS_BACKUP_PATH" { $2 = backup_path }
+     { print }' "$environment_file" >"$validation_environment_file"
+  chmod 600 "$validation_environment_file"
+  environment_file=$validation_environment_file
+  compose_project_name=org-tools-validation
+  ORG_TOOLS_ENV_FILE=$environment_file
+  ORG_TOOLS_COMPOSE_PROJECT_NAME=$compose_project_name
+  export ORG_TOOLS_ENV_FILE ORG_TOOLS_COMPOSE_PROJECT_NAME
+  load_and_validate_environment
+}
+
+install_validation_cleanup() {
+  validation_cleanup_complete=0
+  cleanup_validation() {
+    [ "$validation_cleanup_complete" -eq 0 ] || return 0
+    validation_cleanup_complete=1
+    trap - EXIT INT TERM
+    compose_dev down --remove-orphans >/dev/null 2>&1 || true
+    remaining_validation_containers=$(docker ps -aq --filter "label=com.docker.compose.project=$compose_project_name")
+    if [ -n "$remaining_validation_containers" ]; then
+      docker rm -f $remaining_validation_containers >/dev/null 2>&1 || true
+    fi
+    compose_dev down --remove-orphans >/dev/null 2>&1 || true
+    rm -rf "$validation_root"
+  }
+  trap cleanup_validation EXIT
+  trap 'cleanup_validation; exit 130' INT TERM
+}
+
+start_validation_runtime() {
+  compose_dev down >/dev/null 2>&1 || true
+  ORG_TOOLS_KEEP_DEV_STACK=1 "$repository_root/bin/org-tools-dev-check"
 }
 
 case "${1:-}" in
@@ -116,8 +185,7 @@ case "${1:-}" in
     ;;
   down)
     shift
-    require_environment
-    docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" down "$@"
+    compose_dev down "$@"
     ;;
   logs)
     shift
@@ -125,45 +193,42 @@ case "${1:-}" in
     ;;
   dev)
     shift
-    require_environment
-    docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" up --build "$@"
+    compose_dev up --build "$@"
     ;;
   run)
     shift
-    require_environment
-    docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm toolbox "$@"
+    compose_dev run --rm toolbox "$@"
     ;;
   validate)
     shift
     validation_stage=${1:-}
     if [ -z "$validation_stage" ]; then
-      echo "Usage: ./bin/org-tools validate {fast|changed} [validation arguments]" >&2
+      echo "Usage: ./bin/org-tools validate {fast|changed|gallery} [validation arguments]" >&2
       exit 2
     fi
     shift
     require_environment
     case "$validation_stage" in
       fast)
-        docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm toolbox pnpm validate:fast "$@"
+        compose_dev run --rm --no-deps toolbox pnpm validate:fast "$@"
         ;;
       changed)
-        validation_started_app=0
-        cleanup_validation() {
-          if [ "$validation_started_app" -eq 1 ]; then
-            docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" down >/dev/null 2>&1 || true
-          fi
-        }
-        trap cleanup_validation EXIT INT TERM
-        if docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm toolbox node scripts/validation-runtime-required.mjs "$@"; then
-          if [ "$(docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" ps --status running --services app 2>/dev/null || true)" != "app" ]; then
-            validation_started_app=1
-          fi
-          ORG_TOOLS_KEEP_DEV_STACK=1 "$repository_root/bin/org-tools-dev-check"
+        create_validation_environment
+        install_validation_cleanup
+        compose_dev down >/dev/null 2>&1 || true
+        if compose_dev run --rm --no-deps toolbox node scripts/validation-runtime-required.mjs "$@"; then
+          start_validation_runtime
         fi
-        docker compose --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" run --rm -e ORG_TOOLS_SKIP_DEV_PROBE=1 toolbox pnpm validate:changed "$@"
+        compose_dev run --rm --no-deps -e ORG_TOOLS_SKIP_DEV_PROBE=1 toolbox pnpm validate:changed "$@"
+        ;;
+      gallery)
+        create_validation_environment
+        install_validation_cleanup
+        start_validation_runtime
+        compose_dev run --rm --no-deps toolbox pnpm screenshots:verify "$@"
         ;;
       *)
-        echo "Usage: ./bin/org-tools validate {fast|changed} [validation arguments]" >&2
+        echo "Usage: ./bin/org-tools validate {fast|changed|gallery} [validation arguments]" >&2
         exit 2
         ;;
     esac
@@ -182,7 +247,7 @@ case "${1:-}" in
     exec "$repository_root/bin/org-tools-docker-run" "$@"
     ;;
   *)
-    echo "Usage: ./bin/org-tools {env {init|validate}|up|down|logs|dev|run|validate {fast|changed}|migrate|docker-run|reset-super-admin-password}" >&2
+    echo "Usage: ./bin/org-tools {env {init|validate}|up|down|logs|dev|run|validate {fast|changed|gallery}|migrate|docker-run|reset-super-admin-password}" >&2
     exit 2
     ;;
 esac

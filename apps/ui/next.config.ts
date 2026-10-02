@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./src/server/security-headers";
 
 const distDir = process.env.ORG_TOOLS_NEXT_DIST_DIR?.trim() || ".next";
 
@@ -10,8 +11,12 @@ const nextConfig = {
     unoptimized: true,
   },
   output: "standalone",
+  poweredByHeader: false,
   serverExternalPackages: ["pg"],
   transpilePackages: ["@org-tools/types"],
+  async headers() {
+    return [{ headers: securityHeaders(process.env.NODE_ENV), source: "/:path*" }];
+  },
   webpack(config, { webpack }) {
     config.watchOptions = {
       ...config.watchOptions,

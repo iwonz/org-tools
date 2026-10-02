@@ -1,3 +1,4 @@
+import { runInAction } from "mobx";
 import { describe, expect, test } from "vitest";
 
 import { createEmptyEmployeeFiltersState } from "@/lib/org-file";
@@ -16,14 +17,16 @@ describe("OrgStore Editor deletion coordinator", () => {
     const survivingRootId = store.mainOrgEditor.addUnit({ name: "Survivor", x: 720, y: 0 });
     const filters = { ...createEmptyEmployeeFiltersState(), selectedUnitIds: [rootId, childId] };
     store.selectUnit(childId);
-    store.expandedUnitIds = [rootId, childId, survivingRootId];
-    store.unitsUi = { ...store.unitsUi, employeeFilters: filters };
-    store.employeesUi = { ...store.employeesUi, filters };
-    store.downloadUi = {
-      ...store.downloadUi,
-      employeeFilters: filters,
-      selectedFilters: filters,
-    };
+    runInAction(() => {
+      store.expandedUnitIds = [rootId, childId, survivingRootId];
+      store.unitsUi = { ...store.unitsUi, employeeFilters: filters };
+      store.employeesUi = { ...store.employeesUi, filters };
+      store.downloadUi = {
+        ...store.downloadUi,
+        employeeFilters: filters,
+        selectedFilters: filters,
+      };
+    });
     store.exportSession.setExcludedJsonUnitIds([rootId, childId, survivingRootId]);
     store.addExportSelection({ id: `unit:${childId}`, type: "unit", unitId: childId });
     store.mainOrgEditor.setSelectedItems([

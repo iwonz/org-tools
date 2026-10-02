@@ -62,6 +62,8 @@ const fastCommands = [
   { args: ["lint"], command: "pnpm", name: "lint" },
   { args: ["typecheck"], command: "pnpm", name: "typecheck" },
   { args: ["test:unit"], command: "pnpm", name: "unit tests" },
+  { args: ["hygiene:dead-code"], command: "pnpm", name: "dead source and dependencies" },
+  { args: ["security:audit"], command: "pnpm", name: "dependency security audit" },
   { args: ["test:browser:shards"], command: "pnpm", name: "browser shard partition" },
   { args: ["spec:validate"], command: "pnpm", name: "OpenSpec" },
   { args: ["diff", "--check"], command: "git", name: "diff check" },
@@ -96,8 +98,8 @@ if (succeeded && mode === "changed") {
   }
 
   if (succeeded && plan.browserSuites.length > 0) {
-    succeeded =
-      (await runCommand("affected browser suites", "pnpm", [
+    for (const suite of plan.browserSuites) {
+      const exitCode = await runCommand(`browser: ${suite}`, "pnpm", [
         "--filter",
         "@org-tools/screenshots",
         "exec",
@@ -105,9 +107,14 @@ if (succeeded && mode === "changed") {
         "--env-file-if-exists=../../.env",
         "scripts/run-playwright.mjs",
         "test",
-        ...plan.browserSuites,
+        suite,
         "--project=chromium",
-      ])) === 0;
+      ]);
+      if (exitCode !== 0) {
+        succeeded = false;
+        break;
+      }
+    }
   }
 
   if (succeeded && plan.screenshots) {

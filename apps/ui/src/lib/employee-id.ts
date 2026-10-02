@@ -1,4 +1,5 @@
 import type { EmployeeId } from "@org-tools/types";
+import { createUuid, isUuid } from "@/lib/uuid";
 
 const SHA_256_CONSTANTS = [
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -97,18 +98,6 @@ export const createEmployeeIdentityKey = (fields: EmployeeIdentityFields): strin
     .map(normalizeEmployeeIdentityPart)
     .join("\u001f");
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const createEmployeeUuid = (): EmployeeId => createUuid();
 
-export const createEmployeeUuid = (): EmployeeId => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
-    const random = Math.floor(Math.random() * 16);
-    const value = character === "x" ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
-};
-
-export const isEmployeeId = (value: unknown): value is EmployeeId =>
-  typeof value === "string" && UUID_PATTERN.test(value);
+export const isEmployeeId = (value: unknown): value is EmployeeId => isUuid(value);

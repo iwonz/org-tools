@@ -28,7 +28,12 @@ export default defineConfig({
     baseURL,
     colorScheme: "light",
     launchOptions: {
-      args: ["--disable-gpu", "--disable-lcd-text", "--font-render-hinting=none"],
+      args: [
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-lcd-text",
+        "--font-render-hinting=none",
+      ],
     },
     locale: "en-US",
     timezoneId: "UTC",

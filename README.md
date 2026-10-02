@@ -45,6 +45,8 @@ starts the same non-root application image with the same external bind paths.
 ./bin/org-tools run pnpm lint
 ./bin/org-tools run pnpm typecheck
 ./bin/org-tools run pnpm test:unit
+./bin/org-tools run pnpm hygiene:dead-code
+./bin/org-tools run pnpm security:audit
 ./bin/org-tools run pnpm validate:changed --base origin/main
 ```
 
@@ -57,6 +59,10 @@ are pending or unknown.
 The changed validator explains and runs conservative affected feedback during development. Complete
 CI still runs every unit, browser, performance, gallery, publication, and image check. See
 [Validation](docs/validation.md) for the stages, isolation model, and measured baseline.
+
+The maintained hygiene gate rejects unreachable files and dependencies, while the security audit
+checks the complete locked dependency graph at moderate severity or higher. Neither check runs in
+the application or receives deployment data.
 
 ## Accounts and access
 

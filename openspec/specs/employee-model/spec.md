@@ -230,7 +230,7 @@ change another format or any line gap.
 
 #### Scenario: Apply a valid format immediately
 - **WHEN** a user edits one Display format to a different valid string
-- **THEN** its preview, every matching card, persisted organization, and synchronized live tab receive that format without a Save action
+- **THEN** its preview, every matching card, persisted organization, and authorized open clients receive that format through the revisioned server without a Save action
 
 #### Scenario: Apply a valid line gap immediately
 - **WHEN** a user enters an integer from 0 through 24 in one line-gap input

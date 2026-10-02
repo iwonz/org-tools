@@ -1,8 +1,10 @@
 #!/bin/sh
 set -eu
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+environment_file=${ORG_TOOLS_ENV_FILE:-"$repository_root/.env"}
+compose_project_name=${ORG_TOOLS_COMPOSE_PROJECT_NAME:-org-tools}
 compose() {
-  docker compose --env-file "$repository_root/.env" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" "$@"
+  docker compose --project-name "$compose_project_name" --env-file "$environment_file" -f "$repository_root/compose.yaml" -f "$repository_root/compose.dev.yaml" "$@"
 }
 started=0
 if [ "$(compose ps --status running --services app 2>/dev/null || true)" != "app" ]; then

@@ -12,8 +12,8 @@ only the complete CI matrix is delivery evidence.
    ```
 
 2. **Fast** runs the complete inexpensive gates concurrently: lint, typecheck, all unit tests,
-   browser-shard partition proof, strict OpenSpec validation, diff checking, and the source-only
-   publication scan:
+   dead-file/dependency reachability, a moderate-or-higher dependency advisory audit, browser-shard
+   partition proof, strict OpenSpec validation, diff checking, and the source-only publication scan:
 
    ```sh
    ./bin/org-tools validate fast
@@ -26,11 +26,15 @@ only the complete CI matrix is delivery evidence.
    ./bin/org-tools validate changed --base origin/main
    ```
 
-   An unavailable comparison base, an unknown path, or a validation-infrastructure change selects
+   The advisory lookup contacts the package registry but sends no deployment configuration,
+   credentials, or application data. An unavailable comparison base, an unknown path, or a validation-infrastructure change selects
    the complete expensive local plan. Unit tests are deliberately not selected by import graph: the
    whole suite is cheap and catches cross-module contracts. The wrapper starts and prewarms the
-   development runtime when an affected browser check needs it, then restores the previous Compose
-   state.
+   development runtime when an affected browser check needs it. That runtime uses a dedicated
+   `org-tools-validation` Compose project, port `3101` by default, and temporary PostgreSQL and
+   Backup bind directories. Cleanup removes the temporary data and never opens or mutates the
+   configured development database. Set `ORG_TOOLS_VALIDATION_PORT` only when the default port is
+   occupied.
 
 4. **Complete delivery** is always run by GitHub Actions for pull requests and `main`. Independent
    jobs cover static/runtime checks, four isolated browser shards, two full gallery passes, and the
@@ -48,7 +52,10 @@ pass.
 The authoritative browser command contains `smoke`, localization, authorization, and persistence
 specs. Four CI shards divide all Playwright tests exactly once. Each shard owns a separate
 PostgreSQL directory, backup directory, Compose project, application, sessions, browser, and report
-directory; tests inside a shard use one worker. Ordinary local browser execution remains serial.
+directory; tests inside a shard use one worker. Ordinary local browser execution remains serial and
+starts a fresh Chromium process for each spec file, avoiding renderer-memory accumulation during the
+ten-minute complete matrix. A CI `--shard` argument keeps all tests assigned to that isolated shard
+in one Playwright invocation.
 There is one browser target: the authenticated production server. Static-export and hosted-site
 runtimes are outside the supported build and validation contract.
 
@@ -62,7 +69,7 @@ The maintained gallery is still generated twice in full. The command fails unles
 declared PNG files exist and both SHA-256 manifests match:
 
 ```sh
-./bin/org-tools run pnpm screenshots:verify
+./bin/org-tools validate gallery
 ```
 
 Each capture waits for bundled fonts and embedded images, disables transient animation, and accepts
@@ -162,3 +169,36 @@ two SHA-256 manifests remain identical.
 The corrected PR gate passed all seven parallel jobs. The complete two-pass gallery took 9 minutes
 26 seconds, the slowest browser shard took 8 minutes, static and runtime validation took 3 minutes
 48 seconds, and the production image check took 3 minutes 11 seconds.
+
+## Housekeeping and security audit follow-up
+
+The repository-wide audit added dead-source/dependency reachability and a moderate-or-higher audit
+of the complete locked dependency graph to the maintained Fast stage. Before remediation, the
+production graph contained 3 critical, 5 high, and 2 moderate advisories, while development tooling
+contained another 2 moderate advisories. The updated lockfile reports zero known advisories. Knip
+also identified one unreachable UI component and obsolete helper exports; they were removed, while
+declaration companions and dynamically invoked wrapper entries remain explicitly documented.
+
+After the additions, the containerized Fast stage runs nine gates in 9.20–13.59 seconds and includes
+all 427 unit tests. The extra time comes from proving the 47-test browser-shard partition in four
+fresh processes as well as the two new audits; these gates prevent silent coverage gaps and known
+dependency advisories. The audit also found and fixed a Linux portability defect in the `.env`
+permission check that the macOS-only path had hidden.
+The first complete local run also proved that browser validation could target the configured
+development database. Changed validation now creates a separate Compose project and temporary
+bind-backed database, so test setup, fixture replacement, and rate limits cannot alter or depend on
+developer data.
+
+The isolated full audit also exposed two long-run harness defects. Explicit page closure now lets
+client `EventSource` cleanup finish before authorization-test contexts are destroyed, preventing
+Backup restoration from waiting on a streaming response. Container Chromium uses disk-backed shared
+memory and local complete validation restarts it between spec files; CI retains four smaller isolated
+shards. These changes remove teardown hangs and late renderer crashes without adding retries or
+dropping assertions.
+
+The final isolated local delivery run completed in 723.30 seconds. Its four fresh-browser batches
+took 438.42, 68.92, 32.47, and 32.10 seconds: 571.91 seconds together, 8.2% below the prior
+622.72-second single-browser run. All 47 scenarios passed without a retry, including the
+20,000-Employee / 4,000-Unit performance case. The full-run wall time fell 6.7% from 775.57 seconds
+even though process startup is now paid four times. The final two gallery passes took 118.83 and
+103.97 seconds and produced identical SHA-256 hashes for all 56 frames.

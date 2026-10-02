@@ -108,57 +108,25 @@ runners without deprecation annotations.
   accepted inputs without deprecated-runtime or unexpected-input annotations
 
 ### Requirement: Documentation and gallery cover current product surfaces
-The repository SHALL document the authenticated server runtime, six bundled locales, Arabic RTL, isolated
-Editor Views over global Employees, View-selectable Data
-Download, wrapped direct Tag footers, modal Language and Theme settings, selected-only Editor
-arrangement, direct State Export, source-driven Employee Import, colored Editor PNG Tags, privacy,
-performance, and screenshots without obsolete guidance. The deterministic gallery SHALL contain
-exactly 56 PNGs and the README SHALL retain exactly nine featured Import, Export, Theme, Language,
-Units, Employees, Editor, Calendar, and Download frames.
+The repository SHALL consistently document the authenticated PostgreSQL server, account access,
+Backup/Restore, authorized Data Download and image export, six bundled locales, Arabic RTL,
+Employees, Units, global Tags, isolated Editor Views, staffing slots, Calendar, and container
+operations without presenting removed browser-only, SQLite, State Import/Export, Employee Import,
+Analytics, Open Position, or GitHub Pages behavior as current. Historical OpenSpec archives and
+Git history MAY retain completed records. The maintained gallery SHALL contain exactly 56 synthetic
+PNG files and README SHALL feature the nine current product surfaces.
 
-#### Scenario: Complete gallery
-- **WHEN** screenshot generation runs against the authenticated production server
-- **THEN** it deterministically replaces exactly 56 declared PNGs covering only current product workflows
+#### Scenario: Validate current documentation
+- **WHEN** repository validation scans current capability specs, documentation, contribution templates, and automation
+- **THEN** current behavior and terminology agree with implemented routes, persistence, delivery, and maintained tests
 
-#### Scenario: Locale gallery
-- **WHEN** Language frames are generated
-- **THEN** the primary frame shows six flagged language rows and the supporting frame demonstrates Arabic RTL
+#### Scenario: Generate the current gallery
+- **WHEN** screenshot generation runs twice against the authenticated production server
+- **THEN** exactly 56 declared synthetic PNG files are replaced and both SHA-256 manifests match
 
-#### Scenario: Updated workflow gallery
-- **WHEN** Editor, Units, Calendar, Language, Import, Download, and Tag frames are generated
-- **THEN** they show View selection and management, direct Tag footers, View Download source, colored PNG Tags, rose weekends, flags, target Selects, and flat spaced Tag management
-
-#### Scenario: View workflow gallery
-- **WHEN** the four supporting View frames are generated
-- **THEN** they show the selector, Blank/Copy dialog, isolated custom document, and Rename/Delete lifecycle with synthetic data
-
-#### Scenario: Transfer gallery
-- **WHEN** screenshot generation completes
-- **THEN** featured Import shows State and Employee modes while supporting frames show source-driven mapping and explicit database recreation
-
-#### Scenario: Tag management gallery
-- **WHEN** Tag supporting frames are generated
-- **THEN** catalog, rename, quick color, full Employee membership, and separated padding-free rows are visible across the maintained scenarios
-
-#### Scenario: Structured-output gallery
-- **WHEN** screenshot generation completes
-- **THEN** Data Download shows its View source, JSON collections, exact exclusions, bounded preview, Template, and token suggestions while Editor shows Image, JSON, and Template for the active View
-
-#### Scenario: Editor gallery
-- **WHEN** Editor frames are generated
-- **THEN** the system selector and protected management state are visible without restoring View-local Employee copies or overrides
-
-#### Scenario: Featured README
+#### Scenario: Inspect README previews
 - **WHEN** a visitor opens README
-- **THEN** the same nine current product previews remain featured and every linked PNG exists
-
-#### Scenario: Deterministic generation
-- **WHEN** the 56-frame gallery is generated twice from unchanged source and fixed fixtures
-- **THEN** every PNG hash is identical and every owned page has no unexpected console or network diagnostic
-
-#### Scenario: Full-View image settings frame
-- **WHEN** the full-View image export gallery frame is captured
-- **THEN** it shows the preview above the uncompressed settings and no redundant explanatory subtitle
+- **THEN** nine current product previews are featured and every linked PNG exists
 
 ### Requirement: Localization validation covers every supported catalog
 Automated checks SHALL validate exact keys, placeholders, non-empty translations, allowed technical
@@ -251,7 +219,7 @@ authenticated server runtime without console, page, resource, or external-networ
 Repository validation SHALL cover strict Unit note state, View-local history and copying, safe
 Markdown, server persistence, localization, accessibility, and browser diagnostics. The
 deterministic gallery SHALL contain exactly 56 PNGs including Unit note Preview and Editor scenarios
-while the README retains its ten featured frames.
+while the README retains its nine featured frames.
 
 #### Scenario: Generate Unit note frames
 - **WHEN** screenshot generation runs twice from unchanged source and fixtures
@@ -297,7 +265,7 @@ Repository validation SHALL cover single, all, and mixed distribution selections
 update, multi-placement row actions, read-only map navigation, searchable locale-aware Tag options,
 search-scoped bulk selection, inline catalog counts, the authenticated server runtime, six locales, RTL, browser
 diagnostics, and maintained large-model limits. The deterministic gallery SHALL contain exactly 56
-PNGs while README retains ten featured frames.
+PNGs while README retains nine featured frames.
 
 #### Scenario: Validate the production runtime
 - **WHEN** browser coverage exercises the workflows in the authenticated server application
@@ -312,19 +280,25 @@ PNGs while README retains ten featured frames.
 - **THEN** all 56 hashes match and supporting frames show bulk distribution plus Employee placement navigation
 
 ### Requirement: Validation covers catalog ordering and Unit grouping
-Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtered insertion and cancellation, scrollable nested color presets, conditional dated counts, strict grouping state, earliest-Tag grouping, boss placement, View-local history and copying, manual and Live membership, ordered output, server persistence, accessibility, localization, and bounded derivation. The 56-frame deterministic gallery SHALL include View settings with default-enabled grouping and Tag cloud switches plus distribution colors and catalog rows with leading reorder handles. README SHALL retain ten featured frames.
+Repository validation SHALL cover atomic pointer and keyboard Tag moves, filtered insertion and
+cancellation, scrollable nested color presets, conditional dated counts, strict grouping state,
+earliest-Tag grouping, boss placement, View-local history and copying, manual and Live membership,
+ordered output, revisioned server persistence, authorized refresh, accessibility, localization, and
+bounded derivation. The 56-frame gallery SHALL include View settings with default-enabled grouping
+and Tag cloud switches, distribution colors, and catalog rows with leading reorder handles. README
+SHALL retain nine featured frames.
 
 #### Scenario: Validate ordered presentation in the production runtime
-- **WHEN** users reorder Tags and toggle View grouping in browser validation
-- **THEN** the catalog and Employee Tag surfaces retain the global sequence, each Employee appears once in the expected canvas and PNG sequence, and SQLite reload or live-tab exchange preserves the result without unexpected diagnostics
+- **WHEN** authorized users reorder Tags and toggle View grouping in browser validation
+- **THEN** catalog and Employee Tag surfaces retain global sequence, each Employee appears once in expected DOM and PNG order, and PostgreSQL reload preserves the committed result without unexpected diagnostics
 
-#### Scenario: Validate the current-only state boundary
+#### Scenario: Validate the current-only document boundary
 - **WHEN** a View omits settings or supplies invalid settings
-- **THEN** the complete state is rejected without mutation and the runtime does not migrate it
+- **THEN** strict command validation rejects the complete candidate without mutation and no runtime migration is attempted
 
 #### Scenario: Regenerate settings and catalog frames
 - **WHEN** the gallery is generated twice from unchanged source and fixtures
-- **THEN** all 56 PNG hashes match and the new settings frame shows the View display switches and distribution color fields
+- **THEN** all 56 PNG hashes match and the settings frame shows View display switches and distribution colors
 
 ### Requirement: Validation covers reference-aware placements and reliable Editor controls
 Browser and unit coverage SHALL exercise ordinary/reference placement eligibility, live mode changes, full-row pointer sorting, gaps, auto-scroll, cancellation and peer replacement, independent layout buttons, and exact unique subtree counts in the authenticated server runtime. The maintained 56-frame gallery SHALL remain deterministic and be visually reviewed. The 20,000 Employee and 4,000 Unit bounds SHALL remain covered without organization writes during drag preview or eager per-row membership scans.
@@ -457,13 +431,6 @@ Browser validation SHALL cover named and unnamed Staffing Slots in manual and Li
 - **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
 - **THEN** every PNG is visually inspected and both SHA-256 sets are identical
 
-### Requirement: Delivery converts an owned previous-schema database safely
-
-A release replacing the exact open-position State shape MUST record whether the configured owned SQLite database is absent, already current, or safely converted from the immediately previous valid shape. Conversion MUST occur with the runtime stopped, a timestamped database-family backup, detached and committed-row production-parser validation, preservation comparison, and ordinary startup proof. Converter and database artifacts MUST remain uncommitted.
-
-#### Scenario: Convert the configured previous snapshot
-- **WHEN** the owned database contains the immediately previous valid open-position shape
-- **THEN** slot names, Tags, IDs, selections, and anchors are retained, obsolete colors are removed, revision advances once, and all checks complete before publication
 
 ### Requirement: Validation covers empty Unit action containment
 
@@ -602,3 +569,45 @@ The maintained gallery SHALL wait for bundled fonts and current embedded images 
 #### Scenario: Complete evidence remains authoritative
 - **WHEN** continuous validation runs from unchanged source and fixtures
 - **THEN** it still produces two complete 56-frame passes and requires all resulting SHA-256 hashes to match
+
+### Requirement: Maintained validation audits repository hygiene and locked dependencies
+The repository SHALL provide deterministic checks for dead tracked source, generated or sensitive
+artifacts, obsolete current-runtime contracts, and locked dependency advisories. Explicit
+dependency auditing MAY contact the package registry during development and CI, but MUST NOT run in
+the application or transmit organization data, credentials, or deployment configuration.
+
+#### Scenario: Audit a clean change
+- **WHEN** maintained fast and complete validation run for a change
+- **THEN** source hygiene, current documentation, locked dependencies, tracked artifacts, and
+  publication boundaries are checked alongside the existing functional gates
+
+#### Scenario: Detect a vulnerable production package
+- **WHEN** the installed locked dependency graph contains an advisory at the configured failing severity
+- **THEN** validation fails with package and advisory metadata without printing application secrets or organization data
+
+#### Scenario: Review a possible dead file
+- **WHEN** static analysis identifies a file without an import consumer
+- **THEN** it is removed only after command, configuration, declaration-companion, build, and test consumers are also excluded
+
+### Requirement: Local stateful validation cannot mutate configured organization data
+The maintained local changed-path and deterministic-gallery validation SHALL run browser, fixture,
+authentication, and runtime checks in a dedicated Compose project with temporary bind-backed
+PostgreSQL and Backup directories. They MUST NOT connect to, authenticate against, migrate, or
+replace the configured development organization, and cleanup MUST remove the temporary data after
+the run.
+
+#### Scenario: Validate a change beside an existing development organization
+- **WHEN** a developer runs changed-path validation with a configured PostgreSQL organization
+- **THEN** all stateful checks use the isolated validation database and the configured organization remains byte-for-byte unchanged
+
+#### Scenario: Interrupt changed-path validation
+- **WHEN** validation succeeds, fails, or receives an interrupt
+- **THEN** validation containers stop and their temporary PostgreSQL and Backup directories are removed without stopping the ordinary development project
+
+#### Scenario: Verify the complete gallery locally
+- **WHEN** a developer runs the supported two-pass gallery command
+- **THEN** both passes use an isolated temporary organization and leave the configured development organization unchanged
+
+#### Scenario: Run the complete local browser matrix
+- **WHEN** changed validation selects every maintained browser spec without a CI shard
+- **THEN** each spec runs serially in a fresh Chromium process against the same isolated validation database, while every scenario still executes exactly once

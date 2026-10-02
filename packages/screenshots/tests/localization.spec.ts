@@ -148,19 +148,19 @@ for (const [locale, messages] of [
       baseURL: new URL(page.url()).origin,
     });
     try {
-      const authenticationPage = await authenticationContext.newPage();
-      const assertAuthenticationLocalRequests = await expectLocalRequestsOnly(authenticationPage);
-      await seedLocale(authenticationPage, locale);
-      await authenticationPage.route("**/api/session", (route) =>
+      await authenticationContext.route("**/api/session", (route) =>
         route.fulfill({
           body: JSON.stringify({ error: { code: "unauthenticated" } }),
           contentType: "application/json",
           status: 401,
         }),
       );
-      await authenticationPage.route("**/api/auth/status", (route) =>
+      await authenticationContext.route("**/api/auth/status", (route) =>
         route.fulfill({ body: JSON.stringify({ kind: "login" }), contentType: "application/json" }),
       );
+      const authenticationPage = await authenticationContext.newPage();
+      const assertAuthenticationLocalRequests = await expectLocalRequestsOnly(authenticationPage);
+      await seedLocale(authenticationPage, locale);
       await authenticationPage.goto("/", { waitUntil: "domcontentloaded" });
       const loginForm = authenticationPage.locator('[data-demo-id="login-form"]');
       await expect(loginForm).toContainText(messages.Ui["Sign in"]);

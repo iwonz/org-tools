@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    "packages/screenshots/browser-diagnostics.d.mts",
+    "scripts/screenshot-stability.d.mts"
+  ],
+  "ignoreDependencies": ["@fission-ai/openspec"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/validation-runtime-required.mjs"]
+    }
+  }
+}

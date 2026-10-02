@@ -51,14 +51,16 @@ requirements.
 - `./bin/org-tools reset-super-admin-password` runs the local interactive recovery command.
 - `./bin/org-tools docker-run` runs the supported raw Docker flow.
 - Validation commands are `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`,
-  `./bin/org-tools-dev-check`, `pnpm build`, `pnpm test:browser`, `pnpm screenshots:generate`,
-  `pnpm public:check`, `pnpm spec:validate`, and `git diff --check` through the toolbox.
+  `pnpm hygiene:dead-code`, `pnpm security:audit`, `./bin/org-tools-dev-check`, `pnpm build`,
+  `pnpm test:browser`, `pnpm screenshots:generate`, `pnpm public:check`, `pnpm spec:validate`, and
+  `git diff --check` through the toolbox.
 - `pnpm validation:plan --base origin/main` explains affected validation without running it.
 - `./bin/org-tools validate fast` runs all inexpensive checks concurrently;
   `./bin/org-tools validate changed --base origin/main` adds conservative affected runtime, browser,
-  build, gallery, and publication feedback and manages the required development runtime.
+  build, gallery, and publication feedback in an isolated temporary PostgreSQL runtime.
   These are development feedback only. Complete CI remains the delivery authority.
-- `pnpm screenshots:verify` performs both complete 56-PNG passes and exact SHA-256 comparison.
+- `./bin/org-tools validate gallery` performs both complete 56-PNG passes and exact SHA-256
+  comparison against an isolated temporary PostgreSQL database.
 
 Build before `public:check`. Never commit `.env`, `apps/ui/next-env.d.ts`, `.next`, browser
 reports, generated performance fixtures, database material, or backup material.

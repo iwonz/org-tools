@@ -1,6 +1,6 @@
 # Screenshots
 
-The screenshot catalog is generated from the production applications and declared in
+The screenshot catalog is generated from the production application and declared in
 `docs/screenshot-demo.json`. The README shows the nine featured module frames; this page covers all 56
 current scenarios. Every scenario uses synthetic data, a fixed clock, local fonts, reduced motion,
 and no external requests.
@@ -8,7 +8,7 @@ and no external requests.
 The production server suite authenticates a synthetic Super Administrator and resets PostgreSQL
 through protected organization/UI endpoints before each workflow. Every page is monitored for
 unexpected console warnings and errors, uncaught page errors, failed application requests, and
-failing same-origin resources. Run `pnpm screenshots:generate`, inspect both themes and all six
+failing same-origin resources. Run `./bin/org-tools validate gallery`, inspect both themes and all six
 languages including Arabic RTL, then run it again and compare hashes. Before each capture, the
 harness waits for bundled fonts and embedded images and requires two consecutive pixel samples to
 match. An unstable frame fails with diagnostic samples instead of relying on a fixed delay.
@@ -165,7 +165,7 @@ assignments, Contextual previews, Live apply, Per-format reset.
 [![Custom Value field](screenshots/feature-employees-model-value.png)](screenshots/feature-employees-model-value.png)
 
 Configure a named typed Employee value, required behavior, and stable options for forms, filters,
-imports, and output.
+and authorized output.
 
 Capabilities: Value field, Data type, Required value, Stable options.
 

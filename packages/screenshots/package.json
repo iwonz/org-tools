@@ -5,14 +5,14 @@
   "private": true,
   "scripts": {
     "generate": "node --env-file-if-exists=../../.env scripts/run-playwright.mjs test tests/screenshots.spec.ts --project=chromium",
-    "smoke": "node --env-file-if-exists=../../.env scripts/run-playwright.mjs test tests/smoke.spec.ts tests/localization.spec.ts tests/auth-access.spec.ts tests/state.spec.ts --project=chromium",
+    "smoke": "node --env-file-if-exists=../../.env scripts/run-browser-suites.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
     "@org-tools/types": "workspace:*",
+    "@playwright/test": "^1.58.2",
     "@types/node": "^25.9.1",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.5",
     "typescript": "^6.0.3"
   }
 }

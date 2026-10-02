@@ -1,16 +1,18 @@
 # state-transfer Specification
 
 ## Purpose
-Define strict complete-state and mapped-Employee Import/Export.
+Define the absence of legacy State and mapped Employee transfer surfaces and distinguish encrypted
+complete Backup/Restore from permission-filtered Data Download and Editor exports.
 ## Requirements
 ### Requirement: Legacy State and Employee transfer surfaces are absent
-The shell, routes, parsers, fixtures, messages, tests, and documentation SHALL NOT expose complete
-State Import/Export or mapped Employee Import. Complete recovery SHALL use encrypted Backup/Restore,
-while Data Download and Editor export SHALL remain permission-filtered product outputs.
+The shell, routes, parsers, fixtures, messages, tests, and current documentation SHALL NOT expose
+complete State Import/Export or mapped Employee Import. Complete application recovery SHALL use
+encrypted authorized Backup/Restore, while Data Download and Editor exports SHALL remain separate
+permission-filtered outputs that never imply a complete recoverable state.
 
 #### Scenario: Inspect global transfer actions
-- **WHEN** an authenticated user opens the shell
-- **THEN** no State Import, State Export, Employee Import, mapping, duplicate-review, or related action is available
+- **WHEN** an authenticated user opens the shell and Administration surfaces
+- **THEN** only actions allowed by current Backup, Restore, Data Download, and Editor export permissions are available and no legacy transfer action appears
 
 #### Scenario: Submit a legacy State file
 - **WHEN** a caller uploads legacy State JSON to any supported route

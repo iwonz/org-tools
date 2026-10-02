@@ -14,6 +14,8 @@ const FAST_GATES = [
   "lint",
   "typecheck",
   "unit",
+  "dead-source-and-dependencies",
+  "dependency-security-audit",
   "browser-shard-partition",
   "spec",
   "diff",

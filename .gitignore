@@ -4,6 +4,16 @@ node_modules/
 # Local Org Tools runtime state
 .org-tools/*
 !.org-tools/config.example.json
+*.bak
+*.backup
+*.db
+*.dump
+*.org-tools-backup
+*.pgdump
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.sqlite3-*
 
 # Build and test output
 apps/ui/.next/

@@ -42,9 +42,14 @@ uses `__Host-id` with Secure, HttpOnly, SameSite=Strict and Path=/; localhost de
 non-Secure development cookie.
 
 Mutations require JSON, exact configured Origin, `Sec-Fetch-Site: same-origin`, and a
-session-bound rotating CSRF token. Login has normalized-email and instance rate buckets with a
+session-bound CSRF token. Login has normalized-email and instance rate buckets with a
 generic credential failure. Security changes increment a separate revision and revoke or refresh
 affected sessions.
+
+All routes receive a same-origin Content Security Policy, frame denial, no-referrer policy,
+capability restrictions, MIME sniffing protection, cross-origin opener/resource isolation, and no
+framework signature header. Development adds only the script evaluation required by webpack; the
+production policy omits it.
 
 ## Authorization and projection
 
@@ -117,3 +122,7 @@ therefore parallel execution changes wall time without reducing coverage. CI and
 write separate bounded BuildKit caches and may read the other's cache, so verified immutable layers
 are reusable without concurrent workflows overwriting one cache. See `docs/validation.md` for
 commands and timing methodology.
+
+Fast validation also runs pinned dead-source/dependency reachability and the package manager's full
+moderate-or-higher advisory audit. These are build-time controls only and never enter the standalone
+runtime image.

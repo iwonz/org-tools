@@ -1,7 +1,8 @@
 # postgresql-runtime Specification
 
 ## Purpose
-TBD - created by archiving change enterprise-auth-access-control. Update Purpose after archive.
+Define PostgreSQL persistence, checked migrations, application and owner role separation,
+revisioned transactions, readiness, and normalized security records.
 ## Requirements
 ### Requirement: PostgreSQL stores organization and normalized security state
 The server SHALL persist one validated organization JSONB document with organization and security
@@ -67,18 +68,3 @@ passphrases MUST NOT be recorded.
 #### Scenario: Audit a denied command
 - **WHEN** an authenticated account submits a known command without effective access
 - **THEN** the denial is recorded without the protected data or request secrets
-
-### Requirement: SQLite conversion is external and exact
-The product SHALL contain no SQLite runtime or compatibility reader. Publication SHALL stop the owned
-runtime, retain a timestamped ignored backup of the complete SQLite family, and use an external
-one-time converter that accepts only the immediately preceding valid State, increases revision once,
-builds defaults and indexes, and validates the detached and written PostgreSQL values with production
-parsers.
-
-#### Scenario: Convert the owned snapshot
-- **WHEN** the configured SQLite contains the immediately preceding exact valid State
-- **THEN** all business values are preserved in PostgreSQL and normal setup, startup, and restart succeed
-
-#### Scenario: Encounter an unexpected SQLite shape
-- **WHEN** the configured SQLite is absent, invalid, or not the immediately preceding shape
-- **THEN** no conversion is attempted and the original database family remains untouched

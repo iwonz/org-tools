@@ -144,23 +144,6 @@ visibility, and bounded scrolling SHALL remain unchanged.
 - **THEN** all tags remain visible, the virtualizer remeasures the content, and adjacent rows do not
   overlap
 
-### Requirement: Global transfer actions use focused modal workflows
-Import SHALL open one responsive modal with State and Employees tabs, thematic icons before labels,
-stable control geometry, and no navigation or shell movement. It SHALL expose file selection,
-representative preview, mapping, options, review, and Apply inside the modal. Global Export SHALL
-continue to download the complete State directly without opening a modal.
-
-#### Scenario: Open Import modal
-- **WHEN** a sidebar Import action is activated in compact or expanded mode
-- **THEN** focus moves into its modal and returns to the trigger on close
-
-#### Scenario: Narrow transfer modal
-- **WHEN** the viewport is 390 px wide
-- **THEN** tabs, mapping controls, counts, policies, and footer actions remain contained and usable
-
-#### Scenario: Large match review
-- **WHEN** Employee Import contains thousands of existing matches
-- **THEN** one bounded scroll area renders virtualized rows with visible per-row policy controls
 
 ### Requirement: Download source and selection panes remain geometrically stable
 At 768 px and wider, Data Download SHALL render source and selected-Employee panes at equal width.
@@ -305,3 +288,16 @@ remain above ordinary interaction layers.
 #### Scenario: Open Restore confirmation
 - **WHEN** a Super Administrator reviews a valid detached Backup candidate
 - **THEN** the destructive confirmation traps focus, keeps its bounded summary visible, and remains above shell and canvas controls
+
+### Requirement: Current transfer actions use permission-aware focused workflows
+Backup/Restore SHALL remain inside Super Administrator Administration, while Data Download and Editor
+export SHALL use their existing focused surfaces and effective permissions. These workflows MUST NOT
+expose legacy State or Employee Import controls, tabs, mapping, or duplicate-review chrome.
+
+#### Scenario: Open complete recovery
+- **WHEN** a Super Administrator activates Backup or Restore
+- **THEN** focus enters the Administration workflow and returns to its trigger on close or completion
+
+#### Scenario: Open authorized output
+- **WHEN** an account activates Data Download or an Editor export it can use
+- **THEN** the focused output surface contains only resources from its authorized projection

@@ -24,6 +24,27 @@ const primaryScreenshotModules = [
 ];
 const supportingScreenshotModules = ["access"];
 const sourceOnly = process.argv.includes("--source-only");
+const requiredDockerIgnoreRules = [
+  ".env",
+  ".env.*",
+  ".org-tools",
+  ".playwright-cli",
+  ".pnpm-store",
+  "**/node_modules",
+  "**/playwright-report",
+  "**/playwright-report-shard-*",
+  "**/test-results",
+  "*.bak",
+  "*.backup",
+  "*.db",
+  "*.dump",
+  "*.org-tools-backup",
+  "*.pgdump",
+  "*.sql.gz",
+  "*.sqlite",
+  "*.sqlite3",
+  "*.sqlite3-*",
+];
 
 const blockedPathSegments = new Set([
   ".cache",
@@ -165,6 +186,35 @@ async function walk(directory) {
 
 function normalizedRelativePath(path) {
   return relative(repositoryRoot, path).split(sep).join("/");
+}
+
+export function isForbiddenDataPath(path) {
+  const normalized = path.toLowerCase();
+  const extension = extname(normalized);
+  return (
+    [".bak", ".backup", ".db", ".dump", ".pgdump", ".sqlite", ".sqlite3"].includes(extension) ||
+    /\.sqlite3-/u.test(normalized) ||
+    normalized.endsWith(".org-tools-backup") ||
+    normalized.endsWith(".sql.gz") ||
+    /(?:^|\/)pg_(?:commit_ts|dynshmem|logical|multixact|notify|replslot|serial|snapshots|stat|stat_tmp|subtrans|tblspc|twophase|wal|xact)(?:\/|$)/u.test(
+      normalized,
+    )
+  );
+}
+
+async function validateDockerIgnore(violations) {
+  const content = await readFile(join(repositoryRoot, ".dockerignore"), "utf8");
+  const rules = new Set(
+    content
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#")),
+  );
+  for (const rule of requiredDockerIgnoreRules) {
+    if (!rules.has(rule)) {
+      violations.push({ path: ".dockerignore", rule: `missing required exclusion: ${rule}` });
+    }
+  }
 }
 
 function firstLineNumber(content, index) {
@@ -313,6 +363,7 @@ async function main() {
     .then((entry) => entry.isFile())
     .catch(() => false);
 
+  await validateDockerIgnore(violations);
   await validateScreenshotDemo(violations);
   if (!outputExists && !sourceOnly) {
     violations.push({
@@ -356,11 +407,7 @@ async function main() {
     }
 
     const extension = extname(path).toLowerCase();
-    if (
-      !isProductionFile &&
-      ([".backup", ".db", ".dump", ".sqlite", ".sqlite3"].includes(extension) ||
-        path.endsWith(".org-tools-backup"))
-    ) {
+    if (!isProductionFile && isForbiddenDataPath(path)) {
       violations.push({ path, rule: "local database files must never be published" });
       continue;
     }
@@ -425,4 +472,5 @@ async function main() {
   );
 }
 
-await main();
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) await main();

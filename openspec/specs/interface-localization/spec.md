@@ -31,9 +31,9 @@ format tokens remain English.
 ### Requirement: Users can switch locale without routing
 The application SHALL provide a language sidebar action immediately before theme that opens a
 compact modal with all six choices. Each row SHALL show a localized language name and its autonym
-with native-radio semantics and a selected indicator. Selection SHALL update state, metadata,
-direction, and live tabs immediately, close the modal, and require no route, reload, or network
-request.
+with native-radio semantics and a selected indicator. Selection SHALL immediately update metadata
+and direction, persist in the authenticated account UI state, notify the account's other open
+clients through authorized UI events, and close the modal without route navigation or reload.
 
 #### Scenario: Open language settings
 - **WHEN** a user activates Language in compact or expanded sidebar mode
@@ -41,8 +41,9 @@ request.
 
 #### Scenario: Runtime switch
 - **WHEN** a user chooses another language
-- **THEN** open copy, accessibility names, document metadata, direction, state, preference, and live
-  tabs update in place, the modal closes, and focus returns safely
+- **THEN** open copy, accessibility names, document metadata, direction, state, and preference update
+  in place, the modal closes, focus returns safely, and other open clients converge through the
+  account-scoped event stream
 
 ### Requirement: Localization completeness is automatically enforced
 Catalog validation SHALL require identical non-empty keys and placeholder sets across all six
@@ -92,23 +93,22 @@ month names and accessibility names SHALL continue to use the active locale.
 - **THEN** all three birthday controls, the unknown-year option, validation, and accessibility copy use the active locale without raw internal text
 
 ### Requirement: Refined core workflows are completely localized
-All six bundled locales SHALL provide matching non-empty visible and accessibility copy for database
-recreation and confirmation, Template token descriptions and suggestions, the token-aware Format
-help icon and placeholder, representative Employee Import preview metadata, source-to-target
-mapping, Calendar event groups, segmented Gender, compound Birthday, draft Tag selection, and
-generic Unit form validation. Stable server recovery codes MUST resolve through the catalog and raw
-filesystem or parser messages MUST NOT be rendered.
+All six bundled locales SHALL provide matching non-empty visible and accessibility copy for Setup,
+Login, password change, Administration, Backup/Restore, Data Download and Template tokens, Format
+guidance, Calendar groups, Gender, Birthday, Tag selection, Employee fields, and Unit validation.
+Stable server error codes MUST resolve through the catalog; raw filesystem, SQL, parser, permission,
+or credential values MUST NOT be rendered.
 
 #### Scenario: Recover in Russian
-- **WHEN** the Russian runtime shows either blocking database error and opens Create new confirmation
-- **THEN** every warning, action, accessible name, and failure message is Russian without exposing a filesystem error
+- **WHEN** the Russian runtime opens Backup/Restore and a stable recovery error occurs
+- **THEN** every warning, action, accessible name, and failure message is Russian without exposing an internal error
 
-#### Scenario: Use refined workflows in English
-- **WHEN** the English runtime opens token suggestions, Format guidance, Employee Import, a populated Calendar day, and the Employee form
+#### Scenario: Use current workflows in English
+- **WHEN** the English runtime opens token suggestions, Format guidance, Calendar, Employee form, and Administration
 - **THEN** all owned labels, descriptions, options, errors, and accessibility names are English
 
 #### Scenario: Preserve machine and user values
-- **WHEN** any locale displays `{token}`, a JSON source path, filename, Tag, Unit, or Employee data
+- **WHEN** any locale displays a token, filename, Tag, Unit, or Employee value
 - **THEN** the machine token and user-authored value remain verbatim while surrounding product copy is localized
 
 ### Requirement: Employee schema and Tag management are completely localized
@@ -168,14 +168,6 @@ of meaning and SHALL mirror correctly in Arabic RTL without network access.
 - **WHEN** the modal renders in Arabic RTL
 - **THEN** each flag occupies the mirrored logical start while the radio label remains correctly announced
 
-### Requirement: Refined Tag and mapping workflows are localized
-All six bundled catalogs SHALL provide matching non-empty visible, validation, tooltip, empty-state,
-and accessibility copy for Tag color/view actions, Tag Employee drill-down, and source-driven
-Employee mapping targets. Technical JSON paths and canonical colors SHALL remain verbatim.
-
-#### Scenario: Audit refined workflows
-- **WHEN** localization validation opens Tag actions, membership details, and Employee mapping in every locale
-- **THEN** owned copy uses the active catalog without fallback keys or unexpected English
 
 ### Requirement: View management is localized in every supported language
 The interface SHALL provide complete catalog entries for system View naming, View selection,
@@ -311,3 +303,13 @@ MUST NOT appear in Administration or image-export UI.
 #### Scenario: Open image export in any locale
 - **WHEN** a Super Administrator opens either PNG dialog in English, Russian, Spanish, French, Arabic, or Simplified Chinese
 - **THEN** the selector and every state use bundled localized copy and logical alignment, including RTL Arabic
+
+### Requirement: Refined Tag and access workflows are localized
+All six bundled catalogs SHALL provide matching non-empty visible, validation, tooltip, empty-state,
+and accessibility copy for Tag color and membership actions, access policies, role permissions, and
+authorized Data Download selection. Technical tokens, permission IDs, and canonical colors remain
+internal or verbatim only where they are data rather than user-facing labels.
+
+#### Scenario: Audit refined workflows
+- **WHEN** localization validation opens Tag actions, membership details, access policies, and Data Download in every locale
+- **THEN** owned copy uses the active catalog without fallback keys, raw permission IDs, or unexpected English

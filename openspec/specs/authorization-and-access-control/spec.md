@@ -1,7 +1,8 @@
 # authorization-and-access-control Specification
 
 ## Purpose
-TBD - created by archiving change enterprise-auth-access-control. Update Purpose after archive.
+Define server-enforced roles, additive permission grants, Manager scopes, resource policies,
+least-data authorized projections, and Super Administrator invariants.
 ## Requirements
 ### Requirement: Effective access combines one role and additive direct grants
 Every account SHALL have exactly one role and MAY have direct grants. A grant SHALL contain one

@@ -24,3 +24,13 @@ Security changes must preserve generic login and inaccessible-resource responses
 parsers, prepared SQL, migration checksums, audit secret redaction, session revocation, filtered
 Download/PNG output, local assets, and publication scans. See [Privacy](docs/privacy.md) and
 [Architecture](docs/architecture.md).
+
+Every response is protected against framing, referrer disclosure, MIME sniffing, unnecessary browser
+capabilities, and cross-origin opener/resource reuse. Production Content Security Policy allows only
+same-origin executable resources and bounded embedded local media; webpack evaluation is limited to
+development.
+
+Run `./bin/org-tools run pnpm security:audit` and
+`./bin/org-tools run pnpm hygiene:dead-code` before delivery. The first checks the complete locked
+dependency graph for moderate-or-higher advisories; the second rejects unreachable tracked source
+and dependencies. Neither command is part of the application runtime.

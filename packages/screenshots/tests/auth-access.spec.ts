@@ -576,6 +576,18 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
   } finally {
     // Keep the assertion deadline strict while reserving bounded time for baseline restoration.
     testInfo.setTimeout(testInfo.timeout + 120_000);
+    // Close pages first so their EventSource cleanup runs before the browser contexts disappear.
+    // Closing a context with an active streaming response can otherwise wait for the server-side
+    // stream on some Chromium/Playwright combinations.
+    await Promise.all(
+      contexts.flatMap((context) =>
+        context
+          .pages()
+          .map((contextPage) =>
+            contextPage.close({ runBeforeUnload: false }).catch(() => undefined),
+          ),
+      ),
+    );
     await Promise.all(contexts.map((context) => context.close()));
     const restoreSession = await authenticateSuperAdministrator(page);
     const request = page.context().request;

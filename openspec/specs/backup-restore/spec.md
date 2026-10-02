@@ -1,7 +1,8 @@
 # backup-restore Specification
 
 ## Purpose
-TBD - created by archiving change enterprise-auth-access-control. Update Purpose after archive.
+Define encrypted complete Backup and atomic Restore across organization, identity, access, UI, and
+audit data while excluding live authentication secrets.
 ## Requirements
 ### Requirement: Complete Backup is encrypted and reauthenticated
 An account with Backup-create permission SHALL re-enter its current password before the server
@@ -54,4 +55,3 @@ password hashes, audit, or hidden organization values.
 #### Scenario: Download permitted organization data
 - **WHEN** an account with Data Download permission exports selected records
 - **THEN** output retains existing format behavior using only values visible to that account
-

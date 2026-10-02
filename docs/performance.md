@@ -53,3 +53,7 @@ maintenance lock; only the final replacement transaction blocks ordinary work.
 Performance browser coverage loads 20,000 Employees, 4,000 Units, and bounded Canvas content,
 checks spatial candidate counts and interaction frame samples, and runs through the authenticated
 PostgreSQL runtime.
+
+Static dead-source analysis and registry advisory checks run only during validation. Security
+response headers are constant configuration, and the UUID consolidation removes duplicate fallback
+logic without adding work to rendering, projection, persistence, or interaction paths.

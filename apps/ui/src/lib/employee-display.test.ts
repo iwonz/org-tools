@@ -5,6 +5,7 @@ import type {
   EmployeeUnitPosition,
   UnitId,
 } from "@org-tools/types";
+import { runInAction } from "mobx";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -563,7 +564,9 @@ describe("Employee display formats", () => {
     ]);
 
     const store = new OrgStore();
-    store.employeeFieldDefinitions = [legacyDefinition];
+    runInAction(() => {
+      store.employeeFieldDefinitions = [legacyDefinition];
+    });
     expect(() =>
       store.saveEmployeeFieldDefinition({ ...legacyDefinition, name: "Legacy assignments" }),
     ).not.toThrow();

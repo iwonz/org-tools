@@ -1,7 +1,8 @@
 # container-delivery Specification
 
 ## Purpose
-TBD - created by archiving change enterprise-auth-access-control. Update Purpose after archive.
+Define secret-safe environment configuration, external bind storage, hardened Compose and Docker
+delivery, reproducible development, and verified SemVer GHCR publication.
 ## Requirements
 ### Requirement: Environment configuration is explicit and secret-safe
 The repository SHALL contain a root `.env.example` listing the complete supported environment contract
@@ -34,14 +35,15 @@ container toolbox for every documented development and validation command.
 - **THEN** PostgreSQL and Backup data persist outside the repository
 
 ### Requirement: The production image is minimal and hardened
-The multi-stage image SHALL contain Next.js standalone runtime output, migrations, bundled fonts, and
-local static assets only. The application SHALL run non-root with dropped capabilities, a read-only
-root filesystem, and explicit writable tmpfs or external Backup storage. It SHALL contain no source
-fixtures, environment files, VCS data, SQLite, PostgreSQL data, test output, or remote assets.
+The multi-stage image SHALL contain patched Next.js standalone runtime output, migrations, bundled
+fonts, and local static assets only. The application SHALL run non-root with dropped capabilities, a
+read-only root filesystem, no-new-privileges, and explicit writable tmpfs or external Backup storage.
+The image and its history SHALL contain no source fixtures, environment files, credentials, VCS data,
+SQLite, PostgreSQL data, dumps, Backups, test reports, development dependencies, or remote assets.
 
 #### Scenario: Inspect the production image
 - **WHEN** CI exports the image filesystem, configuration, and history
-- **THEN** only required runtime files and nonsecret OCI metadata are present
+- **THEN** only required runtime files and nonsecret OCI metadata are present and the configured user is non-root
 
 ### Requirement: Docker Run reproduces Compose without evaluating environment code
 A supported Docker Run workflow SHALL parse only allowlisted `.env` keys without shell evaluation,
@@ -54,13 +56,14 @@ external HTTPS, updates, Backup/Restore, and PostgreSQL major upgrades.
 - **THEN** it produces the same schema, storage boundaries, readiness, and application behavior as Compose
 
 ### Requirement: CI and publication cannot leak organization data
-CI databases SHALL be ephemeral and SHALL NOT be uploaded. Publication checks SHALL reject tracked or
-image-contained `.env`, database, dump, Backup, credential, organization fixture, or forbidden build
-artifact content and SHALL validate that the PostgreSQL mount is an external bind.
+CI databases SHALL be isolated, ephemeral external test paths and SHALL NOT be uploaded. Source,
+build-context, production-build, and image checks SHALL reject tracked or packaged environment files,
+database or dump material, Backups, credentials, organization fixtures, generated reports, and
+forbidden build artifacts, and SHALL validate that the PostgreSQL data mount is an external bind.
 
 #### Scenario: Detect an accidental data file
-- **WHEN** a database, Backup, live credential, or generated `.env` becomes tracked or enters the image
-- **THEN** CI and publication fail with the offending path without printing secret content
+- **WHEN** database, Backup, live credential, generated environment, or test report material becomes tracked or enters the build context or image
+- **THEN** CI and publication fail with the offending path without printing its contents
 
 ### Requirement: SemVer releases publish verified public GHCR images
 Release Please SHALL maintain the root version, CHANGELOG, release PR, SemVer tag, and GitHub Release.
@@ -200,3 +203,16 @@ bound SHALL replace the file for review.
 
 - **WHEN** a candidate exceeds the pixel budget or maximum channel delta outside an explicitly marked raster region
 - **THEN** screenshot generation writes the candidate so repository review exposes the change
+
+### Requirement: Production dependencies are patched and auditable
+The committed lockfile and production image SHALL resolve application runtime dependencies outside
+known high or critical advisory ranges at delivery time. A maintained command SHALL audit production
+dependencies explicitly, and Dependabot SHALL continue to monitor npm, Docker, and GitHub Actions.
+
+#### Scenario: Validate a release candidate
+- **WHEN** complete validation runs for a release candidate
+- **THEN** the production dependency audit passes before the application image is published
+
+#### Scenario: Advisory affects a runtime dependency
+- **WHEN** the registry reports a high or critical advisory in the installed production graph
+- **THEN** validation blocks delivery until a patched resolution or separately reviewed change is committed

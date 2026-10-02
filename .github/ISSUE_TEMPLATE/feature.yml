@@ -21,7 +21,7 @@ body:
     id: data-boundary
     attributes:
       label: Data boundary
-      description: Does the proposal keep all organization data within the browser and loopback same-origin runtime?
+      description: Does the proposal keep all organization data within the self-hosted browser, same-origin server, PostgreSQL, and explicit Backup or output boundary?
       options:
         - Yes
         - Unsure; privacy design is needed

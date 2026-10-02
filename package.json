@@ -22,11 +22,13 @@
     "dev:ui": "./bin/org-tools dev",
     "format": "biome format --write .",
     "fixture:performance": "node scripts/generate-performance-fixture.mjs",
+    "hygiene:dead-code": "knip --include files,dependencies,unlisted,binaries",
     "lint": "biome check .",
     "public:check": "node scripts/check-public-safety.mjs",
     "public:check:source": "node scripts/check-public-safety.mjs --source-only",
     "screenshots:generate": "pnpm --filter @org-tools/screenshots generate",
     "screenshots:verify": "node scripts/verify-screenshots.mjs",
+    "security:audit": "pnpm audit --audit-level moderate",
     "spec": "node scripts/run-openspec.mjs",
     "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
     "start": "./bin/org-tools up",
@@ -46,7 +48,8 @@
     "@biomejs/biome": "^2.4.16",
     "@fission-ai/openspec": "1.5.0",
     "@types/node": "^25.9.1",
+    "knip": "6.39.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
