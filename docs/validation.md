@@ -56,6 +56,12 @@ declared PNG files exist and both SHA-256 manifests match:
 ./bin/org-tools run pnpm screenshots:verify
 ```
 
+Each capture waits for bundled fonts and embedded images, disables transient animation, and accepts
+the frame only after two consecutive bounded pixel samples agree. The existing antialiasing budget
+applies only inside explicit raster-noise regions. A frame that never stabilizes fails with both
+final samples in `test-results/screenshot-stability`; a cross-pass mismatch retains both complete
+frame versions in `test-results/screenshot-determinism` and CI uploads the diagnostic artifact.
+
 ## Timing baseline
 
 The last serial `main` CI before this change took 26 minutes 46 seconds. The separate Container
@@ -109,3 +115,27 @@ verified production-image job and Container publication while keeping separate c
 Stateful browser scenarios keep their normal product assertion deadline. When mandatory baseline
 restoration begins, it receives a separate bounded cleanup reserve so an otherwise useful failure
 cannot leave maintenance state behind and invalidate the remainder of its shard.
+
+## Gallery stabilization follow-up
+
+The first archived-state CI run exposed one real `demo-teams.png` mismatch after two otherwise
+successful 56-frame passes. An unchanged rerun passed, proving that the fixed 1.5-second delay was
+neither a sufficient readiness condition nor useful deterministic evidence. Visual inspection also
+found that Administration grants came from PostgreSQL without an explicit aggregate order; the
+server now orders them by permission and scope.
+
+The replacement waits on resources and consecutive visual equality instead of elapsed time. On the
+same isolated development runtime, the previous complete passes took 198.62 and 168.71 seconds.
+Repeated stabilized runs took 142.68/92.66 and 116.55/94.02 seconds. Total gallery generation fell
+from 367.33 seconds to 235.34–210.57 seconds, a 36–43% reduction, while all 56 hashes still matched
+and every capture gained an explicit stability assertion. On GitHub's clean runners the stabilized
+two-pass gallery completed in 9 minutes 32 seconds, down from 11 minutes 22 seconds in the first
+optimized workflow, a further 16% reduction. The complete workflow finished in 9 minutes 37
+seconds, 64% below the original 26-minute-46-second baseline. Its slowest browser shard took 7
+minutes 50 seconds and all four shards passed.
+
+The conservative local changed-path run selected no skips because validation infrastructure and a
+server query changed. It completed all 396 unit tests, 47 browser tests, the 20,000/4,000 performance
+scenario, production build, publication scans, and gallery feedback in 746.56 seconds. The serial
+browser suite remained the local critical path at 601.88 seconds; the single gallery feedback pass
+took 100.58 seconds.

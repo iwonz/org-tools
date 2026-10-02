@@ -394,13 +394,15 @@ export class AdminService {
       this.pool.query(
         `SELECT a.id::text, a.email, a.employee_id::text, a.role_id::text, a.must_change_password,
                 a.status, a.created_at, a.updated_at,
-                COALESCE((SELECT jsonb_agg(jsonb_build_object('permission', permission, 'scope', scope))
+                COALESCE((SELECT jsonb_agg(jsonb_build_object('permission', permission, 'scope', scope)
+                                           ORDER BY permission, scope)
                           FROM account_grants WHERE account_id = a.id), '[]'::jsonb) AS direct_grants
          FROM accounts a ORDER BY lower(a.email), a.id`,
       ),
       this.pool.query(
         `SELECT r.id::text, r.name, r.system_key,
-                COALESCE((SELECT jsonb_agg(jsonb_build_object('permission', permission, 'scope', scope))
+                COALESCE((SELECT jsonb_agg(jsonb_build_object('permission', permission, 'scope', scope)
+                                           ORDER BY permission, scope)
                           FROM role_grants WHERE role_id = r.id), '[]'::jsonb) AS grants,
                 (SELECT count(*)::int FROM accounts WHERE role_id = r.id) AS account_count
          FROM roles r ORDER BY system_key IS NULL, lower(name), id`,

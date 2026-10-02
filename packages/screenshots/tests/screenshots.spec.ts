@@ -6,6 +6,7 @@ import type { Page } from "@playwright/test";
 import sharp from "sharp";
 
 import arMessages from "../../../apps/ui/messages/ar.json" with { type: "json" };
+import { compareScreenshotPixels } from "../../../scripts/screenshot-stability.mjs";
 import { expect, test } from "./browser-test.js";
 import {
   createDistributionStateFile,
@@ -31,8 +32,11 @@ const screenshotsDirectory = fileURLToPath(new URL("../../../docs/screenshots", 
 const manifestPath = fileURLToPath(new URL("../../../docs/screenshot-demo.json", import.meta.url));
 const screenshotManifest = JSON.parse(await readFile(manifestPath, "utf8")) as ScreenshotScenario[];
 const scenariosById = new Map(screenshotManifest.map((scenario) => [scenario.id, scenario]));
-const rasterNoisePixelBudget = 256;
-const rasterNoiseMaxChannelDelta = 3;
+const screenshotStabilityDirectory = fileURLToPath(
+  new URL("../../../test-results/screenshot-stability", import.meta.url),
+);
+const screenshotStabilityAttempts = 6;
+const screenshotStabilityIntervalMs = 100;
 const LONG_EXPORT_TAG = "Strategic Customer Experience Operations Enablement";
 const LONG_EXPORT_TAG_ID = "90000000-0000-4000-8000-000000000099";
 
@@ -59,76 +63,59 @@ async function capture(page: Page, id: string, options: { stabilized?: boolean }
         };
       }),
     );
-  const screenshot = await page.screenshot({ animations: "disabled" });
+  let previousScreenshot = await page.screenshot({ animations: "disabled" });
+  let previousPixels = await decodeScreenshot(previousScreenshot);
+  let unstablePair: [Buffer, Buffer] | null = null;
+  let screenshot: Buffer | null = null;
+  let screenshotPixels = previousPixels;
+  for (let attempt = 1; attempt < screenshotStabilityAttempts; attempt += 1) {
+    await page.waitForTimeout(screenshotStabilityIntervalMs);
+    const candidateScreenshot = await page.screenshot({ animations: "disabled" });
+    const candidatePixels = await decodeScreenshot(candidateScreenshot);
+    if (compareScreenshotPixels(previousPixels, candidatePixels, rasterNoiseRegions).matches) {
+      screenshot = candidateScreenshot;
+      screenshotPixels = candidatePixels;
+      break;
+    }
+    unstablePair = [previousScreenshot, candidateScreenshot];
+    previousScreenshot = candidateScreenshot;
+    previousPixels = candidatePixels;
+  }
+  if (!screenshot) {
+    await mkdir(screenshotStabilityDirectory, { recursive: true });
+    const [before, after] = unstablePair ?? [previousScreenshot, previousScreenshot];
+    await Promise.all([
+      writeFile(`${screenshotStabilityDirectory}/${id}-before.png`, before),
+      writeFile(`${screenshotStabilityDirectory}/${id}-after.png`, after),
+    ]);
+    throw new Error(
+      `Screenshot ${id} did not stabilize across ${screenshotStabilityAttempts} bounded samples.`,
+    );
+  }
   const path = screenshotPath(id);
   try {
     const existing = await readFile(path);
-    const [existingPixels, candidatePixels] = await Promise.all([
-      sharp(existing)
-        .flatten({ background: "#ffffff" })
-        .removeAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true }),
-      sharp(screenshot)
-        .flatten({ background: "#ffffff" })
-        .removeAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true }),
-    ]);
-    if (
-      existingPixels.info.width === candidatePixels.info.width &&
-      existingPixels.info.height === candidatePixels.info.height &&
-      existingPixels.info.channels === candidatePixels.info.channels
-    ) {
-      let changedPixels = 0;
-      let rasterNoiseOnly = true;
-      for (
-        let offset = 0;
-        offset < existingPixels.data.length;
-        offset += existingPixels.info.channels
-      ) {
-        let pixelChanged = false;
-        let hasLargeDelta = false;
-        for (let channel = 0; channel < existingPixels.info.channels; channel += 1) {
-          const existingChannel = existingPixels.data[offset + channel];
-          const candidateChannel = candidatePixels.data[offset + channel];
-          if (existingChannel === undefined || candidateChannel === undefined) {
-            rasterNoiseOnly = false;
-            break;
-          }
-          const delta = Math.abs(existingChannel - candidateChannel);
-          hasLargeDelta ||= delta > rasterNoiseMaxChannelDelta;
-          pixelChanged ||= delta > 0;
-        }
-        if (!rasterNoiseOnly) break;
-        if (pixelChanged) {
-          if (hasLargeDelta) {
-            const pixelIndex = offset / existingPixels.info.channels;
-            const x = pixelIndex % existingPixels.info.width;
-            const y = Math.floor(pixelIndex / existingPixels.info.width);
-            if (
-              !rasterNoiseRegions.some(
-                (region) =>
-                  x >= region.left && x < region.right && y >= region.top && y < region.bottom,
-              )
-            ) {
-              rasterNoiseOnly = false;
-              break;
-            }
-          }
-          changedPixels += 1;
-          if (changedPixels > rasterNoisePixelBudget) {
-            rasterNoiseOnly = false;
-            break;
-          }
-        }
-      }
-      if (rasterNoiseOnly) return;
-    }
+    const existingPixels = await decodeScreenshot(existing);
+    if (compareScreenshotPixels(existingPixels, screenshotPixels, rasterNoiseRegions).matches)
+      return;
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
   await writeFile(path, screenshot);
+}
+
+async function decodeScreenshot(screenshot: Buffer) {
+  const pixels = await sharp(screenshot)
+    .flatten({ background: "#ffffff" })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return {
+    channels: pixels.info.channels,
+    data: pixels.data,
+    height: pixels.info.height,
+    width: pixels.info.width,
+  };
 }
 
 async function openSyntheticState(page: Page) {
