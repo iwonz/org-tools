@@ -117,7 +117,7 @@ const loginAndChangeTemporaryPassword = async (
 test("enforces roles, scopes, ACL projections, and Administration isolation", async ({
   browser,
   page,
-}) => {
+}, testInfo) => {
   test.setTimeout(480_000);
   await replaceWithSyntheticState(page);
   const adminSession = await authenticateSuperAdministrator(page);
@@ -574,6 +574,8 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
       .poll(() => customPage.request.get("/api/session").then((response) => response.status()))
       .toBe(401);
   } finally {
+    // Keep the assertion deadline strict while reserving bounded time for baseline restoration.
+    testInfo.setTimeout(testInfo.timeout + 120_000);
     await Promise.all(contexts.map((context) => context.close()));
     const restoreSession = await authenticateSuperAdministrator(page);
     const request = page.context().request;
