@@ -405,20 +405,57 @@ export async function stabilizeForScreenshot(page: Page): Promise<void> {
       activeElement.blur();
     }
   });
-  await page.addStyleTag({
-    content: `
-      *, *::before, *::after {
-        animation-duration: 0s !important;
-        caret-color: transparent !important;
-        transition-duration: 0s !important;
-      }
-      [data-slot="scroll-area-scrollbar"] {
-        display: none !important;
-      }
-    `,
-  });
   await page.evaluate(async () => {
+    const styleId = "org-tools-screenshot-stability";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        *, *::before, *::after {
+          animation-duration: 0s !important;
+          caret-color: transparent !important;
+          transition-duration: 0s !important;
+        }
+        [data-slot="scroll-area-scrollbar"] {
+          display: none !important;
+        }
+      `;
+      document.head.append(style);
+    }
     await document.fonts.ready;
+    await Promise.all(
+      [...document.images].map(
+        (image) =>
+          new Promise<void>((resolve, reject) => {
+            const decode = () =>
+              void image
+                .decode()
+                .catch(() => undefined)
+                .finally(resolve);
+            if (image.complete) {
+              decode();
+              return;
+            }
+            const timeoutId = window.setTimeout(() => {
+              cleanup();
+              reject(new Error(`Image did not reach a completed state: ${image.currentSrc}`));
+            }, 5_000);
+            const cleanup = () => {
+              window.clearTimeout(timeoutId);
+              image.removeEventListener("load", onComplete);
+              image.removeEventListener("error", onComplete);
+            };
+            const onComplete = () => {
+              cleanup();
+              decode();
+            };
+            image.addEventListener("load", onComplete, { once: true });
+            image.addEventListener("error", onComplete, { once: true });
+          }),
+      ),
+    );
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
   });
-  await page.waitForTimeout(1_500);
 }

@@ -9,7 +9,9 @@ The production server suite authenticates a synthetic Super Administrator and re
 through protected organization/UI endpoints before each workflow. Every page is monitored for
 unexpected console warnings and errors, uncaught page errors, failed application requests, and
 failing same-origin resources. Run `pnpm screenshots:generate`, inspect both themes and all six
-languages including Arabic RTL, then run it again and compare hashes.
+languages including Arabic RTL, then run it again and compare hashes. Before each capture, the
+harness waits for bundled fonts and embedded images and requires two consecutive pixel samples to
+match. An unstable frame fails with diagnostic samples instead of relying on a fixed delay.
 
 ## Authentication
 
