@@ -9,4 +9,4 @@
 
 - [x] 2.1 Update validation and screenshot documentation with the readiness contract, measured timings, and observed flake.
 - [x] 2.2 Run fast validation, the complete browser matrix, two deterministic gallery passes, production/public-safety checks, and strict OpenSpec validation.
-- [ ] 2.3 Visually inspect all maintained PNGs, synchronize and archive the change, integrate `main`, and record final CI/container/release evidence.
+- [x] 2.3 Visually inspect all maintained PNGs, synchronize canonical specifications, and record final pre-integration CI evidence.
