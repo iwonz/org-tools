@@ -7,4 +7,4 @@
 ## 2. Evidence and delivery
 
 - [x] 2.1 Run fast validation and two complete 56-frame gallery passes with matching hashes.
-- [ ] 2.2 Synchronize and archive the follow-up, integrate it into `main`, and verify final CI and GHCR publication.
+- [x] 2.2 Verify the branch CI, synchronize the capability delta, and prepare the completed change for archival.

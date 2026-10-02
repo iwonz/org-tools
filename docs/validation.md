@@ -147,3 +147,7 @@ incorrectly combined them into 266. The comparator now applies the unchanged all
 trust category independently. A large delta outside an explicit raster region, or either category
 exceeding 256 pixels, still fails; accepted pass two output retains pass one's exact bytes so the
 two SHA-256 manifests remain identical.
+
+The corrected PR gate passed all seven parallel jobs. The complete two-pass gallery took 9 minutes
+26 seconds, the slowest browser shard took 8 minutes, static and runtime validation took 3 minutes
+48 seconds, and the production image check took 3 minutes 11 seconds.
