@@ -36,6 +36,13 @@ only the complete CI matrix is delivery evidence.
    jobs cover static/runtime checks, four isolated browser shards, two full gallery passes, and the
    production image. The stable `validate` job succeeds only when all evidence jobs succeed.
 
+Release Please pull requests are created by the repository token. GitHub holds their initial CI run
+for a maintainer's **Approve workflows to run** action; this is the explicit release review gate,
+not a failed check. After the passing release PR is merged, Release Please updates the version and
+changelog, creates the tag and GitHub Release, and explicitly dispatches Container at that tag.
+Delivery is complete only after the versioned multi-platform image and anonymous pull verification
+pass.
+
 ## Isolation and coverage
 
 The authoritative browser command contains `smoke`, localization, authorization, and persistence

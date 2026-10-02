@@ -80,7 +80,9 @@ upgrade procedure. Never copy a live data directory between major versions.
 
 Images are published as `ghcr.io/iwonz/org-tools`: `edge` and `sha-*` track `main`; stable releases
 publish `X.Y.Z`, `X.Y`, `X`, and `latest` for `linux/amd64` and `linux/arm64`. Release Please owns
-SemVer release PRs, `CHANGELOG.md`, GitHub Releases, and generated release notes.
+SemVer release PRs, `CHANGELOG.md`, GitHub Releases, and generated release notes. A reviewed release
+PR is merged manually; the Release workflow then dispatches the existing Container workflow for the
+created tag so the versioned image is published even with GitHub's token event suppression.
 
 ## Screenshots and documentation
 

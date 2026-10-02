@@ -95,7 +95,10 @@ encrypted recovery backup, replaces all data in one transaction, and revokes ses
 
 The production image uses Next standalone output, bundled assets, a read-only root filesystem,
 dropped Linux capabilities, and UID/GID `10001:10001`. GHCR publishes amd64 and arm64 manifests,
-OCI metadata, SBOM, and provenance. Release Please creates conventional SemVer releases.
+OCI metadata, SBOM, and provenance. Release Please creates conventional SemVer releases. Because
+GitHub suppresses workflow events created by the repository token, a successful Release Please
+release explicitly dispatches the Container workflow at the returned SemVer tag. The dispatch uses
+workflow-scoped `actions: write`; repository default token permissions remain read-only.
 
 ## Validation architecture
 
