@@ -23,6 +23,8 @@ export function compareScreenshotPixels(
   }
 
   let changedPixels = 0;
+  let ordinaryChangedPixels = 0;
+  let scopedRasterChangedPixels = 0;
   for (let offset = 0; offset < reference.data.length; offset += reference.channels) {
     let pixelChanged = false;
     let hasLargeDelta = false;
@@ -42,10 +44,13 @@ export function compareScreenshotPixels(
     const pixelIndex = offset / reference.channels;
     const x = pixelIndex % reference.width;
     const y = Math.floor(pixelIndex / reference.width);
-    if (hasLargeDelta && !regions.some((region) => containsPoint(region, x, y))) {
+    const isScopedRasterPixel = regions.some((region) => containsPoint(region, x, y));
+    if (hasLargeDelta && !isScopedRasterPixel) {
       return { changedPixels, matches: false, reason: "unscoped-delta" };
     }
-    if (changedPixels > pixelBudget) {
+    if (isScopedRasterPixel) scopedRasterChangedPixels += 1;
+    else ordinaryChangedPixels += 1;
+    if (ordinaryChangedPixels > pixelBudget || scopedRasterChangedPixels > pixelBudget) {
       return { changedPixels, matches: false, reason: "pixel-budget" };
     }
   }
