@@ -147,3 +147,10 @@ export.
 #### Scenario: Select a viewer without export permission
 - **WHEN** the acting Super Administrator selects an active viewer who cannot independently export images
 - **THEN** the output uses that viewer's read model while the action remains authorized and attributed to the Super Administrator
+
+### Requirement: Administration grants have deterministic order
+Administration account and role read models SHALL return permission grants ordered by permission and scope so equivalent PostgreSQL contents produce the same API and visual presentation across clean instances.
+
+#### Scenario: Equivalent grant sets from clean databases
+- **WHEN** two clean instances contain the same role or account grant set
+- **THEN** their Administration responses and rendered grant order are identical
