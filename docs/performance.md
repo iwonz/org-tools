@@ -46,6 +46,11 @@ Data Download streams one authorized traversal and performs optional line de-dup
 bounded set. Image preview and final output use the same filtered document and enforce pixel and
 dimension limits.
 
+Image Tag exclusions use one bounded ID set per render and are applied before rich-line, Slot, and
+Unit-footer measurement. Hiding Staffing Slots filters rows and dependent attachment chains before
+bounds are calculated. The Tag selector virtualizes its visible catalog, while Select all and
+Deselect all remain one linear pass over the complete authorized catalog.
+
 Backup streams bounded table sets into a validated payload, gzip compresses once, and derives its
 encryption key with intentionally expensive Argon2id. Restore validates before taking the exclusive
 maintenance lock; only the final replacement transaction blocks ordinary work.

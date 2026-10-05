@@ -656,8 +656,24 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
   await expect(
     page.locator('[data-demo-id="org-editor-image-export-subject-options"]'),
   ).toContainText("Jordan Reed");
-  await capture(page, "editor-image-export");
   await page.keyboard.press("Escape");
+  const tagVisibilityTrigger = viewImageDialog.locator(
+    '[data-demo-id="org-editor-image-tag-visibility-trigger"]',
+  );
+  await tagVisibilityTrigger.click();
+  await page.locator('[data-demo-id="org-editor-image-tag-deselect-all"]').click();
+  await page
+    .locator('[data-demo-id="org-editor-image-tag-options"]')
+    .getByText("Design", { exact: true })
+    .click();
+  await capture(page, "editor-image-export");
+  const tagVisibilityPopover = page.locator(
+    '[data-demo-id="org-editor-image-tag-visibility-popover"]',
+  );
+  await expect(tagVisibilityPopover).toBeVisible();
+  await tagVisibilityPopover.getByRole("textbox").press("Escape");
+  await expect(tagVisibilityPopover).toBeHidden();
+  await expect(viewImageDialog).toBeVisible();
   await viewImageDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });

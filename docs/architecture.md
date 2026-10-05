@@ -78,6 +78,12 @@ from that projection without installing it in the session store. Preview, Copy, 
 share one account and revision while the administrator keeps their own session and transient image
 settings. Successful alternate projections append a value-free audit event.
 
+Each account UI document also stores image-content preferences as excluded Tag IDs plus the Hide
+Staffing Slots flag. The account projection removes missing or unreadable Tag IDs before the client
+hydrates them. Both image dialogs reuse the same preferences, intersect exclusions with the
+currently selected access subject's Tag catalog, and pass one immutable settings object through
+measurement, Preview, Copy, and Save.
+
 The client hydrates a strict local store from this projection. Non-Super-Administrator writes use
 `organization.patch`: the server parses a full projected candidate, restores hidden source values,
 then applies permission and ACL checks. Super Administrator replacement follows the same parser and
@@ -126,3 +132,8 @@ commands and timing methodology.
 Fast validation also runs pinned dead-source/dependency reachability and the package manager's full
 moderate-or-higher advisory audit. These are build-time controls only and never enter the standalone
 runtime image.
+
+The audit wrapper currently recognizes one exact, unpatched, development-only OpenSpec dependency
+path for `GHSA-vfj7-8cjw-p6xm`. Its code and tests reject production paths, path drift, a published
+patched version, and dates on or after 2026-11-05, forcing an explicit upgrade or review instead of
+silently suppressing future findings.

@@ -29,6 +29,34 @@ describe("state change tracking", () => {
     expect(store.uiChangeSequence).toBeGreaterThan(0);
   });
 
+  it("tracks normalized image export preferences as account UI only", () => {
+    const store = new OrgStore();
+    const firstTagId = "00000000-0000-4000-8000-000000000111";
+    const secondTagId = "00000000-0000-4000-8000-000000000112";
+    const state = createBlankOrgToolsState("dark");
+    state.organization.tags = [
+      { color: "blue", id: firstTagId, label: "Platform" },
+      { color: "rose", id: secondTagId, label: "Transition" },
+    ];
+    store.loadOrgToolsState(state, "preferences.json", 100);
+    store.resetChangeTracking();
+
+    store.setEditorImageExportPreferences({
+      excludedTagIds: [secondTagId, firstTagId, secondTagId],
+      hideStaffingSlots: true,
+    });
+
+    expect(store.editorImageExportPreferences).toEqual({
+      excludedTagIds: [firstTagId, secondTagId],
+      hideStaffingSlots: true,
+    });
+    expect(store.organizationChangeSequence).toBe(0);
+    expect(store.uiChangeSequence).toBe(1);
+
+    store.setEditorImageExportPreferences(store.editorImageExportPreferences);
+    expect(store.uiChangeSequence).toBe(1);
+  });
+
   it("tracks distribution mode as bounded UI without an organization change", () => {
     const store = new OrgStore();
     const unitId = store.orgEditor.addUnit({ name: "Source", x: 0, y: 0 });

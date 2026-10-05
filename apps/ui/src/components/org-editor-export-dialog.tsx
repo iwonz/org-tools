@@ -1,6 +1,7 @@
 "use client";
 
 import type { Employee, EmployeeId, EmployeeTagColor, OrgEditorUnit } from "@org-tools/types";
+import { observer } from "mobx-react-lite";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -14,6 +15,7 @@ import {
 } from "react-icons/hi2";
 import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
 import { ExportTemplateSettings } from "@/components/export-template-settings";
+import { OrgEditorImageExportContentControls } from "@/components/org-editor-image-export-content-controls";
 import {
   OrgEditorImageExportSubjectSelect,
   useOrgEditorImageExportSubject,
@@ -119,7 +121,7 @@ const getBackgroundButtonClassName = (isActive: boolean) =>
     isActive ? "bg-accent-strong/70 text-foreground" : "bg-secondary/55",
   );
 
-export function OrgEditorExportDialog({
+export const OrgEditorExportDialog = observer(function OrgEditorExportDialog({
   employeeById,
   imageSource,
   onOpenChange,
@@ -145,12 +147,13 @@ export function OrgEditorExportDialog({
     : null;
   const [scope, setScope] = useState<OrgEditorExportScope>("subtree");
   const [activeTab, setActiveTab] = useState<OrgEditorExportTab>("image");
-  const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() =>
-    createDefaultOrgEditorImageExportSettings(
+  const [imageSettings, setImageSettings] = useState<OrgEditorImageExportSettings>(() => ({
+    ...createDefaultOrgEditorImageExportSettings(
       store.employeeDisplayFormats.editorExport,
       store.employeeDisplayLineGaps.editorExport,
     ),
-  );
+    ...store.editorImageExportPreferences,
+  }));
   const previousImageOpenRef = useRef(false);
   const [templateFormat, setTemplateFormat] = useState(DEFAULT_TEMPLATE_FORMAT);
   const [keepUniqueTemplateLines, setKeepUniqueTemplateLines] = useState(false);
@@ -216,10 +219,16 @@ export function OrgEditorExportDialog({
         ...current,
         employeeFormat: store.employeeDisplayFormats.editorExport,
         employeeLineGap: store.employeeDisplayLineGaps.editorExport,
+        ...store.editorImageExportPreferences,
       }));
     }
     previousImageOpenRef.current = open;
-  }, [open, store.employeeDisplayFormats.editorExport, store.employeeDisplayLineGaps.editorExport]);
+  }, [
+    open,
+    store.editorImageExportPreferences,
+    store.employeeDisplayFormats.editorExport,
+    store.employeeDisplayLineGaps.editorExport,
+  ]);
   const exportRows = useMemo(() => {
     if (!unit) return [];
 
@@ -581,6 +590,15 @@ export function OrgEditorExportDialog({
 
               <section className="grid gap-4 py-2">
                 <OrgEditorImageExportSubjectSelect state={subjectState} />
+                <OrgEditorImageExportContentControls
+                  excludedTagIds={imageSettings.excludedTagIds}
+                  hideStaffingSlots={imageSettings.hideStaffingSlots}
+                  onChange={(preferences) => {
+                    store.setEditorImageExportPreferences(preferences);
+                    updateImageSettings(preferences);
+                  }}
+                  tagDefinitions={selectedImageSource?.tagDefinitions ?? []}
+                />
                 <div className="grid gap-2">
                   <Label>{t("Background")}</Label>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -795,4 +813,4 @@ export function OrgEditorExportDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});

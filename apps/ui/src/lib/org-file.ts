@@ -1780,6 +1780,7 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
       "calendar",
       "download",
       "editor",
+      "editorImageExport",
       "employees",
       "expandedUnitIds",
       "locale",
@@ -1812,6 +1813,12 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
     typeof value.editor.searchOpen !== "boolean" ||
     !isString(value.editor.searchQuery) ||
     !Array.isArray(value.editor.views) ||
+    !isRecord(value.editorImageExport) ||
+    !hasExactKeys(value.editorImageExport, ["excludedTagIds", "hideStaffingSlots"]) ||
+    !isUuidArray(value.editorImageExport.excludedTagIds) ||
+    new Set(value.editorImageExport.excludedTagIds).size !==
+      value.editorImageExport.excludedTagIds.length ||
+    typeof value.editorImageExport.hideStaffingSlots !== "boolean" ||
     !isRecord(value.employees) ||
     !hasExactKeys(value.employees, ["filters", "query"]) ||
     !isString(value.employees.query) ||
@@ -1840,6 +1847,10 @@ const normalizeUiState = (value: unknown): OrgToolsUiState | null => {
       searchOpen: value.editor.searchOpen,
       searchQuery: value.editor.searchQuery,
       views: viewUiStates as OrgToolsViewUiState[],
+    },
+    editorImageExport: {
+      excludedTagIds: [...value.editorImageExport.excludedTagIds],
+      hideStaffingSlots: value.editorImageExport.hideStaffingSlots,
     },
     employees: { filters: employeeFilters, query: value.employees.query },
     expandedUnitIds: [...value.expandedUnitIds],
@@ -2068,6 +2079,10 @@ export const createBlankOrgToolsState = (
             viewport: editor.viewport,
           },
         ],
+      },
+      editorImageExport: {
+        excludedTagIds: [],
+        hideStaffingSlots: false,
       },
       employees: { filters: createEmptyEmployeeFiltersState(), query: "" },
       expandedUnitIds: [],

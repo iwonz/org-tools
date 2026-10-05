@@ -404,6 +404,14 @@ test("enforces roles, scopes, ACL projections, and Administration isolation", as
     expect((await fullProjectionResponse).ok()).toBe(true);
     await expect(subjectTrigger).toContainText("Jordan Reed");
     await expect(viewPreview).toBeVisible();
+    const subjectTagTrigger = imageDialog.locator(
+      '[data-demo-id="org-editor-image-tag-visibility-trigger"]',
+    );
+    await subjectTagTrigger.click();
+    const subjectTagOptions = page.locator('[data-demo-id="org-editor-image-tag-options"]');
+    await expect(subjectTagOptions).not.toContainText("Content");
+    await expect(subjectTagOptions).toContainText("Design");
+    await page.keyboard.press("Escape");
     await expect(imageDialog.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
     const adminAfterExport = (await (await page.request.get("/api/session")).json()) as Bootstrap;
     expect(adminAfterExport.account.email).toBe(testAdministrator.email);

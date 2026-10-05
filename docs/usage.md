@@ -111,6 +111,13 @@ the administrator remains signed in. **My access** is restored whenever the dial
 account cannot read the current View or scoped Unit, image actions remain unavailable. The choice
 does not affect JSON or Template Data Download.
 
+**Tags in image** searches the selected access subject's visible Tag catalog. It supports selecting
+or clearing the complete catalog independently of the current search and then toggling individual
+Tags. The account stores exclusions, so newly created visible Tags appear automatically. **Hide
+Staffing Slots** removes Slot rows, Tags, counters, dependent Canvas attachments, and affected
+geometry. These two preferences are shared by full-View and scoped Unit image export and update the
+preview immediately.
+
 ## Calendar and Data Download
 
 Calendar contains only visible Employees, birthdays, dated Tags, and composite dates. Hidden fields,

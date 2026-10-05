@@ -1,11 +1,13 @@
 "use client";
 
 import type { EmployeeTagColor } from "@org-tools/types";
+import { observer } from "mobx-react-lite";
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HiOutlineArrowDownTray, HiOutlineClipboardDocument } from "react-icons/hi2";
 
 import { createEmployeeDisplayFormatTokens } from "@/components/employee-display-format-tokens";
+import { OrgEditorImageExportContentControls } from "@/components/org-editor-image-export-content-controls";
 import {
   OrgEditorImageExportSubjectSelect,
   useOrgEditorImageExportSubject,
@@ -47,7 +49,7 @@ const sanitizeViewImageName = (name: string) =>
     .replace(/^-+|-+$/gu, "")
     .slice(0, 80) || "org-editor-view";
 
-export function OrgEditorViewImageExportDialog({
+export const OrgEditorViewImageExportDialog = observer(function OrgEditorViewImageExportDialog({
   onOpenChange,
   open,
   source: currentSource,
@@ -66,12 +68,13 @@ export function OrgEditorViewImageExportDialog({
   const staffingSlotLabel = t("Staffing slot");
   const subjectState = useOrgEditorImageExportSubject({ currentSource, open });
   const source = subjectState.source;
-  const [settings, setSettings] = useState(() =>
-    createDefaultOrgEditorImageExportSettings(
+  const [settings, setSettings] = useState(() => ({
+    ...createDefaultOrgEditorImageExportSettings(
       store.employeeDisplayFormats.editorExport,
       store.employeeDisplayLineGaps.editorExport,
     ),
-  );
+    ...store.editorImageExportPreferences,
+  }));
   const previousImageOpenRef = useRef(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -89,10 +92,16 @@ export function OrgEditorViewImageExportDialog({
         ...current,
         employeeFormat: store.employeeDisplayFormats.editorExport,
         employeeLineGap: store.employeeDisplayLineGaps.editorExport,
+        ...store.editorImageExportPreferences,
       }));
     }
     previousImageOpenRef.current = open;
-  }, [open, store.employeeDisplayFormats.editorExport, store.employeeDisplayLineGaps.editorExport]);
+  }, [
+    open,
+    store.editorImageExportPreferences,
+    store.employeeDisplayFormats.editorExport,
+    store.employeeDisplayLineGaps.editorExport,
+  ]);
 
   const formatUnitSummary = useCallback(
     (summary: OrgEditorUnitSummary) =>
@@ -242,6 +251,15 @@ export function OrgEditorViewImageExportDialog({
           />
           <section className="grid gap-4 py-2" data-demo-id="org-editor-view-image-settings">
             <OrgEditorImageExportSubjectSelect state={subjectState} />
+            <OrgEditorImageExportContentControls
+              excludedTagIds={settings.excludedTagIds}
+              hideStaffingSlots={settings.hideStaffingSlots}
+              onChange={(preferences) => {
+                store.setEditorImageExportPreferences(preferences);
+                update(preferences);
+              }}
+              tagDefinitions={source?.tagDefinitions ?? []}
+            />
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>{t("Padding")}</Label>
@@ -367,4 +385,4 @@ export function OrgEditorViewImageExportDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});

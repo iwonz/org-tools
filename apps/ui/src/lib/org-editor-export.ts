@@ -127,6 +127,8 @@ export type OrgEditorImageExportSettings = {
   background: OrgEditorImageBackground;
   employeeFormat: string;
   employeeLineGap: number;
+  excludedTagIds: TagId[];
+  hideStaffingSlots: boolean;
   padding: number;
   unitBorderRadius: number;
 };
@@ -502,9 +504,57 @@ export const createDefaultOrgEditorImageExportSettings = (
   background: { type: "transparent" },
   employeeFormat,
   employeeLineGap,
+  excludedTagIds: [],
+  hideStaffingSlots: false,
   padding: 20,
   unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
 });
+
+export const getOrgEditorImageExportVisibleTags = <TTag extends { tagId?: TagId | undefined }>(
+  tags: readonly TTag[],
+  excludedTagIds: ReadonlySet<TagId>,
+): TTag[] => tags.filter((tag) => !tag.tagId || !excludedTagIds.has(tag.tagId));
+
+export const getOrgEditorImageExportVisibleCanvasElements = (
+  elements: readonly OrgEditorCanvasElement[],
+  hiddenStaffingSlotIds: ReadonlySet<string>,
+): OrgEditorCanvasElement[] => {
+  if (hiddenStaffingSlotIds.size === 0) return [...elements];
+  const excludedElementIds = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const element of elements) {
+      if (excludedElementIds.has(element.id)) continue;
+      const targets =
+        element.type === "arrow"
+          ? [element.start.attachment?.target, element.end.attachment?.target]
+          : [element.attachment?.target];
+      const dependsOnHiddenContent = targets.some(
+        (target) =>
+          (target?.owner.type === "staffingSlot" &&
+            hiddenStaffingSlotIds.has(target.owner.staffingSlotId)) ||
+          (target?.owner.type === "element" && excludedElementIds.has(target.owner.elementId)),
+      );
+      if (!dependsOnHiddenContent) continue;
+      excludedElementIds.add(element.id);
+      changed = true;
+    }
+  }
+  return elements.filter((element) => !excludedElementIds.has(element.id));
+};
+
+export const getOrgEditorImageExportVisibleUnitSummary = (
+  summary: OrgEditorUnitSummary,
+  hideStaffingSlots: boolean,
+): OrgEditorUnitSummary =>
+  hideStaffingSlots
+    ? {
+        ...summary,
+        directStaffingSlotCount: 0,
+        totalStaffingSlotCount: 0,
+      }
+    : summary;
 
 export type OrgEditorImageRenderPlan = {
   clamped: boolean;
@@ -1536,6 +1586,7 @@ export const createOrgEditorImageExportResult = async ({
     ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE.fontSize,
   );
   const imageFontFamily = getOrgEditorCanvasCssFontFamily(ORG_EDITOR_EXPORT_FONT_FAMILY);
+  const excludedTagIds = new Set(settings.excludedTagIds);
   const measureEmployeeText: EmployeeDisplayTextMeasure = createEmployeeDisplayTextMeasureEngine({
     createContext: () => measureContext,
   }).measure;
@@ -1550,7 +1601,12 @@ export const createOrgEditorImageExportResult = async ({
   const employeeSummaryByUnitId = buildOrgEditorUnitSummaryById(units);
   const tagDefinitionById = new Map(tagDefinitions.map((tag) => [tag.id, tag] as const));
   const imageUnitRenderData = imageUnits.map((unit) => {
-    const rows = getOrgEditorVisibleUnitRows(unit, employeeById, viewSettings.groupByTag, tagOrder);
+    const rows = getOrgEditorVisibleUnitRows(
+      unit,
+      employeeById,
+      viewSettings.groupByTag,
+      tagOrder,
+    ).filter((row) => !settings.hideStaffingSlots || row.type !== "staffingSlot");
     const employeeDistributionPresentations = rows.map((row) =>
       row.type === "employee"
         ? getEditorEmployeeDistributionPresentation({
@@ -1567,10 +1623,14 @@ export const createOrgEditorImageExportResult = async ({
       if (row.type !== "employee") return [];
       const employee = employeeById.get(row.employeeId);
       if (!employee) return [];
+      const imageEmployee = {
+        ...employee,
+        tags: getOrgEditorImageExportVisibleTags(employee.tags, excludedTagIds),
+      };
       const unitPosition = employee.unitPositions.find((position) => position.unitId === unit.id);
       return renderEmployeeDisplayRichLines({
         customEmployeeFieldDefinitions,
-        employee,
+        employee: imageEmployee,
         format: settings.employeeFormat,
         positionNotSpecifiedLabel,
         ...(resolvedTemplateValuesByEmployeeId ? { resolvedTemplateValuesByEmployeeId } : {}),
@@ -1593,12 +1653,14 @@ export const createOrgEditorImageExportResult = async ({
       const tags =
         row.type === "employee"
           ? []
-          : row.staffingSlot.tags.flatMap((assignment) => {
-              const definition = tagDefinitionById.get(assignment.tagId);
-              return definition
-                ? [{ ...definition, date: assignment.date } satisfies EmployeeTag]
-                : [];
-            });
+          : getOrgEditorImageExportVisibleTags(row.staffingSlot.tags, excludedTagIds).flatMap(
+              (assignment) => {
+                const definition = tagDefinitionById.get(assignment.tagId);
+                return definition
+                  ? [{ ...definition, date: assignment.date } satisfies EmployeeTag]
+                  : [];
+              },
+            );
       return createOrgEditorExportEmployeeTagLayout(
         getOrgEditorExportTags(tags, locale),
         availableTagWidth,
@@ -1615,7 +1677,9 @@ export const createOrgEditorImageExportResult = async ({
     const { offsets: employeeRowOffsets } = getOrgEditorEmployeeRowStackLayout(employeeRowHeights);
 
     const tagSummaries = viewSettings.showTagCloud
-      ? buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder)
+      ? buildOrgEditorUnitTagSummary(unit, employeeById, tagOrder).filter(
+          (summary) => !excludedTagIds.has(summary.tagId),
+        )
       : [];
     const footerHeight = unit.collapsed
       ? 0
@@ -1641,11 +1705,20 @@ export const createOrgEditorImageExportResult = async ({
   const imageUnitRenderDataById = new Map(
     imageUnitRenderData.map((data) => [data.unit.id, data] as const),
   );
+  const hiddenStaffingSlotIds = new Set(
+    settings.hideStaffingSlots
+      ? imageUnits.flatMap((unit) => unit.staffingSlots.map((slot) => slot.id))
+      : [],
+  );
+  const visibleCanvasElements = getOrgEditorImageExportVisibleCanvasElements(
+    canvasElements,
+    hiddenStaffingSlotIds,
+  );
   const scopedElementIds =
     scope === "view"
-      ? new Set(canvasElements.map((element) => element.id))
+      ? new Set(visibleCanvasElements.map((element) => element.id))
       : getOrgEditorScopedCanvasElementIds({
-          elements: canvasElements,
+          elements: visibleCanvasElements,
           ownerKeys: new Set(
             imageUnitRenderData.flatMap(({ rows, unit }) => [
               `unit:${unit.id}`,
@@ -1657,7 +1730,9 @@ export const createOrgEditorImageExportResult = async ({
             ]),
           ),
         });
-  const sceneCanvasElements = canvasElements.filter((element) => scopedElementIds.has(element.id));
+  const sceneCanvasElements = visibleCanvasElements.filter((element) =>
+    scopedElementIds.has(element.id),
+  );
   const resolvedCanvasElementById = resolveOrgEditorCanvasElements({
     elements: sceneCanvasElements,
     resolveExternalAnchor: (ref: OrgEditorAnchorRef) => {
@@ -1862,7 +1937,7 @@ export const createOrgEditorImageExportResult = async ({
 
     const summaryMaxWidth =
       width - ORG_EDITOR_UNIT_BORDER_WIDTH * 2 - ORG_EDITOR_UNIT_CONTENT_PADDING * 2;
-    const summary =
+    const sourceSummary =
       employeeSummaryByUnitId.get(unit.id) ??
       ({
         directEmployeeCount: unit.employeeIds.length,
@@ -1871,6 +1946,10 @@ export const createOrgEditorImageExportResult = async ({
         totalEmployeeCount: unit.employeeIds.length,
         totalStaffingSlotCount: unit.staffingSlots.length,
       } satisfies OrgEditorUnitSummary);
+    const summary = getOrgEditorImageExportVisibleUnitSummary(
+      sourceSummary,
+      settings.hideStaffingSlots,
+    );
     context.textAlign = "start";
     context.textBaseline = "middle";
     context.fillStyle = "#64748b";

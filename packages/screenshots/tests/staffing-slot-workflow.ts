@@ -144,7 +144,10 @@ export async function exerciseStaffingSlots(page: Page) {
   });
   await productUnit.click({ button: "right", position: { x: 80, y: 24 } });
   await page.locator('[data-demo-id="org-editor-export-action"]').click();
-  await expect(page.locator('[data-demo-id="org-editor-export-image"]')).toBeVisible();
+  const imageExport = page.locator('[data-demo-id="org-editor-export-dialog"]');
+  await imageExport.getByRole("tab", { name: "Unit only", exact: true }).click();
+  const imagePreview = imageExport.locator('[data-demo-id="org-editor-export-image"]');
+  await expect(imagePreview).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -183,6 +186,30 @@ export async function exerciseStaffingSlots(page: Page) {
   });
   expect(paintOrder.fillIndex).toBeGreaterThanOrEqual(0);
   expect(paintOrder.outlineIndex).toBeGreaterThan(paintOrder.fillIndex);
+  const visibleSlotHeight = await imagePreview.evaluate(
+    (image: HTMLImageElement) => image.naturalHeight,
+  );
+  const visibleSlotPreview = await imagePreview.getAttribute("src");
+  await page.evaluate(() => {
+    const events = Reflect.get(window, "__staffingSlotCanvasPaints") as Array<unknown>;
+    events.length = 0;
+  });
+  await imageExport.getByRole("checkbox", { name: "Hide Staffing Slots", exact: true }).click();
+  await expect.poll(() => imagePreview.getAttribute("src")).not.toBe(visibleSlotPreview);
+  await expect
+    .poll(() => imagePreview.evaluate((image: HTMLImageElement) => image.naturalHeight))
+    .toBeLessThan(visibleSlotHeight);
+  expect(
+    await page.evaluate(() => {
+      const events = Reflect.get(window, "__staffingSlotCanvasPaints") as Array<{
+        operation: "fill" | "stroke";
+        style: string;
+      }>;
+      return events.some(
+        (event) => event.operation === "fill" && event.style === "rgba(244, 63, 94, 0.15)",
+      );
+    }),
+  ).toBe(false);
   await page.keyboard.press("Escape");
 
   await seededSlot.click({ button: "right" });

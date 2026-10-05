@@ -12,6 +12,7 @@ import type {
   EmployeeTagAssignment,
   EmployeeTagDefinition,
   OrganizationEmployee,
+  OrgEditorImageExportPreferences,
   OrgToolsState,
   TagId,
   UiActiveTab,
@@ -149,6 +150,10 @@ export class OrgStore {
   };
   employeesUi = { filters: createEmptyEmployeeFiltersState(), query: "" };
   editorUi = { searchOpen: false, searchQuery: "" };
+  editorImageExportPreferences: OrgEditorImageExportPreferences = {
+    excludedTagIds: [],
+    hideStaffingSlots: false,
+  };
   calendarUi = {
     monthIndex: new Date().getMonth(),
     year: new Date().getFullYear(),
@@ -185,6 +190,7 @@ export class OrgStore {
         unitsUi: observable.ref,
         employeesUi: observable.ref,
         editorUi: observable.ref,
+        editorImageExportPreferences: observable.ref,
         calendarUi: observable.ref,
         downloadUi: observable.ref,
         exportSession: observable.ref,
@@ -244,6 +250,7 @@ export class OrgStore {
       this.unitsUi,
       this.employeesUi,
       this.editorUi,
+      this.editorImageExportPreferences,
       this.calendarUi,
       this.downloadUi,
       this.exportSession.tabMode,
@@ -468,6 +475,7 @@ export class OrgStore {
         searchOpen: state.ui.editor.searchOpen,
         searchQuery: state.ui.editor.searchQuery,
       };
+      this.editorImageExportPreferences = structuredClone(state.ui.editorImageExport);
       this.calendarUi = { ...state.ui.calendar };
       this.downloadUi = {
         employeeFilters: structuredClone(state.ui.download.employeeFilters),
@@ -511,6 +519,27 @@ export class OrgStore {
 
   setEditorUi(next: Partial<typeof this.editorUi>): void {
     this.editorUi = { ...this.editorUi, ...next };
+  }
+
+  setEditorImageExportPreferences(next: Partial<OrgEditorImageExportPreferences>): void {
+    const excludedTagIdSet = new Set(
+      next.excludedTagIds ?? this.editorImageExportPreferences.excludedTagIds,
+    );
+    const excludedTagIds = this.tagDefinitions
+      .map((tag) => tag.id)
+      .filter((tagId) => excludedTagIdSet.has(tagId));
+    const hideStaffingSlots =
+      next.hideStaffingSlots ?? this.editorImageExportPreferences.hideStaffingSlots;
+    if (
+      hideStaffingSlots === this.editorImageExportPreferences.hideStaffingSlots &&
+      excludedTagIds.length === this.editorImageExportPreferences.excludedTagIds.length &&
+      excludedTagIds.every(
+        (tagId, index) => tagId === this.editorImageExportPreferences.excludedTagIds[index],
+      )
+    ) {
+      return;
+    }
+    this.editorImageExportPreferences = { excludedTagIds, hideStaffingSlots };
   }
 
   setCalendarUi(next: Partial<typeof this.calendarUi>): void {
@@ -1608,6 +1637,7 @@ export class OrgStore {
         activeViewId: this.activeOrgViewId,
         views: this.orgViews.createUiState(),
       },
+      editorImageExport: structuredClone(this.editorImageExportPreferences),
       employees: structuredClone(this.employeesUi),
       expandedUnitIds: [...this.expandedUnitIds],
       locale: this.locale,
@@ -1631,6 +1661,7 @@ export class OrgStore {
       this.unitsUi = structuredClone(ui.units);
       this.employeesUi = structuredClone(ui.employees);
       this.editorUi = { searchOpen: ui.editor.searchOpen, searchQuery: ui.editor.searchQuery };
+      this.editorImageExportPreferences = structuredClone(ui.editorImageExport);
       this.calendarUi = { ...ui.calendar };
       this.downloadUi = {
         employeeFilters: structuredClone(ui.download.employeeFilters),

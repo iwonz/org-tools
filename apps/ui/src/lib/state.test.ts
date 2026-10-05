@@ -85,6 +85,35 @@ describe("OrgToolsState", () => {
     });
     expect(Object.hasOwn(organization, "analytics")).toBe(false);
     expect(Object.hasOwn(store.createOrgToolsState().ui, "analytics")).toBe(false);
+    expect(store.createOrgToolsState().ui.editorImageExport).toEqual({
+      excludedTagIds: [],
+      hideStaffingSlots: false,
+    });
+  });
+
+  test("requires exact unique Editor image export preferences", () => {
+    const state = createBlankOrgToolsState();
+    const firstTagId = uuid(801);
+    const secondTagId = uuid(802);
+    state.ui.editorImageExport = {
+      excludedTagIds: [firstTagId, secondTagId],
+      hideStaffingSlots: true,
+    };
+    expect(parseOrgToolsState(state).ui.editorImageExport).toEqual(state.ui.editorImageExport);
+
+    const missing = structuredClone(state) as unknown as { ui: Record<string, unknown> };
+    delete missing.ui.editorImageExport;
+    expect(() => parseOrgToolsState(missing)).toThrow("invalid durable UI state");
+
+    const duplicate = structuredClone(state);
+    duplicate.ui.editorImageExport.excludedTagIds = [firstTagId, firstTagId];
+    expect(() => parseOrgToolsState(duplicate)).toThrow("invalid durable UI state");
+
+    const extra = structuredClone(state) as unknown as {
+      ui: { editorImageExport: Record<string, unknown> };
+    };
+    extra.ui.editorImageExport.legacy = true;
+    expect(() => parseOrgToolsState(extra)).toThrow("invalid durable UI state");
   });
 
   test("rejects removed Analytics state and active-tab values", () => {

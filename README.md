@@ -61,8 +61,10 @@ CI still runs every unit, browser, performance, gallery, publication, and image 
 [Validation](docs/validation.md) for the stages, isolation model, and measured baseline.
 
 The maintained hygiene gate rejects unreachable files and dependencies, while the security audit
-checks the complete locked dependency graph at moderate severity or higher. Neither check runs in
-the application or receives deployment data.
+checks the complete locked dependency graph at moderate severity or higher. A narrow, tested,
+time-limited exception covers the unpatched dev-only `braces` advisory in OpenSpec and expires on
+2026-11-05; production paths, changed dependency paths, or a published fix still fail validation.
+Neither check runs in the application or receives deployment data.
 
 ## Accounts and access
 

@@ -20,7 +20,11 @@ import {
   ORG_EDITOR_UNIT_MIN_HEIGHT,
   ORG_EDITOR_UNIT_VERTICAL_PADDING,
 } from "@/lib/org-editor";
-import { createOrgEditorStickerElement, createOrgEditorTextElement } from "@/lib/org-editor-canvas";
+import {
+  createOrgEditorArrowElement,
+  createOrgEditorStickerElement,
+  createOrgEditorTextElement,
+} from "@/lib/org-editor-canvas";
 import {
   buildOrgEditorExportRows,
   createDefaultOrgEditorImageExportSettings,
@@ -40,6 +44,9 @@ import {
   getOrgEditorExportEmployeeTags,
   getOrgEditorExportFontRequests,
   getOrgEditorExportStaffingSlotRowOutline,
+  getOrgEditorImageExportVisibleCanvasElements,
+  getOrgEditorImageExportVisibleTags,
+  getOrgEditorImageExportVisibleUnitSummary,
   getOrgEditorImageSolidBackgroundColor,
   ORG_EDITOR_EXPORT_DENSITY,
   ORG_EDITOR_EXPORT_EMPLOYEE_TAG_STYLE,
@@ -139,6 +146,8 @@ describe("Org Editor image export", () => {
       background: { type: "transparent" },
       employeeFormat: expect.any(String),
       employeeLineGap: 4,
+      excludedTagIds: [],
+      hideStaffingSlots: false,
       padding: 20,
       unitBorderRadius: ORG_EDITOR_UNIT_BORDER_RADIUS,
     });
@@ -158,6 +167,88 @@ describe("Org Editor image export", () => {
       "Aurora",
     ]);
     expect(createOrgEditorExportFileBaseName(unit)).toBe("Research-Development-Lab");
+  });
+
+  test("filters only identified excluded Tags while preserving order", () => {
+    const excludedTagId = "00000000-0000-4000-8000-000000000031";
+    const visibleTagId = "00000000-0000-4000-8000-000000000032";
+    expect(
+      getOrgEditorImageExportVisibleTags(
+        [
+          { label: "Excluded", tagId: excludedTagId },
+          { label: "Visible", tagId: visibleTagId },
+          { label: "Legacy resolved value" },
+        ],
+        new Set([excludedTagId]),
+      ),
+    ).toEqual([{ label: "Visible", tagId: visibleTagId }, { label: "Legacy resolved value" }]);
+  });
+
+  test("removes Staffing Slot counts without changing Employee summary data", () => {
+    const summary = {
+      directEmployeeCount: 2,
+      totalEmployeeCount: 5,
+      directStaffingSlotCount: 1,
+      totalStaffingSlotCount: 3,
+      hasChildUnits: true,
+    };
+
+    expect(getOrgEditorImageExportVisibleUnitSummary(summary, false)).toBe(summary);
+    expect(getOrgEditorImageExportVisibleUnitSummary(summary, true)).toEqual({
+      directEmployeeCount: 2,
+      totalEmployeeCount: 5,
+      directStaffingSlotCount: 0,
+      totalStaffingSlotCount: 0,
+      hasChildUnits: true,
+    });
+  });
+
+  test("removes complete Slot-dependent canvas chains without touching unrelated content", () => {
+    const staffingSlotId = "00000000-0000-4000-8000-000000000041";
+    const slotText = {
+      ...createOrgEditorTextElement({ x: 0, y: 0 }),
+      attachment: {
+        offset: { x: 0, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { staffingSlotId, type: "staffingSlot" as const, unitId: unit.id },
+        },
+      },
+    };
+    const dependentSticker = {
+      ...createOrgEditorStickerElement({ x: 20, y: 20 }),
+      attachment: {
+        offset: { x: 0, y: 0 },
+        sourceAnchorId: "leftCenter" as const,
+        target: {
+          anchorId: "rightCenter" as const,
+          owner: { elementId: slotText.id, type: "element" as const },
+        },
+      },
+    };
+    const dependentArrow = {
+      ...createOrgEditorArrowElement({ x: 0, y: 0 }, { x: 100, y: 0 }),
+      start: {
+        attachment: {
+          offset: { x: 0, y: 0 },
+          target: {
+            anchorId: "rightCenter" as const,
+            owner: { elementId: dependentSticker.id, type: "element" as const },
+          },
+        },
+        x: 0,
+        y: 0,
+      },
+    };
+    const standalone = createOrgEditorTextElement({ x: 200, y: 200 });
+
+    expect(
+      getOrgEditorImageExportVisibleCanvasElements(
+        [slotText, dependentSticker, dependentArrow, standalone],
+        new Set([staffingSlotId]),
+      ).map((element) => element.id),
+    ).toEqual([standalone.id]);
   });
 
   test("keeps the dashed staffing-slot outline inside complete shared row bounds", () => {

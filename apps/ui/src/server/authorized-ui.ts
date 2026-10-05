@@ -140,6 +140,12 @@ export const projectAccountUi = (input: {
       searchQuery: input.ui.editor.searchQuery,
       views,
     },
+    editorImageExport: {
+      excludedTagIds: input.ui.editorImageExport.excludedTagIds.filter((tagId) =>
+        visibleTagIds.has(tagId),
+      ),
+      hideStaffingSlots: input.ui.editorImageExport.hideStaffingSlots,
+    },
     employees: {
       filters: safeFilters(input.ui.employees.filters),
       query: input.ui.employees.query,

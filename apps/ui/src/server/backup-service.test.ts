@@ -74,6 +74,16 @@ const payload = (): BackupPayload => {
 describe("encrypted Backup", () => {
   it("round trips an authenticated compressed payload", async () => {
     const source = payload();
+    source.uiStates[0] = {
+      ...(source.uiStates[0] as Record<string, unknown>),
+      ui_json: {
+        ...(source.organization.bootstrapUi as Record<string, unknown>),
+        editorImageExport: {
+          excludedTagIds: ["00000000-0000-4000-8000-000000000211"],
+          hideStaffingSlots: true,
+        },
+      },
+    };
     const encrypted = await encryptBackup(source, "correct horse battery staple");
     await expect(decryptBackup(encrypted, "correct horse battery staple")).resolves.toEqual(source);
   });

@@ -49,6 +49,10 @@ access subject. This does not impersonate that account: the server returns only 
 View projection, omits grants, policies, UI state, sessions, administration data, and every hidden
 resource or field value, and records the acting administrator plus subject and export root in
 audit. The selected subject is transient and resets to the administrator on every dialog open.
+Tag-image exclusions and the Hide Staffing Slots preference belong to the acting account's UI
+state. The server removes inaccessible or deleted Tag IDs from the projected preference, and the
+selector is built only from the chosen export subject's already-authorized Tag catalog. Hidden Tag
+definitions or values are therefore never needed to render the selector or image.
 
 Complete Backup is available only with the corresponding permission and current-password
 reauthentication. It includes password hashes, roles, grants, ACL, UI states, and audit so recovery

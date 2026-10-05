@@ -38,6 +38,11 @@ export type EmployeeDisplayLineGaps = {
   units: number;
 };
 
+export type OrgEditorImageExportPreferences = {
+  excludedTagIds: TagId[];
+  hideStaffingSlots: boolean;
+};
+
 export type OrgToolsEmployeeFilters = {
   birthday: { day: number; month: number; year: number } | null;
   customFields: EmployeeCustomFieldFilter[];
@@ -151,6 +156,7 @@ export type OrgToolsUiState = {
     filters: OrgToolsEmployeeFilters;
     query: string;
   };
+  editorImageExport: OrgEditorImageExportPreferences;
   expandedUnitIds: UnitId[];
   locale: AppLocale;
   selectedUnitId: UnitId | null;

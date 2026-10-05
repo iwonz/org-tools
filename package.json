@@ -28,7 +28,7 @@
     "public:check:source": "node scripts/check-public-safety.mjs --source-only",
     "screenshots:generate": "pnpm --filter @org-tools/screenshots generate",
     "screenshots:verify": "node scripts/verify-screenshots.mjs",
-    "security:audit": "pnpm audit --audit-level moderate",
+    "security:audit": "node scripts/check-dependency-audit.mjs",
     "spec": "node scripts/run-openspec.mjs",
     "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
     "start": "./bin/org-tools up",

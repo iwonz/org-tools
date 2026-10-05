@@ -825,6 +825,26 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   }
   expect(settingsBox.y).toBeGreaterThanOrEqual(initialPreviewBox.y + initialPreviewBox.height);
   await expect(previewViewport).toHaveAttribute("data-preview-mode", "fit");
+  const tagVisibilityTrigger = dialog.locator(
+    '[data-demo-id="org-editor-image-tag-visibility-trigger"]',
+  );
+  await expect(tagVisibilityTrigger).toContainText("Selected 12 of 12");
+  await tagVisibilityTrigger.click();
+  const tagSearch = page.locator('[data-demo-id="org-editor-image-tag-search"]');
+  const tagOptions = page.locator('[data-demo-id="org-editor-image-tag-options"]');
+  await tagSearch.fill("Design");
+  await expect(tagOptions).toContainText("Design");
+  await expect(tagOptions).not.toContainText("Remote");
+  await page.locator('[data-demo-id="org-editor-image-tag-deselect-all"]').click();
+  await expect(tagVisibilityTrigger).toContainText("Selected 0 of 12");
+  await page.locator('[data-demo-id="org-editor-image-tag-select-all"]').click();
+  await expect(tagVisibilityTrigger).toContainText("Selected 12 of 12");
+  await tagOptions.getByText("Design", { exact: true }).click();
+  await expect(tagVisibilityTrigger).toContainText("Selected 11 of 12");
+  await page.keyboard.press("Escape");
+  await expect(
+    dialog.getByRole("checkbox", { name: "Hide Staffing Slots", exact: true }),
+  ).not.toBeChecked();
   const fittedScale = Number(await previewViewport.getAttribute("data-preview-scale"));
   await previewViewport.hover();
   await page.mouse.wheel(0, -500);
@@ -883,6 +903,16 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
     (await preview.evaluate((image: HTMLImageElement) => image.naturalWidth)) / 3;
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
+  await expect
+    .poll(async () => {
+      const response = await page.request.get("/api/session");
+      const session = (await response.json()) as {
+        ui: { editorImageExport: { excludedTagIds: string[] } };
+      };
+      return session.ui.editorImageExport.excludedTagIds;
+    })
+    .toEqual(["90000000-0000-4000-8000-000000000001"]);
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   await product.click({ button: "right", position: { x: 200, y: 60 } });
   await page.locator('[data-demo-id="org-editor-export-action"]').click();
@@ -893,6 +923,9 @@ export async function exerciseCanvasToolsAndViewExport(page: Page): Promise<void
   await expect(unitDialog.getByLabel("Font", { exact: true })).toHaveCount(0);
   await expect(unitDialog.getByLabel("Title", { exact: true })).toHaveCount(0);
   await expect(unitDialog.getByRole("button", { name: "Background color" })).toBeVisible();
+  await expect(
+    unitDialog.locator('[data-demo-id="org-editor-image-tag-visibility-trigger"]'),
+  ).toContainText("Selected 11 of 12");
   const unitPreview = unitDialog.getByAltText("Unit export preview", { exact: true });
   await expect(unitPreview).toBeVisible();
   await expect

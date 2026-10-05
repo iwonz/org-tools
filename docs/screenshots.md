@@ -435,9 +435,11 @@ the durable canvas presentation without printing transient editing chrome. The d
 token-aware Employee format and icon-labelled Copy and Save actions while requesting 3× output and
 applying density safety limits silently. A Super Administrator can open the searchable **Export
 as** selector and render the same View through an active account's exact authorized projection.
+The shared **Tags in image** selector shows colored authorized Tags, complete-catalog bulk actions,
+and a selected count; **Hide Staffing Slots** removes Slot content and recalculates the image.
 
-Capabilities: Full-View PNG, Access-subject selector, Canvas elements, Distribution tones,
-Hierarchy, Zoom and pan, Fixed 3×, Local Copy and Save.
+Capabilities: Full-View PNG, Access-subject selector, Tag visibility, Staffing Slot visibility,
+Canvas elements, Distribution tones, Hierarchy, Zoom and pan, Fixed 3×, Local Copy and Save.
 
 ### Editor text template export
 
@@ -686,6 +688,10 @@ Capabilities: Remaining fields, Formatted JSON, Copy, Local download.
   access** on reopen, and use one selected account source for preview, Copy, and Save. Verify hidden
   fields, Tags, Employees, Units, Slots, and attached Canvas elements are absent; inaccessible roots
   disable image actions; switching subjects never changes the signed-in session or other screens.
+- Confirm both PNG dialogs share persistent Tag exclusions and Hide Staffing Slots, bulk Tag actions
+  apply to the full authorized catalog regardless of search, and filtering recalculates semantic
+  Tags, Slot counters, dependent attachments, Unit bounds, and final image bounds before Preview,
+  Copy, and Save.
 - Confirm avatar crop remains interactive, contains the source, and exposes no encoding error; the
   browser suite separately verifies the visually identical PNG fallback when WebP is unavailable.
 - Confirm the production server exposes the expected role-specific sidebar actions and

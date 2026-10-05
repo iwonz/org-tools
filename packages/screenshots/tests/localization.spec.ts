@@ -144,6 +144,24 @@ for (const [locale, messages] of [
     await expect(administration).not.toContainText("employee.read");
     await expect(administration).not.toContainText("managedSubtree");
 
+    await page.getByRole("tab", { name: messages.Ui.Editor, exact: true }).click();
+    await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
+    await page.locator('[data-demo-id="org-editor-view-image-export-action"]').click();
+    const imageExport = page.locator('[data-demo-id="org-editor-view-image-export-dialog"]');
+    await expect(imageExport).toContainText(messages.Ui["Tags in image"]);
+    await expect(
+      imageExport.getByRole("checkbox", {
+        name: messages.Ui["Hide Staffing Slots"],
+        exact: true,
+      }),
+    ).toBeVisible();
+    await imageExport.locator('[data-demo-id="org-editor-image-tag-visibility-trigger"]').click();
+    await expect(
+      page.locator('[data-demo-id="org-editor-image-tag-visibility-popover"]'),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+
     const authenticationContext = await browser.newContext({
       baseURL: new URL(page.url()).origin,
     });

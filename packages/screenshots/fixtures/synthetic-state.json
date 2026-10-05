@@ -618,6 +618,10 @@
         }
       ]
     },
+    "editorImageExport": {
+      "excludedTagIds": [],
+      "hideStaffingSlots": false
+    },
     "employees": {
       "filters": {
         "birthday": null,

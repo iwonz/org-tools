@@ -15,6 +15,7 @@ describe("authorized UI projection", () => {
     state.ui.editor.searchQuery = "confidential value";
     state.ui.expandedUnitIds = ["00000000-0000-4000-8000-000000000111"];
     state.ui.employees.query = "private employee";
+    state.ui.editorImageExport.excludedTagIds = ["00000000-0000-4000-8000-000000000112"];
     const result = projectAccountUi({
       access: {
         grants: [],
@@ -37,6 +38,10 @@ describe("authorized UI projection", () => {
     expect(result.editor.searchQuery).toBe("confidential value");
     expect(result.employees.query).toBe("private employee");
     expect(result.expandedUnitIds).toEqual([]);
+    expect(result.editorImageExport).toEqual({
+      excludedTagIds: [],
+      hideStaffingSlots: false,
+    });
   });
 
   it("keeps only references that exist in the authorized projection", () => {
@@ -70,6 +75,38 @@ describe("authorized UI projection", () => {
     expect(result.activeTab).toBe("orgEditor");
     expect(result.editor.views).toHaveLength(1);
     expect(result.editor.views[0]?.distributionModeUnitIds).toEqual([]);
+  });
+
+  it("keeps only authorized image-export Tag exclusions", () => {
+    const state = createBlankOrgToolsState();
+    const visibleTagId = "00000000-0000-4000-8000-000000000121";
+    const hiddenTagId = "00000000-0000-4000-8000-000000000122";
+    state.ui.editorImageExport = {
+      excludedTagIds: [visibleTagId, hiddenTagId],
+      hideStaffingSlots: true,
+    };
+    const result = projectAccountUi({
+      access: {
+        grants: [],
+        isSuperAdmin: false,
+        managedDirectUnitIds: [],
+        managedSubtreeUnitIds: [],
+      },
+      projection: {
+        employeeDisplayFormats: state.organization.employeeDisplayFormats,
+        employeeDisplayLineGaps: state.organization.employeeDisplayLineGaps,
+        employeeFieldDefinitions: [],
+        employees: [],
+        tags: [{ color: "blue", id: visibleTagId, label: "Visible" }],
+        views: [],
+      },
+      ui: state.ui,
+    });
+
+    expect(result.editorImageExport).toEqual({
+      excludedTagIds: [visibleTagId],
+      hideStaffingSlots: true,
+    });
   });
 
   it("keeps Download state valid for projected custom Employee fields", async () => {
