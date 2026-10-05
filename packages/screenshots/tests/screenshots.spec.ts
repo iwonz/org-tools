@@ -666,12 +666,14 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
     .locator('[data-demo-id="org-editor-image-tag-options"]')
     .getByText("Design", { exact: true })
     .click();
-  await capture(page, "editor-image-export");
+  await stabilizeForScreenshot(page);
   const tagVisibilityPopover = page.locator(
     '[data-demo-id="org-editor-image-tag-visibility-popover"]',
   );
+  if (!(await tagVisibilityPopover.isVisible())) await tagVisibilityTrigger.click();
   await expect(tagVisibilityPopover).toBeVisible();
-  await tagVisibilityPopover.getByRole("textbox").press("Escape");
+  await capture(page, "editor-image-export", { stabilized: true });
+  await viewImageDialog.locator('[data-slot="dialog-header"]').click({ position: { x: 8, y: 8 } });
   await expect(tagVisibilityPopover).toBeHidden();
   await expect(viewImageDialog).toBeVisible();
   await viewImageDialog.locator('[data-slot="dialog-body"]').evaluate((element) => {
