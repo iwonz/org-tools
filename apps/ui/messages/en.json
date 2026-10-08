@@ -310,7 +310,6 @@
     "Select Units": "Select Units",
     "Select Employee tags": "Select Employee tags",
     "Select a Unit or Employee": "Select a Unit or Employee",
-    "Select at least one Unit.": "Select at least one Unit.",
     "Complete every required custom field.": "Complete every required custom field.",
     "Custom Employee field is invalid.": "Check the field name, key, options, and template dependencies.",
     "Custom Employee field value is invalid.": "The custom field value does not match its configured type.",

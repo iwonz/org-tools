@@ -83,7 +83,9 @@ encrypted timestamped recovery Backup, applies one transaction, and signs out ev
 
 Employees keep stable UUIDs. Create, edit, delete, assignments, model changes, Tag assignment, and
 Tag catalog operations each require their own permission and applicable scope/ACL. A linked
-Employee cannot be deleted. The linked account email is Administration-only.
+Employee cannot be deleted. The linked account email is Administration-only. An Employee may
+remain in the global catalog without a Unit assignment. Clearing every assignment in an Employee
+form removes membership only from that form's system or custom View and leaves other Views intact.
 
 Custom Value fields support scalar and multi-value text, number, flag, date, and options. Composite
 fields contain typed subfields with exactly one required unique primary key. Template fields derive

@@ -538,6 +538,58 @@ describe("write ACL enforcement", () => {
     ).toThrow(AuthorizationDeniedError);
   });
 
+  it("authorizes final assignment removal from the pre-mutation managed branch", () => {
+    const current = document();
+    const candidate = structuredClone(current);
+    const targetUnit = candidate.views[0]?.structure.units[0];
+    if (!targetUnit) throw new Error("unit missing");
+    targetUnit.bossEmployeeId = null;
+    targetUnit.employeeIds = targetUnit.employeeIds.filter((id) => id !== employeeId);
+    targetUnit.employeePositions = targetUnit.employeePositions.filter(
+      (position) => position.employeeId !== employeeId,
+    );
+    const currentRole = role([
+      { permission: "employee.assignments.update", scope: "managedSubtree" },
+      { permission: "unit.boss.assign", scope: "managedSubtree" },
+    ]);
+    const currentAccount = account();
+    const before = structuredClone(current);
+
+    expect(() =>
+      authorizeOrganizationReplacement({
+        access: buildEffectiveAccess({
+          directGrants: [],
+          employeeId,
+          organization: current,
+          role: currentRole,
+        }),
+        account: currentAccount,
+        candidate,
+        current,
+        policies: new Map(),
+        role: currentRole,
+      }),
+    ).not.toThrow();
+
+    const unauthorizedAccount = { ...currentAccount, employeeId: hiddenEmployeeId };
+    expect(() =>
+      authorizeOrganizationReplacement({
+        access: buildEffectiveAccess({
+          directGrants: [],
+          employeeId: hiddenEmployeeId,
+          organization: current,
+          role: currentRole,
+        }),
+        account: unauthorizedAccount,
+        candidate,
+        current,
+        policies: new Map(),
+        role: currentRole,
+      }),
+    ).toThrow(AuthorizationDeniedError);
+    expect(current).toEqual(before);
+  });
+
   it("preserves hidden collection order when a Manager patches a managed Unit", async () => {
     const current = document();
     const visibleTagId = uuid(32);

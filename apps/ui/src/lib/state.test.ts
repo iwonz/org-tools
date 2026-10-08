@@ -585,6 +585,47 @@ describe("OrgToolsState", () => {
     expect(store.orgViewList).toHaveLength(1);
   });
 
+  test("keeps an Employee global while clearing assignments only in the selected View", () => {
+    const { employeeId, store, unitId } = populatedStore();
+    const systemViewId = store.systemOrgViewId;
+    const customViewId = store.createOrgView("Unassigned scenario", {
+      type: "copy",
+      viewId: systemViewId,
+    });
+    const copiedUnit = store.orgEditor.units[0];
+    if (!copiedUnit) throw new Error("Expected a copied Unit.");
+    store.orgEditor.clearHistory();
+
+    store.updateEmployee(employeeId, employeeFields(), [], customViewId);
+
+    expect(store.organizationEmployees.some((employee) => employee.id === employeeId)).toBe(true);
+    expect(store.mainOrgEditor.units.find((unit) => unit.id === unitId)?.employeeIds).toContain(
+      employeeId,
+    );
+    expect(store.orgEditor.units[0]?.employeeIds).not.toContain(employeeId);
+    expect(store.orgEditor.canUndo).toBe(true);
+
+    store.orgEditor.undo();
+    expect(store.orgEditor.units[0]?.employeeIds).toContain(employeeId);
+    store.orgEditor.redo();
+    expect(store.orgEditor.units[0]?.employeeIds).not.toContain(employeeId);
+
+    const persisted = parseOrgToolsState(store.createOrgToolsState());
+    expect(persisted.organization.employees.some((employee) => employee.id === employeeId)).toBe(
+      true,
+    );
+    expect(
+      persisted.organization.views
+        .find((view) => view.id === systemViewId)
+        ?.structure.units[0]?.employeeIds.includes(employeeId),
+    ).toBe(true);
+    expect(
+      persisted.organization.views
+        .find((view) => view.id === customViewId)
+        ?.structure.units[0]?.employeeIds.includes(employeeId),
+    ).toBe(false);
+  });
+
   test("keeps View UI isolated and restores the active View", () => {
     const { store, unitId } = populatedStore();
     store.mainOrgEditor.setViewport({ scale: 1.1, x: 24, y: 48 });

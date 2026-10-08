@@ -80,6 +80,115 @@ export async function exerciseRefinedEditor(page: Page) {
   required(state.ui.editor.views[0]).distributionModeUnitIds = [root.id, live.id];
   required(state.ui.editor.views[0]).selectedItems = [];
   required(state.ui.editor.views[0]).viewport = { scale: 1, x: 0, y: 0 };
+
+  const unassignedState = structuredClone(state);
+  const customViewId = "12121212-1212-4121-8121-121212121212";
+  const customUnitId = "34343434-3434-4343-8343-343434343434";
+  const customUnitName = "Scenario Unit";
+  const customView: OrgToolsState["organization"]["views"][number] = {
+    createdAt: "2026-10-08T00:00:00.000Z",
+    id: customViewId,
+    kind: "custom",
+    name: "Unassigned scenario",
+    structure: {
+      canvasElements: [],
+      layoutMode: "topDown",
+      settings: structuredClone(view.structure.settings),
+      units: [
+        {
+          ...structuredClone(root),
+          bossEmployeeId: first.id,
+          employeeIds: [first.id],
+          employeePositions: [{ employeeId: first.id, position: "Scenario lead" }],
+          id: customUnitId,
+          name: customUnitName,
+          parentId: null,
+          staffingSlots: [],
+          x: 120,
+          y: 80,
+        },
+      ],
+    },
+    updatedAt: "2026-10-08T00:00:00.000Z",
+  };
+  unassignedState.organization.views.push(customView);
+  const customViewUi = {
+    ...structuredClone(required(unassignedState.ui.editor.views[0])),
+    viewId: customViewId,
+  };
+  unassignedState.ui.editor.activeViewId = customViewId;
+  unassignedState.ui.editor.views.push(customViewUi);
+  await importState(page, unassignedState);
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  const customCard = page.locator(`fieldset[aria-label="Canvas Unit ${customUnitName}"]`);
+  await customCard
+    .locator(`[data-org-editor-employee-id="${first.id}"]`)
+    .click({ button: "right" });
+  await page.locator('[data-demo-id="org-editor-edit-employee-action"]').click();
+  let employeeDialog = page.getByRole("dialog", { name: "Edit Employee", exact: true });
+  await employeeDialog.getByTitle(`Remove: ${customUnitName}`).click();
+  await expect(employeeDialog.locator('[data-demo-id="employee-dialog-submit"]')).toBeEnabled();
+  await expect(employeeDialog.getByText("Select at least one Unit.", { exact: true })).toHaveCount(
+    0,
+  );
+  await employeeDialog.locator('[data-demo-id="employee-dialog-submit"]').click();
+  await expect(customCard.locator(`[data-org-editor-employee-id="${first.id}"]`)).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const organization = (await exportState(page)).organization;
+      const custom = organization.views.find((candidate) => candidate.id === customViewId);
+      const system = organization.views.find((candidate) => candidate.kind === "system");
+      return {
+        customAssigned: custom?.structure.units.some((unit) => unit.employeeIds.includes(first.id)),
+        employeeExists: organization.employees.some((employee) => employee.id === first.id),
+        systemAssigned: system?.structure.units.some((unit) => unit.employeeIds.includes(first.id)),
+      };
+    })
+    .toEqual({ customAssigned: false, employeeExists: true, systemAssigned: true });
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await expect(
+    page
+      .locator(`fieldset[aria-label="Canvas Unit ${customUnitName}"]`)
+      .locator(`[data-org-editor-employee-id="${first.id}"]`),
+  ).toHaveCount(0);
+  await page.getByRole("tab", { name: "Employees", exact: true }).click();
+  const globalEmployeeCard = page
+    .locator('[data-demo-id="employees-list"] article')
+    .filter({ hasText: first.firstName })
+    .first();
+  await globalEmployeeCard.locator('[data-demo-id="employee-edit-button"]').click();
+  employeeDialog = page.getByRole("dialog", { name: "Edit Employee", exact: true });
+  await expect(employeeDialog.getByTitle("Remove: Product")).toBeVisible();
+  await expect(employeeDialog.getByTitle(`Remove: ${customUnitName}`)).toHaveCount(0);
+  await employeeDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await page.locator('[data-demo-id="org-editor-canvas"]').click({
+    button: "right",
+    position: { x: 1_000, y: 600 },
+  });
+  await page.getByRole("menuitem", { name: "Add Employees", exact: true }).click();
+  const addDialog = page.locator('[data-demo-id="org-editor-add-employees-dialog"]');
+  await addDialog.getByRole("tab", { name: "Employees", exact: true }).click();
+  const sourceEmployeeCard = addDialog
+    .locator("article")
+    .filter({ hasText: first.firstName })
+    .first();
+  await sourceEmployeeCard.getByRole("button", { name: "Add", exact: true }).click();
+  await addDialog
+    .locator('[data-slot="dialog-footer"]')
+    .getByRole("button", { name: "Add", exact: true })
+    .click();
+  await expect
+    .poll(async () =>
+      (await exportState(page)).organization.views
+        .find((candidate) => candidate.id === customViewId)
+        ?.structure.units.some((unit) => unit.employeeIds.includes(first.id)),
+    )
+    .toBe(true);
+
   await importState(page, state);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   const card = (name: string, owner = page) =>

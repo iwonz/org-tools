@@ -124,6 +124,56 @@ describe("OrgEditorStore grid geometry", () => {
   });
 });
 
+describe("OrgEditorStore Employee assignments", () => {
+  test("clears every manual Unit assignment as one undoable command", () => {
+    const store = new OrgEditorStore();
+    const employeeId = "employee-unassigned";
+    const firstUnitId = store.addUnit({
+      bossEmployeeId: employeeId,
+      employeeIds: [employeeId],
+      name: "First",
+      x: 0,
+      y: 0,
+    });
+    const secondUnitId = store.addUnit({
+      employeeIds: [employeeId],
+      name: "Second",
+      x: 480,
+      y: 0,
+    });
+    store.setEmployeeAssignments(employeeId, [
+      { isBoss: true, position: "Lead", unitId: firstUnitId },
+      { isBoss: false, position: "Engineer", unitId: secondUnitId },
+    ]);
+    store.clearHistory();
+
+    store.setEmployeeAssignments(employeeId, []);
+
+    expect(store.units.every((unit) => !unit.employeeIds.includes(employeeId))).toBe(true);
+    expect(store.units.every((unit) => unit.bossEmployeeId !== employeeId)).toBe(true);
+    expect(
+      store.units.every((unit) =>
+        unit.employeePositions.every((position) => position.employeeId !== employeeId),
+      ),
+    ).toBe(true);
+    expect(store.undoStack).toHaveLength(1);
+
+    store.undo();
+    expect(store.units.find((unit) => unit.id === firstUnitId)).toMatchObject({
+      bossEmployeeId: employeeId,
+      employeeIds: [employeeId],
+      employeePositions: [{ employeeId, position: "Lead" }],
+    });
+    expect(store.units.find((unit) => unit.id === secondUnitId)).toMatchObject({
+      employeeIds: [employeeId],
+      employeePositions: [{ employeeId, position: "Engineer" }],
+    });
+
+    store.redo();
+    expect(store.units.every((unit) => !unit.employeeIds.includes(employeeId))).toBe(true);
+  });
+});
+
 describe("OrgEditorStore Staffing Slots", () => {
   test("creates, edits, deletes, and restores a tagged nullable-name Slot as one command each", () => {
     const store = new OrgEditorStore();

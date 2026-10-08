@@ -457,8 +457,6 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
       setFormError(describeError(error));
     }
   };
-  const editorTargetMissing =
-    canEditAssignments && mode === "editor" && selectedUnitIds.length === 0;
   const title = employee ? t("Edit Employee") : t("Create Employee");
 
   return (
@@ -1140,9 +1138,6 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
                       })}
                     </div>
                   )}
-                  {editorTargetMissing && (
-                    <div className="text-sm text-destructive">{t("Select at least one Unit.")}</div>
-                  )}
                 </section>
               )}
               {formError && (
@@ -1155,11 +1150,7 @@ export function EmployeeDialog(props: EmployeeDialogProps) {
               <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
                 {t("Cancel")}
               </Button>
-              <Button
-                data-demo-id="employee-dialog-submit"
-                disabled={editorTargetMissing}
-                type="submit"
-              >
+              <Button data-demo-id="employee-dialog-submit" type="submit">
                 {employee ? t("Save") : t("Create")}
               </Button>
             </DialogFooter>

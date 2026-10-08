@@ -310,7 +310,6 @@
     "Select Units": "Sélectionner des unités",
     "Select Employee tags": "Sélectionner les étiquettes de l'employé",
     "Select a Unit or Employee": "Choisir une unité ou un employé",
-    "Select at least one Unit.": "Sélectionnez au moins une unité.",
     "Complete every required custom field.": "Remplissez tous les champs personnalisés requis.",
     "Custom Employee field is invalid.": "Vérifiez le nom du champ, la clé, les options et les dépendances du modèle.",
     "Custom Employee field value is invalid.": "La valeur du champ personnalisé ne correspond pas à son type configuré.",

@@ -166,8 +166,9 @@ Tags SHALL use one shared picker whose closed trigger wraps every selected Tag c
 summary or separate selected list. A dated chip SHALL show its localized date after a middle dot.
 The virtualized popover SHALL support search, create, checkbox selection, and an optional date per
 row, while changing only the form draft until the form's Save succeeds. Unit assignments SHALL use
-the single visible label `Units`, accessible name `Select Units`, and validation `Select at least one
-Unit` in every Employee form mode.
+the single visible label `Units` and accessible name `Select Units` in every Employee form mode.
+Zero Unit assignments MUST be valid for both creation and editing in the system View and every
+custom View.
 
 #### Scenario: Choose gender with radio semantics
 - **WHEN** a keyboard or pointer user chooses a Gender segment
@@ -189,9 +190,17 @@ Unit` in every Employee form mode.
 - **WHEN** the user saves a valid Employee form after editing Tags
 - **THEN** the final draft Tags are committed together with the Employee and ordinary persistence runs once
 
-#### Scenario: Use Unit terminology in Editor mode
-- **WHEN** an Editor-originated Employee form renders or fails Unit validation
-- **THEN** it uses only the generic localized Unit label, picker name, and validation message
+#### Scenario: Save an Employee without a Unit
+- **WHEN** an authorized user creates an Employee without selecting a Unit or clears every Unit while editing
+- **THEN** the form remains valid and saves an empty assignment list without displaying minimum-Unit validation
+
+#### Scenario: Clear assignments in one View
+- **WHEN** an authorized user clears every Unit in an Editor form and saves
+- **THEN** the Employee is removed from manual Units only in the active View while its global record and assignments in other Views remain unchanged
+
+#### Scenario: Reject an unauthorized assignment removal atomically
+- **WHEN** clearing the assignment list would change any Unit outside the account's assignment-update scope
+- **THEN** the server rejects the complete mutation and retains every preceding assignment
 
 ### Requirement: Global Employee identity spans every View
 Employee creation and core-field, custom-value, and Tag edits SHALL mutate one global Employee

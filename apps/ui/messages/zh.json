@@ -310,7 +310,6 @@
     "Select Units": "选择团队",
     "Select Employee tags": "选择员工标签",
     "Select a Unit or Employee": "选择团队或员工",
-    "Select at least one Unit.": "请至少选择一个团队。",
     "Complete every required custom field.": "完成所有需要的自定义字段 。",
     "Custom Employee field is invalid.": "请检查字段名称、键、选项和模板依赖关系。",
     "Custom Employee field value is invalid.": "自定义字段值与其配置的类型不符 。",

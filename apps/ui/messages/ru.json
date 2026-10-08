@@ -310,7 +310,6 @@
     "Select Units": "Выбрать команды",
     "Select Employee tags": "Выбрать теги сотрудника",
     "Select a Unit or Employee": "Выберите команду или сотрудника",
-    "Select at least one Unit.": "Выберите хотя бы одну команду.",
     "Complete every required custom field.": "Заполните все обязательные кастомные поля.",
     "Custom Employee field is invalid.": "Проверьте название, ключ, варианты и зависимости шаблона.",
     "Custom Employee field value is invalid.": "Значение пользовательского поля не соответствует его типу.",
