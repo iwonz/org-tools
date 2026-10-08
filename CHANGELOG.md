@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0](https://github.com/iwonz/org-tools/compare/v1.0.0...v1.1.0) (2026-10-08)
+
+
+### Features
+
+* control editor image export content ([1d4c376](https://github.com/iwonz/org-tools/commit/1d4c37681d76ec0b60a082843415947079b4496f))
+* export editor images with account access ([6769d9d](https://github.com/iwonz/org-tools/commit/6769d9d1a3c991e39c3bc96b7349eb1d4c132c6f))
+* polish administration navigation ([e4159c2](https://github.com/iwonz/org-tools/commit/e4159c24d68831e3af39e78cb151c97a2d363362))
+
+
+### Bug Fixes
+
+* allow employees without unit assignments ([11648ed](https://github.com/iwonz/org-tools/commit/11648ed838f45a811549a5f775e87cdfb2f024c0))
+* **release:** publish images for release tags ([0a6eb9c](https://github.com/iwonz/org-tools/commit/0a6eb9c0c418d25d01e42c19f5ca7c4e7d428cb6))
+* remove obsolete GitHub Pages delivery ([99f15d9](https://github.com/iwonz/org-tools/commit/99f15d9a07ba0a7298e4e55c41b0c2e410607177))
+
 ## 1.0.0 (2026-10-01)
 
 
