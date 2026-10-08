@@ -45,9 +45,10 @@ starts the same non-root application image with the same external bind paths.
 ./bin/org-tools run pnpm lint
 ./bin/org-tools run pnpm typecheck
 ./bin/org-tools run pnpm test:unit
+./bin/org-tools run pnpm architecture:check
 ./bin/org-tools run pnpm hygiene:dead-code
-./bin/org-tools run pnpm security:audit
-./bin/org-tools run pnpm validate:changed --base origin/main
+./bin/org-tools validate fast
+./bin/org-tools validate changed --base origin/main
 ```
 
 `compose.dev.yaml` supplies hot reload and a toolbox container. Its application build cache and
@@ -56,12 +57,14 @@ available in the checkout for validation. Schema migrations run separately under
 owner; the web process has only the restricted application role and refuses to start when migrations
 are pending or unknown.
 
-The changed validator explains and runs conservative affected feedback during development. Complete
-CI still runs every unit, browser, performance, gallery, publication, and image check. See
-[Validation](docs/validation.md) for the stages, isolation model, and measured baseline.
+The changed validator explains and runs conservative affected feedback during development. Ordinary
+CI repeats fast security and affected Core evidence; nightly, manual, and release CI owns exhaustive
+browser, performance, gallery, migration, publication, and image checks. See
+[Validation](docs/validation.md) for profiles, architecture boundaries, and measured results.
 
-The maintained hygiene gate rejects unreachable files and dependencies, while the security audit
-checks the complete locked dependency graph at moderate severity or higher. A narrow, tested,
+The maintained hygiene gate rejects unreachable files and dependencies, and the architecture gate
+rejects production import cycles and reverse layer dependencies. CI security audit checks the
+complete locked dependency graph at moderate severity or higher. A narrow, tested,
 time-limited exception covers the unpatched dev-only `braces` advisory in OpenSpec and expires on
 2026-11-05; production paths, changed dependency paths, or a published fix still fail validation.
 Neither check runs in the application or receives deployment data.

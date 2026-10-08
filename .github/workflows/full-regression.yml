@@ -1,0 +1,190 @@
+name: Full Regression
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 1 * * *"
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eligibility:
+    name: Full Regression eligibility
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.resolve.outputs.run }}
+    steps:
+      - id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$EVENT_NAME" != pull_request ] || printf '%s' "$HEAD_REF" | grep -q '^release-please--'; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'run=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  static:
+    name: Full static, build, migration, and restart
+    needs: eligibility
+    if: needs.eligibility.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
+        run: |
+          ./bin/org-tools env init
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-full-static/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-full-static/backups|' .env
+          mkdir -p /tmp/org-tools-full-static/postgres /tmp/org-tools-full-static/backups
+      - name: Start runtime and apply migrations
+        run: ./bin/org-tools dev -d
+      - name: Probe runtime
+        run: ./bin/org-tools-dev-check
+      - name: Fast validation
+        run: ./bin/org-tools run pnpm validate:fast
+      - name: Dependency security audit
+        run: ./bin/org-tools run pnpm security:audit
+      - name: Production build
+        run: ./bin/org-tools run pnpm build
+      - name: Publication scan
+        run: ./bin/org-tools run pnpm public:check
+      - name: Prove restart against the migrated database
+        run: |
+          docker compose --env-file .env -f compose.yaml -f compose.dev.yaml restart app
+          ./bin/org-tools-dev-check
+      - if: always()
+        run: ./bin/org-tools down
+
+  browser:
+    name: Full browser shard ${{ matrix.shard }} of 4
+    needs: eligibility
+    if: needs.eligibility.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
+        run: |
+          ./bin/org-tools env init
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-full-browser-${{ matrix.shard }}/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-full-browser-${{ matrix.shard }}/backups|' .env
+          mkdir -p /tmp/org-tools-full-browser-${{ matrix.shard }}/postgres /tmp/org-tools-full-browser-${{ matrix.shard }}/backups
+      - name: Start isolated runtime
+        run: ./bin/org-tools dev -d
+      - name: Run complete isolated browser shard
+        run: >-
+          ./bin/org-tools run env
+          ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000
+          ORG_TOOLS_E2E_ISOLATED_SHARD=1
+          ORG_TOOLS_E2E_SHARD_ID=${{ matrix.shard }}
+          ORG_TOOLS_PERFORMANCE_MODE=full
+          ORG_TOOLS_PERFORMANCE_RESULTS=/workspace/test-results/performance-${{ matrix.shard }}.json
+          pnpm test:browser --grep @regression --shard=${{ matrix.shard }}/4
+      - if: always()
+        name: Publish performance metrics when assigned to this shard
+        run: |
+          metrics_path="test-results/performance-${{ matrix.shard }}.json"
+          if [ -f "$metrics_path" ]; then
+            printf '### Editor performance shard %s\n\n```json\n' '${{ matrix.shard }}' >> "$GITHUB_STEP_SUMMARY"
+            cat "$metrics_path" >> "$GITHUB_STEP_SUMMARY"
+            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-browser-${{ matrix.shard }}-evidence
+          path: |
+            playwright-report-shard-${{ matrix.shard }}
+            test-results/screenshots-shard-${{ matrix.shard }}
+            test-results/performance-${{ matrix.shard }}.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - if: always()
+        run: ./bin/org-tools down
+
+  gallery:
+    name: Full deterministic gallery
+    needs: eligibility
+    if: needs.eligibility.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
+        run: |
+          ./bin/org-tools env init
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-full-gallery/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-full-gallery/backups|' .env
+          mkdir -p /tmp/org-tools-full-gallery/postgres /tmp/org-tools-full-gallery/backups
+      - name: Start isolated runtime
+        run: ./bin/org-tools dev -d
+      - name: Generate and compare both gallery passes
+        run: ./bin/org-tools run pnpm screenshots:verify
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-screenshot-gallery
+          path: |
+            docs/screenshots/*.png
+            playwright-report
+            test-results/screenshot-determinism
+            test-results/screenshot-stability
+          if-no-files-found: ignore
+          retention-days: 14
+      - if: always()
+        run: ./bin/org-tools down
+
+  image:
+    name: Full production image
+    needs: eligibility
+    if: needs.eligibility.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - name: Build production image
+        uses: docker/build-push-action@v7
+        with:
+          cache-from: type=gha,scope=ci-runtime
+          cache-to: type=gha,mode=max,scope=ci-runtime
+          context: .
+          file: Dockerfile
+          load: true
+          tags: org-tools:full-regression
+      - name: Inspect production image
+        run: ./bin/org-tools-image-check org-tools:full-regression
+
+  full-regression:
+    name: full-regression
+    if: always()
+    needs: [eligibility, static, browser, gallery, image]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete evidence when eligible
+        env:
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          ELIGIBLE: ${{ needs.eligibility.outputs.run }}
+          GALLERY_RESULT: ${{ needs.gallery.result }}
+          IMAGE_RESULT: ${{ needs.image.result }}
+          STATIC_RESULT: ${{ needs.static.result }}
+        run: |
+          if [ "$ELIGIBLE" != true ]; then exit 0; fi
+          test "$STATIC_RESULT" = success
+          test "$BROWSER_RESULT" = success
+          test "$GALLERY_RESULT" = success
+          test "$IMAGE_RESULT" = success

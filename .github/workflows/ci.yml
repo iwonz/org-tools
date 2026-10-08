@@ -13,8 +13,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Affected validation plan
+    runs-on: ubuntu-latest
+    outputs:
+      audit: ${{ steps.plan.outputs.audit }}
+      browser_grep: ${{ steps.plan.outputs.browser_grep }}
+      build: ${{ steps.plan.outputs.build }}
+      image: ${{ steps.plan.outputs.image }}
+      runtime: ${{ steps.plan.outputs.runtime }}
+      screenshot_modules: ${{ steps.plan.outputs.screenshot_modules }}
+      screenshots: ${{ steps.plan.outputs.screenshots }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: plan
+        name: Resolve affected evidence
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          echo "audit=$(node scripts/validation-ci-output.mjs audit --base "$BASE_SHA")" >> "$GITHUB_OUTPUT"
+          echo "browser_grep=$(node scripts/validation-ci-output.mjs browserGrep --base "$BASE_SHA")" >> "$GITHUB_OUTPUT"
+          echo "build=$(node scripts/validation-ci-output.mjs build --base "$BASE_SHA")" >> "$GITHUB_OUTPUT"
+          echo "image=$(node scripts/validation-ci-output.mjs image --base "$BASE_SHA")" >> "$GITHUB_OUTPUT"
+          echo "runtime=$(node scripts/validation-ci-output.mjs runtime --base "$BASE_SHA")" >> "$GITHUB_OUTPUT"
+          echo "screenshot_modules=$(node scripts/validation-ci-output.mjs screenshotModules --base "$BASE_SHA")" >> "$GITHUB_OUTPUT"
+          echo "screenshots=$(node scripts/validation-ci-output.mjs screenshots --base "$BASE_SHA")" >> "$GITHUB_OUTPUT"
+
   static:
-    name: Static and runtime
+    name: Fast static and security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
+        run: ./bin/org-tools env init
+      - name: Build validation toolbox
+        run: >-
+          docker compose --env-file .env -f compose.yaml -f compose.dev.yaml
+          build toolbox
+      - name: Fast validation
+        run: ./bin/org-tools run pnpm validate:fast
+      - name: Dependency security audit
+        run: ./bin/org-tools run pnpm security:audit
+
+  runtime:
+    name: Affected build and runtime
+    needs: plan
+    if: needs.plan.outputs.runtime == 'true' || needs.plan.outputs.build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -22,61 +69,27 @@ jobs:
       - name: Initialize isolated environment
         run: |
           ./bin/org-tools env init
-          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-static/postgres|' .env
-          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-static/backups|' .env
-          mkdir -p /tmp/org-tools-ci-static/postgres /tmp/org-tools-ci-static/backups
-      - name: Build toolbox and start PostgreSQL
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-runtime/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-runtime/backups|' .env
+          mkdir -p /tmp/org-tools-ci-runtime/postgres /tmp/org-tools-ci-runtime/backups
+      - name: Start isolated runtime and apply migrations
         run: ./bin/org-tools dev -d
-      - name: Probe development runtime in Chromium
+      - if: needs.plan.outputs.runtime == 'true'
+        name: Probe development runtime
         run: ./bin/org-tools-dev-check
-      - name: Fast complete checks
-        run: ./bin/org-tools run pnpm validate:fast
-      - name: Build production application
+      - if: needs.plan.outputs.build == 'true'
+        name: Build production application
         run: ./bin/org-tools run pnpm build
-      - name: Publication safety
+      - if: needs.plan.outputs.build == 'true'
+        name: Publication safety
         run: ./bin/org-tools run pnpm public:check
       - if: always()
-        run: ./bin/org-tools down --volumes
+        run: ./bin/org-tools down
 
   browser:
-    name: Browser shard ${{ matrix.shard }} of 4
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    steps:
-      - uses: actions/checkout@v6
-      - name: Initialize isolated environment
-        run: |
-          ./bin/org-tools env init
-          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-browser-${{ matrix.shard }}/postgres|' .env
-          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-browser-${{ matrix.shard }}/backups|' .env
-          mkdir -p /tmp/org-tools-ci-browser-${{ matrix.shard }}/postgres /tmp/org-tools-ci-browser-${{ matrix.shard }}/backups
-      - name: Build toolbox and start isolated PostgreSQL
-        run: ./bin/org-tools dev -d
-      - name: Run isolated browser shard
-        run: >-
-          ./bin/org-tools run env
-          ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000
-          ORG_TOOLS_E2E_ISOLATED_SHARD=1
-          ORG_TOOLS_E2E_SHARD_ID=${{ matrix.shard }}
-          pnpm --filter @org-tools/screenshots smoke --shard=${{ matrix.shard }}/4
-      - if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: browser-shard-${{ matrix.shard }}-failure
-          path: |
-            playwright-report-shard-${{ matrix.shard }}
-            test-results/screenshots-shard-${{ matrix.shard }}
-          if-no-files-found: ignore
-          retention-days: 7
-      - if: always()
-        run: ./bin/org-tools down --volumes
-
-  gallery:
-    name: Deterministic gallery
+    name: Affected Core browser
+    needs: plan
+    if: needs.plan.outputs.browser_grep != ''
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -84,36 +97,70 @@ jobs:
       - name: Initialize isolated environment
         run: |
           ./bin/org-tools env init
-          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-gallery/postgres|' .env
-          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-gallery/backups|' .env
-          mkdir -p /tmp/org-tools-ci-gallery/postgres /tmp/org-tools-ci-gallery/backups
-      - name: Build toolbox and start isolated PostgreSQL
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-browser/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-browser/backups|' .env
+          mkdir -p /tmp/org-tools-ci-browser/postgres /tmp/org-tools-ci-browser/backups
+      - name: Start isolated runtime
         run: ./bin/org-tools dev -d
-      - name: Generate and compare both gallery passes
-        run: ./bin/org-tools run pnpm screenshots:verify
+      - name: Run affected Core domains
+        env:
+          BROWSER_GREP: ${{ needs.plan.outputs.browser_grep }}
+        run: >-
+          ./bin/org-tools run env ORG_TOOLS_TEST_UPSTREAM_ORIGIN=http://app:3000
+          ORG_TOOLS_PERFORMANCE_MODE=structural pnpm test:browser --grep "$BROWSER_GREP"
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: screenshot-gallery-failure
+          name: affected-browser-failure
           path: |
-            docs/screenshots/*.png
             playwright-report
-            test-results/screenshot-determinism
-            test-results/screenshot-stability
             test-results/screenshots
           if-no-files-found: ignore
           retention-days: 7
-      - uses: actions/upload-artifact@v7
-        with:
-          name: org-tools-screenshots
-          path: docs/screenshots/*.png
-          if-no-files-found: error
-          retention-days: 14
       - if: always()
-        run: ./bin/org-tools down --volumes
+        run: ./bin/org-tools down
+
+  screenshots:
+    name: Affected screenshots
+    needs: plan
+    if: needs.plan.outputs.screenshots == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Initialize isolated environment
+        run: |
+          ./bin/org-tools env init
+          sed -i 's|^ORG_TOOLS_POSTGRES_DATA_PATH=.*|ORG_TOOLS_POSTGRES_DATA_PATH=/tmp/org-tools-ci-screenshots/postgres|' .env
+          sed -i 's|^ORG_TOOLS_BACKUP_PATH=.*|ORG_TOOLS_BACKUP_PATH=/tmp/org-tools-ci-screenshots/backups|' .env
+          mkdir -p /tmp/org-tools-ci-screenshots/postgres /tmp/org-tools-ci-screenshots/backups
+      - name: Start isolated runtime
+        run: ./bin/org-tools dev -d
+      - name: Generate selected screenshot modules once
+        env:
+          SCREENSHOT_MODULES: ${{ needs.plan.outputs.screenshot_modules }}
+        run: |
+          if [ "$SCREENSHOT_MODULES" = '*' ]; then
+            SCREENSHOT_MODULES='access,administration,authentication,calendar,download,editor,employees,language,teams,theme'
+          fi
+          ./bin/org-tools run env ORG_TOOLS_SCREENSHOT_MODULES="$SCREENSHOT_MODULES" pnpm screenshots:verify:affected
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: affected-screenshot-failure
+          path: |
+            docs/screenshots/*.png
+            playwright-report
+            test-results/screenshots
+          if-no-files-found: ignore
+          retention-days: 7
+      - if: always()
+        run: ./bin/org-tools down
 
   image:
-    name: Production image
+    name: Affected production image
+    needs: plan
+    if: needs.plan.outputs.image == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -122,9 +169,7 @@ jobs:
       - name: Build cached production image
         uses: docker/build-push-action@v7
         with:
-          cache-from: |
-            type=gha,scope=ci-runtime
-            type=gha,scope=published-runtime
+          cache-from: type=gha,scope=ci-runtime
           cache-to: type=gha,mode=max,scope=ci-runtime
           context: .
           file: Dockerfile
@@ -136,17 +181,21 @@ jobs:
   validate:
     name: validate
     if: always()
-    needs: [static, browser, gallery, image]
+    needs: [plan, static, runtime, browser, screenshots, image]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every complete evidence job
+      - name: Require selected Core evidence
         env:
           BROWSER_RESULT: ${{ needs.browser.result }}
-          GALLERY_RESULT: ${{ needs.gallery.result }}
           IMAGE_RESULT: ${{ needs.image.result }}
+          PLAN_RESULT: ${{ needs.plan.result }}
+          RUNTIME_RESULT: ${{ needs.runtime.result }}
+          SCREENSHOTS_RESULT: ${{ needs.screenshots.result }}
           STATIC_RESULT: ${{ needs.static.result }}
         run: |
+          test "$PLAN_RESULT" = success
           test "$STATIC_RESULT" = success
-          test "$BROWSER_RESULT" = success
-          test "$GALLERY_RESULT" = success
-          test "$IMAGE_RESULT" = success
+          test "$RUNTIME_RESULT" = success -o "$RUNTIME_RESULT" = skipped
+          test "$BROWSER_RESULT" = success -o "$BROWSER_RESULT" = skipped
+          test "$SCREENSHOTS_RESULT" = success -o "$SCREENSHOTS_RESULT" = skipped
+          test "$IMAGE_RESULT" = success -o "$IMAGE_RESULT" = skipped

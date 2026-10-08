@@ -114,7 +114,7 @@ const loginAndChangeTemporaryPassword = async (
   return page;
 };
 
-test("enforces roles, scopes, ACL projections, and Administration isolation", async ({
+test("@core @regression @access enforces roles, scopes, ACL projections, and Administration isolation", async ({
   browser,
   page,
 }, testInfo) => {

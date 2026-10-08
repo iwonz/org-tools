@@ -31,7 +31,9 @@ import { exerciseTagGrouping } from "./tag-grouping-workflow.js";
 import { exerciseUsedColorsAndToolIcons } from "./used-colors-workflow.js";
 import { exerciseViewSettings } from "./view-settings-workflow.js";
 
-test("persists global Tag order and Unit grouping with scrollable presets", async ({ page }) => {
+test("@regression @employees @units persists global Tag order and Unit grouping with scrollable presets", async ({
+  page,
+}) => {
   await openBlankState(page);
   const { groupedOrder } = await exerciseTagGrouping(page);
   await page.reload();
@@ -45,7 +47,9 @@ test("persists global Tag order and Unit grouping with scrollable presets", asyn
     .toEqual(groupedOrder);
 });
 
-test("edits durable canvas tools and exports the complete View PNG", async ({ page }) => {
+test("@core @regression @editor @output edits durable canvas tools and exports the complete View PNG", async ({
+  page,
+}) => {
   test.setTimeout(120_000);
   await openBlankState(page);
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
@@ -57,17 +61,21 @@ test("edits durable canvas tools and exports the complete View PNG", async ({ pa
   await exerciseCanvasToolsAndViewExport(page);
 });
 
-test("reuses colors from every View and renders refined Editor tool icons", async ({ page }) => {
+test("@regression @editor reuses colors from every View and renders refined Editor tool icons", async ({
+  page,
+}) => {
   await openBlankState(page);
   await exerciseUsedColorsAndToolIcons(page);
 });
 
-test("keeps the 20,000-Employee and 4,000-Unit Editor workload bounded", async ({ page }) => {
+test("@regression @performance @editor keeps the 20,000-Employee and 4,000-Unit Editor workload bounded", async ({
+  page,
+}) => {
   test.setTimeout(180_000);
   await exerciseLargeEditorPerformance(page);
 });
 
-test("manages View-local Staffing Slots", async ({ page }) => {
+test("@core @regression @editor @units manages View-local Staffing Slots", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -76,7 +84,9 @@ test("manages View-local Staffing Slots", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("contains empty Unit actions inside shared DOM and PNG geometry", async ({ page }) => {
+test("@regression @editor @units contains empty Unit actions inside shared DOM and PNG geometry", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await exerciseEmptyUnitContainment(page);
@@ -362,7 +372,9 @@ async function selectDialogRadio(
   await expect(dialog).toBeHidden();
 }
 
-test("shows one centered icon-only loader while loading initial state", async ({ page }) => {
+test("@regression @state shows one centered icon-only loader while loading initial state", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   const path = await resetServerState(page);
   await page.addInitScript(() => window.localStorage.setItem("org-tools-locale", "en"));
@@ -428,7 +440,9 @@ test("shows one centered icon-only loader while loading initial state", async ({
   await assertLocalRequests();
 });
 
-test("registers responsive workflow actions in the shared header", async ({ page }) => {
+test("@regression @localization registers responsive workflow actions in the shared header", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await openBlankState(page);
@@ -797,7 +811,9 @@ async function expectContainedBy(parent: Locator, child: Locator) {
   );
 }
 
-test("opens a blank state with all product surfaces", async ({ page }) => {
+test("@core @regression @employees @units @editor opens a blank state with all product surfaces", async ({
+  page,
+}) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -893,7 +909,9 @@ test("opens a blank state with all product surfaces", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("keeps interaction cues accessible with reduced motion", async ({ page }) => {
+test("@regression @localization keeps interaction cues accessible with reduced motion", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openBlankState(page);
 
@@ -920,7 +938,9 @@ test("keeps interaction cues accessible with reduced motion", async ({ page }) =
   await expectUniformUiFont(page);
 });
 
-test("contains the collapsible sidebar at narrow and desktop widths", async ({ page }) => {
+test("@regression @localization contains the collapsible sidebar at narrow and desktop widths", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openBlankState(page);
   await page.locator('[data-demo-id="tab-employees"]').click();
@@ -1091,7 +1111,9 @@ test("contains the collapsible sidebar at narrow and desktop widths", async ({ p
   }
 });
 
-test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ page }) => {
+test("@regression @editor uses full-bleed tonal workflows with a distinct Editor canvas", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await openBlankState(page);
 
@@ -1207,7 +1229,9 @@ test("uses full-bleed tonal workflows with a distinct Editor canvas", async ({ p
   );
 });
 
-test("keeps JSON and Template as authorized Download outputs", async ({ page }) => {
+test("@core @regression @output @access keeps JSON and Template as authorized Download outputs", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await expect(page.locator('[data-demo-id="org-editor-view-image-export-action"]')).toBeVisible();
@@ -1309,7 +1333,9 @@ test("keeps JSON and Template as authorized Download outputs", async ({ page }) 
   await assertLocalRequests();
 });
 
-test("creates, crops, re-crops, pastes, and removes a local Employee avatar", async ({ page }) => {
+test("@regression @employees creates, crops, re-crops, pastes, and removes a local Employee avatar", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
@@ -1397,7 +1423,9 @@ test("creates, crops, re-crops, pastes, and removes a local Employee avatar", as
   await assertLocalRequests();
 });
 
-test("creates extensible multi-option and Composite Employee fields", async ({ page }) => {
+test("@regression @employees creates extensible multi-option and Composite Employee fields", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await page.getByRole("tab", { name: "Employees", exact: true }).click();
@@ -1470,7 +1498,7 @@ test("creates extensible multi-option and Composite Employee fields", async ({ p
   await assertLocalRequests();
 });
 
-test("edits contextual Employee card formats with live previews and local image overrides", async ({
+test("@regression @employees @editor edits contextual Employee card formats with live previews and local image overrides", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -2059,7 +2087,7 @@ test("edits contextual Employee card formats with live previews and local image 
   await assertLocalRequests();
 });
 
-test("atomically opens a complete synthetic state", async ({ page }) => {
+test("@regression @state atomically opens a complete synthetic state", async ({ page }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -2154,7 +2182,9 @@ test("atomically opens a complete synthetic state", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("shows reactive total and filtered Employee counts", async ({ page }) => {
+test("@regression @employees shows reactive total and filtered Employee counts", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -2308,7 +2338,9 @@ test("shows reactive total and filtered Employee counts", async ({ page }) => {
   await assertLocalRequests();
 });
 
-test("renders split Org Editor controls and reveals search to the left", async ({ page }) => {
+test("@regression @editor renders split Org Editor controls and reveals search to the left", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -2648,7 +2680,7 @@ test("renders split Org Editor controls and reveals search to the left", async (
   await assertLocalRequests();
 });
 
-test("persists Editor distribution highlighting and selected placement connections", async ({
+test("@regression @editor persists Editor distribution highlighting and selected placement connections", async ({
   page,
 }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
@@ -2842,7 +2874,9 @@ test("persists Editor distribution highlighting and selected placement connectio
   await assertLocalRequests();
 });
 
-test("creates, isolates, renames, restores, and deletes Editor Views", async ({ page }) => {
+test("@core @regression @editor creates, isolates, renames, restores, and deletes Editor Views", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -2993,7 +3027,9 @@ test("creates, isolates, renames, restores, and deletes Editor Views", async ({ 
   await assertLocalRequests();
 });
 
-test("edits, safely previews, persists, and discards Unit Markdown notes", async ({ page }) => {
+test("@regression @editor @units edits, safely previews, persists, and discards Unit Markdown notes", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -3081,7 +3117,7 @@ test("edits, safely previews, persists, and discards Unit Markdown notes", async
   await assertLocalRequests();
 });
 
-test("deletes nested Units and detaches surviving annotations as one valid state", async ({
+test("@regression @editor @units deletes nested Units and detaches surviving annotations as one valid state", async ({
   page,
 }) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
@@ -3105,7 +3141,9 @@ test("deletes nested Units and detaches surviving annotations as one valid state
   await assertLocalRequests();
 });
 
-test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({ page }) => {
+test("@regression @editor @output exports an aligned long-roster hierarchy as a decoded local PNG", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   const state = await createLongRosterState();
@@ -3286,7 +3324,9 @@ test("exports an aligned long-roster hierarchy as a decoded local PNG", async ({
   await assertLocalRequests();
 });
 
-test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page }) => {
+test("@regression @editor edge-pans Unit, Employee, connection, and marquee drags", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await openBlankState(page);
@@ -3362,7 +3402,9 @@ test("edge-pans Unit, Employee, connection, and marquee drags", async ({ page })
   await assertLocalRequests();
 });
 
-test("renders safe profile links, birthdays, and dated tag events", async ({ page }) => {
+test("@regression @employees renders safe profile links, birthdays, and dated tag events", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   const state = JSON.parse(await readFile(syntheticStatePath, "utf8")) as OrgToolsState;
@@ -3505,7 +3547,9 @@ test("renders safe profile links, birthdays, and dated tag events", async ({ pag
   await assertLocalRequests();
 });
 
-test("keeps Calendar navigation in the header and fits July at 1280 by 720", async ({ page }) => {
+test("@regression @employees keeps Calendar navigation in the header and fits July at 1280 by 720", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
@@ -3636,7 +3680,9 @@ test("keeps Calendar navigation in the header and fits July at 1280 by 720", asy
   await assertLocalRequests();
 });
 
-test("edits and clears a dated tag from quick and full Employee editors", async ({ page }) => {
+test("@regression @employees edits and clears a dated tag from quick and full Employee editors", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -3700,7 +3746,9 @@ test("edits and clears a dated tag from quick and full Employee editors", async 
   await assertLocalRequests();
 });
 
-test("uses the configured Tag color as fill without leading marker dots", async ({ page }) => {
+test("@regression @employees uses the configured Tag color as fill without leading marker dots", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -3935,7 +3983,9 @@ test("uses the configured Tag color as fill without leading marker dots", async 
   await assertLocalRequests();
 });
 
-test("adds a tag and applies one date through the bulk Org Editor menu", async ({ page }) => {
+test("@regression @editor @employees adds a tag and applies one date through the bulk Org Editor menu", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await openBlankState(page);
   await replaceWithSyntheticState(page);
@@ -3973,7 +4023,7 @@ test("adds a tag and applies one date through the bulk Org Editor menu", async (
   await assertLocalRequests();
 });
 
-test("refines reference placements, explicit layout, and unique hierarchy counts", async ({
+test("@regression @editor @units refines reference placements, explicit layout, and unique hierarchy counts", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -3981,7 +4031,7 @@ test("refines reference placements, explicit layout, and unique hierarchy counts
   await exerciseRefinedEditor(page);
 });
 
-test("previews and commits pointer Tag sorting with cancellation and peer replacement", async ({
+test("@regression @employees previews and commits pointer Tag sorting with cancellation and peer replacement", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -3989,9 +4039,10 @@ test("previews and commits pointer Tag sorting with cancellation and peer replac
   await exercisePointerTagSorting(page);
 });
 
-test("persists View settings, distribution colors, and matching PNG presentation", async ({
+test("@regression @editor @output persists View settings, distribution colors, and matching PNG presentation", async ({
   page,
 }) => {
+  test.setTimeout(180_000);
   await openBlankState(page);
   await exerciseViewSettings(page);
   await page.reload();

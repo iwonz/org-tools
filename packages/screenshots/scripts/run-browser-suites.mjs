@@ -2,6 +2,8 @@
 
 import { spawnSync } from "node:child_process";
 
+import { createBrowserSuiteBatches } from "./browser-suite-plan.mjs";
+
 const suites = [
   "tests/auth-access.spec.ts",
   "tests/localization.spec.ts",
@@ -9,8 +11,7 @@ const suites = [
   "tests/state.spec.ts",
 ];
 const forwarded = process.argv.slice(2);
-const shardRequested = forwarded.some((argument) => argument.startsWith("--shard"));
-const batches = shardRequested ? [suites] : suites.map((suite) => [suite]);
+const batches = createBrowserSuiteBatches(suites, forwarded);
 
 for (const batch of batches) {
   const result = spawnSync(

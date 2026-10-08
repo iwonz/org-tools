@@ -17,6 +17,7 @@ import {
   stabilizeForScreenshot,
   syntheticStatePath,
 } from "./helpers.js";
+import { createScreenshotSelection } from "./screenshot-selection.js";
 
 type ScreenshotScenario = {
   capabilities: string[];
@@ -32,6 +33,10 @@ const screenshotsDirectory = fileURLToPath(new URL("../../../docs/screenshots", 
 const manifestPath = fileURLToPath(new URL("../../../docs/screenshot-demo.json", import.meta.url));
 const screenshotManifest = JSON.parse(await readFile(manifestPath, "utf8")) as ScreenshotScenario[];
 const scenariosById = new Map(screenshotManifest.map((scenario) => [scenario.id, scenario]));
+const selectedScenarioIds = createScreenshotSelection(screenshotManifest, {
+  ids: process.env.ORG_TOOLS_SCREENSHOT_IDS,
+  modules: process.env.ORG_TOOLS_SCREENSHOT_MODULES,
+});
 const screenshotStabilityDirectory = fileURLToPath(
   new URL("../../../test-results/screenshot-stability", import.meta.url),
 );
@@ -49,6 +54,7 @@ function screenshotPath(id: string): string {
 }
 
 async function capture(page: Page, id: string, options: { stabilized?: boolean } = {}) {
+  if (!selectedScenarioIds.has(id)) return;
   if (!options.stabilized) await stabilizeForScreenshot(page);
   const rasterNoiseRegions = await page
     .locator("[data-screenshot-raster-noise]")
@@ -103,6 +109,8 @@ async function capture(page: Page, id: string, options: { stabilized?: boolean }
   }
   await writeFile(path, screenshot);
 }
+
+const hasSelectedScenario = (ids: string[]) => ids.some((id) => selectedScenarioIds.has(id));
 
 async function decodeScreenshot(screenshot: Buffer) {
   const pixels = await sharp(screenshot)
@@ -197,6 +205,17 @@ test.afterAll(async () => {
 });
 
 test("captures sign-in and Administration", async ({ page }) => {
+  test.skip(
+    !hasSelectedScenario([
+      "authentication-login",
+      "administration-users",
+      "administration-roles",
+      "administration-access",
+      "administration-audit",
+      "administration-backup",
+    ]),
+    "No selected screenshot belongs to this workflow.",
+  );
   await page.route("**/api/session", (route) =>
     route.fulfill({
       body: JSON.stringify({ error: { code: "unauthenticated" } }),
@@ -256,6 +275,10 @@ test("captures sign-in and Administration", async ({ page }) => {
 });
 
 test("captures both themes and multilingual language states", async ({ page }) => {
+  test.skip(
+    !hasSelectedScenario(["theme-light-shell", "theme", "language", "language-arabic-rtl"]),
+    "No selected screenshot belongs to this workflow.",
+  );
   await openSyntheticState(page);
   await page.locator('[data-demo-id="sidebar-toggle"]').click();
   await expect(page.locator('[data-demo-id="app-sidebar"]')).toHaveAttribute(
@@ -287,6 +310,10 @@ test("captures both themes and multilingual language states", async ({ page }) =
 });
 
 test("captures Team browsing, creation, Live rules, and editing", async ({ page }) => {
+  test.skip(
+    !hasSelectedScenario(["teams", "teams-create-manual", "teams-create-live", "teams-edit"]),
+    "No selected screenshot belongs to this workflow.",
+  );
   await openSyntheticTab(page, "Units");
   let productUnit = page
     .locator('[data-demo-id="unit-tree-item"]')
@@ -322,6 +349,14 @@ test("captures Team browsing, creation, Live rules, and editing", async ({ page 
 });
 
 test("captures the complete Employee workflow", async ({ page }) => {
+  test.skip(
+    !hasSelectedScenario(
+      screenshotManifest
+        .filter((scenario) => scenario.module === "employees")
+        .map((scenario) => scenario.id),
+    ),
+    "No selected screenshot belongs to this workflow.",
+  );
   await openSyntheticTab(page, "Employees");
   await expect(page.locator('[data-demo-id="employees-list"]')).toContainText("Avery Stone");
   await capture(page, "employees");
@@ -448,6 +483,14 @@ test("captures the complete Employee workflow", async ({ page }) => {
 });
 
 test("captures Editor navigation, commands, and export tooling", async ({ page }) => {
+  test.skip(
+    !hasSelectedScenario(
+      screenshotManifest
+        .filter((scenario) => scenario.module === "editor")
+        .map((scenario) => scenario.id),
+    ),
+    "No selected screenshot belongs to this workflow.",
+  );
   await openSyntheticState(page);
   await expect(page.locator('[data-demo-id="org-editor-canvas"]')).toBeVisible();
   const selectedAnnotation = page.locator(
@@ -697,6 +740,14 @@ test("captures Editor navigation, commands, and export tooling", async ({ page }
 });
 
 test("captures Calendar overview, day details, and dated-tag history", async ({ page }) => {
+  test.skip(
+    !hasSelectedScenario(
+      screenshotManifest
+        .filter((scenario) => scenario.module === "calendar")
+        .map((scenario) => scenario.id),
+    ),
+    "No selected screenshot belongs to this workflow.",
+  );
   await openSyntheticTab(page, "Calendar");
   await expect(page.locator('[data-demo-id="calendar-weekdays"]')).toBeVisible();
   await capture(page, "calendar");
@@ -715,6 +766,14 @@ test("captures Calendar overview, day details, and dated-tag history", async ({ 
 });
 
 test("captures source selection and every data Download format", async ({ page }) => {
+  test.skip(
+    !hasSelectedScenario(
+      screenshotManifest
+        .filter((scenario) => scenario.module === "download")
+        .map((scenario) => scenario.id),
+    ),
+    "No selected screenshot belongs to this workflow.",
+  );
   await openSyntheticTab(page, "Download");
   await page
     .getByRole("button", { name: "Add Unit Employees to download", exact: true })

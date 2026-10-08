@@ -7,7 +7,11 @@
   "ignoreDependencies": ["@fission-ai/openspec"],
   "workspaces": {
     ".": {
-      "entry": ["scripts/validation-runtime-required.mjs"]
+      "entry": [
+        "scripts/validation-image-required.mjs",
+        "scripts/validation-migration-required.mjs",
+        "scripts/validation-runtime-required.mjs"
+      ]
     }
   }
 }

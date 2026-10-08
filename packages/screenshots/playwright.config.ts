@@ -10,7 +10,7 @@ export default defineConfig({
   testDir: "./tests",
   fullyParallel: process.env.ORG_TOOLS_E2E_ISOLATED_SHARD === "1",
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   timeout: 60_000,
   workers: 1,
   reporter: process.env.CI

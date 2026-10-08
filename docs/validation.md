@@ -1,204 +1,131 @@
 # Validation
 
-Validation has separate feedback and delivery stages. A selective result helps during development;
-only the complete CI matrix is delivery evidence.
+Validation separates quick local confidence from exhaustive regression. Every profile prints its
+commands and wall times without organization values or credentials.
 
-## Stages
+## Profiles
 
-1. **Plan** explains the changed paths, selected checks, skipped expensive feedback, and why:
-
-   ```sh
-   ./bin/org-tools run pnpm validation:plan --base origin/main
-   ```
-
-2. **Fast** runs the complete inexpensive gates concurrently: lint, typecheck, all unit tests,
-   dead-file/dependency reachability, a moderate-or-higher dependency advisory audit, browser-shard
-   partition proof, strict OpenSpec validation, diff checking, and the source-only publication scan:
-
-   ```sh
-   ./bin/org-tools validate fast
-   ```
-
-3. **Changed** runs Fast, then adds the development probe, production build, owned browser specs,
-   gallery feedback, and publication scan selected by the conservative path plan:
-
-   ```sh
-   ./bin/org-tools validate changed --base origin/main
-   ```
-
-   The advisory lookup contacts the package registry but sends no deployment configuration,
-   credentials, or application data. An unavailable comparison base, an unknown path, or a validation-infrastructure change selects
-   the complete expensive local plan. Unit tests are deliberately not selected by import graph: the
-   whole suite is cheap and catches cross-module contracts. The wrapper starts and prewarms the
-   development runtime when an affected browser check needs it. That runtime uses a dedicated
-   `org-tools-validation` Compose project, port `3101` by default, and temporary PostgreSQL and
-   Backup bind directories. Cleanup removes the temporary data and never opens or mutates the
-   configured development database. Set `ORG_TOOLS_VALIDATION_PORT` only when the default port is
-   occupied.
-
-4. **Complete delivery** is always run by GitHub Actions for pull requests and `main`. Independent
-   jobs cover static/runtime checks, four isolated browser shards, two full gallery passes, and the
-   production image. The stable `validate` job succeeds only when all evidence jobs succeed.
-
-Release Please pull requests are created by the repository token. GitHub holds their initial CI run
-for a maintainer's **Approve workflows to run** action; this is the explicit release review gate,
-not a failed check. After the passing release PR is merged, Release Please updates the version and
-changelog, creates the tag and GitHub Release, and explicitly dispatches Container at that tag.
-Delivery is complete only after the versioned multi-platform image and anonymous pull verification
-pass.
-
-## Isolation and coverage
-
-The authoritative browser command contains `smoke`, localization, authorization, and persistence
-specs. Four CI shards divide all Playwright tests exactly once. Each shard owns a separate
-PostgreSQL directory, backup directory, Compose project, application, sessions, browser, and report
-directory; tests inside a shard use one worker. Ordinary local browser execution remains serial and
-starts a fresh Chromium process for each spec file, avoiding renderer-memory accumulation during the
-ten-minute complete matrix. A CI `--shard` argument keeps all tests assigned to that isolated shard
-in one Playwright invocation.
-There is one browser target: the authenticated production server. Static-export and hosted-site
-runtimes are outside the supported build and validation contract.
-
-Use this structural proof after changing browser discovery or sharding:
+**Fast** is the required inner loop. It runs Biome, TypeScript, every Vitest test, the production
+import graph, Knip, strict OpenSpec validation, `git diff --check`, and source publication safety in
+parallel:
 
 ```sh
-./bin/org-tools run pnpm test:browser:shards
+./bin/org-tools validate fast
 ```
 
-The maintained gallery is still generated twice in full. The command fails unless exactly 56
-declared PNG files exist and both SHA-256 manifests match:
+Fast makes no registry request and starts no browser or database. The target is 15 seconds in a
+warm toolbox. The dependency audit still runs in ordinary CI, and Changed adds it when a package
+manifest or lockfile changes.
+
+**Changed** combines the merge-base diff with staged, unstaged, and untracked paths. It always runs
+Fast, explains every selected and skipped gate, then adds only owned evidence:
+
+```sh
+./bin/org-tools validate changed --base origin/main
+```
+
+Maintainers can reproduce one planner class with `--path <repository-path>`; normal delivery omits
+that option so staged, unstaged, untracked, and committed changes are all considered.
+
+- Runtime code selects a production build, publication scan, and bounded runtime probe.
+- Product domains select their tagged Core browser scenarios.
+- Visual domains select manifest modules for one screenshot pass and require no committed-image
+  diff. `ORG_TOOLS_SCREENSHOT_IDS` can select exact scenario IDs for direct gallery work.
+- Persistence changes select migration and restart proof.
+- Package or delivery inputs select the registry audit or production image inspection.
+- Validation infrastructure selects Full because it changes the evidence mechanism.
+
+The wrapper uses a dedicated `org-tools-validation` Compose project, port `3101` by default, and
+temporary PostgreSQL and Backup bind directories. Cleanup cannot open or alter the configured
+development database. An ordinary Changed run targets five minutes or less; this is an observation
+goal rather than a test timeout.
+
+**Full Regression** is the exhaustive profile:
+
+```sh
+./bin/org-tools validate full
+```
+
+It adds the complete 47-scenario browser catalog, the large Editor timing run, migration/restart,
+two complete 56-frame gallery passes with equal SHA-256 hashes, and production image inspection.
+Use it manually for validation-infrastructure work and releases. GitHub runs the same evidence every
+night, on manual dispatch, and for `release-please--*` pull requests.
+
+## Browser and performance evidence
+
+Browser titles carry `@core`, `@regression`, optional `@performance`, and product-domain tags.
+Ordinary CI and Changed run selected Core domains. Full splits every Regression scenario exactly
+once over four isolated PostgreSQL/runtime/browser shards, with one worker per shard. Playwright has
+no automatic retry, so a flake remains visible.
+
+The 20,000-Employee / 4,000-Unit case always blocks excess scans, renders, writes, layout work,
+spatial candidates, or serialization. Ordinary runs do not fail on shared-runner timing. Full warms
+the workload and records three pan and input windows. It fails when median pan p95 exceeds 100 ms,
+median input p95 exceeds 200 ms, or any measured latency exceeds 1000 ms. Full CI retains the metric
+JSON as a data-free artifact.
+
+## Gallery evidence
+
+Affected capture is one pass selected by manifest module or scenario ID:
+
+```sh
+ORG_TOOLS_SCREENSHOT_MODULES=editor ./bin/org-tools run pnpm screenshots:verify:affected
+ORG_TOOLS_SCREENSHOT_IDS=editor-image-export ./bin/org-tools run pnpm screenshots:verify:affected
+```
+
+Full gallery verification remains available independently:
 
 ```sh
 ./bin/org-tools validate gallery
 ```
 
-Each capture waits for bundled fonts and embedded images, disables transient animation, and accepts
-the frame only after two consecutive bounded pixel samples agree. Ordinary small-delta
-antialiasing and pixels inside explicit raster-noise regions use independent bounded allowances;
-larger deltas remain restricted to the explicit regions. A frame that never stabilizes fails with
-both final samples in `test-results/screenshot-stability`; a cross-pass mismatch retains both
-complete frame versions in `test-results/screenshot-determinism` and CI uploads the diagnostic
-artifact.
+Every capture waits for local fonts, embedded images, and consecutive visual stability. Full keeps
+exactly 56 declared PNGs and compares two SHA-256 manifests. Ordinary work visually reviews only
+changed frames; Full Regression reviews the complete gallery.
 
-## Timing baseline
+## Architecture gate
 
-The last serial `main` CI before this change took 26 minutes 46 seconds. The separate Container
-workflow took 14 minutes 24 seconds. A local 44-test browser run took about 7.9 minutes, two gallery
-passes took about 5.6 minutes together, and all 384 unit tests took about 3.5 seconds. The browser
-suite had unintentionally omitted three persistence tests; the new complete suite contains 47. The
-restored tests found real issues: invalid UI input returned 500 instead of 400, interrupted SSE
-streams could close twice, and equal cross-tab writes could conflict only because their timestamps
-differed. A following edit could then use the stale revision. All are fixed rather than excluded
-from the suite; retry is allowed only after a full business-document equality check.
+`pnpm architecture:check` parses the production TypeScript graph with the installed compiler. It
+rejects cycles and reverse dependencies across shared types, `i18n`/`lib`, server, stores,
+components, and app/routes. API routes may use server, foundational logic, localization, and shared
+types; shared contracts cannot depend on application code. Knip separately owns dead files and
+dependency reachability.
 
-Compare wall time, not summed runner time. The optimized CI makes browser shards, gallery, static
-checks, and image inspection concurrent, so its critical path is the slowest complete evidence job.
-Validation logs report every command duration and overall stage duration without organization data
-or credentials.
+## CI and delivery
 
-## Measured result for this change
+Ordinary pull requests and `main` run parallel jobs for Fast plus dependency security, affected
+build/runtime, affected Core browser domains, affected screenshots, and production image checks only
+when delivery inputs changed. The stable `validate` job requires every selected job and accepts an
+unselected job only as skipped.
 
-On the development machine, repeated `validate:fast` runs completed all seven cheap gates in
-6.73–7.50 seconds. The same gates took about 20.5 seconds when invoked one after another, so
-concurrent execution reduced wall time by 63–67% while still running all 393 unit tests.
+After a normal push, confirm that CI, Container, and Release workflows were created and record their
+links. Do not wait for completion unless the task publishes a version, the user requests it, or a
+known failure needs repair. A later failed workflow is a new blocking defect and is never reported as
+successful validation.
 
-The four clean browser shards completed in 2.4, 3.1, 2.7, and 3.1 minutes. Their local critical path
-is therefore about 3.1 minutes, 61% below the previous 7.9-minute serial run, while coverage grew
-from 44 to 47 tests. Running all four Chromium instances simultaneously on the same development
-machine exhausted local browser resources; isolated GitHub runners avoid that constraint, while the
-supported local command remains serial and the shards can be reproduced one at a time.
+## Timing comparison
 
-The two complete gallery passes took 198.62 and 168.71 seconds and produced identical hashes for all
-56 PNG files. Gallery work was deliberately kept complete; CI overlaps it with the browser, static,
-and image jobs instead of weakening it. A cold development-image rebuild also spent 113.8 seconds
-downloading Chromium, which confirms the value of the bounded BuildKit cache added to CI.
+The previous complete local validation baseline was 723.30 seconds. Its Fast stage took 9.20–13.59
+seconds, included network audit and four browser-list processes, and every delivered change repeated
+the complete browser/gallery/image work.
 
-The complete pull-request workflow finished in 11 minutes 28 seconds, down from 26 minutes 46
-seconds: a 57% reduction in authoritative wall time. Its slowest browser shard took 7 minutes 26
-seconds versus 16 minutes 54 seconds for the former serial browser job, a 56% reduction. The two-pass
-gallery became the 11-minute 22-second critical evidence job. Parallelism increased summed runner
-time from 26 minutes 46 seconds to about 45 minutes 20 seconds; this is an intentional tradeoff for
-faster feedback while retaining every gate and adding the three previously omitted browser tests.
+The warmed host Fast profile now takes 6.86 seconds, a 25–50% reduction from that range. In the
+isolated toolbox, a documentation-only Changed run took 13.20 seconds inside the runner and 15.82
+seconds including container startup. A representative server-security Changed run took 155.06
+seconds inside the runner and 208.05 seconds end to end: 7 affected browser scenarios ran instead of
+the complete 47-scenario catalog, and the run remained below the five-minute observation target.
+Planning docs, runtime, security, persistence, visual, performance, and delivery inputs took less
+than one millisecond per case.
 
-The optimized runs exposed infrastructure limits rather than hiding them. Chromium's shared disk
-cache failed during isolated multi-tab runs, so the browser harness disables that cache while still
-executing every request. A healthy API could precede the first cold Next.js page compilation, so the
-development probe now performs a bounded page prewarm. Cold compilation also made the comprehensive
-authorization scenario exceed its former five-minute timeout, and the 20,000-Employee autosave could
-take longer than ten seconds to reach PostgreSQL; only those bounded waits were increased, without
-weakening their assertions. The Container baseline spent 13 minutes 41 seconds of its 14 minutes 24
-seconds in the multi-architecture build. The new workflows share bounded BuildKit inputs between the
-verified production-image job and Container publication while keeping separate cache write scopes.
+The required Full Regression took 1,041.67 seconds, 44% longer than the former 723.30-second
+ordinary gate because it now records three performance samples and verifies every expensive surface
+without retries. It passed all 47 browser scenarios and both passes of all 56 PNGs. Median pan p95
+was 28 ms, median input p95 was 20 ms, and the largest measured interaction was 81 ms. This cost is
+now paid nightly, manually, and for release pull requests instead of after ordinary product work.
 
-Stateful browser scenarios keep their normal product assertion deadline. When mandatory baseline
-restoration begins, it receives a separate bounded cleanup reserve so an otherwise useful failure
-cannot leave maintenance state behind and invalidate the remainder of its shard.
-
-## Gallery stabilization follow-up
-
-The first archived-state CI run exposed one real `demo-teams.png` mismatch after two otherwise
-successful 56-frame passes. An unchanged rerun passed, proving that the fixed 1.5-second delay was
-neither a sufficient readiness condition nor useful deterministic evidence. Visual inspection also
-found that Administration grants came from PostgreSQL without an explicit aggregate order; the
-server now orders them by permission and scope.
-
-The replacement waits on resources and consecutive visual equality instead of elapsed time. On the
-same isolated development runtime, the previous complete passes took 198.62 and 168.71 seconds.
-Repeated stabilized runs took 142.68/92.66 and 116.55/94.02 seconds. Total gallery generation fell
-from 367.33 seconds to 235.34–210.57 seconds, a 36–43% reduction, while all 56 hashes still matched
-and every capture gained an explicit stability assertion. On GitHub's clean runners the stabilized
-two-pass gallery completed in 9 minutes 32 seconds, down from 11 minutes 22 seconds in the first
-optimized workflow, a further 16% reduction. The complete workflow finished in 9 minutes 37
-seconds, 64% below the original 26-minute-46-second baseline. Its slowest browser shard took 7
-minutes 50 seconds and all four shards passed.
-
-The conservative local changed-path run selected no skips because validation infrastructure and a
-server query changed. It completed all 396 unit tests, 47 browser tests, the 20,000/4,000 performance
-scenario, production build, publication scans, and gallery feedback in 746.56 seconds. The serial
-browser suite remained the local critical path at 601.88 seconds; the single gallery feedback pass
-took 100.58 seconds.
-
-A later `main` run retained the strict gate and exposed a second `demo-teams.png` mismatch: 242
-ordinary one-channel antialiasing pixels and 24 pixels in the explicitly declared boss-marker
-raster region. Each class stayed inside the existing 256-pixel allowance, but the old comparator
-incorrectly combined them into 266. The comparator now applies the unchanged allowance to each
-trust category independently. A large delta outside an explicit raster region, or either category
-exceeding 256 pixels, still fails; accepted pass two output retains pass one's exact bytes so the
-two SHA-256 manifests remain identical.
-
-The corrected PR gate passed all seven parallel jobs. The complete two-pass gallery took 9 minutes
-26 seconds, the slowest browser shard took 8 minutes, static and runtime validation took 3 minutes
-48 seconds, and the production image check took 3 minutes 11 seconds.
-
-## Housekeeping and security audit follow-up
-
-The repository-wide audit added dead-source/dependency reachability and a moderate-or-higher audit
-of the complete locked dependency graph to the maintained Fast stage. Before remediation, the
-production graph contained 3 critical, 5 high, and 2 moderate advisories, while development tooling
-contained another 2 moderate advisories. The updated lockfile reports zero known advisories. Knip
-also identified one unreachable UI component and obsolete helper exports; they were removed, while
-declaration companions and dynamically invoked wrapper entries remain explicitly documented.
-
-After the additions, the containerized Fast stage runs nine gates in 9.20–13.59 seconds and includes
-all 427 unit tests. The extra time comes from proving the 47-test browser-shard partition in four
-fresh processes as well as the two new audits; these gates prevent silent coverage gaps and known
-dependency advisories. The audit also found and fixed a Linux portability defect in the `.env`
-permission check that the macOS-only path had hidden.
-The first complete local run also proved that browser validation could target the configured
-development database. Changed validation now creates a separate Compose project and temporary
-bind-backed database, so test setup, fixture replacement, and rate limits cannot alter or depend on
-developer data.
-
-The isolated full audit also exposed two long-run harness defects. Explicit page closure now lets
-client `EventSource` cleanup finish before authorization-test contexts are destroyed, preventing
-Backup restoration from waiting on a streaming response. Container Chromium uses disk-backed shared
-memory and local complete validation restarts it between spec files; CI retains four smaller isolated
-shards. These changes remove teardown hangs and late renderer crashes without adding retries or
-dropping assertions.
-
-The final isolated local delivery run completed in 723.30 seconds. Its four fresh-browser batches
-took 438.42, 68.92, 32.47, and 32.10 seconds: 571.91 seconds together, 8.2% below the prior
-622.72-second single-browser run. All 47 scenarios passed without a retry, including the
-20,000-Employee / 4,000-Unit performance case. The full-run wall time fell 6.7% from 775.57 seconds
-even though process startup is now paid four times. The final two gallery passes took 118.83 and
-103.97 seconds and produced identical SHA-256 hashes for all 56 frames.
+The first Full attempt exposed one real evidence defect: a long Editor scenario exhausted the shared
+60-second default and had previously relied on a CI retry. The scenario now declares its justified
+180-second budget while global retries remain disabled. A focused browser dry run also exposed that
+per-file batching treated a file with no grep matches as a failure; filtered runs now batch the
+catalog once and retain a failing result when the complete filter matches nothing. This tooling-only
+change produced no PNG differences.

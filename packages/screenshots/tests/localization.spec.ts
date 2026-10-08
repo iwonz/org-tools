@@ -31,7 +31,9 @@ const seedLocale = async (page: Page, locale: AppLocale) => {
   });
 };
 
-test("honors a supported locale from the current account UI state", async ({ page }) => {
+test("@regression @localization honors a supported locale from the current account UI state", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await setBrowserLanguages(page, ["de-DE", "ar-EG", "en-US"]);
   await page.addInitScript((key) => window.localStorage.removeItem(key), localeStorageKey);
@@ -50,7 +52,9 @@ test("honors a supported locale from the current account UI state", async ({ pag
   await assertLocalRequests();
 });
 
-test("falls back to English for unsupported browser locales", async ({ page }) => {
+test("@regression @localization falls back to English for unsupported browser locales", async ({
+  page,
+}) => {
   await setBrowserLanguages(page, ["de-DE", "it-IT"]);
   await page.addInitScript((key) => window.localStorage.removeItem(key), localeStorageKey);
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
@@ -62,7 +66,9 @@ test("falls back to English for unsupported browser locales", async ({ page }) =
   );
 });
 
-test("switches the authenticated interface in place and persists the choice", async ({ page }) => {
+test("@core @regression @localization switches the authenticated interface in place and persists the choice", async ({
+  page,
+}) => {
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
   await page.locator('[data-demo-id="language-toggle"]').click();
   await page.locator('[data-demo-id="language-dialog"] label:has(input[value="ru"])').click();
@@ -94,7 +100,10 @@ for (const [locale, messages] of [
   ["fr", frMessages],
   ["ar", arMessages],
 ] as const satisfies ReadonlyArray<readonly [AppLocale, Messages]>) {
-  test(`localizes authentication and Administration in ${locale}`, async ({ browser, page }) => {
+  test(`@regression @localization localizes authentication and Administration in ${locale}`, async ({
+    browser,
+    page,
+  }) => {
     const assertLocalRequests = await expectLocalRequestsOnly(page);
     await seedLocale(page, locale);
     await page.goto(await resetServerState(page, locale), { waitUntil: "domcontentloaded" });
@@ -198,7 +207,9 @@ for (const [locale, messages] of [
   });
 }
 
-test("centers Login and Setup headings while keeping fields start-aligned", async ({ page }) => {
+test("@regression @localization centers Login and Setup headings while keeping fields start-aligned", async ({
+  page,
+}) => {
   await page.route("**/api/session", (route) =>
     route.fulfill({
       body: JSON.stringify({ error: { code: "unauthenticated" } }),

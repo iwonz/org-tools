@@ -36,6 +36,7 @@ import {
 } from "@/lib/employee-display-measure";
 import { createOrgUnitContext } from "@/lib/employee-unit-contexts";
 import { getEmployeeInitials } from "@/lib/employee-utils";
+import type { ExportEmployeeFieldKey } from "@/lib/export-contracts";
 import {
   asExportText,
   buildEmployeeExportRows,
@@ -104,7 +105,6 @@ import {
 } from "@/lib/tag-color";
 import { layoutInlineSurfaces } from "@/lib/tag-surface";
 import { renderTemplateFormat, type TemplateFieldValue } from "@/lib/template-format";
-import type { ExportEmployeeFieldKey } from "@/stores/org-store";
 
 export type OrgEditorExportScope = "subtree" | "unit";
 export type OrgEditorExportTab = "image" | "json" | "template";

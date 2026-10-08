@@ -3,27 +3,43 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-export const ALL_BROWSER_SUITES = [
-  "tests/smoke.spec.ts",
-  "tests/localization.spec.ts",
-  "tests/auth-access.spec.ts",
-  "tests/state.spec.ts",
+export const ALL_BROWSER_TAGS = [
+  "@access",
+  "@core",
+  "@editor",
+  "@employees",
+  "@localization",
+  "@output",
+  "@performance",
+  "@state",
+  "@units",
 ];
 
-const FAST_GATES = [
+export const ALL_SCREENSHOT_MODULES = [
+  "access",
+  "administration",
+  "authentication",
+  "calendar",
+  "download",
+  "editor",
+  "employees",
+  "language",
+  "teams",
+  "theme",
+];
+
+export const FAST_GATES = [
   "lint",
   "typecheck",
   "unit",
+  "architecture",
   "dead-source-and-dependencies",
-  "dependency-security-audit",
-  "browser-shard-partition",
   "spec",
   "diff",
   "source-publication",
 ];
 
 const normalized = (path) => path.replaceAll("\\", "/").replace(/^\.\//u, "");
-const matches = (path, pattern) => pattern.test(path);
 
 const isKnownDocumentation = (path) =>
   path === "AGENTS.md" ||
@@ -33,77 +49,133 @@ const isKnownDocumentation = (path) =>
   path.startsWith("openspec/");
 
 const isValidationInfrastructure = (path) =>
+  path === ".github/workflows/ci.yml" ||
+  path === ".github/workflows/full-regression.yml" ||
+  path === "packages/screenshots/playwright.config.ts" ||
+  path === "packages/screenshots/package.json" ||
+  path.startsWith("packages/screenshots/scripts/") ||
+  path === "packages/screenshots/tests/browser-test.ts" ||
+  path === "scripts/check-browser-shards.mjs" ||
+  path.startsWith("scripts/run-validation") ||
+  path.startsWith("scripts/validation-") ||
+  path === "scripts/verify-screenshots.mjs";
+
+const isDeliveryInput = (path) =>
   path === "Dockerfile" ||
   path === "compose.yaml" ||
   path === "compose.dev.yaml" ||
+  path === ".dockerignore" ||
+  path === ".github/workflows/container.yml" ||
+  path.startsWith("bin/org-tools-image-") ||
+  path === "scripts/check-public-safety.mjs";
+
+const isDependencyInput = (path) =>
   path === "package.json" ||
   path === "pnpm-lock.yaml" ||
   path === "pnpm-workspace.yaml" ||
-  path === "tsconfig.json" ||
-  path.startsWith(".github/workflows/") ||
-  path.startsWith("bin/") ||
-  path.startsWith("scripts/") ||
-  path === "packages/screenshots/playwright.config.ts" ||
-  path === "packages/screenshots/package.json" ||
-  path === "packages/screenshots/scripts/run-playwright.mjs" ||
-  path === "packages/screenshots/tests/browser-test.ts" ||
-  path === "packages/screenshots/tests/helpers.ts";
+  path.endsWith("/package.json");
 
-const isVisualApplicationPath = (path) =>
-  path.startsWith("apps/ui/messages/") ||
-  path.startsWith("apps/ui/src/components/") ||
-  path.startsWith("apps/ui/src/styles/") ||
-  matches(
-    path,
-    /^apps\/ui\/src\/(?:app|lib|stores)\/.*(?:editor|employee|tag|calendar|export|display|surface|color|image)/u,
-  );
+const add = (set, ...values) => {
+  for (const value of values) set.add(value);
+};
 
-const addSuite = (suites, suite) => suites.add(suite);
+const addOwnedUiFeedback = (path, browserTags, screenshotModules) => {
+  add(browserTags, "@core");
+  if (/auth|access|permission|administration|projection|session|backup/u.test(path)) {
+    add(browserTags, "@access");
+    add(screenshotModules, "access", "administration", "authentication");
+  }
+  if (/employee|tag|display|model/u.test(path)) {
+    add(browserTags, "@employees");
+    add(screenshotModules, "employees");
+  }
+  if (/unit|team/u.test(path)) {
+    add(browserTags, "@units");
+    add(screenshotModules, "teams");
+  }
+  if (/editor|canvas|staffing|position|color|image/u.test(path)) {
+    add(browserTags, "@editor");
+    add(screenshotModules, "editor");
+  }
+  if (/export|download|backup/u.test(path)) {
+    add(browserTags, "@output");
+    add(screenshotModules, "download");
+  }
+  if (/state|store|persistence/u.test(path)) add(browserTags, "@state");
+  if (/calendar/u.test(path)) add(screenshotModules, "calendar");
+};
 
 export function createValidationPlan(inputPaths, { baseAvailable = true } = {}) {
   const paths = [...new Set(inputPaths.map(normalized).filter(Boolean))].sort();
-  const browserSuites = new Set();
+  const browserTags = new Set();
+  const screenshotModules = new Set();
   const reasons = [];
-  let runtime = false;
+  let audit = false;
   let build = false;
-  let screenshots = false;
+  let full = false;
   let image = false;
-  let fullFallback = !baseAvailable;
+  let migrations = false;
+  let runtime = false;
+  let screenshotAll = false;
 
-  if (!baseAvailable) reasons.push("comparison base is unavailable; using the complete plan");
+  if (!baseAvailable) {
+    runtime = true;
+    build = true;
+    add(browserTags, ...ALL_BROWSER_TAGS);
+    reasons.push("comparison base is unavailable; using every Core domain");
+  }
 
   for (const path of paths) {
     if (isValidationInfrastructure(path)) {
-      fullFallback = true;
-      reasons.push(`${path}: validation or delivery infrastructure`);
+      full = true;
+      reasons.push(`${path}: validation evidence infrastructure`);
+      continue;
+    }
+
+    if (isDeliveryInput(path)) {
+      build = true;
+      image = true;
+      audit = true;
+      reasons.push(`${path}: container or publication boundary`);
+      continue;
+    }
+
+    if (isDependencyInput(path)) {
+      build = true;
+      image = true;
+      audit = true;
+      add(browserTags, "@core");
+      reasons.push(`${path}: installed dependency graph`);
       continue;
     }
 
     if (isKnownDocumentation(path)) {
-      if (path === "docs/screenshot-demo.json" || /^docs\/screenshots\/.*\.png$/u.test(path)) {
-        screenshots = true;
+      if (path === "docs/screenshot-demo.json") {
         runtime = true;
-        reasons.push(`${path}: maintained gallery contract`);
+        screenshotAll = true;
+        reasons.push(`${path}: maintained screenshot manifest`);
+      } else if (/^docs\/screenshots\/.*\.png$/u.test(path)) {
+        reasons.push(`${path}: maintained screenshot output`);
       } else {
         reasons.push(`${path}: documentation or specification source`);
       }
       continue;
     }
 
-    if (path.startsWith("packages/screenshots/tests/")) {
+    if (
+      path === "packages/screenshots/tests/editor-performance-workflow.ts" ||
+      path === "packages/screenshots/tests/performance-policy.ts"
+    ) {
       runtime = true;
-      if (path.endsWith("screenshots.spec.ts")) screenshots = true;
-      else if (path.endsWith("auth-access.spec.ts"))
-        addSuite(browserSuites, "tests/auth-access.spec.ts");
-      else if (path.endsWith("localization.spec.ts"))
-        addSuite(browserSuites, "tests/localization.spec.ts");
-      else if (path.endsWith("state.spec.ts")) addSuite(browserSuites, "tests/state.spec.ts");
-      else if (path.endsWith("smoke.spec.ts") || path.endsWith("-workflow.ts")) {
-        addSuite(browserSuites, "tests/smoke.spec.ts");
-      } else {
-        fullFallback = true;
-      }
-      reasons.push(`${path}: browser coverage`);
+      build = true;
+      add(browserTags, "@performance");
+      reasons.push(`${path}: deterministic large-Editor performance evidence`);
+      continue;
+    }
+
+    if (path.startsWith("packages/screenshots/tests/")) {
+      full = true;
+      reasons.push(`${path}: browser evidence definition`);
       continue;
     }
 
@@ -112,26 +184,29 @@ export function createValidationPlan(inputPaths, { baseAvailable = true } = {}) 
       continue;
     }
 
-    if (
-      path.startsWith("apps/ui/migrations/") ||
-      path.startsWith("apps/ui/src/server/") ||
-      path.startsWith("apps/ui/src/app/api/")
-    ) {
+    if (path.startsWith("apps/ui/migrations/") || /migration|repository|postgres/u.test(path)) {
       runtime = true;
       build = true;
-      image = true;
-      addSuite(browserSuites, "tests/auth-access.spec.ts");
-      addSuite(browserSuites, "tests/state.spec.ts");
-      reasons.push(`${path}: server, security, or PostgreSQL boundary`);
+      migrations = true;
+      add(browserTags, "@access", "@state");
+      reasons.push(`${path}: PostgreSQL or migration boundary`);
+      continue;
+    }
+
+    if (path.startsWith("apps/ui/src/server/") || path.startsWith("apps/ui/src/app/api/")) {
+      runtime = true;
+      build = true;
+      add(browserTags, "@access", "@state");
+      if (/backup|download|export/u.test(path)) add(browserTags, "@output");
+      reasons.push(`${path}: server or authorization boundary`);
       continue;
     }
 
     if (path.startsWith("apps/ui/messages/") || path.startsWith("apps/ui/src/i18n/")) {
       runtime = true;
       build = true;
-      screenshots = true;
-      addSuite(browserSuites, "tests/localization.spec.ts");
-      addSuite(browserSuites, "tests/smoke.spec.ts");
+      screenshotAll = true;
+      add(browserTags, "@core", "@localization");
       reasons.push(`${path}: localized product interface`);
       continue;
     }
@@ -139,52 +214,79 @@ export function createValidationPlan(inputPaths, { baseAvailable = true } = {}) 
     if (path.startsWith("packages/types/")) {
       runtime = true;
       build = true;
-      image = true;
-      addSuite(browserSuites, "tests/smoke.spec.ts");
-      addSuite(browserSuites, "tests/state.spec.ts");
-      if (path.includes("security")) addSuite(browserSuites, "tests/auth-access.spec.ts");
-      reasons.push(`${path}: shared public type contract`);
+      add(browserTags, "@core", "@state");
+      if (path.includes("security")) add(browserTags, "@access");
+      reasons.push(`${path}: shared public contract`);
+      continue;
+    }
+
+    if (path.startsWith("apps/ui/src/components/ui/") || path.startsWith("apps/ui/src/styles/")) {
+      runtime = true;
+      build = true;
+      screenshotAll = true;
+      add(browserTags, "@core");
+      reasons.push(`${path}: shared visual primitive`);
       continue;
     }
 
     if (path.startsWith("apps/ui/src/") || path.startsWith("apps/ui/public/")) {
       runtime = true;
       build = true;
-      image = true;
-      addSuite(browserSuites, "tests/smoke.spec.ts");
-      if (/auth|access|permission|administration|projection|backup/u.test(path)) {
-        addSuite(browserSuites, "tests/auth-access.spec.ts");
-      }
-      if (/state|store|authenticated-state/u.test(path))
-        addSuite(browserSuites, "tests/state.spec.ts");
-      if (isVisualApplicationPath(path)) screenshots = true;
-      reasons.push(`${path}: product runtime`);
+      addOwnedUiFeedback(path, browserTags, screenshotModules);
+      reasons.push(`${path}: owned product runtime domain`);
       continue;
     }
 
-    fullFallback = true;
-    reasons.push(`${path}: no owned impact rule; using the complete plan`);
-  }
-
-  if (fullFallback) {
     runtime = true;
     build = true;
-    screenshots = true;
+    add(browserTags, ...ALL_BROWSER_TAGS);
+    reasons.push(`${path}: unknown product path; using every Core domain`);
+  }
+
+  if (full) {
+    runtime = true;
+    build = true;
     image = true;
-    for (const suite of ALL_BROWSER_SUITES) addSuite(browserSuites, suite);
+    migrations = true;
+    audit = true;
+    screenshotAll = true;
+    add(browserTags, ...ALL_BROWSER_TAGS);
   }
 
   return {
+    audit,
     baseAvailable,
-    browserSuites: ALL_BROWSER_SUITES.filter((suite) => browserSuites.has(suite)),
+    browserTags: ALL_BROWSER_TAGS.filter((tag) => browserTags.has(tag)),
     build,
     fastGates: FAST_GATES,
-    fullFallback,
+    full,
     image,
+    migrations,
     paths,
     reasons: [...new Set(reasons)],
     runtime,
-    screenshots,
+    screenshotAll,
+    screenshotModules: ALL_SCREENSHOT_MODULES.filter((module) => screenshotModules.has(module)),
+    screenshots: screenshotAll || screenshotModules.size > 0,
+  };
+}
+
+export function createFullValidationPlan() {
+  return {
+    audit: true,
+    baseAvailable: true,
+    browserTags: ALL_BROWSER_TAGS,
+    build: true,
+    fastGates: FAST_GATES,
+    full: true,
+    image: true,
+    migrations: true,
+    paths: [],
+    reasons: ["explicit Full Regression profile"],
+    runtime: true,
+    screenshotAll: true,
+    screenshotModules: ALL_SCREENSHOT_MODULES,
+    screenshots: true,
   };
 }
 
@@ -220,32 +322,43 @@ export function discoverChangedPaths(base = "origin/main") {
 export function formatValidationPlan(plan) {
   const selected = [
     ...plan.fastGates,
+    ...(plan.audit ? ["dependency-security-audit"] : []),
     ...(plan.runtime ? ["development-runtime"] : []),
     ...(plan.build ? ["production-build", "full-publication-scan"] : []),
-    ...plan.browserSuites.map((suite) => `browser:${suite}`),
-    ...(plan.screenshots ? ["gallery-feedback"] : []),
-    ...(plan.image ? ["production-image (authoritative CI)"] : []),
+    ...(plan.migrations ? ["migration-and-restart"] : []),
+    ...(plan.full ? ["browser:full"] : plan.browserTags.map((tag) => `browser:${tag}`)),
+    ...(plan.screenshots
+      ? [
+          plan.screenshotAll
+            ? "screenshots:all-once"
+            : `screenshots:${plan.screenshotModules.join(",")}`,
+        ]
+      : []),
+    ...(plan.image ? ["production-image"] : []),
   ];
   const skipped = [
+    ...(!plan.audit ? ["dependency-security-audit"] : []),
     ...(!plan.runtime ? ["development-runtime"] : []),
     ...(!plan.build ? ["production-build", "full-publication-scan"] : []),
-    ...(plan.browserSuites.length === 0 ? ["browser-feedback"] : []),
-    ...(!plan.screenshots ? ["gallery-feedback"] : []),
+    ...(!plan.migrations ? ["migration-and-restart"] : []),
+    ...(plan.browserTags.length === 0 ? ["browser-feedback"] : []),
+    ...(!plan.screenshots ? ["screenshot-feedback"] : []),
     ...(!plan.image ? ["production-image"] : []),
+    ...(!plan.full ? ["full-regression"] : []),
   ];
   return [
-    `Validation plan (${plan.fullFallback ? "complete fallback" : "affected"})`,
+    `Validation plan (${plan.full ? "full" : "affected Core"})`,
     `Changed paths: ${plan.paths.length}`,
     ...plan.paths.map((path) => `  - ${path}`),
     "Selected gates:",
     ...selected.map((gate) => `  - ${gate}`),
-    "Skipped expensive feedback gates:",
+    "Skipped expensive gates:",
     ...(skipped.length ? skipped.map((gate) => `  - ${gate}`) : ["  - none"]),
     "Reasons:",
     ...(plan.reasons.length
       ? plan.reasons.map((reason) => `  - ${reason}`)
       : ["  - no changed paths"]),
-    "Authoritative CI still runs the complete validation matrix.",
+    "Nightly, manual, and Release Please Full Regression remain exhaustive.",
   ].join("\n");
 }
 

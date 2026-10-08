@@ -173,6 +173,26 @@ export type OrgEditorEmployeePosition = {
   position: string | null;
 };
 
+export type OrgEditorUnitMemberAssignment = {
+  employeeId: EmployeeId;
+  position: string | null;
+};
+
+export type OrgEditorUnitConfiguration =
+  | {
+      assignments: OrgEditorUnitMemberAssignment[];
+      bossEmployeeId: EmployeeId | null;
+      membershipMode: "manual";
+      name: string;
+    }
+  | {
+      bossEmployeeId: EmployeeId | null;
+      liveFilter: EmployeeLiveFilterRule;
+      membershipMode: "live";
+      name: string;
+      positionOverrides: OrgEditorEmployeePosition[];
+    };
+
 export type OrgEditorStaffingSlot = {
   id: OrgEditorStaffingSlotId;
   name: string | null;

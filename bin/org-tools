@@ -171,6 +171,16 @@ start_validation_runtime() {
   ORG_TOOLS_KEEP_DEV_STACK=1 "$repository_root/bin/org-tools-dev-check"
 }
 
+inspect_validation_image() {
+  docker build --tag org-tools:validation --file "$repository_root/Dockerfile" "$repository_root"
+  "$repository_root/bin/org-tools-image-check" org-tools:validation
+}
+
+restart_validation_runtime() {
+  compose_dev restart app
+  ORG_TOOLS_KEEP_DEV_STACK=1 "$repository_root/bin/org-tools-dev-check"
+}
+
 case "${1:-}" in
   env)
     case "${2:-}" in
@@ -203,7 +213,7 @@ case "${1:-}" in
     shift
     validation_stage=${1:-}
     if [ -z "$validation_stage" ]; then
-      echo "Usage: ./bin/org-tools validate {fast|changed|gallery} [validation arguments]" >&2
+      echo "Usage: ./bin/org-tools validate {fast|changed|full|gallery} [validation arguments]" >&2
       exit 2
     fi
     shift
@@ -220,6 +230,20 @@ case "${1:-}" in
           start_validation_runtime
         fi
         compose_dev run --rm --no-deps -e ORG_TOOLS_SKIP_DEV_PROBE=1 toolbox pnpm validate:changed "$@"
+        if compose_dev run --rm --no-deps toolbox node scripts/validation-migration-required.mjs "$@"; then
+          restart_validation_runtime
+        fi
+        if compose_dev run --rm --no-deps toolbox node scripts/validation-image-required.mjs "$@"; then
+          inspect_validation_image
+        fi
+        ;;
+      full)
+        create_validation_environment
+        install_validation_cleanup
+        start_validation_runtime
+        compose_dev run --rm --no-deps -e ORG_TOOLS_SKIP_DEV_PROBE=1 toolbox pnpm validate:full "$@"
+        restart_validation_runtime
+        inspect_validation_image
         ;;
       gallery)
         create_validation_environment
@@ -228,7 +252,7 @@ case "${1:-}" in
         compose_dev run --rm --no-deps toolbox pnpm screenshots:verify "$@"
         ;;
       *)
-        echo "Usage: ./bin/org-tools validate {fast|changed|gallery} [validation arguments]" >&2
+        echo "Usage: ./bin/org-tools validate {fast|changed|full|gallery} [validation arguments]" >&2
         exit 2
         ;;
     esac
@@ -247,7 +271,7 @@ case "${1:-}" in
     exec "$repository_root/bin/org-tools-docker-run" "$@"
     ;;
   *)
-    echo "Usage: ./bin/org-tools {env {init|validate}|up|down|logs|dev|run|validate {fast|changed|gallery}|migrate|docker-run|reset-super-admin-password}" >&2
+    echo "Usage: ./bin/org-tools {env {init|validate}|up|down|logs|dev|run|validate {fast|changed|full|gallery}|migrate|docker-run|reset-super-admin-password}" >&2
     exit 2
     ;;
 esac

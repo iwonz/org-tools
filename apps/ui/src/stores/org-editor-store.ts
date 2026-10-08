@@ -15,7 +15,9 @@ import type {
   OrgEditorStaffingSlotId,
   OrgEditorState,
   OrgEditorUnit,
+  OrgEditorUnitConfiguration,
   OrgEditorUnitId,
+  OrgEditorUnitMemberAssignment,
   OrgEditorViewSettings,
   ViewId,
 } from "@org-tools/types";
@@ -94,25 +96,7 @@ export type OrgEditorEmployeeAssignment = {
   unitId: OrgEditorUnitId;
 };
 
-export type OrgEditorUnitMemberAssignment = {
-  employeeId: EmployeeId;
-  position: string | null;
-};
-
-export type OrgEditorUnitConfiguration =
-  | {
-      assignments: OrgEditorUnitMemberAssignment[];
-      bossEmployeeId: EmployeeId | null;
-      membershipMode: "manual";
-      name: string;
-    }
-  | {
-      bossEmployeeId: EmployeeId | null;
-      liveFilter: EmployeeLiveFilterRule;
-      membershipMode: "live";
-      name: string;
-      positionOverrides: OrgEditorEmployeePosition[];
-    };
+export type { OrgEditorUnitConfiguration, OrgEditorUnitMemberAssignment } from "@org-tools/types";
 
 type OrgEditorSnapshotCommand = {
   after: OrgEditorHistorySnapshot;

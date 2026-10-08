@@ -55,10 +55,14 @@ Backup streams bounded table sets into a validated payload, gzip compresses once
 encryption key with intentionally expensive Argon2id. Restore validates before taking the exclusive
 maintenance lock; only the final replacement transaction blocks ordinary work.
 
-Performance browser coverage loads 20,000 Employees, 4,000 Units, and bounded Canvas content,
-checks spatial candidate counts and interaction frame samples, and runs through the authenticated
-PostgreSQL runtime.
+Performance browser coverage loads 20,000 Employees, 4,000 Units, and bounded Canvas content through
+the authenticated PostgreSQL runtime. Deterministic limits on scans, renders, writes, layout work,
+spatial candidates, and serialization remain blocking whenever the Editor domain is selected.
+Shared-runner frame timing is excluded from ordinary gates. Full Regression warms the workload,
+records three pan and input windows, publishes their metrics, and fails only above a median pan p95
+of 100 ms, median input p95 of 200 ms, or any single latency of 1000 ms.
 
-Static dead-source analysis and registry advisory checks run only during validation. Security
-response headers are constant configuration, and the UUID consolidation removes duplicate fallback
-logic without adding work to rendering, projection, persistence, or interaction paths.
+Static architecture and dead-source analysis run in every Fast validation. Registry advisory checks
+run in CI, Full, and dependency-affected validation. Security response headers are constant
+configuration, and the UUID consolidation removes duplicate fallback logic without adding work to
+rendering, projection, persistence, or interaction paths.

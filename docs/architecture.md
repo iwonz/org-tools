@@ -117,21 +117,26 @@ PostgreSQL-backed server through its same-origin interface.
 
 ## Validation architecture
 
-Local affected validation is an explanatory optimization over repository paths. It always runs the
-complete inexpensive suite and falls back to broader checks for unknown or validation-related
-paths. It is not an authorization or delivery boundary.
+The TypeScript import graph enforces a directed production architecture. `packages/types` is the
+application-independent contract owner. `i18n` and `lib` may depend on shared types; server and
+stores are separate peers above foundational logic; components may use stores and foundational
+logic; API routes use server, `lib`, `i18n`, and shared types. Cycles and reverse edges fail Fast.
+Knip separately checks dead files and dependency reachability.
 
-Authoritative CI separates static/runtime, browser, gallery, and production-image evidence into
-concurrent jobs. Browser tests are partitioned over four independent Compose and PostgreSQL
-instances and stay serial inside each shard. A final stable `validate` job requires all evidence;
-therefore parallel execution changes wall time without reducing coverage. CI and Container builds
-write separate bounded BuildKit caches and may read the other's cache, so verified immutable layers
-are reusable without concurrent workflows overwriting one cache. See `docs/validation.md` for
-commands and timing methodology.
+Fast is a non-networked parallel static/unit profile. Changed maps merge-base, staged, unstaged, and
+untracked paths to owned runtime, Core browser, screenshot, migration, audit, and image evidence.
+Unknown product paths select all Core domains; validation-infrastructure changes select Full. The
+planner is explanatory rather than an authorization boundary.
 
-Fast validation also runs pinned dead-source/dependency reachability and the package manager's full
-moderate-or-higher advisory audit. These are build-time controls only and never enter the standalone
-runtime image.
+Ordinary CI runs Fast and the dependency audit, then parallel affected build/runtime, Core browser,
+screenshot, and image jobs. Nightly, manual, and Release Please Full Regression partitions all
+browser scenarios over four independent Compose/PostgreSQL instances, repeats performance timing,
+generates the complete gallery twice, proves migration/restart, and inspects the production image.
+The stable aggregate job requires every selected evidence job. CI and Container builds use separate
+bounded BuildKit write scopes. See `docs/validation.md` for commands and timing methodology.
+
+The package manager's moderate-or-higher advisory audit runs in CI, Full, and Changed when dependency
+inputs change. It does not run in every Fast invocation and never enters the standalone runtime.
 
 The audit wrapper currently recognizes one exact, unpatched, development-only OpenSpec dependency
 path for `GHSA-vfj7-8cjw-p6xm`. Its code and tests reject production paths, path drift, a published

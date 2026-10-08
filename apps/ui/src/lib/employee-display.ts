@@ -17,6 +17,7 @@ import {
   employeeDisplayTextMeasureEngine,
 } from "@/lib/employee-display-measure";
 import type { EmployeeUnitContext } from "@/lib/employee-unit-contexts";
+import type { ExportEmployeeFieldKey } from "@/lib/export-contracts";
 import {
   asExportText,
   exportEmployeeFieldByKey,
@@ -28,7 +29,6 @@ import {
   type TemplateFieldResolver,
   type TemplateFormatPart,
 } from "@/lib/template-format";
-import type { ExportEmployeeFieldKey } from "@/stores/export-session-store";
 
 export const EMPLOYEE_DISPLAY_UNIT_FIELD_KEYS = [
   "unitId",

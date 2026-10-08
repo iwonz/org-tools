@@ -15,8 +15,8 @@ const discovery = explicitPaths.length
   : discoverChangedPaths(base);
 const plan = createValidationPlan(discovery.paths, discovery);
 console.log(
-  plan.runtime
-    ? "Affected validation requires the development runtime."
-    : "Affected validation does not require the development runtime.",
+  plan.image
+    ? "Affected validation requires production image inspection."
+    : "Affected validation does not require production image inspection.",
 );
-process.exitCode = plan.runtime ? 0 : 1;
+process.exitCode = plan.image ? 0 : 1;

@@ -8,10 +8,13 @@ and no external requests.
 The production server suite authenticates a synthetic Super Administrator and resets PostgreSQL
 through protected organization/UI endpoints before each workflow. Every page is monitored for
 unexpected console warnings and errors, uncaught page errors, failed application requests, and
-failing same-origin resources. Run `./bin/org-tools validate gallery`, inspect both themes and all six
-languages including Arabic RTL, then run it again and compare hashes. Before each capture, the
-harness waits for bundled fonts and embedded images and requires two consecutive pixel samples to
-match. An unstable frame fails with diagnostic samples instead of relying on a fixed delay.
+failing same-origin resources. Changed validation selects manifest modules and creates them once;
+the pass must leave committed PNGs unchanged. Exact IDs can be selected with
+`ORG_TOOLS_SCREENSHOT_IDS`. Run `./bin/org-tools validate gallery` for the Full two-pass check,
+inspect both themes and all six languages including Arabic RTL, and compare hashes. Before each
+capture, the harness waits for bundled fonts and embedded images and requires two consecutive pixel
+samples to match. An unstable frame fails with diagnostic samples instead of relying on a fixed
+delay.
 
 ## Authentication
 

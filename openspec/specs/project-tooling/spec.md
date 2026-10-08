@@ -3,6 +3,43 @@
 ## Purpose
 Define the specification workflow, privacy-preserving development commands, and public automation.
 ## Requirements
+### Requirement: Browser performance separates structural and timing evidence
+Affected Editor validation SHALL block on deterministic large-model serialization, scan, write,
+index, layout, and render budgets without using browser elapsed time. Full Regression SHALL warm the
+20,000-Employee / 4,000-Unit workload, collect three timing windows, publish their values without
+organization data, and reject only sustained or gross latency regression. Automatic retry MUST NOT
+turn a failed timing assertion into passing evidence.
+
+#### Scenario: Validate an affected Editor change
+- **WHEN** Changed or Core validation exercises the large Editor workload
+- **THEN** full scans, serialization, excess renders, and unexpected writes fail while frame timing is recorded without a blocking threshold
+
+#### Scenario: Measure Full Regression timing
+- **WHEN** nightly, manual, or release Full Regression runs
+- **THEN** it fails when median pan p95 exceeds 100 ms, median input p95 exceeds 200 ms, or any measured latency exceeds 1000 ms
+
+#### Scenario: Observe one noisy ordinary frame
+- **WHEN** an ordinary Core runner produces a slow frame while every structural budget holds
+- **THEN** the run does not retry or fail solely because of that elapsed sample
+
+### Requirement: Production dependencies follow explicit architecture boundaries
+Repository validation SHALL parse the production TypeScript import graph, reject dependency cycles,
+and enforce documented direction between shared contracts, foundational logic, server modules,
+client stores, components, and application routes. Existing code MUST satisfy the graph without
+path-specific exceptions, and the check MUST run in Fast and Core validation.
+
+#### Scenario: Reject a reverse layer dependency
+- **WHEN** foundational logic imports a client store or a component imports a server module
+- **THEN** architecture validation fails with the source, target, and violated boundary
+
+#### Scenario: Reject a production cycle
+- **WHEN** production modules form a direct or transitive import cycle
+- **THEN** architecture validation fails with the complete cycle path
+
+#### Scenario: Share a cross-layer contract
+- **WHEN** server, store, rendering, and export code require the same public type
+- **THEN** the type is owned by shared contracts or foundational logic rather than a later runtime layer
+
 ### Requirement: OpenSpec governs repository changes
 The repository SHALL include the Codex OpenSpec integration, English project context, strict
 validation, and archived capability specifications.
@@ -17,8 +54,10 @@ validation, and archived capability specifications.
 
 ### Requirement: Repository changes complete one closed delivery lifecycle
 Every repository change MUST begin from a clean current default branch, proceed through one isolated
-OpenSpec change, and finish integrated, published when allowed, archived, validated, and free of
-dangling work.
+OpenSpec change, and finish integrated, published when allowed, archived, locally validated, and free
+of dangling work. Ordinary delivery SHALL confirm that expected remote workflows started without
+waiting for their completion. Release-specific work, explicit publication work, or a user request
+MUST still wait for the relevant remote result.
 
 #### Scenario: Clean current start
 - **WHEN** a contributor begins a repository change
@@ -34,23 +73,22 @@ dangling work.
 
 #### Scenario: Validated and archived change
 - **WHEN** implementation tasks are complete
-- **THEN** formatting, static checks, unit tests, production build, browser tests, screenshot
-  generation and visual review, deterministic screenshot verification, public-safety checks,
-  OpenSpec validation, and diff checks pass before delta specs are synchronized and the completed
-  change is archived
+- **THEN** Fast validation and affected build, runtime, browser, screenshot, migration, audit,
+  publication, and image checks pass before delta specs are synchronized and the completed change is archived
 
-#### Scenario: Integrated delivery
+#### Scenario: Integrated ordinary delivery
 - **WHEN** the archived change is ready for delivery and publication is allowed
-- **THEN** the contributor creates meaningful commits, updates and merges into `main`, pushes `main`
-  to the configured origin, removes the merged change branch, and verifies that local `HEAD`, local
-  `main`, and `origin/main` agree with a clean worktree, no unique change commits, and no active
-  OpenSpec changes
+- **THEN** the contributor creates meaningful commits, updates and merges into `main`, pushes `main`,
+  confirms the expected remote workflows started, records their URLs, removes the merged change
+  branch, and verifies clean matching local and remote refs without waiting for workflow completion
+
+#### Scenario: Deliver a release-specific change
+- **WHEN** the requested work creates or verifies a release or explicitly requires publication evidence
+- **THEN** delivery waits for the relevant Release Please, GitHub Release, and GHCR results before completion
 
 #### Scenario: Explicit publication exception
-- **WHEN** the user explicitly forbids publication or an external service blocks the final merge or
-  push
-- **THEN** the contributor preserves the safest clean local state and reports the exact incomplete
-  integration instead of claiming that the delivery lifecycle is complete
+- **WHEN** the user explicitly forbids publication or an external service blocks the final merge or push
+- **THEN** the contributor preserves the safest clean local state and reports the exact incomplete integration instead of claiming completion
 
 ### Requirement: Browser validation fails on unexpected runtime diagnostics
 Development and production browser validation SHALL monitor every owned page for console errors and
@@ -431,7 +469,6 @@ Browser validation SHALL cover named and unnamed Staffing Slots in manual and Li
 - **WHEN** the 56-frame gallery is generated twice from unchanged source and fixtures
 - **THEN** every PNG is visually inspected and both SHA-256 sets are identical
 
-
 ### Requirement: Validation covers empty Unit action containment
 
 Repository validation SHALL cover expanded empty manual and Live Units, collapsed geometry, zoomed DOM containment, action accessibility, hierarchy spacing, anchors, and DOM/PNG agreement in the authenticated production runtime. The deterministic gallery SHALL remain exactly 56 PNG files.
@@ -467,13 +504,20 @@ host with Docker and Git only.
 - **THEN** the pinned toolbox executes the complete repository checks without host Node or pnpm
 
 ### Requirement: Server and image validation cover delivery
-CI SHALL start ephemeral PostgreSQL, run checked migrations, exercise Setup/Login and representative
-roles, build the hardened server image, run both unit and browser suites, generate exactly 56 server
-PNGs twice, compare hashes, and scan tracked files, build context, image layers, and runtime resources.
+Core CI SHALL run static and dependency-security checks for every change and, when affected runtime
+or browser evidence is selected, start ephemeral PostgreSQL and exercise the selected Setup/Login,
+authorization, persistence, output, or locale scenarios. Checked migration, production build,
+publication, and image checks SHALL run when their inputs change. Full Regression SHALL additionally
+run every browser scenario, migration/restart proof, production image inspection, large-model timing,
+and two complete 56-frame gallery passes.
 
-#### Scenario: Continuous validation
-- **WHEN** CI runs for a pull request
-- **THEN** all server, authorization, PostgreSQL, image, locale, gallery, performance, OpenSpec, and publication-safety checks pass without publishing an image
+#### Scenario: Validate an ordinary pull request or main commit
+- **WHEN** Core CI runs
+- **THEN** all static, unit, security, affected runtime, key browser, build, and publication checks pass without publishing an image
+
+#### Scenario: Validate a release candidate
+- **WHEN** Full Regression runs for a Release Please PR
+- **THEN** every browser, performance, migration, image, locale, gallery, OpenSpec, and publication-safety check passes before release merge
 
 ### Requirement: Release automation is part of the closed lifecycle
 The delivery lifecycle SHALL include Release Please configuration, a passing release PR, public GHCR
@@ -486,43 +530,56 @@ stable release. Publication failure SHALL be reported without claiming the lifec
 
 ### Requirement: Changed validation is explanatory and conservative
 The repository SHALL provide a changed-file validation stage that compares the merge base plus
-staged, unstaged, and untracked paths, runs every cheap static and unit gate, and selects relevant
-runtime, browser, visual, and publication feedback. The stage MUST print the selected gates and
-reasons. An unavailable base, an unknown path, or validation-infrastructure change MUST select the
-complete expensive local plan. Its root Compose command MUST start and prewarm the development
-runtime when selected feedback requires it and MUST restore the previous stack state.
+staged, unstaged, and untracked paths, runs every non-networked inexpensive gate, and selects owned
+runtime, browser-domain, screenshot, migration, dependency-audit, publication, and image feedback.
+The stage MUST print selected and skipped gates with reasons. An unavailable base or unknown product
+path MUST select all Core domains; validation-infrastructure changes MUST select Full Regression.
+Its Compose wrapper MUST isolate and clean stateful validation.
 
 #### Scenario: Validate a documentation-only change
 - **WHEN** only known documentation and OpenSpec paths changed
-- **THEN** complete lint, typecheck, unit, specification, diff, and source-publication checks run while runtime, browser, gallery, and image feedback are explicitly skipped
+- **THEN** Fast validation runs while runtime, browser, screenshot, migration, audit, and image feedback are explicitly skipped
 
-#### Scenario: Validate an unknown path
-- **WHEN** the planner receives a changed path without an owned impact rule
-- **THEN** it selects every runtime, browser, gallery, build, and publication gate and explains the fallback
+#### Scenario: Validate an unknown product path
+- **WHEN** the planner receives an application path without an owned domain rule
+- **THEN** it selects production build, runtime probe, and every Core browser domain without selecting Full Regression
+
+#### Scenario: Validate orchestration itself
+- **WHEN** validation, browser discovery, screenshot selection, or CI orchestration changes
+- **THEN** the local plan selects Full Regression and explains that the evidence mechanism changed
 
 ### Requirement: Complete validation remains authoritative
-Changed validation MUST NOT replace complete delivery validation. Every pull request and main commit
-SHALL run the full unit suite, all browser and performance scenarios, two complete 56-image gallery
-passes with matching SHA-256 manifests, production build and publication scanning, migration-backed
-runtime checks, and production image inspection.
+Core CI SHALL be the required ordinary pull-request and main gate. Full Regression SHALL remain the
+authoritative exhaustive evidence and run nightly, by manual dispatch, and for Release Please pull
+requests. It MUST run the full unit suite, every browser and performance scenario, two complete
+56-image gallery passes with matching SHA-256 manifests, migration-backed runtime checks, production
+build and publication scanning, and production image inspection.
 
-#### Scenario: A changed stage skips an unrelated browser suite
-- **WHEN** affected feedback completes with one or more expensive gates skipped
-- **THEN** the authoritative CI still executes every browser, performance, gallery, and image gate before reporting success
+#### Scenario: Core skips unrelated detailed scenarios
+- **WHEN** affected Core validation completes with regression scenarios or screenshots skipped
+- **THEN** the required ordinary gate succeeds from its declared evidence and the next Full Regression still executes every exhaustive gate
+
+#### Scenario: Prepare a release
+- **WHEN** a Release Please pull request is opened or updated
+- **THEN** Full Regression runs and must pass before the release pull request is merged
+
+#### Scenario: Run scheduled evidence
+- **WHEN** the nightly schedule or a maintainer dispatch starts Full Regression
+- **THEN** it ignores affected-path selection and executes the complete matrix
 
 ### Requirement: Full browser coverage uses isolated shards
-CI SHALL distribute browser scenarios across bounded shards only when every shard owns an isolated
-PostgreSQL database, application runtime, migration run, session set, browser process, and storage
-paths. Tests inside one shard SHALL remain serial. Ordinary local browser execution SHALL remain
-serial unless isolated sharding is explicitly requested.
+Full Regression SHALL distribute browser scenarios across bounded shards only when every shard owns
+an isolated PostgreSQL database, application runtime, migration run, session set, browser process,
+and storage paths. Tests inside one shard SHALL remain serial. Core and ordinary local browser
+execution SHALL use one worker unless explicitly assigned an isolated shard.
 
-#### Scenario: Run four browser shards
-- **WHEN** authoritative CI executes the browser suite
-- **THEN** every smoke, localization, authorization, persistence, and performance scenario runs exactly once across four isolated shards without shared mutable state
+#### Scenario: Run Full Regression shards
+- **WHEN** nightly, manual, or release Full Regression executes the browser suite
+- **THEN** every Core, regression, authorization, persistence, localization, and performance scenario runs exactly once across isolated shards
 
 #### Scenario: Run the ordinary local browser command
-- **WHEN** a contributor runs the browser command without the sharding flag
-- **THEN** Playwright uses one worker and preserves the existing serial database behavior
+- **WHEN** a contributor runs affected browser validation without sharding
+- **THEN** Playwright uses one worker and executes only selected domain tags against the isolated validation database
 
 ### Requirement: Validation reports comparable timing evidence
 Repository validation SHALL report command and stage wall time, success or failure, and the selected
@@ -548,7 +605,15 @@ an active maintenance operation.
 - **THEN** the scenario remains failed while its bounded cleanup is still allowed to restore the baseline
 
 ### Requirement: Screenshot capture waits for observed visual stability
-The maintained gallery SHALL wait for bundled fonts and current embedded images to finish loading or reach an explicit error state, disable transient animation, and require two consecutive bounded visual samples to match before accepting each PNG. Ordinary small-delta pixels and pixels inside explicitly marked raster-noise regions MUST each use the unchanged 256-pixel budget independently. Ordinary channel deltas above three MUST fail outside an explicit raster-noise region. Failure to stabilize MUST fail the gallery and retain diagnostic samples. The complete validation lifecycle SHALL still generate all 56 frames twice and compare every SHA-256 hash.
+Maintained screenshot capture SHALL wait for bundled fonts and embedded images, disable transient
+animation, and require two consecutive bounded visual samples before accepting a PNG. Ordinary
+small-delta pixels and explicitly marked raster-noise regions MUST retain independent 256-pixel
+budgets. Affected validation SHALL generate selected committed frames once and fail on a remaining
+repository diff. Full Regression SHALL generate all 56 frames twice and compare every SHA-256 hash.
+
+#### Scenario: Capture affected frames
+- **WHEN** Changed or Core validation selects visual modules or IDs
+- **THEN** only those frames are generated once and committed screenshots remain unchanged after comparison
 
 #### Scenario: Stable resources replace a fixed delay
 - **WHEN** fonts and images become ready and two consecutive samples match
@@ -564,26 +629,30 @@ The maintained gallery SHALL wait for bundled fonts and current embedded images 
 
 #### Scenario: Frame never stabilizes
 - **WHEN** no consecutive visual samples match within the bounded attempt limit
-- **THEN** the gallery fails with the scenario identifier and retains the final samples as diagnostics
+- **THEN** capture fails with the scenario identifier and retains final diagnostic samples
 
-#### Scenario: Complete evidence remains authoritative
-- **WHEN** continuous validation runs from unchanged source and fixtures
-- **THEN** it still produces two complete 56-frame passes and requires all resulting SHA-256 hashes to match
+#### Scenario: Full deterministic evidence
+- **WHEN** Full Regression runs from unchanged source and fixtures
+- **THEN** both complete 56-frame passes match each other and the committed gallery
 
 ### Requirement: Maintained validation audits repository hygiene and locked dependencies
-The repository SHALL provide deterministic checks for dead tracked source, generated or sensitive
-artifacts, obsolete current-runtime contracts, and locked dependency advisories. Explicit
-dependency auditing MAY contact the package registry during development and CI, but MUST NOT run in
-the application or transmit organization data, credentials, or deployment configuration.
+The repository SHALL provide deterministic checks for architecture boundaries, cycles, dead tracked
+source, generated or sensitive artifacts, obsolete current-runtime contracts, and locked dependency
+advisories. Dependency auditing SHALL run in Core and Full CI and in local Changed validation when
+manifest or lock inputs change. It MUST NOT run in the application or transmit organization data,
+credentials, or deployment configuration.
 
-#### Scenario: Audit a clean change
-- **WHEN** maintained fast and complete validation run for a change
-- **THEN** source hygiene, current documentation, locked dependencies, tracked artifacts, and
-  publication boundaries are checked alongside the existing functional gates
+#### Scenario: Run local Fast validation
+- **WHEN** maintained Fast validation runs for an ordinary source change
+- **THEN** architecture, cycles, dead source, current documentation, tracked artifacts, and publication boundaries are checked without a registry request
+
+#### Scenario: Audit dependencies in CI
+- **WHEN** Core or Full CI runs, or a local dependency input changes
+- **THEN** the complete locked graph is checked at the configured failing severity
 
 #### Scenario: Detect a vulnerable production package
-- **WHEN** the installed locked dependency graph contains an advisory at the configured failing severity
-- **THEN** validation fails with package and advisory metadata without printing application secrets or organization data
+- **WHEN** the installed locked dependency graph contains a failing advisory
+- **THEN** validation fails with package and advisory metadata without printing secrets or organization data
 
 #### Scenario: Review a possible dead file
 - **WHEN** static analysis identifies a file without an import consumer

@@ -14,6 +14,7 @@
     "url": "https://github.com/iwonz/org-tools/issues"
   },
   "scripts": {
+    "architecture:check": "node scripts/check-architecture.mjs",
     "build": "pnpm --filter @org-tools/ui build",
     "build:ui": "pnpm --filter @org-tools/ui build",
     "dev": "./bin/org-tools dev",
@@ -28,17 +29,20 @@
     "public:check:source": "node scripts/check-public-safety.mjs --source-only",
     "screenshots:generate": "pnpm --filter @org-tools/screenshots generate",
     "screenshots:verify": "node scripts/verify-screenshots.mjs",
+    "screenshots:verify:affected": "node scripts/verify-affected-screenshots.mjs",
     "security:audit": "node scripts/check-dependency-audit.mjs",
     "spec": "node scripts/run-openspec.mjs",
     "spec:validate": "node scripts/run-openspec.mjs validate --all --strict --no-interactive",
     "start": "./bin/org-tools up",
     "test": "pnpm test:unit",
     "test:browser": "pnpm --filter @org-tools/screenshots smoke",
+    "test:browser:core": "pnpm test:browser --grep @core",
     "test:browser:shards": "node scripts/check-browser-shards.mjs",
     "test:unit": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @org-tools/ui typecheck && pnpm --filter @org-tools/screenshots typecheck",
     "validate:changed": "node scripts/run-validation.mjs changed",
     "validate:fast": "node scripts/run-validation.mjs fast",
+    "validate:full": "node scripts/run-validation.mjs full",
     "validation:plan": "node scripts/validation-plan.mjs"
   },
   "engines": {

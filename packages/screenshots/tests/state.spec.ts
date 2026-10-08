@@ -19,7 +19,9 @@ const mutationHeaders = (csrfToken: string, origin = configuredOrigin()) => ({
   "X-Org-Tools-CSRF": csrfToken,
 });
 
-test("writes organization and per-account UI automatically", async ({ page }) => {
+test("@core @regression @state writes organization and per-account UI automatically", async ({
+  page,
+}) => {
   await openBlankState(page);
   await expect(page).toHaveURL(/\/$/u);
 
@@ -68,7 +70,10 @@ test("writes organization and per-account UI automatically", async ({ page }) =>
   );
 });
 
-test("synchronizes organization and UI between authenticated tabs", async ({ page, context }) => {
+test("@regression @state synchronizes organization and UI between authenticated tabs", async ({
+  page,
+  context,
+}) => {
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
   const secondPage = await context.newPage();
   await secondPage.goto("/", { waitUntil: "domcontentloaded" });
@@ -98,7 +103,9 @@ test("synchronizes organization and UI between authenticated tabs", async ({ pag
   );
 });
 
-test("requires exact authenticated CSRF, origin, media type, and UI shape", async ({ page }) => {
+test("@core @regression @access @state requires exact authenticated CSRF, origin, media type, and UI shape", async ({
+  page,
+}) => {
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.goto(await resetServerState(page), { waitUntil: "domcontentloaded" });
   const bootstrap = await authenticateSuperAdministrator(page);

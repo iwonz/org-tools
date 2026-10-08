@@ -29,6 +29,7 @@ Run through the toolbox:
 ./bin/org-tools run pnpm lint
 ./bin/org-tools run pnpm typecheck
 ./bin/org-tools run pnpm test:unit
+./bin/org-tools run pnpm architecture:check
 ./bin/org-tools run pnpm hygiene:dead-code
 ./bin/org-tools run pnpm security:audit
 ./bin/org-tools-dev-check
@@ -39,13 +40,15 @@ Run through the toolbox:
 ./bin/org-tools run pnpm spec:validate
 ```
 
-Also test migrations from empty PostgreSQL, restart, Backup/Restore, the non-root production image,
-and external bind persistence. Generate the 56 PNG gallery twice, compare SHA-256, and inspect every
-frame. Sync and archive OpenSpec before integration.
+Changed selects migrations, restart, affected browser domains, screenshots, and image inspection
+from the actual diff. Use `./bin/org-tools validate full` for validation infrastructure and release
+work. Full tests empty PostgreSQL and restart, the non-root production image, all browser scenarios,
+and both 56-PNG passes. Sync and archive OpenSpec before integration.
 
 ## Publish
 
-Merge the completed branch into fresh `main` and push without rewriting history. Release Please
+Merge the completed branch into fresh `main` and push without rewriting history. Confirm the
+expected workflows started; ordinary delivery does not wait for their completion. Release Please
 creates the SemVer release PR. Approve the CI workflow held for that bot-created PR, review its
 version and `CHANGELOG.md`, and merge it only when that version is intended for publication. Release
 Please then creates the tag and GitHub Release and explicitly dispatches the container workflow for

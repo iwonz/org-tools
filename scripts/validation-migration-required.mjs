@@ -15,8 +15,8 @@ const discovery = explicitPaths.length
   : discoverChangedPaths(base);
 const plan = createValidationPlan(discovery.paths, discovery);
 console.log(
-  plan.runtime
-    ? "Affected validation requires the development runtime."
-    : "Affected validation does not require the development runtime.",
+  plan.migrations
+    ? "Affected validation requires migration and restart evidence."
+    : "Affected validation does not require migration and restart evidence.",
 );
-process.exitCode = plan.runtime ? 0 : 1;
+process.exitCode = plan.migrations ? 0 : 1;

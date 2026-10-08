@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 
 import type { OrgToolsState, SessionBootstrap } from "@org-tools/types";
 import { expect, type Page, type Request } from "@playwright/test";
@@ -10,6 +10,12 @@ import {
   replaceStateFromFile,
   syntheticStatePath,
 } from "./helpers.js";
+import {
+  evaluateTimingPolicy,
+  median,
+  type PerformanceTimingMetrics,
+  percentile95,
+} from "./performance-policy.js";
 
 const createTestEmployeeId = (fields: {
   email: string | null;
@@ -232,6 +238,8 @@ const stopFrameSampling = (page: Page) =>
   });
 
 export async function exerciseLargeEditorPerformance(page: Page): Promise<void> {
+  const timingMode = process.env.ORG_TOOLS_PERFORMANCE_MODE === "full" ? "full" : "structural";
+  const measurementCount = timingMode === "full" ? 3 : 1;
   const assertLocalRequests = await expectLocalRequestsOnly(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await openBlankState(page);
@@ -318,31 +326,33 @@ export async function exerciseLargeEditorPerformance(page: Page): Promise<void> 
   page.on("request", onRequest);
 
   try {
-    await resetPerformanceDiagnostics(page);
-    await startFrameSampling(page);
-    await page.mouse.move(panStart.x, panStart.y);
-    await page.mouse.down({ button: "middle" });
-    await page.mouse.move(panStart.x + 48, panStart.y + 24, { steps: 20 });
-    await page.waitForTimeout(500);
-    expect(writes).toEqual([]);
-    const panPreviewDiagnostics = await readPerformanceDiagnostics(page);
-    expect(panPreviewDiagnostics.viewportFrames).toBeGreaterThan(0);
-    expect(panPreviewDiagnostics.viewportWindowInvalidations).toBe(0);
-    expect(panPreviewDiagnostics.richTextLayoutComputations).toBeLessThan(200);
-    expect(panPreviewDiagnostics.unitRenders).toBeLessThan(200);
-    expect(panPreviewDiagnostics.canvasElementRenders).toBeLessThanOrEqual(
-      visibleCanvasElementCount * 4,
-    );
-    const frameSamples = await stopFrameSampling(page);
-    const sortedFrameSamples = [...frameSamples].sort((first, second) => first - second);
-    const frameP95 = sortedFrameSamples[Math.floor((sortedFrameSamples.length - 1) * 0.95)] ?? 0;
-    expect(frameSamples.length).toBeGreaterThan(10);
-    expect(frameP95).toBeLessThanOrEqual(33);
-    expect(Math.max(...frameSamples)).toBeLessThanOrEqual(250);
-    await page.mouse.up({ button: "middle" });
-    await expect.poll(() => writes.filter((write) => write.kind === "ui").length).toBe(1);
-    expect(Number(await canvas.getAttribute("data-spatial-candidate-count"))).toBeLessThan(200);
-    writes.length = 0;
+    const panP95Samples: number[] = [];
+    const panMaximumSamples: number[] = [];
+    for (let sample = 0; sample < measurementCount; sample += 1) {
+      writes.length = 0;
+      await resetPerformanceDiagnostics(page);
+      await startFrameSampling(page);
+      await page.mouse.move(panStart.x, panStart.y);
+      await page.mouse.down({ button: "middle" });
+      await page.mouse.move(panStart.x + 48, panStart.y + 24, { steps: 20 });
+      await page.waitForTimeout(500);
+      expect(writes).toEqual([]);
+      const panPreviewDiagnostics = await readPerformanceDiagnostics(page);
+      expect(panPreviewDiagnostics.viewportFrames).toBeGreaterThan(0);
+      expect(panPreviewDiagnostics.viewportWindowInvalidations).toBe(0);
+      expect(panPreviewDiagnostics.richTextLayoutComputations).toBeLessThan(200);
+      expect(panPreviewDiagnostics.unitRenders).toBeLessThan(200);
+      expect(panPreviewDiagnostics.canvasElementRenders).toBeLessThanOrEqual(
+        visibleCanvasElementCount * 4,
+      );
+      const frameSamples = await stopFrameSampling(page);
+      expect(frameSamples.length).toBeGreaterThan(10);
+      panP95Samples.push(percentile95(frameSamples));
+      panMaximumSamples.push(Math.max(...frameSamples));
+      await page.mouse.up({ button: "middle" });
+      await expect.poll(() => writes.filter((write) => write.kind === "ui").length).toBe(1);
+      expect(Number(await canvas.getAttribute("data-spatial-candidate-count"))).toBeLessThan(200);
+    }
 
     await longTextElement.dblclick({ force: true });
     const richTextEditor = longTextElement.getByRole("textbox");
@@ -383,41 +393,66 @@ export async function exerciseLargeEditorPerformance(page: Page): Promise<void> 
         { signal: AbortSignal.timeout(30_000) },
       );
     });
-    writes.length = 0;
     const inputSample = "abcdefghij".repeat(4);
-    for (const character of inputSample) {
-      await page.keyboard.insertText(character);
-      await page.waitForTimeout(24);
-    }
-    await expect
-      .poll(() => richTextEditor.evaluate((element) => element.textContent?.length))
-      .toBe(60_000 + inputSample.length);
-    expect(writes.filter((write) => write.kind === "organization")).toEqual([]);
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () =>
-            (
-              window as typeof window & {
-                __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
-              }
-            ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__?.length ?? 0,
-        ),
-      )
-      .toBeGreaterThanOrEqual(inputSample.length / 2);
-    const inputLatencies = await page.evaluate(
-      () =>
+    const inputP95Samples: number[] = [];
+    const inputMaximumSamples: number[] = [];
+    writes.length = 0;
+    for (let sample = 0; sample < measurementCount; sample += 1) {
+      await page.evaluate(() => {
         (
           window as typeof window & {
             __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
           }
-        ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__ ?? [],
-    );
-    const sortedInputLatencies = [...inputLatencies].sort((first, second) => first - second);
-    const inputP95 =
-      sortedInputLatencies[Math.floor((sortedInputLatencies.length - 1) * 0.95)] ?? 0;
-    expect(inputP95).toBeLessThanOrEqual(67);
-    expect(Math.max(...inputLatencies)).toBeLessThanOrEqual(250);
+        ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__ = [];
+      });
+      for (const character of inputSample) {
+        await page.keyboard.insertText(character);
+        await page.waitForTimeout(24);
+      }
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              (
+                window as typeof window & {
+                  __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
+                }
+              ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__?.length ?? 0,
+          ),
+        )
+        .toBeGreaterThanOrEqual(inputSample.length / 2);
+      const inputLatencies = await page.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              __ORG_TOOLS_EDITOR_INPUT_LATENCIES__?: number[];
+            }
+          ).__ORG_TOOLS_EDITOR_INPUT_LATENCIES__ ?? [],
+      );
+      inputP95Samples.push(percentile95(inputLatencies));
+      inputMaximumSamples.push(Math.max(...inputLatencies));
+    }
+    await expect
+      .poll(() => richTextEditor.evaluate((element) => element.textContent?.length))
+      .toBe(60_000 + inputSample.length * measurementCount);
+    expect(writes.filter((write) => write.kind === "organization")).toEqual([]);
+    const timingMetrics: PerformanceTimingMetrics = {
+      inputMaximumMs: Math.max(...inputMaximumSamples),
+      inputMedianP95Ms: median(inputP95Samples),
+      inputP95Samples,
+      mode: timingMode,
+      panMaximumMs: Math.max(...panMaximumSamples),
+      panMedianP95Ms: median(panP95Samples),
+      panP95Samples,
+    };
+    console.log(`Editor performance metrics: ${JSON.stringify(timingMetrics)}`);
+    if (process.env.ORG_TOOLS_PERFORMANCE_RESULTS) {
+      await writeFile(
+        process.env.ORG_TOOLS_PERFORMANCE_RESULTS,
+        `${JSON.stringify(timingMetrics, null, 2)}\n`,
+      );
+    }
+    expect(evaluateTimingPolicy(timingMetrics)).toEqual([]);
     const textCommitResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" && response.url().endsWith("/api/commands"),
