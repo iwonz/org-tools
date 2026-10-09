@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22.22.0-bookworm-slim AS base
+FROM node:26.9.0-bookworm-slim AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -26,7 +26,7 @@ FROM dependencies AS build
 COPY . .
 RUN pnpm --filter @org-tools/ui build
 
-FROM node:22.22.0-bookworm-slim AS runtime
+FROM node:26.9.0-bookworm-slim AS runtime
 ENV HOSTNAME=0.0.0.0
 ENV NODE_ENV=production
 ENV PORT=3000
