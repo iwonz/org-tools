@@ -195,9 +195,10 @@ Capabilities: Custom fields, Virtualized values, Not filled, Compound filtering.
 
 Search centralized Tags in padding-free inert rows and inspect named or arbitrary global filled
 colors, Employee usage, positive With date counts, a leading reorder handle, and Eye, Color, Edit,
-and Delete actions.
+and Delete actions. Plain click selects one Tag; Ctrl/Command-click builds a visibly outlined
+selection that can be dragged as one ordered block.
 
-Capabilities: Tag catalog, Search, Global colors, Usage counts.
+Capabilities: Tag catalog, Multi-selection, Bulk reorder, Search, Global colors, Usage counts.
 
 ### Tag catalog editor
 

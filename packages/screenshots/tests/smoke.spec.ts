@@ -3796,11 +3796,16 @@ test("@regression @employees uses the configured Tag color as fill without leadi
       .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label"))),
   ).toEqual([
     "Drag Accessibility to reorder",
+    "Accessibility",
     "View Employees with this Tag",
     "Choose Tag color",
     "Edit tag",
     "Delete tag",
   ]);
+  await expect(tagRow.getByRole("button", { name: "Accessibility", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
   await tagRow.getByRole("button", { name: "Edit tag", exact: true }).click();
   const tagEditor = page.getByRole("dialog", { name: "Edit tag", exact: true });
   await expect(catalog.locator('[data-demo-id="tag-catalog-editor"]')).toHaveCount(0);

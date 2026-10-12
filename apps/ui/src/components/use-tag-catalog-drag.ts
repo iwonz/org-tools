@@ -7,7 +7,8 @@ type Slot = { id: TagId; top: number; height: number };
 type Gesture = {
   handle: HTMLButtonElement;
   pointerId: number;
-  sourceIndex: number;
+  sourceIds: readonly TagId[];
+  sourceIdSet: ReadonlySet<TagId>;
   slots: Slot[];
   gap: number;
   width: number;
@@ -23,7 +24,9 @@ type Gesture = {
 
 type Preview = {
   destination: number;
-  id: TagId;
+  ids: readonly TagId[];
+  targetId: TagId | null;
+  placement: "before" | "after";
   x: number;
   y: number;
   width: number;
@@ -38,13 +41,17 @@ export function useTagCatalogDrag({
   visible,
   query,
   open,
+  selectedIds,
+  onSelectOnly,
   onMove,
 }: {
   tags: readonly EmployeeTagDefinition[];
   visible: readonly EmployeeTagDefinition[];
   query: string;
   open: boolean;
-  onMove: (source: TagId, target: TagId, placement: "before" | "after") => void;
+  selectedIds: readonly TagId[];
+  onSelectOnly: (id: TagId) => void;
+  onMove: (sources: readonly TagId[], target: TagId, placement: "before" | "after") => void;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
   const gestureRef = useRef<Gesture | null>(null);
@@ -88,30 +95,35 @@ export function useTagCatalogDrag({
 
   const updatePreview = (gesture: Gesture) => {
     const list = listRef.current;
-    const source = gesture.slots[gesture.sourceIndex];
-    if (!list || !source) return;
+    const sources = gesture.slots.filter((slot) => gesture.sourceIdSet.has(slot.id));
+    if (!list || sources.length === 0) return;
     const bounds = list.getBoundingClientRect();
     const contentY = gesture.y - bounds.top + list.scrollTop;
     // Slots are measured before transforms; animated siblings cannot feed back into collision.
-    const others = gesture.slots.filter((slot) => slot.id !== source.id);
+    const others = gesture.slots.filter((slot) => !gesture.sourceIdSet.has(slot.id));
     const destination = others.filter((slot) => contentY > slot.top + slot.height / 2).length;
     const ordered = [...others];
-    ordered.splice(destination, 0, source);
+    ordered.splice(destination, 0, ...sources);
     const offsets = new Map<TagId, number>();
     let top = gesture.slots[0]?.top ?? 0;
     let placeholderTop = top;
     for (const slot of ordered) {
       offsets.set(slot.id, top - slot.top);
-      if (slot.id === source.id) placeholderTop = top;
+      if (slot.id === sources[0]?.id) placeholderTop = top;
       top += slot.height + gesture.gap;
     }
+    const target = destination < others.length ? others[destination] : others.at(-1);
     setPreview({
       destination,
-      id: source.id,
+      ids: gesture.sourceIds,
+      targetId: target?.id ?? null,
+      placement: destination < others.length ? "before" : "after",
       x: gesture.x - gesture.offsetX,
       y: gesture.y - gesture.offsetY,
       width: gesture.width,
-      height: source.height,
+      height:
+        sources.reduce((height, source) => height + source.height, 0) +
+        gesture.gap * Math.max(0, sources.length - 1),
       top: placeholderTop,
       offsets,
     });
@@ -169,13 +181,23 @@ export function useTagCatalogDrag({
         height: rect.height,
       };
     });
+    const selectedIdSet = new Set(selectedIds);
+    const sourceIds = selectedIdSet.has(id)
+      ? slots.filter((slot) => selectedIdSet.has(slot.id)).map((slot) => slot.id)
+      : [id];
+    const sourceIdSet = new Set(sourceIds);
+    const sourceSlots = slots.filter((slot) => sourceIdSet.has(slot.id));
+    const firstSource = sourceSlots[0];
+    if (!firstSource) return;
+    if (!selectedIdSet.has(id)) onSelectOnly(id);
     event.preventDefault();
     event.currentTarget.focus({ preventScroll: true });
     event.currentTarget.setPointerCapture(event.pointerId);
     gestureRef.current = {
       handle: event.currentTarget,
       pointerId: event.pointerId,
-      sourceIndex,
+      sourceIds,
+      sourceIdSet,
       slots,
       gap: slots[1] && slots[0] ? slots[1].top - slots[0].top - slots[0].height : 0,
       width: sourceBounds.width,
@@ -184,7 +206,7 @@ export function useTagCatalogDrag({
       x: event.clientX,
       y: event.clientY,
       offsetX: event.clientX - sourceBounds.left,
-      offsetY: event.clientY - sourceBounds.top,
+      offsetY: event.clientY - (bounds.top - list.scrollTop + firstSource.top),
       active: false,
       lastFrame: 0,
     };
@@ -208,13 +230,10 @@ export function useTagCatalogDrag({
       event.clientX <= bounds.right &&
       event.clientY >= bounds.top &&
       event.clientY <= bounds.bottom;
-    const source = gesture.slots[gesture.sourceIndex];
-    const destination = preview?.destination ?? gesture.sourceIndex;
-    const target = gesture.slots[destination];
     // Commit the last painted destination, never a new unpainted pointer-up calculation.
     cancel();
-    if (gesture.active && inside && source && target && source !== target)
-      onMove(source.id, target.id, destination < gesture.sourceIndex ? "before" : "after");
+    if (gesture.active && inside && preview?.targetId)
+      onMove(gesture.sourceIds, preview.targetId, preview.placement);
   };
   const cancelPointer = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (gestureRef.current?.pointerId === event.pointerId) cancel();

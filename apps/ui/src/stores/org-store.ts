@@ -67,7 +67,7 @@ import {
 } from "@/lib/org-file";
 import { normalizeSearchValue } from "@/lib/search-index";
 import { collectUsedEmployeeTagColors } from "@/lib/tag-color";
-import { moveCatalogTag } from "@/lib/tag-order";
+import { moveCatalogTags } from "@/lib/tag-order";
 import type {
   ExportFieldDropPlacement,
   ExportJsonEmployeeFieldKey,
@@ -1464,7 +1464,11 @@ export class OrgStore {
   }
 
   moveTag(sourceId: TagId, targetId: TagId, placement: "before" | "after"): void {
-    const next = moveCatalogTag(this.tagDefinitions, sourceId, targetId, placement);
+    this.moveTags([sourceId], targetId, placement);
+  }
+
+  moveTags(sourceIds: readonly TagId[], targetId: TagId, placement: "before" | "after"): void {
+    const next = moveCatalogTags(this.tagDefinitions, sourceIds, targetId, placement);
     if (next === this.tagDefinitions) return;
     this.tagDefinitions = [...next];
     this.rebuildMainModel();

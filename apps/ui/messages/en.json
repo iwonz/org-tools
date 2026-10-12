@@ -508,6 +508,7 @@
     "Markdown editor": "Markdown editor",
     "With date: {count}": "With date: {count}",
     "Group by tag": "Group by tag",
+    "Moved {count} Tags to position {position}": "Moved {count} Tags to position {position}",
     "{name} moved to position {position}": "{name} moved to position {position}",
     "Drag to reorder or use the arrow keys": "Drag to reorder or use the arrow keys",
     "View settings": "View settings",

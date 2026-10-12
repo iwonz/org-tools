@@ -508,6 +508,7 @@
     "Markdown editor": "محرر Markdown",
     "With date: {count}": "بتاريخ: {count}",
     "Group by tag": "التجميع حسب الوسم",
+    "Moved {count} Tags to position {position}": "تم نقل {count} من الوسوم إلى الموضع {position}",
     "{name} moved to position {position}": "تم نقل {name} إلى الموضع {position}",
     "Drag to reorder or use the arrow keys": "اسحب لإعادة الترتيب أو استخدم مفاتيح الأسهم",
     "View settings": "إعدادات العرض",

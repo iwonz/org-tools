@@ -508,6 +508,7 @@
     "Markdown editor": "Editor de Markdown",
     "With date: {count}": "Con fecha: {count}",
     "Group by tag": "Agrupar por etiqueta",
+    "Moved {count} Tags to position {position}": "Se movieron {count} Etiquetas a la posición {position}",
     "{name} moved to position {position}": "{name} se movió a la posición {position}",
     "Drag to reorder or use the arrow keys": "Arrastra para reordenar o usa las teclas de flecha",
     "View settings": "Configuración de la Vista",

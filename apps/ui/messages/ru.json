@@ -508,6 +508,7 @@
     "Markdown editor": "Редактор Markdown",
     "With date: {count}": "С датой: {count}",
     "Group by tag": "Группировать по тегу",
+    "Moved {count} Tags to position {position}": "Перемещено Тегов: {count}; позиция: {position}",
     "{name} moved to position {position}": "Тег «{name}» перемещён на позицию {position}",
     "Drag to reorder or use the arrow keys": "Перетащите для изменения порядка или используйте клавиши со стрелками",
     "View settings": "Настройки Представления",

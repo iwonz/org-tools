@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { OrgToolsState, SessionBootstrap } from "@org-tools/types";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "./browser-test.js";
 import { replaceStateFromFile, syntheticStatePath } from "./helpers.js";
 
@@ -327,19 +327,25 @@ export async function exercisePointerTagSorting(page: Page) {
   const catalog = page.getByRole("dialog", { name: "Tags", exact: true });
   const list = catalog.locator('[data-demo-id="tag-catalog-scroll"]');
   const rows = catalog.locator('[data-demo-id="tag-catalog-row"]');
+  const rowById = (id: string) => catalog.locator(`[data-tag-id="${id}"]`);
+  const identityById = (id: string) => rowById(id).locator('[data-demo-id="tag-catalog-identity"]');
   const ids = () =>
     rows.evaluateAll((items) => items.map((item) => item.getAttribute("data-tag-id")));
   const original = tags.map((tag) => tag.id);
+  const [tag0Id, tag1Id, tag2Id, tag3Id, tag4Id, tag5Id] = original;
+  if (!tag0Id || !tag1Id || !tag2Id || !tag3Id || !tag4Id || !tag5Id)
+    throw new Error("Expected at least six Tags in the sorting fixture");
   const overlay = page.locator('[data-demo-id="tag-catalog-drag-preview"]');
   const placeholder = catalog.locator('[data-demo-id="tag-catalog-drop-placeholder"]');
   const handle = rows.first().locator('[data-demo-id="tag-catalog-drag-handle"]');
-  const start = async () => {
-    const bounds = await handle.boundingBox();
+  const startHandle = async (dragHandle: Locator) => {
+    const bounds = await dragHandle.boundingBox();
     if (!bounds) throw new Error("Missing handle");
     await page.mouse.move(bounds.x + 12, bounds.y + 12);
     await page.mouse.down();
     return bounds;
   };
+  const start = async () => startHandle(handle);
   let organizationWrites = 0;
   const observeWrite = (request: { method(): string; url(): string }) => {
     if (request.method() === "POST" && request.url().endsWith("/api/commands")) {
@@ -465,13 +471,107 @@ export async function exercisePointerTagSorting(page: Page) {
   await expect.poll(ids).toEqual([original[0], original[2], original[1], ...original.slice(3)]);
   expect(await writes()).toBe(2);
   await peer.close();
+
+  await identityById(tag0Id).click();
+  await identityById(tag1Id).click({ modifiers: ["Control"] });
+  await identityById(tag2Id).click({ modifiers: ["Meta"] });
+  await expect(identityById(tag2Id)).toHaveAttribute("aria-pressed", "true");
+  await identityById(tag2Id).click({ modifiers: ["Meta"] });
+  await expect(identityById(tag0Id)).toHaveAttribute("aria-pressed", "true");
+  await expect(identityById(tag1Id)).toHaveAttribute("aria-pressed", "true");
+  await expect(identityById(tag2Id)).toHaveAttribute("aria-pressed", "false");
+  await expect(
+    catalog.locator('[data-demo-id="tag-catalog-row"][data-selected="true"]'),
+  ).toHaveCount(2);
+  expect(await writes()).toBe(2);
+
+  const groupHandle = rowById(tag1Id).locator('[data-demo-id="tag-catalog-drag-handle"]');
+  await startHandle(groupHandle);
+  const groupTarget = await rowById(tag4Id).boundingBox();
+  if (!groupTarget) throw new Error("Missing grouped Tag target");
+  await page.mouse.move(groupTarget.x + 100, groupTarget.y + groupTarget.height - 3, { steps: 8 });
+  await expect(overlay).toBeVisible();
+  await expect(overlay.locator('[data-demo-id="tag-catalog-identity"]')).toHaveCount(2);
+  await expect(placeholder).toBeVisible();
+  await expect
+    .poll(() => placeholder.evaluate((element) => element.getBoundingClientRect().height))
+    .toBeGreaterThan(groupTarget.height * 1.5);
+  expect(await writes()).toBe(2);
+  await page.screenshot({ path: "../../test-results/tag-group-drag-preview.png" });
+  await page.mouse.up();
+  const groupedOrder = [tag2Id, tag3Id, tag4Id, tag0Id, tag1Id, ...original.slice(5)];
+  await expect.poll(ids).toEqual(groupedOrder);
+  await expect.poll(writes).toBe(3);
+
+  await startHandle(rowById(tag0Id).locator('[data-demo-id="tag-catalog-drag-handle"]'));
+  const cancelTarget = await rowById(tag5Id).boundingBox();
+  if (!cancelTarget) throw new Error("Missing grouped cancel target");
+  await page.mouse.move(cancelTarget.x + 100, cancelTarget.y + 4, { steps: 8 });
+  await expect(overlay.locator('[data-demo-id="tag-catalog-identity"]')).toHaveCount(2);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect.poll(ids).toEqual(groupedOrder);
+  expect(await writes()).toBe(3);
+
+  await groupHandle.focus();
+  await groupHandle.press("ArrowUp");
+  const keyboardOrder = [tag2Id, tag3Id, tag0Id, tag1Id, ...original.slice(4)];
+  await expect.poll(ids).toEqual(keyboardOrder);
+  await expect.poll(writes).toBe(4);
+
+  const singleHandle = rowById(tag5Id).locator('[data-demo-id="tag-catalog-drag-handle"]');
+  await startHandle(singleHandle);
+  const singleTarget = await rowById(tag2Id).boundingBox();
+  if (!singleTarget) throw new Error("Missing single Tag target");
+  await page.mouse.move(singleTarget.x + 100, singleTarget.y + 4, { steps: 8 });
+  await expect(overlay.locator('[data-demo-id="tag-catalog-identity"]')).toHaveCount(1);
+  await expect(identityById(tag5Id)).toHaveAttribute("aria-pressed", "true");
+  await expect(identityById(tag0Id)).toHaveAttribute("aria-pressed", "false");
+  await page.mouse.up();
+  const singleOrder = [tag5Id, tag2Id, tag3Id, tag0Id, tag1Id, tag4Id, ...original.slice(6)];
+  await expect.poll(ids).toEqual(singleOrder);
+  await expect.poll(writes).toBe(5);
+
+  await catalog.getByRole("searchbox").fill("Synthetic Tag 20");
+  await expect(
+    catalog.locator('[data-demo-id="tag-catalog-row"][data-selected="true"]'),
+  ).toHaveCount(0);
+  await catalog.getByRole("searchbox").fill("");
+  expect(await writes()).toBe(5);
+
+  await identityById(tag0Id).click();
+  await identityById(tag1Id).click({ modifiers: ["Control"] });
+  await startHandle(groupHandle);
+  const refreshTarget = await rowById(tag4Id).boundingBox();
+  if (!refreshTarget) throw new Error("Missing grouped refresh target");
+  await page.mouse.move(refreshTarget.x + 100, refreshTarget.y + refreshTarget.height - 3, {
+    steps: 8,
+  });
+  await expect(overlay.locator('[data-demo-id="tag-catalog-identity"]')).toHaveCount(2);
+  const groupPeer = await page.context().newPage();
+  await groupPeer.goto(page.url(), { waitUntil: "domcontentloaded" });
+  await groupPeer.locator('[data-demo-id="employee-tags-button"]').click();
+  const groupPeerHandle = groupPeer
+    .locator('[data-demo-id="tag-catalog-row"]')
+    .nth(2)
+    .locator('[data-demo-id="tag-catalog-drag-handle"]');
+  await groupPeerHandle.focus();
+  await groupPeerHandle.press("ArrowUp");
+  await expect(overlay).toHaveCount(0);
+  await page.mouse.up();
+  expect(await writes()).toBe(5);
+  await groupPeer.close();
+
   await page.keyboard.press("Escape");
   const exported = await exportState(page);
   expect(exported.organization.tags.map((tag) => tag.id)).toEqual([
-    original[0],
-    original[2],
-    original[1],
-    ...original.slice(3),
+    tag5Id,
+    tag3Id,
+    tag2Id,
+    tag0Id,
+    tag1Id,
+    tag4Id,
+    ...original.slice(6),
   ]);
   page.off("request", observeWrite);
 }

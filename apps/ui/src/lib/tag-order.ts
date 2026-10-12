@@ -26,12 +26,20 @@ export const moveCatalogTag = <T extends { id: TagId }>(
   sourceId: TagId,
   targetId: TagId,
   placement: "before" | "after",
+): readonly T[] => moveCatalogTags(tags, [sourceId], targetId, placement);
+
+export const moveCatalogTags = <T extends { id: TagId }>(
+  tags: readonly T[],
+  sourceIds: readonly TagId[],
+  targetId: TagId,
+  placement: "before" | "after",
 ): readonly T[] => {
-  if (sourceId === targetId) return tags;
-  const source = tags.find((tag) => tag.id === sourceId);
-  if (!source || !tags.some((tag) => tag.id === targetId)) return tags;
-  const next = tags.filter((tag) => tag.id !== sourceId);
+  const sourceIdSet = new Set(sourceIds);
+  if (sourceIdSet.size === 0 || sourceIdSet.has(targetId)) return tags;
+  const sources = tags.filter((tag) => sourceIdSet.has(tag.id));
+  if (sources.length !== sourceIdSet.size || !tags.some((tag) => tag.id === targetId)) return tags;
+  const next = tags.filter((tag) => !sourceIdSet.has(tag.id));
   const targetIndex = next.findIndex((tag) => tag.id === targetId);
-  next.splice(targetIndex + (placement === "after" ? 1 : 0), 0, source);
+  next.splice(targetIndex + (placement === "after" ? 1 : 0), 0, ...sources);
   return next.every((tag, index) => tag === tags[index]) ? tags : next;
 };

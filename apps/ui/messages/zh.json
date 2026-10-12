@@ -508,6 +508,7 @@
     "Markdown editor": "Markdown 编辑器",
     "With date: {count}": "有日期：{count}",
     "Group by tag": "按标签分组",
+    "Moved {count} Tags to position {position}": "已将 {count} 个标签移动到位置 {position}",
     "{name} moved to position {position}": "{name} 已移至第 {position} 位",
     "Drag to reorder or use the arrow keys": "拖动或使用方向键调整顺序",
     "View settings": "视图设置",

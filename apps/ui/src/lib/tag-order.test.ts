@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   createTagOrderIndex,
   moveCatalogTag,
+  moveCatalogTags,
   normalizeTagSearchValue,
   orderByTagCatalog,
 } from "@/lib/tag-order";
@@ -30,11 +31,27 @@ describe("Catalog Tag ordering", () => {
     expect(moveCatalogTag(tags, "1", "3", "before").map((tag) => tag.id)).toEqual(["1", "3", "2"]);
     expect(moveCatalogTag(tags, "3", "1", "after").map((tag) => tag.id)).toEqual(["2", "1", "3"]);
   });
+  test("moves non-contiguous Tags as one ordered block", () => {
+    expect(moveCatalogTags(tags, ["3", "1"], "2", "after").map((tag) => tag.id)).toEqual([
+      "2",
+      "3",
+      "1",
+    ]);
+    expect(moveCatalogTags(tags, ["1", "3"], "2", "before").map((tag) => tag.id)).toEqual([
+      "3",
+      "1",
+      "2",
+    ]);
+  });
   test("retains the original reference for invalid and unchanged moves", () => {
     expect(moveCatalogTag(tags, "3", "3", "before")).toBe(tags);
     expect(moveCatalogTag(tags, "3", "2", "before")).toBe(tags);
     expect(moveCatalogTag(tags, "missing", "1", "after")).toBe(tags);
     expect(moveCatalogTag(tags, "1", "missing", "after")).toBe(tags);
+    expect(moveCatalogTags(tags, [], "1", "after")).toBe(tags);
+    expect(moveCatalogTags(tags, ["3", "2"], "1", "before")).toBe(tags);
+    expect(moveCatalogTags(tags, ["3", "missing"], "1", "after")).toBe(tags);
+    expect(moveCatalogTags(tags, ["3", "1"], "1", "after")).toBe(tags);
   });
   test("normalizes case and combining marks for search", () => {
     expect(normalizeTagSearchValue("Développement")).toBe("developpement");

@@ -167,6 +167,20 @@ describe("Catalog order and Unit grouping", () => {
     expect(restored.tagDefinitions.map((tag) => tag.id)).toEqual([alpha, zulu]);
   });
 
+  test("commits a grouped Tag move as one organization change", () => {
+    const { store, zulu, alpha } = setup();
+    const beta = "00000000-0000-4000-8000-000000000013";
+    store.saveTagDefinition({ id: beta, label: "Beta", color: null });
+    const persisted = store.organizationEmployees;
+    const sequence = store.organizationChangeSequence;
+    store.moveTags([zulu, beta], alpha, "after");
+    expect(store.organizationChangeSequence).toBe(sequence + 1);
+    expect(store.tagDefinitions.map((tag) => tag.id)).toEqual([alpha, zulu, beta]);
+    expect(store.organizationEmployees).toBe(persisted);
+    store.moveTags([zulu, beta], alpha, "after");
+    expect(store.organizationChangeSequence).toBe(sequence + 1);
+  });
+
   test("groups resolved Live membership and re-evaluates the earliest Tag after deletion", () => {
     const { store, unitId, zulu, boss, both, later, first, untagged } = setup();
     const liveId = store.mainOrgEditor.addUnit({

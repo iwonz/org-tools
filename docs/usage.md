@@ -86,6 +86,10 @@ Tag catalog operations each require their own permission and applicable scope/AC
 Employee cannot be deleted. The linked account email is Administration-only. An Employee may
 remain in the global catalog without a Unit assignment. Clearing every assignment in an Employee
 form removes membership only from that form's system or custom View and leaves other Views intact.
+In the Tag catalog, click a Tag identity to select it, then use Ctrl on Windows/Linux or Command on
+macOS while clicking other identities to build a selection. Drag any selected Tag's leading handle
+to move the complete selection as one ordered block; dragging an unselected Tag keeps the existing
+single-Tag behavior.
 
 Custom Value fields support scalar and multi-value text, number, flag, date, and options. Composite
 fields contain typed subfields with exactly one required unique primary key. Template fields derive

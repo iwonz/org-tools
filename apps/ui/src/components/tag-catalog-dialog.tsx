@@ -2,7 +2,7 @@
 
 import type { Employee, EmployeeTagDefinition, TagId } from "@org-tools/types";
 import { observer } from "mobx-react-lite";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   HiOutlineBars3,
@@ -67,6 +67,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   const canCreateTags = can("tag.create");
   const canDeleteTags = can("tag.delete");
   const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<TagId[]>([]);
   const [editing, setEditing] = useState<EmployeeTagDefinition | null>(null);
   const [deleteId, setDeleteId] = useState<TagId | null>(null);
   const [viewingTagId, setViewingTagId] = useState<TagId | null>(null);
@@ -87,15 +88,25 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
       )
     );
   };
-  const moveTag = (sourceId: TagId, targetId: TagId, placement: "before" | "after") => {
+  const moveTags = (
+    sourceIds: readonly TagId[],
+    targetId: TagId,
+    placement: "before" | "after",
+  ) => {
     if (!canUpdateTags) return;
-    store.moveTag(sourceId, targetId, placement);
-    const index = store.tagDefinitions.findIndex((tag) => tag.id === sourceId);
-    const tag = store.tagDefinitions[index];
-    if (tag)
+    store.moveTags(sourceIds, targetId, placement);
+    const positions = sourceIds
+      .map((sourceId) => store.tagDefinitions.findIndex((tag) => tag.id === sourceId))
+      .filter((index) => index >= 0);
+    const position = positions.length > 0 ? Math.min(...positions) + 1 : null;
+    const tag = sourceIds.length === 1 ? store.tagDefinitions[positions[0] ?? -1] : null;
+    if (tag && position !== null) {
+      setAnnouncement(t("{name} moved to position {position}", { name: tag.label, position }));
+    } else if (position !== null) {
       setAnnouncement(
-        t("{name} moved to position {position}", { name: tag.label, position: index + 1 }),
+        t("Moved {count} Tags to position {position}", { count: sourceIds.length, position }),
       );
+    }
   };
   const visible = useMemo(() => {
     const normalized = normalizeTagSearchValue(query);
@@ -103,12 +114,45 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
       (tag) => !normalized || normalizeTagSearchValue(tag.label).includes(normalized),
     );
   }, [query, store.tagDefinitions]);
+  const visibleById = useMemo(() => new Map(visible.map((tag) => [tag.id, tag])), [visible]);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const catalogIdSet = useMemo(
+    () => new Set(store.tagDefinitions.map((tag) => tag.id)),
+    [store.tagDefinitions],
+  );
+  useEffect(() => {
+    setSelectedIds((current) => {
+      if (!open) return current.length === 0 ? current : [];
+      const next = current.filter((id) => catalogIdSet.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [catalogIdSet, open]);
+  const replaceSelection = (ids: TagId[]) => {
+    setSelectedIds(ids);
+    setAnnouncement(
+      t("Selected {selected} of {total}", {
+        selected: ids.length,
+        total: store.tagDefinitions.length,
+      }),
+    );
+  };
+  const selectTag = (id: TagId, additive: boolean) => {
+    if (!canUpdateTags) return;
+    const next = additive
+      ? selectedIdSet.has(id)
+        ? selectedIds.filter((selectedId) => selectedId !== id)
+        : [...selectedIds, id]
+      : [id];
+    replaceSelection(next);
+  };
   const drag = useTagCatalogDrag({
     tags: store.tagDefinitions,
     visible,
     query,
     open,
-    onMove: moveTag,
+    selectedIds,
+    onSelectOnly: (id) => replaceSelection([id]),
+    onMove: moveTags,
   });
   const counts = useMemo(() => {
     const result = new Map<TagId, { dated: number; employees: number }>();
@@ -137,10 +181,12 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
   );
   const renderRow = (tag: EmployeeTagDefinition, visibleIndex: number, overlay = false) => {
     const count = counts.get(tag.id) ?? { dated: 0, employees: 0 };
+    const selected = !overlay && selectedIdSet.has(tag.id);
     return (
       <fieldset
         className={cn(
           "relative m-0 flex min-w-0 items-center gap-2 border-0 p-0",
+          selected && "outline outline-2 outline-offset-2 outline-signal/70",
           !overlay &&
             drag.preview &&
             "transition-transform duration-150 motion-reduce:transition-none",
@@ -152,10 +198,11 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                 transform: drag.preview
                   ? `translateY(${drag.preview.offsets.get(tag.id) ?? 0}px)`
                   : undefined,
-                opacity: drag.preview?.id === tag.id ? 0 : undefined,
+                opacity: drag.preview?.ids.includes(tag.id) ? 0 : undefined,
               }
         }
         data-demo-id={overlay ? undefined : "tag-catalog-row"}
+        data-selected={overlay ? undefined : String(selected)}
         data-tag-id={overlay ? undefined : tag.id}
         aria-label={tag.label}
         key={tag.id}
@@ -176,8 +223,19 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
               drag.cancel();
               if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
               event.preventDefault();
-              const target = visible[visibleIndex + (event.key === "ArrowUp" ? -1 : 1)];
-              if (target) moveTag(tag.id, target.id, event.key === "ArrowUp" ? "before" : "after");
+              const sourceIds = selectedIdSet.has(tag.id)
+                ? visible.filter((item) => selectedIdSet.has(item.id)).map((item) => item.id)
+                : [tag.id];
+              const sourceIdSet = new Set(sourceIds);
+              const target =
+                event.key === "ArrowUp"
+                  ? visible
+                      .slice(0, visibleIndex)
+                      .reverse()
+                      .find((item) => !sourceIdSet.has(item.id))
+                  : visible.slice(visibleIndex + 1).find((item) => !sourceIdSet.has(item.id));
+              if (target)
+                moveTags(sourceIds, target.id, event.key === "ArrowUp" ? "before" : "after");
             }}
             title={t("Drag to reorder or use the arrow keys")}
             type="button"
@@ -185,9 +243,17 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
             <HiOutlineBars3 className="size-4" />
           </button>
         )}
-        <div
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+        <button
+          aria-label={tag.label}
+          aria-pressed={selected}
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-sm text-start outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-demo-id="tag-catalog-identity"
+          disabled={overlay || !canUpdateTags}
+          onClick={
+            overlay ? undefined : (event) => selectTag(tag.id, event.ctrlKey || event.metaKey)
+          }
+          tabIndex={overlay ? -1 : undefined}
+          type="button"
         >
           <TagSurface className="font-medium" color={tag.color}>
             <HighlightedText queryTokens={[normalizeTagSearchValue(query)]} text={tag.label} />
@@ -208,7 +274,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
               </span>
             )}
           </span>
-        </div>
+        </button>
         <Button
           aria-label={t("View Employees with this Tag")}
           data-demo-id="tag-catalog-view-employees"
@@ -271,6 +337,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
       <Dialog
         onOpenChange={(nextOpen) => {
           drag.cancel();
+          if (!nextOpen) setSelectedIds([]);
           onOpenChange(nextOpen);
         }}
         open={open}
@@ -291,7 +358,10 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
               <Input
                 aria-label={t("Search tags")}
                 className="pl-9"
-                onChange={(event) => setQuery(event.currentTarget.value)}
+                onChange={(event) => {
+                  setQuery(event.currentTarget.value);
+                  setSelectedIds([]);
+                }}
                 placeholder={t("Search tags")}
                 type="search"
                 value={query}
@@ -335,7 +405,14 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
                 {t("Create")}
               </Button>
             )}
-            <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
+            <Button
+              onClick={() => {
+                setSelectedIds([]);
+                onOpenChange(false);
+              }}
+              type="button"
+              variant="outline"
+            >
               {t("Close")}
             </Button>
           </DialogFooter>
@@ -346,7 +423,7 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
           <div
             aria-hidden="true"
             inert
-            className="pointer-events-none fixed z-[100] rounded-md bg-popover text-popover-foreground shadow-lg ring-1 ring-border"
+            className="pointer-events-none fixed z-[100] grid gap-3 rounded-md bg-popover text-popover-foreground shadow-lg ring-1 ring-border"
             data-demo-id="tag-catalog-drag-preview"
             style={{
               left: drag.preview.x,
@@ -355,9 +432,10 @@ export const TagCatalogDialog = observer(function TagCatalogDialog({
               height: drag.preview.height,
             }}
           >
-            {visible
-              .filter((tag) => tag.id === drag.preview?.id)
-              .map((tag) => renderRow(tag, -1, true))}
+            {drag.preview.ids.flatMap((id) => {
+              const tag = visibleById.get(id);
+              return tag ? [renderRow(tag, -1, true)] : [];
+            })}
           </div>,
           document.body,
         )}

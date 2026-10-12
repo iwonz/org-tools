@@ -508,6 +508,7 @@
     "Markdown editor": "Éditeur Markdown",
     "With date: {count}": "Avec date : {count}",
     "Group by tag": "Grouper par étiquette",
+    "Moved {count} Tags to position {position}": "{count} Tags déplacés à la position {position}",
     "{name} moved to position {position}": "{name} a été déplacé à la position {position}",
     "Drag to reorder or use the arrow keys": "Faites glisser pour réordonner ou utilisez les touches fléchées",
     "View settings": "Paramètres de la Vue",
