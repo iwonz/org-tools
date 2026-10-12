@@ -24,6 +24,7 @@ services:
     command: ["pnpm", "--filter", "@org-tools/ui", "exec", "next", "dev", "--webpack", "--hostname", "0.0.0.0", "--port", "3000"]
     image: org-tools-dev
     environment:
+      CI: "true"
       NODE_ENV: development
     read_only: false
     user: "0:0"

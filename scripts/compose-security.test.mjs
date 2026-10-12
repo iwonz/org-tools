@@ -28,12 +28,14 @@ describe("Compose application security", () => {
     expect(developmentApp).toContain('cap_add: ["DAC_OVERRIDE"]');
     expect(developmentApp).toContain("read_only: false");
     expect(developmentApp).toContain('user: "0:0"');
+    expect(developmentApp).toContain('CI: "true"');
     expect(developmentSource.match(/cap_add:/gu)).toHaveLength(1);
 
     expect(developmentToolbox).toContain('GIT_CONFIG_COUNT: "1"');
     expect(developmentToolbox).toContain("GIT_CONFIG_KEY_0: safe.directory");
     expect(developmentToolbox).toContain("GIT_CONFIG_VALUE_0: /workspace");
     expect(developmentApp).not.toContain("GIT_CONFIG_");
+    expect(productionApp).not.toContain("CI:");
     expect(productionSource).not.toContain("GIT_CONFIG_");
   });
 });
